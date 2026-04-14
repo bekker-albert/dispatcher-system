@@ -3,6 +3,8 @@
 import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { supabaseConfigured } from "@/lib/supabase/client";
+import { loadPtoStateFromSupabase, savePtoStateToSupabase } from "@/lib/supabase/pto";
 
 type VehicleRow = {
   id: number;
@@ -1444,6 +1446,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function errorToMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function normalizeStoredTopTabs(value: unknown) {
   if (!Array.isArray(value)) return defaultTopTabs;
 
@@ -1639,6 +1645,8 @@ export default function App() {
   const [editingTopTabId, setEditingTopTabId] = useState<string | null>(null);
   const [editingSubTabId, setEditingSubTabId] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState("Изменения сохраняются в этом браузере.");
+  const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База Supabase подключается..." : "База Supabase не настроена.");
+  const [ptoDatabaseSaving, setPtoDatabaseSaving] = useState(false);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
   const [search, setSearch] = useState("");
@@ -1781,6 +1789,45 @@ export default function App() {
 
   useEffect(() => {
     if (!adminDataLoaded) return;
+
+    let cancelled = false;
+
+    async function loadPtoDatabase() {
+      if (!supabaseConfigured) {
+        setPtoDatabaseMessage("База Supabase не настроена.");
+        return;
+      }
+
+      setPtoDatabaseMessage("Загружаю ПТО из Supabase...");
+
+      try {
+        const databaseState = await loadPtoStateFromSupabase();
+        if (cancelled) return;
+
+        if (!databaseState) {
+          setPtoDatabaseMessage("База подключена. Данных ПТО пока нет — нажми «Сохранить в базу».");
+          return;
+        }
+
+        setPtoManualYears(normalizeStoredPtoYears(databaseState.manualYears));
+        setPtoPlanRows(databaseState.planRows.map((row) => normalizePtoPlanRow(row)));
+        setPtoOperRows(databaseState.operRows.map((row) => normalizePtoPlanRow(row)));
+        setPtoSurveyRows(databaseState.surveyRows.map((row) => normalizePtoPlanRow(row)));
+        setPtoDatabaseMessage("ПТО загружено из Supabase.");
+      } catch (error) {
+        if (!cancelled) setPtoDatabaseMessage(`Supabase пока не готов: ${errorToMessage(error)}`);
+      }
+    }
+
+    void loadPtoDatabase();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adminDataLoaded]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.reports, JSON.stringify(reportRows));
   }, [adminDataLoaded, reportRows]);
 
@@ -1868,6 +1915,30 @@ export default function App() {
     return () => window.cancelAnimationFrame(frame);
   }, [ptoPendingFieldFocus, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
 
+  async function savePtoDatabaseChanges() {
+    if (!supabaseConfigured) {
+      setPtoDatabaseMessage("База Supabase не настроена.");
+      return;
+    }
+
+    setPtoDatabaseSaving(true);
+    setPtoDatabaseMessage("Сохраняю ПТО в Supabase...");
+
+    try {
+      await savePtoStateToSupabase({
+        manualYears: ptoManualYears,
+        planRows: ptoPlanRows,
+        operRows: ptoOperRows,
+        surveyRows: ptoSurveyRows,
+      });
+      setPtoDatabaseMessage("ПТО сохранено в Supabase.");
+    } catch (error) {
+      setPtoDatabaseMessage(`Не удалось сохранить в Supabase: ${errorToMessage(error)}`);
+    } finally {
+      setPtoDatabaseSaving(false);
+    }
+  }
+
   function saveAdminChanges() {
     window.localStorage.setItem(adminStorageKeys.reports, JSON.stringify(reportRows));
     window.localStorage.setItem(adminStorageKeys.customTabs, JSON.stringify(customTabs));
@@ -1881,6 +1952,7 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.orgMembers, JSON.stringify(orgMembers));
     window.localStorage.setItem(adminStorageKeys.dependencyNodes, JSON.stringify(dependencyNodes));
     window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
+    void savePtoDatabaseChanges();
     setSaveMessage("Сохранено. Редактирование можно завершить.");
   }
 
@@ -3840,6 +3912,12 @@ export default function App() {
             </SubTabs>
 
             <SectionCard title={["plan", "oper", "survey"].includes(ptoTab) ? "" : `ПТО: ${activePtoSubtab?.label ?? ptoTab}`}>
+              {["plan", "oper", "survey"].includes(ptoTab) && (
+                <div style={ptoDatabaseBarStyle}>
+                  <span>{ptoDatabaseMessage}</span>
+                  <TopButton active={!ptoDatabaseSaving} onClick={() => void savePtoDatabaseChanges()} label={ptoDatabaseSaving ? "Сохраняю..." : "Сохранить в базу"} />
+                </div>
+              )}
               {ptoTab.startsWith("custom:") && <div style={blockStyle}>{activePtoSubtab?.content || "В этой подвкладке пока нет информации."}</div>}
               {ptoTab === "bodies" && <div style={blockStyle}>{activePtoSubtab?.content || "Справочник объемов кузовов: модель техники → материал → объем кузова."}</div>}
               {ptoTab === "performance" && <div style={blockStyle}>{activePtoSubtab?.content || "Расчет производительности: рейсы, кузова, материалы, удельный вес, перевод м³ ↔ тн."}</div>}
@@ -5306,6 +5384,21 @@ const ptoFormulaInputStyle: React.CSSProperties = {
   fontSize: 13,
   fontVariantNumeric: "tabular-nums",
   outline: "none",
+};
+
+const ptoDatabaseBarStyle: React.CSSProperties = {
+  border: "1px solid #dbeafe",
+  borderRadius: 8,
+  background: "#eff6ff",
+  color: "#1e3a8a",
+  padding: "8px 10px",
+  marginBottom: 12,
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+  fontSize: 13,
 };
 
 const ptoAreaCellStyle: React.CSSProperties = {
