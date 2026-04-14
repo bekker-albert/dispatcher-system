@@ -2806,6 +2806,26 @@ export default function App() {
       setPtoSelectedCellKeys(formulaRangeKeys(anchorCell, targetCell));
     };
 
+    const toggleFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
+      const targetCell = { ...cell, table: ptoTab, year: ptoPlanYear };
+      const targetKey = formulaSelectionKey(targetCell);
+      const selectionScope = `${ptoTab}:${ptoPlanYear}:`;
+
+      setPtoFormulaCell(targetCell);
+      setPtoFormulaDraft(formatPtoFormulaNumber(value));
+      setPtoInlineEditCell(null);
+      setPtoInlineEditInitialDraft("");
+      setPtoSelectionAnchorCell(targetCell);
+      setPtoSelectedCellKeys((currentKeys) => {
+        const scopedKeys = currentKeys.filter((key) => key.startsWith(selectionScope));
+        const nextKeys = scopedKeys.includes(targetKey)
+          ? scopedKeys.filter((key) => key !== targetKey)
+          : [...scopedKeys, targetKey];
+
+        return nextKeys.length ? nextKeys : [targetKey];
+      });
+    };
+
     const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
       const nextCell = { ...cell, table: ptoTab, year: ptoPlanYear };
       const draft = draftOverride ?? formatPtoFormulaNumber(value);
@@ -2970,7 +2990,9 @@ export default function App() {
       if (event.button !== 0 || isEditing) return;
 
       ptoSelectionDraggingRef.current = true;
-      if (event.shiftKey) {
+      if (event.ctrlKey || event.metaKey) {
+        toggleFormulaCell(cell, value);
+      } else if (event.shiftKey) {
         selectFormulaRange(cell, value);
       } else {
         selectFormulaCell(cell, value);
@@ -2978,7 +3000,7 @@ export default function App() {
     };
 
     const handleFormulaCellMouseEnter = (event: React.MouseEvent<HTMLElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
-      if (!ptoSelectionDraggingRef.current || event.buttons !== 1 || isEditing) return;
+      if (!ptoSelectionDraggingRef.current || event.buttons !== 1 || event.ctrlKey || event.metaKey || isEditing) return;
       selectFormulaRange(cell, value);
     };
 
@@ -3383,6 +3405,10 @@ export default function App() {
                                 onMouseDown={(event) => handleFormulaCellMouseDown(event, { ...monthCell, editable: false }, monthValue, false)}
                                 onMouseEnter={(event) => handleFormulaCellMouseEnter(event, { ...monthCell, editable: false }, monthValue, false)}
                                 onClick={(event) => {
+                                  if (event.ctrlKey || event.metaKey) {
+                                    return;
+                                  }
+
                                   if (event.shiftKey) {
                                     selectFormulaRange({ ...monthCell, editable: false }, monthValue);
                                   } else {
