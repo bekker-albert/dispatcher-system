@@ -5450,6 +5450,9 @@ const ptoActiveFormulaCellStyle: React.CSSProperties = {
 
 const ptoSelectedFormulaCellStyle: React.CSSProperties = {
   background: "#f0f7ff",
+  outline: "1px solid #93c5fd",
+  outlineOffset: "-1px",
+  zIndex: 1,
 };
 
 const ptoEditingFormulaCellStyle: React.CSSProperties = {
