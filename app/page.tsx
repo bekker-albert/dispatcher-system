@@ -2,7 +2,7 @@
 
 import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 type VehicleRow = {
   id: number;
@@ -1599,8 +1599,11 @@ export default function App() {
   const [ptoFormulaDraft, setPtoFormulaDraft] = useState("");
   const [ptoInlineEditCell, setPtoInlineEditCell] = useState<PtoFormulaCell | null>(null);
   const [ptoInlineEditInitialDraft, setPtoInlineEditInitialDraft] = useState("");
+  const [ptoSelectionAnchorCell, setPtoSelectionAnchorCell] = useState<PtoFormulaCell | null>(null);
+  const [ptoSelectedCellKeys, setPtoSelectedCellKeys] = useState<string[]>([]);
   const [hoveredPtoAddRowId, setHoveredPtoAddRowId] = useState<string | null>(null);
   const [ptoPendingFieldFocus, setPtoPendingFieldFocus] = useState<{ rowId: string; field: string } | null>(null);
+  const ptoSelectionDraggingRef = useRef(false);
   const [topTabs, setTopTabs] = useState<TopTabDefinition[]>(defaultTopTabs);
   const [subTabs, setSubTabs] = useState<Record<EditableSubtabGroup, SubTabConfig[]>>(defaultSubTabs);
   const [reportArea, setReportArea] = useState("Все участки");
@@ -1835,6 +1838,15 @@ export default function App() {
     if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
   }, [adminDataLoaded, dependencyLinks]);
+
+  useEffect(() => {
+    const stopPtoSelectionDrag = () => {
+      ptoSelectionDraggingRef.current = false;
+    };
+
+    window.addEventListener("mouseup", stopPtoSelectionDrag);
+    return () => window.removeEventListener("mouseup", stopPtoSelectionDrag);
+  }, []);
 
   useEffect(() => {
     if (!ptoPendingFieldFocus) return;
@@ -2732,6 +2744,8 @@ export default function App() {
 
     const formulaCellKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${cell.rowId}:${cell.kind}:${cell.month ?? cell.day ?? ""}`;
     const formulaCellDomKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${ptoTab}:${ptoPlanYear}:${formulaCellKey(cell)}`;
+    const formulaSelectionKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => formulaCellDomKey(cell);
+    const selectedFormulaCellKeys = new Set(ptoSelectedCellKeys);
     const getFormulaCellValue = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
       const row = rows.find((item) => item.id === cell.rowId);
       if (!row) return undefined;
@@ -2749,11 +2763,47 @@ export default function App() {
       });
     };
 
+    const formulaRangeKeys = (anchor: PtoFormulaCell, target: PtoFormulaCell) => {
+      const anchorRowIndex = formulaCellRows.findIndex((row) => row.cells.some((cell) => formulaCellKey(cell) === formulaCellKey(anchor)));
+      const targetRowIndex = formulaCellRows.findIndex((row) => row.cells.some((cell) => formulaCellKey(cell) === formulaCellKey(target)));
+      if (anchorRowIndex < 0 || targetRowIndex < 0) return [formulaSelectionKey(target)];
+
+      const anchorColumnIndex = formulaCellRows[anchorRowIndex].cells.findIndex((cell) => formulaCellKey(cell) === formulaCellKey(anchor));
+      const targetColumnIndex = formulaCellRows[targetRowIndex].cells.findIndex((cell) => formulaCellKey(cell) === formulaCellKey(target));
+      if (anchorColumnIndex < 0 || targetColumnIndex < 0) return [formulaSelectionKey(target)];
+
+      const rowStart = Math.min(anchorRowIndex, targetRowIndex);
+      const rowEnd = Math.max(anchorRowIndex, targetRowIndex);
+      const columnStart = Math.min(anchorColumnIndex, targetColumnIndex);
+      const columnEnd = Math.max(anchorColumnIndex, targetColumnIndex);
+
+      return formulaCellRows
+        .slice(rowStart, rowEnd + 1)
+        .flatMap((row) => row.cells.slice(columnStart, columnEnd + 1).map((cell) => formulaSelectionKey(cell)));
+    };
+
     const selectFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
-      setPtoFormulaCell({ ...cell, table: ptoTab, year: ptoPlanYear });
+      const nextCell = { ...cell, table: ptoTab, year: ptoPlanYear };
+      setPtoFormulaCell(nextCell);
       setPtoFormulaDraft(formatPtoFormulaNumber(value));
       setPtoInlineEditCell(null);
       setPtoInlineEditInitialDraft("");
+      setPtoSelectionAnchorCell(nextCell);
+      setPtoSelectedCellKeys([formulaSelectionKey(nextCell)]);
+    };
+
+    const selectFormulaRange = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
+      const targetCell = { ...cell, table: ptoTab, year: ptoPlanYear };
+      const anchorCell = ptoSelectionAnchorCell?.table === ptoTab && ptoSelectionAnchorCell.year === ptoPlanYear
+        ? ptoSelectionAnchorCell
+        : targetCell;
+
+      setPtoFormulaCell(targetCell);
+      setPtoFormulaDraft(formatPtoFormulaNumber(value));
+      setPtoInlineEditCell(null);
+      setPtoInlineEditInitialDraft("");
+      setPtoSelectionAnchorCell(anchorCell);
+      setPtoSelectedCellKeys(formulaRangeKeys(anchorCell, targetCell));
     };
 
     const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
@@ -2783,6 +2833,11 @@ export default function App() {
 
     const formulaCellActive = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => formulaCellMatches(activeFormulaCell, rowId, kind, key);
     const formulaCellEditing = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => formulaCellMatches(activeInlineEditCell, rowId, kind, key);
+    const formulaCellSelected = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => selectedFormulaCellKeys.has(formulaSelectionKey({
+      rowId,
+      kind,
+      ...(kind === "month" ? { month: key } : kind === "day" ? { day: key } : {}),
+    }));
 
     const commitFormulaCellValue = (cell: PtoFormulaCell, value: string) => {
       if (cell.editable === false) return false;
@@ -2909,6 +2964,22 @@ export default function App() {
         event.preventDefault();
         startInlineFormulaEdit(cell, value);
       }
+    };
+
+    const handleFormulaCellMouseDown = (event: React.MouseEvent<HTMLElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
+      if (event.button !== 0 || isEditing) return;
+
+      ptoSelectionDraggingRef.current = true;
+      if (event.shiftKey) {
+        selectFormulaRange(cell, value);
+      } else {
+        selectFormulaCell(cell, value);
+      }
+    };
+
+    const handleFormulaCellMouseEnter = (event: React.MouseEvent<HTMLElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
+      if (!ptoSelectionDraggingRef.current || event.buttons !== 1 || isEditing) return;
+      selectFormulaRange(cell, value);
     };
 
     const addPtoRowAfter = (row: PtoPlanRow) => {
@@ -3047,7 +3118,7 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => {
+              {filteredRows.map((row, rowIndex) => {
                 const rowAreaFilter = cleanAreaName(row.area) || "Все участки";
                 const locationOptions = showLocation
                   ? uniqueSorted(allPtoDateRows
@@ -3068,8 +3139,11 @@ export default function App() {
                       ...(ptoDropTarget.position === "before" ? { top: -2 } : { bottom: -2 }),
                     }
                   : null;
+                const showInlineAddRowButton = rowIndex < filteredRows.length - 1;
                 const coefficientCellActive = formulaCellActive(row.id, "coefficient");
                 const carryoverCellActive = formulaCellActive(row.id, "carryover");
+                const coefficientCellSelected = formulaCellSelected(row.id, "coefficient");
+                const carryoverCellSelected = formulaCellSelected(row.id, "carryover");
                 const coefficientCellEditing = formulaCellEditing(row.id, "coefficient");
                 const carryoverCellEditing = formulaCellEditing(row.id, "carryover");
                 const rowStatus = ptoAutomatedStatus(row, reportDate);
@@ -3117,20 +3191,22 @@ export default function App() {
                   >
                     <PtoPlanTd>
                       {dropLineStyle ? <span style={dropLineStyle} /> : null}
-                      <button
-                        type="button"
-                        onClick={() => addPtoRowAfter(row)}
-                        onMouseEnter={() => setHoveredPtoAddRowId(row.id)}
-                        onMouseLeave={() => setHoveredPtoAddRowId((current) => (current === row.id ? null : current))}
-                        style={{
-                          ...ptoInlineAddRowButtonStyle,
-                          ...(hoveredPtoAddRowId === row.id ? ptoInlineAddRowButtonHoverStyle : null),
-                        }}
-                        title="Добавить строку ниже"
-                        aria-label="Добавить строку ниже"
-                      >
-                        +
-                      </button>
+                      {showInlineAddRowButton ? (
+                        <button
+                          type="button"
+                          onClick={() => addPtoRowAfter(row)}
+                          onMouseEnter={() => setHoveredPtoAddRowId(row.id)}
+                          onMouseLeave={() => setHoveredPtoAddRowId((current) => (current === row.id ? null : current))}
+                          style={{
+                            ...ptoInlineAddRowButtonStyle,
+                            ...(hoveredPtoAddRowId === row.id ? ptoInlineAddRowButtonHoverStyle : null),
+                          }}
+                          title="Добавить строку ниже"
+                          aria-label="Добавить строку ниже"
+                        >
+                          +
+                        </button>
+                      ) : null}
                       <div style={ptoAreaCellStyle}>
                         <div style={ptoRowToolsStyle}>
                           <button
@@ -3183,7 +3259,7 @@ export default function App() {
                         ))}
                       </select>
                     </PtoPlanTd>
-                    <PtoPlanTd active={coefficientCellActive} editing={coefficientCellEditing} align="center">
+                    <PtoPlanTd active={coefficientCellActive} selected={coefficientCellSelected} editing={coefficientCellEditing} align="center">
                       <input
                         readOnly={!coefficientCellEditing}
                         data-pto-row-field={ptoRowFieldDomKey(row.id, "coefficient")}
@@ -3191,9 +3267,13 @@ export default function App() {
                         type="text"
                         inputMode="decimal"
                         value={coefficientCellEditing ? ptoFormulaDraft : formatPtoCellNumber(row.coefficient)}
-                        onFocus={() => selectFormulaCell(coefficientCell, row.coefficient)}
-                        onClick={() => {
-                          if (!coefficientCellEditing) selectFormulaCell(coefficientCell, row.coefficient);
+                        onFocus={() => {
+                          if (!ptoSelectionDraggingRef.current) selectFormulaCell(coefficientCell, row.coefficient);
+                        }}
+                        onMouseDown={(event) => handleFormulaCellMouseDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
+                        onMouseEnter={(event) => handleFormulaCellMouseEnter(event, coefficientCell, row.coefficient, coefficientCellEditing)}
+                        onClick={(event) => {
+                          if (event.shiftKey && !coefficientCellEditing) selectFormulaRange(coefficientCell, row.coefficient);
                         }}
                         onDoubleClick={(event) => {
                           startInlineFormulaEdit(coefficientCell, row.coefficient);
@@ -3220,16 +3300,20 @@ export default function App() {
                         ))}
                       </select>
                     </PtoPlanTd>
-                    <PtoPlanTd active={carryoverCellActive} editing={carryoverCellEditing} align="center">
+                    <PtoPlanTd active={carryoverCellActive} selected={carryoverCellSelected} editing={carryoverCellEditing} align="center">
                       <input
                         readOnly={!carryoverCellEditing}
                         data-pto-cell-key={formulaCellDomKey(carryoverCell)}
                         type="text"
                         inputMode="decimal"
                         value={carryoverCellEditing ? ptoFormulaDraft : formatPtoCellNumber(effectiveCarryover)}
-                        onFocus={() => selectFormulaCell(carryoverCell, effectiveCarryover)}
-                        onClick={() => {
-                          if (!carryoverCellEditing) selectFormulaCell(carryoverCell, effectiveCarryover);
+                        onFocus={() => {
+                          if (!ptoSelectionDraggingRef.current) selectFormulaCell(carryoverCell, effectiveCarryover);
+                        }}
+                        onMouseDown={(event) => handleFormulaCellMouseDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
+                        onMouseEnter={(event) => handleFormulaCellMouseEnter(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
+                        onClick={(event) => {
+                          if (event.shiftKey && !carryoverCellEditing) selectFormulaRange(carryoverCell, effectiveCarryover);
                         }}
                         onDoubleClick={(event) => {
                           startInlineFormulaEdit(carryoverCell, effectiveCarryover);
@@ -3251,6 +3335,7 @@ export default function App() {
                       const monthHasValue = group.days.some((day) => row.dailyPlans[day] !== undefined);
                       const monthValue = monthHasValue ? ptoMonthTotal(row, group.month) : undefined;
                       const monthCellActive = formulaCellActive(row.id, "month", group.month);
+                      const monthCellSelected = formulaCellSelected(row.id, "month", group.month);
                       const monthCellEditing = formulaCellEditing(row.id, "month", group.month);
                       const monthCell = {
                         rowId: row.id,
@@ -3263,7 +3348,7 @@ export default function App() {
 
                       return (
                         <Fragment key={`${row.id}-${group.month}`}>
-                          <PtoPlanTd active={monthCellActive} editing={monthCellEditing} align="center">
+                          <PtoPlanTd active={monthCellActive} selected={monthCellSelected} editing={monthCellEditing} align="center">
                             {editableMonthTotal ? (
                               <input
                                 readOnly={!monthCellEditing}
@@ -3271,11 +3356,13 @@ export default function App() {
                                 type="text"
                                 inputMode="decimal"
                                 value={monthCellEditing ? ptoFormulaDraft : formatPtoCellNumber(monthValue)}
-                                onFocus={() => selectFormulaCell(monthCell, monthValue)}
-                                onClick={() => {
-                                  if (!monthCellEditing) {
-                                    selectFormulaCell(monthCell, monthValue);
-                                  }
+                                onFocus={() => {
+                                  if (!ptoSelectionDraggingRef.current) selectFormulaCell(monthCell, monthValue);
+                                }}
+                                onMouseDown={(event) => handleFormulaCellMouseDown(event, monthCell, monthValue, monthCellEditing)}
+                                onMouseEnter={(event) => handleFormulaCellMouseEnter(event, monthCell, monthValue, monthCellEditing)}
+                                onClick={(event) => {
+                                  if (event.shiftKey && !monthCellEditing) selectFormulaRange(monthCell, monthValue);
                                 }}
                                 onDoubleClick={(event) => {
                                   startInlineFormulaEdit(monthCell, monthValue);
@@ -3293,7 +3380,15 @@ export default function App() {
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => selectFormulaCell({ ...monthCell, editable: false }, monthValue)}
+                                onMouseDown={(event) => handleFormulaCellMouseDown(event, { ...monthCell, editable: false }, monthValue, false)}
+                                onMouseEnter={(event) => handleFormulaCellMouseEnter(event, { ...monthCell, editable: false }, monthValue, false)}
+                                onClick={(event) => {
+                                  if (event.shiftKey) {
+                                    selectFormulaRange({ ...monthCell, editable: false }, monthValue);
+                                  } else {
+                                    selectFormulaCell({ ...monthCell, editable: false }, monthValue);
+                                  }
+                                }}
                                 title={formatPtoFormulaNumber(monthValue)}
                                 style={ptoReadonlyTotalStyle}
                               >
@@ -3304,6 +3399,7 @@ export default function App() {
                           {group.expanded && group.days.map((day) => {
                             const dayValue = row.dailyPlans[day];
                             const dayCellActive = formulaCellActive(row.id, "day", day);
+                            const dayCellSelected = formulaCellSelected(row.id, "day", day);
                             const dayCellEditing = formulaCellEditing(row.id, "day", day);
                             const dayLabel = `${day.slice(8, 10)}.${day.slice(5, 7)}`;
                             const dayCell = {
@@ -3314,18 +3410,20 @@ export default function App() {
                             };
 
                             return (
-                              <PtoPlanTd key={day} active={dayCellActive} editing={dayCellEditing} align="center">
+                              <PtoPlanTd key={day} active={dayCellActive} selected={dayCellSelected} editing={dayCellEditing} align="center">
                                 <input
                                   readOnly={!dayCellEditing}
                                   data-pto-cell-key={formulaCellDomKey(dayCell)}
                                   type="text"
                                   inputMode="decimal"
                                   value={dayCellEditing ? ptoFormulaDraft : formatPtoCellNumber(dayValue)}
-                                  onFocus={() => selectFormulaCell(dayCell, dayValue)}
-                                  onClick={() => {
-                                    if (!dayCellEditing) {
-                                      selectFormulaCell(dayCell, dayValue);
-                                    }
+                                  onFocus={() => {
+                                    if (!ptoSelectionDraggingRef.current) selectFormulaCell(dayCell, dayValue);
+                                  }}
+                                  onMouseDown={(event) => handleFormulaCellMouseDown(event, dayCell, dayValue, dayCellEditing)}
+                                  onMouseEnter={(event) => handleFormulaCellMouseEnter(event, dayCell, dayValue, dayCellEditing)}
+                                  onClick={(event) => {
+                                    if (event.shiftKey && !dayCellEditing) selectFormulaRange(dayCell, dayValue);
                                   }}
                                   onDoubleClick={(event) => {
                                     startInlineFormulaEdit(dayCell, dayValue);
@@ -4950,13 +5048,14 @@ function PtoPlanTh({ children, colSpan = 1, rowSpan = 1, align = "left" }: { chi
   return <th colSpan={colSpan} rowSpan={rowSpan} style={{ ...ptoPlanThStyle, textAlign: align }}>{children}</th>;
 }
 
-function PtoPlanTd({ children, colSpan = 1, active = false, editing = false, align }: { children: React.ReactNode; colSpan?: number; active?: boolean; editing?: boolean; align?: React.CSSProperties["textAlign"] }) {
+function PtoPlanTd({ children, colSpan = 1, active = false, selected = false, editing = false, align }: { children: React.ReactNode; colSpan?: number; active?: boolean; selected?: boolean; editing?: boolean; align?: React.CSSProperties["textAlign"] }) {
   return (
     <td
       colSpan={colSpan}
       style={{
         ...ptoPlanTdStyle,
         ...(align ? { textAlign: align } : null),
+        ...(selected ? ptoSelectedFormulaCellStyle : null),
         ...(editing ? ptoEditingFormulaCellStyle : null),
         ...(active ? ptoActiveFormulaCellStyle : null),
       }}
@@ -5347,6 +5446,10 @@ const ptoActiveFormulaCellStyle: React.CSSProperties = {
   outline: "2px solid #2563eb",
   outlineOffset: "-2px",
   zIndex: 2,
+};
+
+const ptoSelectedFormulaCellStyle: React.CSSProperties = {
+  background: "#f0f7ff",
 };
 
 const ptoEditingFormulaCellStyle: React.CSSProperties = {
