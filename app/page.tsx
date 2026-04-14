@@ -2817,7 +2817,9 @@ export default function App() {
     const formulaCellKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${cell.rowId}:${cell.kind}:${cell.month ?? cell.day ?? ""}`;
     const formulaCellDomKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${ptoTab}:${ptoPlanYear}:${formulaCellKey(cell)}`;
     const formulaSelectionKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => formulaCellDomKey(cell);
-    const selectedFormulaCellKeys = new Set(ptoSelectedCellKeys);
+    const formulaSelectionScope = `${ptoTab}:${ptoPlanYear}:`;
+    const selectedFormulaCellKeys = new Set(ptoSelectedCellKeys.filter((key) => key.startsWith(formulaSelectionScope)));
+    const arrowKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
     const getFormulaCellValue = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
       const row = rows.find((item) => item.id === cell.rowId);
       if (!row) return undefined;
@@ -2963,6 +2965,44 @@ export default function App() {
       return false;
     };
 
+    const selectedFormulaCells = () => formulaCellRows
+      .flatMap((row) => row.cells)
+      .filter((formulaCell) => selectedFormulaCellKeys.has(formulaSelectionKey(formulaCell)));
+
+    const clearSelectedFormulaCells = (fallbackCell: Omit<PtoFormulaCell, "table" | "year">) => {
+      const cellsToClear = selectedFormulaCells();
+      const targetCells = cellsToClear.length ? cellsToClear : [fallbackCell];
+      let committed = false;
+
+      targetCells.forEach((targetCell) => {
+        committed = commitFormulaCellValue({ ...targetCell, table: ptoTab, year: ptoPlanYear }, "") || committed;
+      });
+
+      if (!committed) return false;
+
+      const nextActiveCell = activeFormulaCell && targetCells.some((targetCell) => formulaCellKey(targetCell) === formulaCellKey(activeFormulaCell))
+        ? activeFormulaCell
+        : { ...targetCells[0], table: ptoTab, year: ptoPlanYear };
+
+      setPtoFormulaCell(nextActiveCell);
+      setPtoFormulaDraft("");
+      setPtoInlineEditCell(null);
+      setPtoInlineEditInitialDraft("");
+      setPtoSelectionAnchorCell(nextActiveCell);
+      setPtoSelectedCellKeys(targetCells.map((targetCell) => formulaSelectionKey(targetCell)));
+      return true;
+    };
+
+    const collapseFormulaSelection = (fallbackCell: Omit<PtoFormulaCell, "table" | "year">) => {
+      const nextActiveCell = activeFormulaCell ?? { ...fallbackCell, table: ptoTab, year: ptoPlanYear };
+
+      setPtoFormulaCell(nextActiveCell);
+      setPtoInlineEditCell(null);
+      setPtoInlineEditInitialDraft("");
+      setPtoSelectionAnchorCell(nextActiveCell);
+      setPtoSelectedCellKeys([formulaSelectionKey(nextActiveCell)]);
+    };
+
     const commitInlineFormulaEdit = () => {
       if (!activeInlineEditCell) return;
       const committed = commitFormulaCellValue(activeInlineEditCell, ptoFormulaDraft);
@@ -3021,13 +3061,32 @@ export default function App() {
 
     const handleFormulaCellKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
       if (isEditing) {
+        if (arrowKeys.includes(event.key)) {
+          event.preventDefault();
+          if (!activeInlineEditCell) return;
+
+          const committed = commitFormulaCellValue(activeInlineEditCell, ptoFormulaDraft);
+          if (!committed) return;
+
+          setPtoInlineEditCell(null);
+          setPtoInlineEditInitialDraft("");
+          moveFormulaSelection(event.key);
+          return;
+        }
+
         handleInlineFormulaKeyDown(event);
         return;
       }
 
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+      if (arrowKeys.includes(event.key)) {
         event.preventDefault();
         moveFormulaSelection(event.key);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        collapseFormulaSelection(cell);
         return;
       }
 
@@ -3041,14 +3100,7 @@ export default function App() {
 
       if (event.key === "Backspace" || event.key === "Delete") {
         event.preventDefault();
-        const activeCell = { ...cell, table: ptoTab, year: ptoPlanYear };
-        const committed = commitFormulaCellValue(activeCell, "");
-        if (committed) {
-          setPtoFormulaCell(activeCell);
-          setPtoFormulaDraft("");
-          setPtoInlineEditCell(null);
-          setPtoInlineEditInitialDraft("");
-        }
+        clearSelectedFormulaCells(cell);
         return;
       }
 
