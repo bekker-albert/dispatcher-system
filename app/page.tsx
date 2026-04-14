@@ -2,7 +2,7 @@
 
 import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabaseConfigured } from "@/lib/supabase/client";
 import { loadPtoStateFromSupabase, savePtoStateToSupabase } from "@/lib/supabase/pto";
 
@@ -1610,6 +1610,10 @@ export default function App() {
   const [hoveredPtoAddRowId, setHoveredPtoAddRowId] = useState<string | null>(null);
   const [ptoPendingFieldFocus, setPtoPendingFieldFocus] = useState<{ rowId: string; field: string } | null>(null);
   const ptoSelectionDraggingRef = useRef(false);
+  const ptoDatabaseLoadedRef = useRef(false);
+  const ptoDatabaseSavingRef = useRef(false);
+  const ptoDatabaseSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ptoDatabaseSaveSnapshotRef = useRef("");
   const [topTabs, setTopTabs] = useState<TopTabDefinition[]>(defaultTopTabs);
   const [subTabs, setSubTabs] = useState<Record<EditableSubtabGroup, SubTabConfig[]>>(defaultSubTabs);
   const [reportArea, setReportArea] = useState("Все участки");
@@ -1650,6 +1654,12 @@ export default function App() {
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
   const [search, setSearch] = useState("");
+  const ptoDatabaseSnapshot = useMemo(() => JSON.stringify({
+    manualYears: ptoManualYears,
+    planRows: ptoPlanRows,
+    operRows: ptoOperRows,
+    surveyRows: ptoSurveyRows,
+  }), [ptoManualYears, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -1805,14 +1815,28 @@ export default function App() {
         if (cancelled) return;
 
         if (!databaseState) {
-          setPtoDatabaseMessage("База подключена. Данных ПТО пока нет — нажми «Сохранить в базу».");
+          ptoDatabaseLoadedRef.current = true;
+          ptoDatabaseSaveSnapshotRef.current = "";
+          setPtoDatabaseMessage("База подключена. Данных ПТО пока нет — внеси изменение, оно сохранится автоматически.");
           return;
         }
 
-        setPtoManualYears(normalizeStoredPtoYears(databaseState.manualYears));
-        setPtoPlanRows(databaseState.planRows.map((row) => normalizePtoPlanRow(row)));
-        setPtoOperRows(databaseState.operRows.map((row) => normalizePtoPlanRow(row)));
-        setPtoSurveyRows(databaseState.surveyRows.map((row) => normalizePtoPlanRow(row)));
+        const nextManualYears = normalizeStoredPtoYears(databaseState.manualYears);
+        const nextPlanRows = databaseState.planRows.map((row) => normalizePtoPlanRow(row));
+        const nextOperRows = databaseState.operRows.map((row) => normalizePtoPlanRow(row));
+        const nextSurveyRows = databaseState.surveyRows.map((row) => normalizePtoPlanRow(row));
+
+        ptoDatabaseLoadedRef.current = true;
+        ptoDatabaseSaveSnapshotRef.current = JSON.stringify({
+          manualYears: nextManualYears,
+          planRows: nextPlanRows,
+          operRows: nextOperRows,
+          surveyRows: nextSurveyRows,
+        });
+        setPtoManualYears(nextManualYears);
+        setPtoPlanRows(nextPlanRows);
+        setPtoOperRows(nextOperRows);
+        setPtoSurveyRows(nextSurveyRows);
         setPtoDatabaseMessage("ПТО загружено из Supabase.");
       } catch (error) {
         if (!cancelled) setPtoDatabaseMessage(`Supabase пока не готов: ${errorToMessage(error)}`);
@@ -1871,6 +1895,66 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.ptoOperRows, JSON.stringify(ptoOperRows));
   }, [adminDataLoaded, ptoOperRows]);
 
+  const savePtoDatabaseChanges = useCallback(async (mode: "auto" | "manual" = "manual") => {
+    if (!supabaseConfigured) {
+      setPtoDatabaseMessage("База Supabase не настроена.");
+      return;
+    }
+
+    if (ptoDatabaseSavingRef.current) {
+      if (mode === "auto" && !ptoDatabaseSaveTimerRef.current) {
+        ptoDatabaseSaveTimerRef.current = setTimeout(() => {
+          ptoDatabaseSaveTimerRef.current = null;
+          void savePtoDatabaseChanges("auto");
+        }, 1200);
+      }
+      return;
+    }
+
+    ptoDatabaseSavingRef.current = true;
+    setPtoDatabaseSaving(true);
+    setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в Supabase..." : "Сохраняю ПТО в Supabase...");
+
+    try {
+      await savePtoStateToSupabase({
+        manualYears: ptoManualYears,
+        planRows: ptoPlanRows,
+        operRows: ptoOperRows,
+        surveyRows: ptoSurveyRows,
+      });
+      ptoDatabaseSaveSnapshotRef.current = ptoDatabaseSnapshot;
+      setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в Supabase." : "ПТО сохранено в Supabase.");
+    } catch (error) {
+      setPtoDatabaseMessage(`Не удалось сохранить в Supabase: ${errorToMessage(error)}`);
+    } finally {
+      ptoDatabaseSavingRef.current = false;
+      setPtoDatabaseSaving(false);
+    }
+  }, [ptoDatabaseSnapshot, ptoManualYears, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
+
+  useEffect(() => {
+    if (!adminDataLoaded || !supabaseConfigured || !ptoDatabaseLoadedRef.current) return;
+    if (ptoDatabaseSnapshot === ptoDatabaseSaveSnapshotRef.current) return;
+
+    setPtoDatabaseMessage("Есть изменения. Автосохранение через пару секунд...");
+
+    if (ptoDatabaseSaveTimerRef.current) {
+      clearTimeout(ptoDatabaseSaveTimerRef.current);
+    }
+
+    ptoDatabaseSaveTimerRef.current = setTimeout(() => {
+      ptoDatabaseSaveTimerRef.current = null;
+      void savePtoDatabaseChanges("auto");
+    }, 1600);
+
+    return () => {
+      if (ptoDatabaseSaveTimerRef.current) {
+        clearTimeout(ptoDatabaseSaveTimerRef.current);
+        ptoDatabaseSaveTimerRef.current = null;
+      }
+    };
+  }, [adminDataLoaded, ptoDatabaseSnapshot, savePtoDatabaseChanges]);
+
   useEffect(() => {
     if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.orgMembers, JSON.stringify(orgMembers));
@@ -1914,30 +1998,6 @@ export default function App() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [ptoPendingFieldFocus, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
-
-  async function savePtoDatabaseChanges() {
-    if (!supabaseConfigured) {
-      setPtoDatabaseMessage("База Supabase не настроена.");
-      return;
-    }
-
-    setPtoDatabaseSaving(true);
-    setPtoDatabaseMessage("Сохраняю ПТО в Supabase...");
-
-    try {
-      await savePtoStateToSupabase({
-        manualYears: ptoManualYears,
-        planRows: ptoPlanRows,
-        operRows: ptoOperRows,
-        surveyRows: ptoSurveyRows,
-      });
-      setPtoDatabaseMessage("ПТО сохранено в Supabase.");
-    } catch (error) {
-      setPtoDatabaseMessage(`Не удалось сохранить в Supabase: ${errorToMessage(error)}`);
-    } finally {
-      setPtoDatabaseSaving(false);
-    }
-  }
 
   function saveAdminChanges() {
     window.localStorage.setItem(adminStorageKeys.reports, JSON.stringify(reportRows));
@@ -2056,6 +2116,7 @@ export default function App() {
   const activeFuelSubtab = subTabs.fuel.find((tab) => tab.value === fuelTab);
   const activePtoSubtab = subTabs.pto.find((tab) => tab.value === ptoTab);
   const activeTbSubtab = subTabs.tb.find((tab) => tab.value === tbTab);
+  const isPtoDateTab = ["plan", "oper", "survey"].includes(ptoTab);
 
   function updateReportForm(field: keyof ReportRow, value: string) {
     const textFields: Array<keyof ReportRow> = ["area", "name", "unit", "dayReason", "yearReason"];
@@ -3153,7 +3214,7 @@ export default function App() {
     };
 
     return (
-      <div style={{ display: "grid", gap: 12 }}>
+      <div style={ptoDateTableLayoutStyle}>
         <div style={ptoToolbarStyle}>
           <div style={ptoToolbarBlockStyle}>
             <span style={fieldLabelStyle}>Участки</span>
@@ -3956,18 +4017,18 @@ export default function App() {
         )}
 
         {topTab === "pto" && (
-          <>
+          <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
             <SubTabs>
               {subTabs.pto.filter((tab) => tab.visible).map((tab) => (
                 <TopButton key={tab.id} active={ptoTab === tab.value} onClick={() => setPtoTab(tab.value)} label={compactSubTabLabel("pto", tab)} />
               ))}
             </SubTabs>
 
-            <SectionCard title={["plan", "oper", "survey"].includes(ptoTab) ? "" : `ПТО: ${activePtoSubtab?.label ?? ptoTab}`}>
-              {["plan", "oper", "survey"].includes(ptoTab) && (
+            <SectionCard title={isPtoDateTab ? "" : `ПТО: ${activePtoSubtab?.label ?? ptoTab}`} fill={isPtoDateTab}>
+              {isPtoDateTab && (
                 <div style={ptoDatabaseBarStyle}>
                   <span>{ptoDatabaseMessage}</span>
-                  <TopButton active={!ptoDatabaseSaving} onClick={() => void savePtoDatabaseChanges()} label={ptoDatabaseSaving ? "Сохраняю..." : "Сохранить в базу"} />
+                  {ptoDatabaseSaving ? <span style={ptoDatabaseSavingBadgeStyle}>Автосохранение...</span> : null}
                 </div>
               )}
               {ptoTab.startsWith("custom:") && <div style={blockStyle}>{activePtoSubtab?.content || "В этой подвкладке пока нет информации."}</div>}
@@ -3976,37 +4037,43 @@ export default function App() {
               {ptoTab === "cycle" && <div style={blockStyle}>{activePtoSubtab?.content || "Цикл погрузки: подъезд, погрузка, выезд, разгрузка, обратный путь."}</div>}
               {ptoTab === "buckets" && <div style={blockStyle}>{activePtoSubtab?.content || "Объемы ковшей по моделям экскаваторов."}</div>}
               {ptoTab === "plan" && (
-                <div style={{ display: "grid", gap: 12 }}>
+                <div style={ptoDatePanelStyle}>
                   {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
-                  {renderPtoDateTable(
-                    ptoPlanRows,
-                    setPtoPlanRows,
-                    { showLocation: false, editableMonthTotal: true },
-                  )}
+                  <div style={ptoDateTableFrameStyle}>
+                    {renderPtoDateTable(
+                      ptoPlanRows,
+                      setPtoPlanRows,
+                      { showLocation: false, editableMonthTotal: true },
+                    )}
+                  </div>
                 </div>
               )}
               {ptoTab === "oper" && (
-                <div style={{ display: "grid", gap: 12 }}>
+                <div style={ptoDatePanelStyle}>
                   {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
-                  {renderPtoDateTable(
-                    ptoOperRows,
-                    setPtoOperRows,
-                    { showLocation: false, editableMonthTotal: true },
-                  )}
+                  <div style={ptoDateTableFrameStyle}>
+                    {renderPtoDateTable(
+                      ptoOperRows,
+                      setPtoOperRows,
+                      { showLocation: false, editableMonthTotal: true },
+                    )}
+                  </div>
                 </div>
               )}
               {ptoTab === "survey" && (
-                <div style={{ display: "grid", gap: 12 }}>
+                <div style={ptoDatePanelStyle}>
                   {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
-                  {renderPtoDateTable(
-                    ptoSurveyRows,
-                    setPtoSurveyRows,
-                    { showLocation: false, editableMonthTotal: true },
-                  )}
+                  <div style={ptoDateTableFrameStyle}>
+                    {renderPtoDateTable(
+                      ptoSurveyRows,
+                      setPtoSurveyRows,
+                      { showLocation: false, editableMonthTotal: true },
+                    )}
+                  </div>
                 </div>
               )}
             </SectionCard>
-          </>
+          </div>
         )}
 
         {topTab === "tb" && (
@@ -5078,9 +5145,9 @@ function IconButton({ label, onClick, children, disabled = false }: { label: str
   );
 }
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionCard({ title, children, fill = false }: { title: string; children: React.ReactNode; fill?: boolean }) {
   return (
-    <div style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
+    <div style={{ ...sectionCardStyle, ...(fill ? sectionCardFillStyle : null) }}>
       {title ? <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>{title}</div> : null}
       {children}
     </div>
@@ -5237,6 +5304,23 @@ const blockStyle: React.CSSProperties = {
   background: "#f8fafc",
 };
 
+const sectionCardStyle: React.CSSProperties = {
+  background: "#ffffff",
+  borderRadius: 18,
+  padding: 20,
+  boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
+  marginBottom: 20,
+};
+
+const sectionCardFillStyle: React.CSSProperties = {
+  minHeight: 0,
+  height: "100%",
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+  marginBottom: 0,
+};
+
 const reportTableStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 2300,
@@ -5371,14 +5455,43 @@ const ptoPlanTdStyle: React.CSSProperties = {
   background: "inherit",
 };
 
+const ptoWorkspaceStyle: React.CSSProperties = {
+  height: "calc(100dvh - 210px)",
+  minHeight: 320,
+  display: "grid",
+  gridTemplateRows: "auto minmax(0, 1fr)",
+};
+
+const ptoDatePanelStyle: React.CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+};
+
+const ptoDateTableFrameStyle: React.CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  height: "100%",
+};
+
+const ptoDateTableLayoutStyle: React.CSSProperties = {
+  height: "100%",
+  minHeight: 0,
+  display: "grid",
+  gridTemplateRows: "auto auto minmax(0, 1fr)",
+  gap: 10,
+};
+
 const ptoDateTableScrollStyle: React.CSSProperties = {
   overflow: "auto",
   border: "1px solid #e2e8f0",
   borderRadius: 8,
   paddingLeft: 24,
   background: "#ffffff",
-  height: "calc(100vh - 330px)",
-  minHeight: 460,
+  height: "100%",
+  minHeight: 0,
 };
 
 const ptoToolbarStyle: React.CSSProperties = {
@@ -5451,6 +5564,16 @@ const ptoDatabaseBarStyle: React.CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   fontSize: 13,
+};
+
+const ptoDatabaseSavingBadgeStyle: React.CSSProperties = {
+  border: "1px solid #bfdbfe",
+  borderRadius: 8,
+  background: "#ffffff",
+  color: "#1d4ed8",
+  padding: "5px 8px",
+  fontWeight: 800,
+  whiteSpace: "nowrap",
 };
 
 const ptoAreaCellStyle: React.CSSProperties = {
