@@ -6375,7 +6375,7 @@ const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
 
 const headerSubtabsStyle: React.CSSProperties = {
   position: "absolute",
-  top: "calc(100% + 16px)",
+  top: "calc(100% + 14px)",
   left: "50%",
   transform: "translateX(-50%)",
   display: "flex",
@@ -6385,19 +6385,19 @@ const headerSubtabsStyle: React.CSSProperties = {
   justifyContent: "center",
   width: "max-content",
   maxWidth: "min(720px, calc(100vw - 120px))",
-  borderTop: "2px dashed #2563eb",
-  paddingTop: 7,
+  borderTop: "1px solid #cbd5e1",
+  paddingTop: 6,
   zIndex: 10,
 };
 
 const headerSubtabButtonStyle: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
-  border: "none",
+  border: "1px solid transparent",
   background: "transparent",
   color: "#64748b",
-  borderRadius: 0,
-  padding: "2px 7px 3px",
+  borderRadius: 8,
+  padding: "3px 8px",
   fontFamily: "inherit",
   fontSize: 12,
   fontWeight: 800,
@@ -6409,6 +6409,8 @@ const headerSubtabButtonStyle: React.CSSProperties = {
 };
 
 const headerSubtabButtonActiveStyle: React.CSSProperties = {
+  background: "#eff6ff",
+  borderColor: "#bfdbfe",
   color: "#1d4ed8",
 };
 
