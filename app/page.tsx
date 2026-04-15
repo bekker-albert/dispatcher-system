@@ -4073,7 +4073,8 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
       <div style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
         <div style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
-          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ width: 130, flex: "0 0 130px" }}>
               <Image src="/mining-logo.png" alt="Логотип" width={112} height={72} style={logoImageStyle} priority />
             </div>
@@ -4090,6 +4091,23 @@ export default function App() {
                 <input type="date" value={reportDate} min={reportMonthStart} max={reportMonthEnd} onChange={(e) => selectReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
               </Field>
             </div>
+            </div>
+
+            {topTab === "pto" ? (
+              <div style={headerSubtabsStyle}>
+                <div style={headerSubtabsLabelStyle}>ПТО</div>
+                <div style={headerSubtabsButtonsStyle}>
+                  {subTabs.pto.filter((tab) => tab.visible).map((tab) => (
+                    <HeaderSubButton
+                      key={tab.id}
+                      active={ptoTab === tab.value}
+                      onClick={() => selectPtoTab(tab.value)}
+                      label={compactSubTabLabel("pto", tab)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -4364,12 +4382,6 @@ export default function App() {
 
         {topTab === "pto" && (
           <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
-            <SubTabs>
-              {subTabs.pto.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={ptoTab === tab.value} onClick={() => selectPtoTab(tab.value)} label={compactSubTabLabel("pto", tab)} />
-              ))}
-            </SubTabs>
-
             <SectionCard title={isPtoDateTab ? "" : `ПТО: ${activePtoSubtab?.label ?? ptoTab}`} fill={isPtoDateTab}>
               {isPtoDateTab && (
                 <div style={ptoDatabaseBarStyle}>
@@ -5483,6 +5495,21 @@ function TopButton({ active, onClick, label }: { active: boolean; onClick: () =>
   );
 }
 
+function HeaderSubButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...headerSubtabButtonStyle,
+        ...(active ? headerSubtabButtonActiveStyle : null),
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function IconButton({ label, onClick, children, disabled = false }: { label: string; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
   return (
     <button aria-label={label} disabled={disabled} title={label} onClick={onClick} style={disabled ? { ...iconButtonStyle, cursor: "not-allowed", opacity: 0.45 } : iconButtonStyle} type="button">
@@ -5884,10 +5911,10 @@ const ptoPlanTdStyle: React.CSSProperties = {
 };
 
 const ptoWorkspaceStyle: React.CSSProperties = {
-  height: "calc(100dvh - 210px)",
+  height: "calc(100dvh - 252px)",
   minHeight: 320,
   display: "grid",
-  gridTemplateRows: "auto minmax(0, 1fr)",
+  gridTemplateRows: "minmax(0, 1fr)",
 };
 
 const ptoDatePanelStyle: React.CSSProperties = {
@@ -6297,6 +6324,52 @@ const displayNamePreviewStyle: React.CSSProperties = {
   fontWeight: 700,
   lineHeight: 1.4,
   overflowWrap: "anywhere",
+};
+
+const headerSubtabsStyle: React.CSSProperties = {
+  borderTop: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  borderRadius: 8,
+  padding: "9px 10px",
+  display: "grid",
+  gridTemplateColumns: "92px minmax(0, 1fr)",
+  gap: 10,
+  alignItems: "center",
+};
+
+const headerSubtabsLabelStyle: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: 0,
+  textTransform: "uppercase",
+};
+
+const headerSubtabsButtonsStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 6,
+  alignItems: "center",
+};
+
+const headerSubtabButtonStyle: React.CSSProperties = {
+  border: "1px solid #cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
+  borderRadius: 8,
+  padding: "6px 9px",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  cursor: "pointer",
+};
+
+const headerSubtabButtonActiveStyle: React.CSSProperties = {
+  borderColor: "#2563eb",
+  background: "#dbeafe",
+  color: "#1e3a8a",
+  boxShadow: "inset 0 -2px 0 #2563eb",
 };
 
 const logoImageStyle: React.CSSProperties = {
