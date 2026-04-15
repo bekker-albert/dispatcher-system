@@ -3643,7 +3643,9 @@ export default function App() {
                     {renderPtoMonthHeader(group.month, group.label, group.expanded)}
                   </PtoPlanTh>
                 ))}
-                <PtoPlanTh rowSpan={2} columnKey="actions" width={columnWidthByKey.get("actions")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("actions", "Действия")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} columnKey="actions" width={columnWidthByKey.get("actions")} onResizeStart={startPtoColumnResize}>
+                  <span aria-hidden />
+                </PtoPlanTh>
               </tr>
               <tr>
                 {ptoMonthGroups.map((group) => (
@@ -4089,6 +4091,7 @@ export default function App() {
 
               {topTab === "pto" ? (
                 <div style={headerSubtabsStyle}>
+                  <span style={headerSubtabsRoadStyle} aria-hidden />
                   {subTabs.pto.filter((tab) => tab.visible).map((tab) => (
                     <HeaderSubButton
                       key={tab.id}
@@ -6358,13 +6361,24 @@ const headerSubtabsStyle: React.CSSProperties = {
   paddingLeft: 6,
 };
 
+const headerSubtabsRoadStyle: React.CSSProperties = {
+  width: 36,
+  height: 14,
+  borderLeft: "2px dashed #94a3b8",
+  borderTop: "2px dashed #94a3b8",
+  borderTopLeftRadius: 7,
+  marginLeft: 10,
+  marginRight: 2,
+  alignSelf: "flex-start",
+};
+
 const headerSubtabButtonStyle: React.CSSProperties = {
   border: "none",
-  borderBottom: "2px solid transparent",
+  borderTop: "2px solid transparent",
   background: "transparent",
   color: "#64748b",
   borderRadius: 0,
-  padding: "3px 7px 4px",
+  padding: "4px 7px 3px",
   fontFamily: "inherit",
   fontSize: 12,
   fontWeight: 800,
@@ -6373,7 +6387,7 @@ const headerSubtabButtonStyle: React.CSSProperties = {
 };
 
 const headerSubtabButtonActiveStyle: React.CSSProperties = {
-  borderBottomColor: "#2563eb",
+  borderTopColor: "#2563eb",
   color: "#1d4ed8",
 };
 
