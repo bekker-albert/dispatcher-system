@@ -4079,7 +4079,7 @@ export default function App() {
             <div style={{ width: 130, flex: "0 0 130px" }}>
               <Image src="/mining-logo.png" alt="Логотип" width={112} height={72} style={logoImageStyle} priority />
             </div>
-            <div style={headerNavStackStyle}>
+            <div style={{ ...headerNavStackStyle, ...(topTab === "pto" ? headerNavStackPtoStyle : null) }}>
               <div style={headerMainTabsStyle}>
                 {topTabs.filter((tab) => tab.visible).map((tab) => (
                   tab.id === "pto" && topTab === "pto" ? (
@@ -5502,6 +5502,7 @@ function HeaderSubButton({ active, onClick, label }: { active: boolean; onClick:
   return (
     <button
       type="button"
+      onMouseDown={(event) => event.preventDefault()}
       onClick={(event) => {
         onClick();
         event.currentTarget.blur();
@@ -6352,41 +6353,57 @@ const headerNavStackStyle: React.CSSProperties = {
   minWidth: 280,
 };
 
+const headerNavStackPtoStyle: React.CSSProperties = {
+  paddingBottom: 48,
+};
+
 const headerMainTabsStyle: React.CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
   gap: 6,
-  alignItems: "flex-start",
+  alignItems: "center",
 };
 
 const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
-  display: "grid",
-  justifyItems: "center",
-  alignItems: "start",
-  gap: 2,
+  position: "relative",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flex: "0 0 auto",
 };
 
 const headerSubtabsStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "calc(100% + 26px)",
+  left: "50%",
+  transform: "translateX(-50%)",
   display: "flex",
   flexWrap: "wrap",
   gap: 4,
   alignItems: "center",
   justifyContent: "center",
-  marginTop: 1,
+  width: "max-content",
+  maxWidth: "min(720px, calc(100vw - 120px))",
+  zIndex: 10,
 };
 
 const headerSubtabsRoadStyle: React.CSSProperties = {
-  width: 72,
-  height: 16,
+  position: "absolute",
+  top: "calc(100% + 5px)",
+  left: "50%",
+  width: 54,
+  height: 18,
   borderLeft: "2px dashed #2563eb",
   borderBottom: "2px dashed #2563eb",
   borderBottomLeftRadius: 8,
-  justifySelf: "center",
   opacity: 0.72,
-  transform: "translateX(35px)",
+  transform: "translateX(-1px)",
+  pointerEvents: "none",
 };
 
 const headerSubtabButtonStyle: React.CSSProperties = {
+  appearance: "none",
+  WebkitAppearance: "none",
   border: "none",
   borderTop: "2px solid transparent",
   background: "transparent",
@@ -6400,6 +6417,7 @@ const headerSubtabButtonStyle: React.CSSProperties = {
   cursor: "pointer",
   outline: "none",
   boxShadow: "none",
+  userSelect: "none",
 };
 
 const headerSubtabButtonActiveStyle: React.CSSProperties = {
