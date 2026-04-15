@@ -4073,30 +4073,22 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
       <div style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
         <div style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
-          <div style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ width: 130, flex: "0 0 130px" }}>
               <Image src="/mining-logo.png" alt="Логотип" width={112} height={72} style={logoImageStyle} priority />
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: "1 1 720px" }}>
-              {topTabs.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-              ))}
-              {customTabs.filter((tab) => tab.visible !== false).map((tab) => (
-                <TopButton key={tab.id} active={topTab === customTabKey(tab.id)} onClick={() => selectTopTab(customTabKey(tab.id))} label={tab.title} />
-              ))}
-            </div>
-            <div style={workDateStyle}>
-              <Field label="Рабочая дата">
-                <input type="date" value={reportDate} min={reportMonthStart} max={reportMonthEnd} onChange={(e) => selectReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
-              </Field>
-            </div>
-            </div>
+            <div style={headerNavStackStyle}>
+              <div style={headerMainTabsStyle}>
+                {topTabs.filter((tab) => tab.visible).map((tab) => (
+                  <TopButton key={tab.id} active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                ))}
+                {customTabs.filter((tab) => tab.visible !== false).map((tab) => (
+                  <TopButton key={tab.id} active={topTab === customTabKey(tab.id)} onClick={() => selectTopTab(customTabKey(tab.id))} label={tab.title} />
+                ))}
+              </div>
 
-            {topTab === "pto" ? (
-              <div style={headerSubtabsStyle}>
-                <div style={headerSubtabsLabelStyle}>ПТО</div>
-                <div style={headerSubtabsButtonsStyle}>
+              {topTab === "pto" ? (
+                <div style={headerSubtabsStyle}>
                   {subTabs.pto.filter((tab) => tab.visible).map((tab) => (
                     <HeaderSubButton
                       key={tab.id}
@@ -4106,8 +4098,13 @@ export default function App() {
                     />
                   ))}
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
+            <div style={workDateStyle}>
+              <Field label="Рабочая дата">
+                <input type="date" value={reportDate} min={reportMonthStart} max={reportMonthEnd} onChange={(e) => selectReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
+              </Field>
+            </div>
           </div>
         </div>
 
@@ -5925,7 +5922,7 @@ const ptoPlanTdStyle: React.CSSProperties = {
 };
 
 const ptoWorkspaceStyle: React.CSSProperties = {
-  height: "calc(100dvh - 252px)",
+  height: "calc(100dvh - 232px)",
   minHeight: 320,
   display: "grid",
   gridTemplateRows: "minmax(0, 1fr)",
@@ -6340,38 +6337,35 @@ const displayNamePreviewStyle: React.CSSProperties = {
   overflowWrap: "anywhere",
 };
 
-const headerSubtabsStyle: React.CSSProperties = {
-  borderTop: "1px solid #e2e8f0",
-  background: "#f8fafc",
-  borderRadius: 8,
-  padding: "9px 10px",
+const headerNavStackStyle: React.CSSProperties = {
+  flex: "1 1 720px",
   display: "grid",
-  gridTemplateColumns: "92px minmax(0, 1fr)",
-  gap: 10,
-  alignItems: "center",
+  gap: 5,
+  minWidth: 280,
 };
 
-const headerSubtabsLabelStyle: React.CSSProperties = {
-  color: "#475569",
-  fontSize: 12,
-  fontWeight: 800,
-  letterSpacing: 0,
-  textTransform: "uppercase",
-};
-
-const headerSubtabsButtonsStyle: React.CSSProperties = {
+const headerMainTabsStyle: React.CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
   gap: 6,
   alignItems: "center",
 };
 
+const headerSubtabsStyle: React.CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 4,
+  alignItems: "center",
+  paddingLeft: 6,
+};
+
 const headerSubtabButtonStyle: React.CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
-  color: "#0f172a",
-  borderRadius: 8,
-  padding: "6px 9px",
+  border: "none",
+  borderBottom: "2px solid transparent",
+  background: "transparent",
+  color: "#64748b",
+  borderRadius: 0,
+  padding: "3px 7px 4px",
   fontFamily: "inherit",
   fontSize: 12,
   fontWeight: 800,
@@ -6380,10 +6374,8 @@ const headerSubtabButtonStyle: React.CSSProperties = {
 };
 
 const headerSubtabButtonActiveStyle: React.CSSProperties = {
-  borderColor: "#2563eb",
-  background: "#dbeafe",
-  color: "#1e3a8a",
-  boxShadow: "inset 0 -2px 0 #2563eb",
+  borderBottomColor: "#2563eb",
+  color: "#1d4ed8",
 };
 
 const logoImageStyle: React.CSSProperties = {
