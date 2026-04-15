@@ -559,7 +559,6 @@ const defaultReportForm: ReportRow = {
 const defaultReportDate = "2026-04-12";
 
 const defaultPtoPlanMonth = "2026-04";
-const ptoStatusOptions: PtoStatus[] = ["Новая", "В работе", "Завершена", "Запланировано"];
 const ptoUnitOptions = ["м2", "м3", "тн"] as const;
 
 function dateRange(start: string, end: string) {
@@ -3841,19 +3840,12 @@ export default function App() {
                       />
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
-                      <select
-                        value={rowStatus}
-                        onChange={(event) => {
-                          updatePtoDateRow(setRows, row.id, "status", event.target.value);
-                          requestPtoDatabaseSave();
-                        }}
+                      <span
                         title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
-                        style={{ ...ptoPlanInputStyle, ...ptoStatusSelectStyle, ...ptoStatusControlStyle(rowStatus), minWidth: 110 }}
+                        style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}
                       >
-                        {ptoStatusOptions.map((status) => (
-                          <option key={status}>{status}</option>
-                        ))}
-                      </select>
+                        {rowStatus}
+                      </span>
                     </PtoPlanTd>
                     <PtoPlanTd active={carryoverCellActive} selected={carryoverCellSelected} editing={carryoverCellEditing} align="center">
                       <input
@@ -6214,10 +6206,20 @@ const ptoCompactNumberInputStyle: React.CSSProperties = {
   textAlign: "center",
 };
 
-const ptoStatusSelectStyle: React.CSSProperties = {
+const ptoStatusBadgeStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  minHeight: 25,
+  boxSizing: "border-box",
+  border: "1px solid",
+  borderRadius: 4,
+  padding: "3px 6px",
   fontWeight: 800,
-  cursor: "default",
+  lineHeight: 1.15,
   textAlign: "center",
+  whiteSpace: "normal",
 };
 
 const ptoActiveFormulaCellStyle: React.CSSProperties = {
