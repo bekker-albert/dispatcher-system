@@ -22,6 +22,17 @@ export type SupabasePtoState = {
   planRows: SupabasePtoRow[];
   operRows: SupabasePtoRow[];
   surveyRows: SupabasePtoRow[];
+  uiState?: {
+    reportDate?: string;
+    topTab?: string;
+    ptoTab?: string;
+    ptoPlanYear?: string;
+    ptoAreaFilter?: string;
+    expandedPtoMonths?: Record<string, boolean>;
+    ptoColumnWidths?: Record<string, number>;
+    ptoRowHeights?: Record<string, number>;
+    ptoHeaderLabels?: Record<string, string>;
+  };
 };
 
 type PtoDateRowRecord = {
@@ -49,6 +60,7 @@ type PtoSettingRecord = {
 const ptoRowsTable = "pto_date_rows";
 const ptoSettingsTable = "pto_settings";
 const ptoManualYearsKey = "pto_manual_years";
+const ptoUiStateKey = "pto_ui_state";
 
 function requireSupabase() {
   if (!supabaseConfigured || !supabase) {
@@ -113,16 +125,18 @@ export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | nul
     client
       .from(ptoSettingsTable)
       .select("*")
-      .eq("key", ptoManualYearsKey)
-      .maybeSingle(),
+      .in("key", [ptoManualYearsKey, ptoUiStateKey]),
   ]);
 
   if (rowsError) throw rowsError;
   if (settingsError) throw settingsError;
   if (!rows?.length) return null;
 
-  const manualYears = Array.isArray((settings as PtoSettingRecord | null)?.value)
-    ? ((settings as PtoSettingRecord).value as unknown[]).filter((year): year is string => typeof year === "string")
+  const settingsByKey = new Map((settings as PtoSettingRecord[] | null ?? []).map((setting) => [setting.key, setting.value]));
+  const manualYearsValue = settingsByKey.get(ptoManualYearsKey);
+  const uiStateValue = settingsByKey.get(ptoUiStateKey);
+  const manualYears = Array.isArray(manualYearsValue)
+    ? manualYearsValue.filter((year): year is string => typeof year === "string")
     : [];
 
   return {
@@ -130,6 +144,7 @@ export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | nul
     planRows: rowsByTable(rows as PtoDateRowRecord[], "plan"),
     operRows: rowsByTable(rows as PtoDateRowRecord[], "oper"),
     surveyRows: rowsByTable(rows as PtoDateRowRecord[], "survey"),
+    uiState: typeof uiStateValue === "object" && uiStateValue !== null ? uiStateValue as SupabasePtoState["uiState"] : undefined,
   };
 }
 
@@ -149,13 +164,21 @@ export async function savePtoStateToSupabase(state: SupabasePtoState) {
     if (insertError) throw insertError;
   }
 
+  const updatedAt = new Date().toISOString();
   const { error: settingsError } = await client
     .from(ptoSettingsTable)
-    .upsert({
-      key: ptoManualYearsKey,
-      value: state.manualYears,
-      updated_at: new Date().toISOString(),
-    });
+    .upsert([
+      {
+        key: ptoManualYearsKey,
+        value: state.manualYears,
+        updated_at: updatedAt,
+      },
+      {
+        key: ptoUiStateKey,
+        value: state.uiState ?? {},
+        updated_at: updatedAt,
+      },
+    ]);
 
   if (settingsError) throw settingsError;
 }

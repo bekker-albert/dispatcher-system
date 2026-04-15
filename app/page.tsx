@@ -100,6 +100,15 @@ type PtoFormulaCell = {
   editable?: boolean;
 };
 
+type PtoResizeState =
+  | { type: "column"; key: string; startX: number; startWidth: number }
+  | { type: "row"; key: string; startY: number; startHeight: number };
+
+type PtoTableColumn = {
+  key: string;
+  width: number;
+};
+
 type CustomTab = {
   id: string;
   title: string;
@@ -889,9 +898,26 @@ const adminStorageKeys = {
   ptoPlanRows: "dispatcher:pto-plan-rows",
   ptoSurveyRows: "dispatcher:pto-survey-rows",
   ptoOperRows: "dispatcher:pto-oper-rows",
+  ptoColumnWidths: "dispatcher:pto-column-widths",
+  ptoRowHeights: "dispatcher:pto-row-heights",
+  ptoHeaderLabels: "dispatcher:pto-header-labels",
   orgMembers: "dispatcher:org-members",
   dependencyNodes: "dispatcher:dependency-nodes",
   dependencyLinks: "dispatcher:dependency-links",
+};
+
+const ptoColumnDefaults = {
+  area: 138,
+  location: 150,
+  structure: 250,
+  unit: 58,
+  coefficient: 72,
+  status: 118,
+  carryover: 92,
+  yearTotal: 92,
+  monthTotal: 76,
+  day: 54,
+  actions: 54,
 };
 
 const fuelGeneral: FuelRow[] = [
@@ -1446,6 +1472,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function normalizeNumberRecord(value: unknown, minValue: number, maxValue: number) {
+  if (!isRecord(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([key, item]) => [key, Number(item)] as const)
+      .filter(([key, item]) => key.trim() && Number.isFinite(item))
+      .map(([key, item]) => [key, Math.min(maxValue, Math.max(minValue, Math.round(item)))])
+  ) as Record<string, number>;
+}
+
+function normalizeStringRecord(value: unknown) {
+  if (!isRecord(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter((entry): entry is [string, string] => entry[0].trim() !== "" && typeof entry[1] === "string")
+      .map(([key, item]) => [key, item.trim()])
+      .filter(([, item]) => item !== ""),
+  ) as Record<string, string>;
+}
+
 function errorToMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -1610,9 +1658,10 @@ export default function App() {
   const [hoveredPtoAddRowId, setHoveredPtoAddRowId] = useState<string | null>(null);
   const [ptoPendingFieldFocus, setPtoPendingFieldFocus] = useState<{ rowId: string; field: string } | null>(null);
   const ptoSelectionDraggingRef = useRef(false);
+  const ptoResizeStateRef = useRef<PtoResizeState | null>(null);
   const ptoDatabaseLoadedRef = useRef(false);
   const ptoDatabaseSavingRef = useRef(false);
-  const ptoDatabaseSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ptoDatabaseSaveQueuedRef = useRef(false);
   const ptoDatabaseSaveSnapshotRef = useRef("");
   const [topTabs, setTopTabs] = useState<TopTabDefinition[]>(defaultTopTabs);
   const [subTabs, setSubTabs] = useState<Record<EditableSubtabGroup, SubTabConfig[]>>(defaultSubTabs);
@@ -1629,6 +1678,11 @@ export default function App() {
   const [ptoPlanRows, setPtoPlanRows] = useState<PtoPlanRow[]>(() => defaultPtoPlanRows.map(normalizePtoPlanRow));
   const [ptoSurveyRows, setPtoSurveyRows] = useState<PtoPlanRow[]>(() => defaultPtoSurveyRows.map(normalizePtoPlanRow));
   const [ptoOperRows, setPtoOperRows] = useState<PtoPlanRow[]>(() => defaultPtoOperRows.map(normalizePtoPlanRow));
+  const [ptoColumnWidths, setPtoColumnWidths] = useState<Record<string, number>>({});
+  const [ptoRowHeights, setPtoRowHeights] = useState<Record<string, number>>({});
+  const [ptoHeaderLabels, setPtoHeaderLabels] = useState<Record<string, string>>({});
+  const [editingPtoHeaderKey, setEditingPtoHeaderKey] = useState<string | null>(null);
+  const [ptoHeaderDraft, setPtoHeaderDraft] = useState("");
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const [customTabForm, setCustomTabForm] = useState(defaultCustomTabForm);
   const [customInfoForm, setCustomInfoForm] = useState("");
@@ -1651,15 +1705,35 @@ export default function App() {
   const [saveMessage, setSaveMessage] = useState("Изменения сохраняются в этом браузере.");
   const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База Supabase подключается..." : "База Supabase не настроена.");
   const [ptoDatabaseSaving, setPtoDatabaseSaving] = useState(false);
+  const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
   const [search, setSearch] = useState("");
-  const ptoDatabaseSnapshot = useMemo(() => JSON.stringify({
+  const ptoDatabaseState = useMemo(() => ({
     manualYears: ptoManualYears,
     planRows: ptoPlanRows,
     operRows: ptoOperRows,
     surveyRows: ptoSurveyRows,
-  }), [ptoManualYears, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
+    uiState: {
+      reportDate,
+      topTab,
+      ptoTab,
+      ptoPlanYear,
+      ptoAreaFilter,
+      expandedPtoMonths,
+      ptoColumnWidths,
+      ptoRowHeights,
+      ptoHeaderLabels,
+    },
+  }), [expandedPtoMonths, ptoAreaFilter, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportDate, topTab]);
+  const ptoDatabaseSnapshot = useMemo(() => JSON.stringify(ptoDatabaseState), [ptoDatabaseState]);
+  const ptoDatabaseStateRef = useRef(ptoDatabaseState);
+  const ptoDatabaseSnapshotRef = useRef(ptoDatabaseSnapshot);
+
+  useEffect(() => {
+    ptoDatabaseStateRef.current = ptoDatabaseState;
+    ptoDatabaseSnapshotRef.current = ptoDatabaseSnapshot;
+  }, [ptoDatabaseSnapshot, ptoDatabaseState]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -1685,6 +1759,9 @@ export default function App() {
         const savedPtoPlanRows = readStoredValue(adminStorageKeys.ptoPlanRows);
         const savedPtoSurveyRows = readStoredValue(adminStorageKeys.ptoSurveyRows);
         const savedPtoOperRows = readStoredValue(adminStorageKeys.ptoOperRows);
+        const savedPtoColumnWidths = readStoredValue(adminStorageKeys.ptoColumnWidths);
+        const savedPtoRowHeights = readStoredValue(adminStorageKeys.ptoRowHeights);
+        const savedPtoHeaderLabels = readStoredValue(adminStorageKeys.ptoHeaderLabels);
         const savedOrgMembers = readStoredValue(adminStorageKeys.orgMembers);
         const savedDependencyNodes = readStoredValue(adminStorageKeys.dependencyNodes);
         const savedDependencyLinks = readStoredValue(adminStorageKeys.dependencyLinks);
@@ -1749,6 +1826,10 @@ export default function App() {
         if (Array.isArray(savedPtoOperRows)) {
           setPtoOperRows(savedPtoOperRows.map((row) => normalizePtoPlanRow(isRecord(row) ? row : {})));
         }
+
+        setPtoColumnWidths(normalizeNumberRecord(savedPtoColumnWidths, 44, 800));
+        setPtoRowHeights(normalizeNumberRecord(savedPtoRowHeights, 28, 180));
+        setPtoHeaderLabels(normalizeStringRecord(savedPtoHeaderLabels));
 
         if (Array.isArray(savedOrgMembers)) {
           setOrgMembers(
@@ -1825,6 +1906,8 @@ export default function App() {
         const nextPlanRows = databaseState.planRows.map((row) => normalizePtoPlanRow(row));
         const nextOperRows = databaseState.operRows.map((row) => normalizePtoPlanRow(row));
         const nextSurveyRows = databaseState.surveyRows.map((row) => normalizePtoPlanRow(row));
+        const nextUiState = databaseState.uiState ?? {};
+        const fallbackUiState = ptoDatabaseStateRef.current.uiState;
 
         ptoDatabaseLoadedRef.current = true;
         ptoDatabaseSaveSnapshotRef.current = JSON.stringify({
@@ -1832,11 +1915,35 @@ export default function App() {
           planRows: nextPlanRows,
           operRows: nextOperRows,
           surveyRows: nextSurveyRows,
+          uiState: {
+            reportDate: nextUiState.reportDate ?? fallbackUiState.reportDate,
+            topTab: nextUiState.topTab ?? fallbackUiState.topTab,
+            ptoTab: nextUiState.ptoTab ?? fallbackUiState.ptoTab,
+            ptoPlanYear: nextUiState.ptoPlanYear ?? fallbackUiState.ptoPlanYear,
+            ptoAreaFilter: nextUiState.ptoAreaFilter ?? fallbackUiState.ptoAreaFilter,
+            expandedPtoMonths: nextUiState.expandedPtoMonths ?? fallbackUiState.expandedPtoMonths,
+            ptoColumnWidths: nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths,
+            ptoRowHeights: nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights,
+            ptoHeaderLabels: nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels,
+          },
         });
         setPtoManualYears(nextManualYears);
         setPtoPlanRows(nextPlanRows);
         setPtoOperRows(nextOperRows);
         setPtoSurveyRows(nextSurveyRows);
+        if (typeof nextUiState.reportDate === "string") setReportDate(nextUiState.reportDate);
+        if (typeof nextUiState.topTab === "string") setTopTab(nextUiState.topTab as TopTab);
+        if (typeof nextUiState.ptoTab === "string") setPtoTab(nextUiState.ptoTab);
+        if (typeof nextUiState.ptoPlanYear === "string") setPtoPlanYear(nextUiState.ptoPlanYear);
+        if (typeof nextUiState.ptoAreaFilter === "string") setPtoAreaFilter(nextUiState.ptoAreaFilter);
+        if (isRecord(nextUiState.expandedPtoMonths)) {
+          setExpandedPtoMonths(Object.fromEntries(
+            Object.entries(nextUiState.expandedPtoMonths).filter((entry): entry is [string, boolean] => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
+          ));
+        }
+        setPtoColumnWidths(normalizeNumberRecord(nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths, 44, 800));
+        setPtoRowHeights(normalizeNumberRecord(nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights, 28, 180));
+        setPtoHeaderLabels(normalizeStringRecord(nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels));
         setPtoDatabaseMessage("ПТО загружено из Supabase.");
       } catch (error) {
         if (!cancelled) setPtoDatabaseMessage(`Supabase пока не готов: ${errorToMessage(error)}`);
@@ -1895,19 +2002,37 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.ptoOperRows, JSON.stringify(ptoOperRows));
   }, [adminDataLoaded, ptoOperRows]);
 
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.ptoColumnWidths, JSON.stringify(ptoColumnWidths));
+  }, [adminDataLoaded, ptoColumnWidths]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.ptoRowHeights, JSON.stringify(ptoRowHeights));
+  }, [adminDataLoaded, ptoRowHeights]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.ptoHeaderLabels, JSON.stringify(ptoHeaderLabels));
+  }, [adminDataLoaded, ptoHeaderLabels]);
+
   const savePtoDatabaseChanges = useCallback(async (mode: "auto" | "manual" = "manual") => {
     if (!supabaseConfigured) {
       setPtoDatabaseMessage("База Supabase не настроена.");
       return;
     }
 
+    if (!ptoDatabaseLoadedRef.current) return;
+
+    const snapshotToSave = ptoDatabaseSnapshotRef.current;
+    if (mode === "auto" && snapshotToSave === ptoDatabaseSaveSnapshotRef.current) {
+      setPtoDatabaseMessage("ПТО сохранено в Supabase.");
+      return;
+    }
+
     if (ptoDatabaseSavingRef.current) {
-      if (mode === "auto" && !ptoDatabaseSaveTimerRef.current) {
-        ptoDatabaseSaveTimerRef.current = setTimeout(() => {
-          ptoDatabaseSaveTimerRef.current = null;
-          void savePtoDatabaseChanges("auto");
-        }, 1200);
-      }
+      ptoDatabaseSaveQueuedRef.current = true;
       return;
     }
 
@@ -1916,44 +2041,71 @@ export default function App() {
     setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в Supabase..." : "Сохраняю ПТО в Supabase...");
 
     try {
-      await savePtoStateToSupabase({
-        manualYears: ptoManualYears,
-        planRows: ptoPlanRows,
-        operRows: ptoOperRows,
-        surveyRows: ptoSurveyRows,
-      });
-      ptoDatabaseSaveSnapshotRef.current = ptoDatabaseSnapshot;
+      await savePtoStateToSupabase(ptoDatabaseStateRef.current);
+      ptoDatabaseSaveSnapshotRef.current = snapshotToSave;
       setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в Supabase." : "ПТО сохранено в Supabase.");
     } catch (error) {
       setPtoDatabaseMessage(`Не удалось сохранить в Supabase: ${errorToMessage(error)}`);
     } finally {
       ptoDatabaseSavingRef.current = false;
       setPtoDatabaseSaving(false);
+      if (ptoDatabaseSaveQueuedRef.current) {
+        ptoDatabaseSaveQueuedRef.current = false;
+        if (ptoDatabaseSnapshotRef.current !== ptoDatabaseSaveSnapshotRef.current) {
+          setPtoSaveRevision((current) => current + 1);
+        }
+      }
     }
-  }, [ptoDatabaseSnapshot, ptoManualYears, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
+  }, []);
+
+  const requestPtoDatabaseSave = useCallback(() => {
+    if (!supabaseConfigured || !ptoDatabaseLoadedRef.current) return;
+    setPtoDatabaseMessage("Есть изменения. Автосохраняю после завершенного действия...");
+    setPtoSaveRevision((current) => current + 1);
+  }, []);
 
   useEffect(() => {
-    if (!adminDataLoaded || !supabaseConfigured || !ptoDatabaseLoadedRef.current) return;
-    if (ptoDatabaseSnapshot === ptoDatabaseSaveSnapshotRef.current) return;
+    if (!adminDataLoaded || !supabaseConfigured || !ptoDatabaseLoadedRef.current || ptoSaveRevision === 0) return;
+    void savePtoDatabaseChanges("auto");
+  }, [adminDataLoaded, ptoSaveRevision, savePtoDatabaseChanges]);
 
-    setPtoDatabaseMessage("Есть изменения. Автосохранение через пару секунд...");
+  useEffect(() => {
+    const clearResizeCursor = () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
 
-    if (ptoDatabaseSaveTimerRef.current) {
-      clearTimeout(ptoDatabaseSaveTimerRef.current);
-    }
+    const handleResizeMove = (event: MouseEvent) => {
+      const resizeState = ptoResizeStateRef.current;
+      if (!resizeState) return;
 
-    ptoDatabaseSaveTimerRef.current = setTimeout(() => {
-      ptoDatabaseSaveTimerRef.current = null;
-      void savePtoDatabaseChanges("auto");
-    }, 1600);
+      if (resizeState.type === "column") {
+        const nextWidth = Math.min(800, Math.max(44, Math.round(resizeState.startWidth + event.clientX - resizeState.startX)));
+        setPtoColumnWidths((current) => (current[resizeState.key] === nextWidth ? current : { ...current, [resizeState.key]: nextWidth }));
+        return;
+      }
+
+      const nextHeight = Math.min(180, Math.max(28, Math.round(resizeState.startHeight + event.clientY - resizeState.startY)));
+      setPtoRowHeights((current) => (current[resizeState.key] === nextHeight ? current : { ...current, [resizeState.key]: nextHeight }));
+    };
+
+    const handleResizeEnd = () => {
+      if (!ptoResizeStateRef.current) return;
+
+      ptoResizeStateRef.current = null;
+      clearResizeCursor();
+      requestPtoDatabaseSave();
+    };
+
+    window.addEventListener("mousemove", handleResizeMove);
+    window.addEventListener("mouseup", handleResizeEnd);
 
     return () => {
-      if (ptoDatabaseSaveTimerRef.current) {
-        clearTimeout(ptoDatabaseSaveTimerRef.current);
-        ptoDatabaseSaveTimerRef.current = null;
-      }
+      window.removeEventListener("mousemove", handleResizeMove);
+      window.removeEventListener("mouseup", handleResizeEnd);
+      clearResizeCursor();
     };
-  }, [adminDataLoaded, ptoDatabaseSnapshot, savePtoDatabaseChanges]);
+  }, [requestPtoDatabaseSave]);
 
   useEffect(() => {
     if (!adminDataLoaded) return;
@@ -2009,6 +2161,9 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.ptoPlanRows, JSON.stringify(ptoPlanRows));
     window.localStorage.setItem(adminStorageKeys.ptoSurveyRows, JSON.stringify(ptoSurveyRows));
     window.localStorage.setItem(adminStorageKeys.ptoOperRows, JSON.stringify(ptoOperRows));
+    window.localStorage.setItem(adminStorageKeys.ptoColumnWidths, JSON.stringify(ptoColumnWidths));
+    window.localStorage.setItem(adminStorageKeys.ptoRowHeights, JSON.stringify(ptoRowHeights));
+    window.localStorage.setItem(adminStorageKeys.ptoHeaderLabels, JSON.stringify(ptoHeaderLabels));
     window.localStorage.setItem(adminStorageKeys.orgMembers, JSON.stringify(orgMembers));
     window.localStorage.setItem(adminStorageKeys.dependencyNodes, JSON.stringify(dependencyNodes));
     window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
@@ -2118,6 +2273,81 @@ export default function App() {
   const activeTbSubtab = subTabs.tb.find((tab) => tab.value === tbTab);
   const isPtoDateTab = ["plan", "oper", "survey"].includes(ptoTab);
 
+  function selectTopTab(tab: TopTab) {
+    setTopTab(tab);
+    requestPtoDatabaseSave();
+  }
+
+  function selectPtoTab(tab: string) {
+    setPtoTab(tab);
+    requestPtoDatabaseSave();
+  }
+
+  function selectPtoPlanYear(year: string) {
+    setPtoPlanYear(year);
+    requestPtoDatabaseSave();
+  }
+
+  function selectPtoArea(area: string) {
+    setPtoAreaFilter(area);
+    requestPtoDatabaseSave();
+  }
+
+  function selectReportDate(value: string) {
+    setReportDate(value);
+    requestPtoDatabaseSave();
+  }
+
+  function startPtoColumnResize(event: React.MouseEvent<HTMLElement>, key: string, width: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    ptoResizeStateRef.current = { type: "column", key, startX: event.clientX, startWidth: width };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  function startPtoRowResize(event: React.MouseEvent<HTMLElement>, key: string) {
+    event.preventDefault();
+    event.stopPropagation();
+    const rowElement = event.currentTarget.closest("tr");
+    const startHeight = rowElement?.getBoundingClientRect().height ?? ptoRowHeights[key] ?? 34;
+
+    ptoResizeStateRef.current = { type: "row", key, startY: event.clientY, startHeight };
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  function ptoHeaderLabel(key: string, fallback: string) {
+    return ptoHeaderLabels[key]?.trim() || fallback;
+  }
+
+  function startPtoHeaderEdit(key: string, fallback: string) {
+    setEditingPtoHeaderKey(key);
+    setPtoHeaderDraft(ptoHeaderLabel(key, fallback));
+  }
+
+  function cancelPtoHeaderEdit() {
+    setEditingPtoHeaderKey(null);
+    setPtoHeaderDraft("");
+  }
+
+  function commitPtoHeaderEdit(key: string, fallback: string) {
+    const nextLabel = ptoHeaderDraft.trim();
+
+    setPtoHeaderLabels((current) => {
+      const next = { ...current };
+      if (!nextLabel || nextLabel === fallback) {
+        delete next[key];
+      } else {
+        next[key] = nextLabel;
+      }
+      return next;
+    });
+    setEditingPtoHeaderKey(null);
+    setPtoHeaderDraft("");
+    requestPtoDatabaseSave();
+  }
+
   function updateReportForm(field: keyof ReportRow, value: string) {
     const textFields: Array<keyof ReportRow> = ["area", "name", "unit", "dayReason", "yearReason"];
     setReportForm((current) => ({
@@ -2195,6 +2425,7 @@ export default function App() {
     setPtoPlanRows((current) => insertPtoRowAfter(current, insertAfterRow, planRow));
     setPtoOperRows((current) => insertPtoRowAfter(current, insertAfterRow, operRow));
     setPtoSurveyRows((current) => insertPtoRowAfter(current, insertAfterRow, surveyRow));
+    requestPtoDatabaseSave();
 
     return id;
   }
@@ -2208,6 +2439,7 @@ export default function App() {
     setExpandedPtoMonths((current) => ({ ...current, [`${nextYear}-01`]: true }));
     setPtoYearDialogOpen(false);
     setPtoYearInput("");
+    requestPtoDatabaseSave();
   }
 
   function deletePtoYear() {
@@ -2226,6 +2458,7 @@ export default function App() {
     setPtoPlanYear(fallbackYear);
     setPtoYearInput("");
     setPtoYearDialogOpen(false);
+    requestPtoDatabaseSave();
   }
 
   function updatePtoDateRow(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, field: keyof Omit<PtoPlanRow, "id" | "dailyPlans">, value: string) {
@@ -2348,6 +2581,7 @@ export default function App() {
     setPtoPlanRows(removeRow);
     setPtoOperRows(removeRow);
     setPtoSurveyRows(removeRow);
+    requestPtoDatabaseSave();
   }
 
   function getPtoDropPosition(event: React.DragEvent<HTMLTableRowElement>): PtoDropPosition {
@@ -2367,6 +2601,7 @@ export default function App() {
     setPtoPlanRows(reorderRows);
     setPtoOperRows(reorderRows);
     setPtoSurveyRows(reorderRows);
+    requestPtoDatabaseSave();
   }
 
   function addCustomTab() {
@@ -2828,9 +3063,26 @@ export default function App() {
     const showLocation = options.showLocation !== false;
     const editableMonthTotal = options.editableMonthTotal === true;
     const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
-    const visibleColumnCount = ptoMonthGroups.reduce((count, group) => count + 1 + (group.expanded ? group.days.length : 0), 0);
-    const tableMinWidth = (showLocation ? 1040 : 900) + visibleColumnCount * 74;
     const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;
+    const columnWidth = (key: string, fallback: number) => Math.min(800, Math.max(44, Math.round(ptoColumnWidths[key] ?? fallback)));
+    const baseColumns: PtoTableColumn[] = [
+      { key: "area", width: columnWidth("area", ptoColumnDefaults.area) },
+      ...(showLocation ? [{ key: "location", width: columnWidth("location", ptoColumnDefaults.location) }] : []),
+      { key: "structure", width: columnWidth("structure", ptoColumnDefaults.structure) },
+      { key: "unit", width: columnWidth("unit", ptoColumnDefaults.unit) },
+      { key: "coefficient", width: columnWidth("coefficient", ptoColumnDefaults.coefficient) },
+      { key: "status", width: columnWidth("status", ptoColumnDefaults.status) },
+      { key: `carryover:${ptoPlanYear}`, width: columnWidth(`carryover:${ptoPlanYear}`, ptoColumnDefaults.carryover) },
+      { key: "year-total", width: columnWidth("year-total", ptoColumnDefaults.yearTotal) },
+    ];
+    const dateColumns = ptoMonthGroups.flatMap((group) => [
+      { key: `month-total:${group.month}`, width: columnWidth(`month-total:${group.month}`, ptoColumnDefaults.monthTotal) },
+      ...(group.expanded ? group.days.map((day) => ({ key: `day:${day}`, width: columnWidth(`day:${day}`, ptoColumnDefaults.day) })) : []),
+    ]);
+    const actionColumn = { key: "actions", width: columnWidth("actions", ptoColumnDefaults.actions) };
+    const tableColumns = [...baseColumns, ...dateColumns, actionColumn];
+    const tableMinWidth = tableColumns.reduce((sum, column) => sum + column.width, 0);
+    const columnWidthByKey = new Map(tableColumns.map((column) => [column.key, column.width]));
     const activeFormulaCell = ptoFormulaCell?.table === ptoTab && ptoFormulaCell.year === ptoPlanYear ? ptoFormulaCell : null;
     const activeInlineEditCell = ptoInlineEditCell?.table === ptoTab && ptoInlineEditCell.year === ptoPlanYear ? ptoInlineEditCell : null;
     const activeFormulaRow = activeFormulaCell ? rows.find((row) => row.id === activeFormulaCell.rowId) : undefined;
@@ -2925,6 +3177,7 @@ export default function App() {
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(nextCell);
       setPtoSelectedCellKeys([formulaSelectionKey(nextCell)]);
+      requestPtoDatabaseSave();
     };
 
     const selectFormulaRange = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
@@ -2939,6 +3192,7 @@ export default function App() {
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(anchorCell);
       setPtoSelectedCellKeys(formulaRangeKeys(anchorCell, targetCell));
+      requestPtoDatabaseSave();
     };
 
     const toggleFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
@@ -2959,6 +3213,7 @@ export default function App() {
 
         return nextKeys.length ? nextKeys : [targetKey];
       });
+      requestPtoDatabaseSave();
     };
 
     const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
@@ -3051,6 +3306,7 @@ export default function App() {
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(nextActiveCell);
       setPtoSelectedCellKeys(targetCells.map((targetCell) => formulaSelectionKey(targetCell)));
+      requestPtoDatabaseSave();
       return true;
     };
 
@@ -3072,6 +3328,7 @@ export default function App() {
       setPtoInlineEditCell(null);
       setPtoInlineEditInitialDraft("");
       setPtoFormulaDraft(ptoFormulaDraft.trim() ? formatPtoFormulaNumber(parseDecimalValue(ptoFormulaDraft)) : "");
+      requestPtoDatabaseSave();
     };
 
     const handleInlineFormulaKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -3132,6 +3389,7 @@ export default function App() {
           setPtoInlineEditCell(null);
           setPtoInlineEditInitialDraft("");
           moveFormulaSelection(event.key);
+          requestPtoDatabaseSave();
           return;
         }
 
@@ -3206,11 +3464,86 @@ export default function App() {
         [field]: field === "unit" ? normalizePtoUnit(value) : field === "coefficient" ? parseDecimalValue(value) : value,
       });
       setPtoPendingFieldFocus({ rowId: nextRowId, field });
+      requestPtoDatabaseSave();
     };
 
     const addPtoRowFromDraft = () => {
       const nextRowId = addLinkedPtoDateRow();
       setPtoPendingFieldFocus({ rowId: nextRowId, field: ptoAreaFilter === "Все участки" ? "area" : "structure" });
+    };
+
+    const renderPtoHeaderText = (key: string, fallback: string, align: React.CSSProperties["textAlign"] = "left") => {
+      const isEditing = editingPtoHeaderKey === key;
+
+      if (isEditing) {
+        return (
+          <input
+            autoFocus
+            value={ptoHeaderDraft}
+            onChange={(event) => setPtoHeaderDraft(event.target.value)}
+            onBlur={(event) => {
+              if (event.currentTarget.dataset.cancelHeaderEdit === "true") return;
+              commitPtoHeaderEdit(key, fallback);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitPtoHeaderEdit(key, fallback);
+              }
+
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.currentTarget.dataset.cancelHeaderEdit = "true";
+                cancelPtoHeaderEdit();
+              }
+            }}
+            onClick={(event) => event.stopPropagation()}
+            style={{ ...ptoHeaderInputStyle, textAlign: align }}
+          />
+        );
+      }
+
+      return (
+        <button
+          type="button"
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            startPtoHeaderEdit(key, fallback);
+          }}
+          style={{ ...ptoHeaderLabelButtonStyle, textAlign: align }}
+          title="Двойной клик — переименовать заголовок"
+        >
+          {ptoHeaderLabel(key, fallback)}
+        </button>
+      );
+    };
+
+    const renderPtoMonthHeader = (month: string, fallback: string, expanded: boolean) => {
+      const key = `month-group:${month}`;
+      const isEditing = editingPtoHeaderKey === key;
+
+      if (isEditing) {
+        return renderPtoHeaderText(key, fallback);
+      }
+
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            setExpandedPtoMonths((current) => ({ ...current, [month]: !current[month] }));
+            requestPtoDatabaseSave();
+          }}
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            startPtoHeaderEdit(key, fallback);
+          }}
+          style={monthToggleStyle}
+          title="Клик — свернуть/развернуть, двойной клик — переименовать"
+        >
+          {expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+          {ptoHeaderLabel(key, fallback)}
+        </button>
+      );
     };
 
     return (
@@ -3220,7 +3553,7 @@ export default function App() {
             <span style={fieldLabelStyle}>Участки</span>
             <div style={ptoToolbarRowStyle}>
               {ptoAreaTabs.map((area) => (
-                <TopButton key={area} active={ptoAreaFilter === area} onClick={() => setPtoAreaFilter(area)} label={area} />
+                <TopButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
               ))}
             </div>
           </div>
@@ -3233,7 +3566,7 @@ export default function App() {
               </IconButton>
               {ptoYearTabs.map((year) => (
                 <TopButton key={year} active={ptoPlanYear === year} onClick={() => {
-                  setPtoPlanYear(year);
+                  selectPtoPlanYear(year);
                 }} label={year} />
               ))}
               <IconButton label="Добавить год" onClick={() => {
@@ -3280,6 +3613,7 @@ export default function App() {
             onChange={(event) => updateFormulaValue(event.target.value)}
             onBlur={() => {
               if (activeFormulaCell) setPtoFormulaDraft(formatPtoFormulaNumber(activeFormulaValue));
+              requestPtoDatabaseSave();
             }}
             disabled={formulaInputDisabled}
             placeholder="Выбери числовую ячейку"
@@ -3289,36 +3623,34 @@ export default function App() {
 
         <div style={ptoDateTableScrollStyle}>
           <table style={{ ...ptoPlanTableStyle, minWidth: tableMinWidth }}>
+            <colgroup>
+              {tableColumns.map((column) => (
+                <col key={column.key} style={{ width: column.width }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
-                <PtoPlanTh rowSpan={2}>Участок</PtoPlanTh>
-                {showLocation ? <PtoPlanTh rowSpan={2}>Местонахождение</PtoPlanTh> : null}
-                <PtoPlanTh rowSpan={2}>Структура</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center">Ед.</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center">Коэфф.</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center">Статус</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center">{carryoverHeader}</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center">Итого год</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} columnKey="area" width={columnWidthByKey.get("area")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("area", "Участок")}</PtoPlanTh>
+                {showLocation ? <PtoPlanTh rowSpan={2} columnKey="location" width={columnWidthByKey.get("location")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("location", "Местонахождение")}</PtoPlanTh> : null}
+                <PtoPlanTh rowSpan={2} columnKey="structure" width={columnWidthByKey.get("structure")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("structure", "Структура")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="unit" width={columnWidthByKey.get("unit")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("unit", "Ед.", "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="coefficient" width={columnWidthByKey.get("coefficient")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("coefficient", "Коэфф.", "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="status" width={columnWidthByKey.get("status")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("status", "Статус", "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey={`carryover:${ptoPlanYear}`} width={columnWidthByKey.get(`carryover:${ptoPlanYear}`)} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText(`carryover:${ptoPlanYear}`, carryoverHeader, "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="year-total" width={columnWidthByKey.get("year-total")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("year-total", "Итого год", "center")}</PtoPlanTh>
                 {ptoMonthGroups.map((group) => (
                   <PtoPlanTh key={group.month} colSpan={1 + (group.expanded ? group.days.length : 0)}>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedPtoMonths((current) => ({ ...current, [group.month]: !current[group.month] }))}
-                      style={monthToggleStyle}
-                    >
-                      {group.expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
-                      {group.label}
-                    </button>
+                    {renderPtoMonthHeader(group.month, group.label, group.expanded)}
                   </PtoPlanTh>
                 ))}
-                <PtoPlanTh rowSpan={2}>Действия</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} columnKey="actions" width={columnWidthByKey.get("actions")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("actions", "Действия")}</PtoPlanTh>
               </tr>
               <tr>
                 {ptoMonthGroups.map((group) => (
                   <Fragment key={`${group.month}-days`}>
-                    <PtoPlanTh align="center">Итого</PtoPlanTh>
+                    <PtoPlanTh align="center" columnKey={`month-total:${group.month}`} width={columnWidthByKey.get(`month-total:${group.month}`)} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText(`month-total:${group.month}`, "Итого", "center")}</PtoPlanTh>
                     {group.expanded && group.days.map((day) => (
-                      <PtoPlanTh key={day} align="center">{day.slice(8, 10)}</PtoPlanTh>
+                      <PtoPlanTh key={day} align="center" columnKey={`day:${day}`} width={columnWidthByKey.get(`day:${day}`)} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText(`day:${day}`, day.slice(8, 10), "center")}</PtoPlanTh>
                     ))}
                   </Fragment>
                 ))}
@@ -3361,11 +3693,13 @@ export default function App() {
                 const carryoverCell = formulaCellRows
                   .find((item) => item.row.id === row.id)
                   ?.cells.find((cell) => cell.kind === "carryover") ?? { rowId: row.id, kind: "carryover" as const, label: carryoverHeader };
+                const rowHeightKey = `${ptoTab}:${row.id}`;
+                const rowHeight = ptoRowHeights[rowHeightKey];
 
                 return (
                   <tr
                     key={row.id}
-                    style={{ background: ptoStatusRowBackground(rowStatus) }}
+                    style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}
                     onDragOver={(event) => {
                       event.preventDefault();
                       if (!draggedPtoRowId || draggedPtoRowId === row.id) {
@@ -3398,6 +3732,12 @@ export default function App() {
                   >
                     <PtoPlanTd>
                       {dropLineStyle ? <span style={dropLineStyle} /> : null}
+                      <span
+                        onMouseDown={(event) => startPtoRowResize(event, rowHeightKey)}
+                        style={ptoRowResizeHandleStyle}
+                        title="Потяни вниз или вверх, чтобы изменить высоту строки"
+                        aria-hidden
+                      />
                       {showInlineAddRowButton ? (
                         <button
                           type="button"
@@ -3438,12 +3778,12 @@ export default function App() {
                             </span>
                           </button>
                         </div>
-                        <input data-pto-row-field={ptoRowFieldDomKey(row.id, "area")} list="pto-area-options" value={row.area} onChange={(e) => updatePtoDateRow(setRows, row.id, "area", e.target.value)} placeholder="Уч_Аксу" style={{ ...ptoPlanInputStyle, minWidth: 104 }} />
+                        <input data-pto-row-field={ptoRowFieldDomKey(row.id, "area")} list="pto-area-options" value={row.area} onChange={(e) => updatePtoDateRow(setRows, row.id, "area", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Уч_Аксу" style={ptoPlanInputStyle} />
                       </div>
                     </PtoPlanTd>
                     {showLocation ? (
                       <PtoPlanTd>
-                        <input data-pto-row-field={ptoRowFieldDomKey(row.id, "location")} list={locationListId} value={row.location} onChange={(e) => updatePtoDateRow(setRows, row.id, "location", e.target.value)} placeholder="Карьер" style={ptoPlanInputStyle} />
+                        <input data-pto-row-field={ptoRowFieldDomKey(row.id, "location")} list={locationListId} value={row.location} onChange={(e) => updatePtoDateRow(setRows, row.id, "location", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Карьер" style={ptoPlanInputStyle} />
                         <datalist id={locationListId}>
                           {locationOptions.map((location) => (
                             <option key={location} value={location} />
@@ -3452,7 +3792,7 @@ export default function App() {
                       </PtoPlanTd>
                     ) : null}
                     <PtoPlanTd>
-                      <input data-pto-row-field={ptoRowFieldDomKey(row.id, "structure")} list={structureListId} value={row.structure} onChange={(e) => updatePtoDateRow(setRows, row.id, "structure", e.target.value)} placeholder="Вид работ" style={{ ...ptoPlanInputStyle, minWidth: 240 }} />
+                      <input data-pto-row-field={ptoRowFieldDomKey(row.id, "structure")} list={structureListId} value={row.structure} onChange={(e) => updatePtoDateRow(setRows, row.id, "structure", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Вид работ" style={ptoPlanInputStyle} />
                       <datalist id={structureListId}>
                         {structureOptions.map((structure) => (
                           <option key={structure} value={structure} />
@@ -3460,7 +3800,10 @@ export default function App() {
                       </datalist>
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
-                      <select data-pto-row-field={ptoRowFieldDomKey(row.id, "unit")} value={normalizePtoUnit(row.unit)} onChange={(e) => updatePtoDateRow(setRows, row.id, "unit", e.target.value)} style={{ ...ptoPlanInputStyle, minWidth: 58, textAlign: "center" }}>
+                      <select data-pto-row-field={ptoRowFieldDomKey(row.id, "unit")} value={normalizePtoUnit(row.unit)} onChange={(e) => {
+                        updatePtoDateRow(setRows, row.id, "unit", e.target.value);
+                        requestPtoDatabaseSave();
+                      }} style={{ ...ptoPlanInputStyle, textAlign: "center" }}>
                         {ptoUnitOptions.map((unit) => (
                           <option key={unit} value={unit}>{unit}</option>
                         ))}
@@ -3488,17 +3831,20 @@ export default function App() {
                         }}
                         onChange={(event) => updateFormulaValue(event.target.value)}
                         onBlur={() => {
-                          if (coefficientCellEditing) cancelInlineFormulaEdit();
+                          if (coefficientCellEditing) commitInlineFormulaEdit();
                         }}
                         onKeyDown={(event) => handleFormulaCellKeyDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
                         title={formatPtoFormulaNumber(row.coefficient)}
-                        style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle, minWidth: 62 }}
+                        style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
                       />
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       <select
                         value={rowStatus}
-                        onChange={(event) => updatePtoDateRow(setRows, row.id, "status", event.target.value)}
+                        onChange={(event) => {
+                          updatePtoDateRow(setRows, row.id, "status", event.target.value);
+                          requestPtoDatabaseSave();
+                        }}
                         title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
                         style={{ ...ptoPlanInputStyle, ...ptoStatusSelectStyle, ...ptoStatusControlStyle(rowStatus), minWidth: 110 }}
                       >
@@ -3528,11 +3874,11 @@ export default function App() {
                         }}
                         onChange={(event) => updateFormulaValue(event.target.value)}
                         onBlur={() => {
-                          if (carryoverCellEditing) cancelInlineFormulaEdit();
+                          if (carryoverCellEditing) commitInlineFormulaEdit();
                         }}
                         onKeyDown={(event) => handleFormulaCellKeyDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
                         title={formatPtoFormulaNumber(effectiveCarryover)}
-                        style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle, minWidth: 72 }}
+                        style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
                       />
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
@@ -3577,12 +3923,12 @@ export default function App() {
                                 }}
                                 onChange={(event) => updateFormulaValue(event.target.value)}
                                 onBlur={() => {
-                                  if (monthCellEditing) cancelInlineFormulaEdit();
+                                  if (monthCellEditing) commitInlineFormulaEdit();
                                 }}
                                 onKeyDown={(event) => handleFormulaCellKeyDown(event, monthCell, monthValue, monthCellEditing)}
                                 placeholder="Месяц"
                                 title={formatPtoFormulaNumber(monthValue)}
-                                style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle, minWidth: 74, fontWeight: 800 }}
+                                style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle, fontWeight: 800 }}
                               />
                             ) : (
                               <button
@@ -3642,7 +3988,7 @@ export default function App() {
                                   }}
                                   onChange={(event) => updateFormulaValue(event.target.value)}
                                   onBlur={() => {
-                                    if (dayCellEditing) cancelInlineFormulaEdit();
+                                    if (dayCellEditing) commitInlineFormulaEdit();
                                   }}
                                   onKeyDown={(event) => handleFormulaCellKeyDown(event, dayCell, dayValue, dayCellEditing)}
                                   title={formatPtoFormulaNumber(dayValue)}
@@ -3674,7 +4020,7 @@ export default function App() {
                     >
                       +
                     </button>
-                    <input value="" onChange={(event) => commitPtoDraftField("area", event.target.value)} placeholder="Новая строка" style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, minWidth: 104 }} />
+                    <input value="" onChange={(event) => commitPtoDraftField("area", event.target.value)} placeholder="Новая строка" style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }} />
                   </div>
                 </PtoPlanTd>
                 {showLocation ? (
@@ -3683,10 +4029,10 @@ export default function App() {
                   </PtoPlanTd>
                 ) : null}
                 <PtoPlanTd>
-                  <input value="" onChange={(event) => commitPtoDraftField("structure", event.target.value)} placeholder="Структура" style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, minWidth: 240 }} />
+                  <input value="" onChange={(event) => commitPtoDraftField("structure", event.target.value)} placeholder="Структура" style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }} />
                 </PtoPlanTd>
                 <PtoPlanTd align="center">
-                  <select value="" onChange={(event) => commitPtoDraftField("unit", event.target.value)} style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, minWidth: 58, textAlign: "center" }}>
+                  <select value="" onChange={(event) => commitPtoDraftField("unit", event.target.value)} style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}>
                     <option value="">Ед.</option>
                     {ptoUnitOptions.map((unit) => (
                       <option key={unit} value={unit}>{unit}</option>
@@ -3694,7 +4040,7 @@ export default function App() {
                   </select>
                 </PtoPlanTd>
                 <PtoPlanTd align="center">
-                  <input value="" inputMode="decimal" onChange={(event) => commitPtoDraftField("coefficient", event.target.value)} placeholder="0" style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle, ...ptoDraftInputStyle, minWidth: 62 }} />
+                  <input value="" inputMode="decimal" onChange={(event) => commitPtoDraftField("coefficient", event.target.value)} placeholder="0" style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle, ...ptoDraftInputStyle }} />
                 </PtoPlanTd>
                 <PtoPlanTd align="center">
                   <span style={ptoDraftStatusStyle}>Новая</span>
@@ -3733,15 +4079,15 @@ export default function App() {
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: "1 1 720px" }}>
               {topTabs.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={topTab === tab.id} onClick={() => setTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                <TopButton key={tab.id} active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
               ))}
               {customTabs.filter((tab) => tab.visible !== false).map((tab) => (
-                <TopButton key={tab.id} active={topTab === customTabKey(tab.id)} onClick={() => setTopTab(customTabKey(tab.id))} label={tab.title} />
+                <TopButton key={tab.id} active={topTab === customTabKey(tab.id)} onClick={() => selectTopTab(customTabKey(tab.id))} label={tab.title} />
               ))}
             </div>
             <div style={workDateStyle}>
               <Field label="Рабочая дата">
-                <input type="date" value={reportDate} min={reportMonthStart} max={reportMonthEnd} onChange={(e) => setReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
+                <input type="date" value={reportDate} min={reportMonthStart} max={reportMonthEnd} onChange={(e) => selectReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
               </Field>
             </div>
           </div>
@@ -4020,7 +4366,7 @@ export default function App() {
           <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
             <SubTabs>
               {subTabs.pto.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={ptoTab === tab.value} onClick={() => setPtoTab(tab.value)} label={compactSubTabLabel("pto", tab)} />
+                <TopButton key={tab.id} active={ptoTab === tab.value} onClick={() => selectPtoTab(tab.value)} label={compactSubTabLabel("pto", tab)} />
               ))}
             </SubTabs>
 
@@ -5267,8 +5613,44 @@ function ReportTd({ children, strong = false, align = "left", tone, colSpan = 1 
   return <td colSpan={colSpan} style={{ ...reportTdStyle, textAlign: align, fontWeight: strong ? 700 : 400, color }}>{children}</td>;
 }
 
-function PtoPlanTh({ children, colSpan = 1, rowSpan = 1, align = "left" }: { children: React.ReactNode; colSpan?: number; rowSpan?: number; align?: React.CSSProperties["textAlign"] }) {
-  return <th colSpan={colSpan} rowSpan={rowSpan} style={{ ...ptoPlanThStyle, textAlign: align }}>{children}</th>;
+function PtoPlanTh({
+  children,
+  colSpan = 1,
+  rowSpan = 1,
+  align = "left",
+  columnKey,
+  width,
+  onResizeStart,
+}: {
+  children: React.ReactNode;
+  colSpan?: number;
+  rowSpan?: number;
+  align?: React.CSSProperties["textAlign"];
+  columnKey?: string;
+  width?: number;
+  onResizeStart?: (event: React.MouseEvent<HTMLElement>, key: string, width: number) => void;
+}) {
+  return (
+    <th
+      colSpan={colSpan}
+      rowSpan={rowSpan}
+      style={{
+        ...ptoPlanThStyle,
+        textAlign: align,
+        ...(width ? { width, minWidth: width, maxWidth: width } : null),
+      }}
+    >
+      <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{children}</div>
+      {columnKey && width && onResizeStart ? (
+        <span
+          onMouseDown={(event) => onResizeStart(event, columnKey, width)}
+          style={ptoColumnResizeHandleStyle}
+          title="Потяни, чтобы изменить ширину столбца"
+          aria-hidden
+        />
+      ) : null}
+    </th>
+  );
 }
 
 function PtoPlanTd({ children, colSpan = 1, active = false, selected = false, editing = false, align }: { children: React.ReactNode; colSpan?: number; active?: boolean; selected?: boolean; editing?: boolean; align?: React.CSSProperties["textAlign"] }) {
@@ -5417,6 +5799,7 @@ const reportTdStyle: React.CSSProperties = {
 const ptoPlanTableStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
+  tableLayout: "fixed",
   fontSize: 12,
   background: "#ffffff",
 };
@@ -5430,6 +5813,8 @@ const ptoPlanThStyle: React.CSSProperties = {
   textAlign: "left",
   verticalAlign: "middle",
   whiteSpace: "nowrap",
+  position: "relative",
+  overflow: "visible",
 };
 
 const monthToggleStyle: React.CSSProperties = {
@@ -5444,7 +5829,50 @@ const monthToggleStyle: React.CSSProperties = {
   gap: 4,
   padding: 0,
   cursor: "pointer",
+  maxWidth: "100%",
+  overflow: "hidden",
   whiteSpace: "nowrap",
+};
+
+const ptoHeaderLabelButtonStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  cursor: "text",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  padding: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const ptoHeaderInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  border: "1px solid #60a5fa",
+  borderRadius: 4,
+  background: "#ffffff",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  outline: "none",
+  padding: "2px 4px",
+};
+
+const ptoColumnResizeHandleStyle: React.CSSProperties = {
+  position: "absolute",
+  top: 0,
+  right: -3,
+  width: 7,
+  height: "100%",
+  cursor: "col-resize",
+  zIndex: 12,
 };
 
 const ptoPlanTdStyle: React.CSSProperties = {
@@ -5644,6 +6072,16 @@ const ptoDropIndicatorStyle: React.CSSProperties = {
   zIndex: 3,
 };
 
+const ptoRowResizeHandleStyle: React.CSSProperties = {
+  position: "absolute",
+  left: -24,
+  right: 0,
+  bottom: -4,
+  height: 8,
+  cursor: "row-resize",
+  zIndex: 8,
+};
+
 const dragHandleDotsStyle: React.CSSProperties = {
   width: 6,
   display: "grid",
@@ -5711,7 +6149,7 @@ const ptoDraftCellHintStyle: React.CSSProperties = {
 
 const ptoPlanInputStyle: React.CSSProperties = {
   width: "100%",
-  minWidth: 120,
+  minWidth: 0,
   boxSizing: "border-box",
   border: "1px solid transparent",
   borderRadius: 0,
@@ -5725,7 +6163,7 @@ const ptoPlanInputStyle: React.CSSProperties = {
 };
 
 const ptoCompactNumberInputStyle: React.CSSProperties = {
-  minWidth: 68,
+  minWidth: 0,
   cursor: "cell",
   textAlign: "center",
 };
