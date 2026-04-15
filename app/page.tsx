@@ -6385,7 +6385,7 @@ const headerSubtabsStyle: React.CSSProperties = {
   justifyContent: "center",
   width: "max-content",
   maxWidth: "min(720px, calc(100vw - 120px))",
-  borderTop: "1px solid #cbd5e1",
+  borderTop: "1px solid #0f172a",
   paddingTop: 6,
   zIndex: 10,
 };
@@ -6393,25 +6393,27 @@ const headerSubtabsStyle: React.CSSProperties = {
 const headerSubtabButtonStyle: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
-  border: "1px solid transparent",
-  background: "transparent",
-  color: "#64748b",
+  WebkitTapHighlightColor: "transparent",
+  border: "1px solid #cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
   borderRadius: 8,
-  padding: "3px 8px",
+  padding: "5px 9px",
   fontFamily: "inherit",
   fontSize: 12,
   fontWeight: 800,
   lineHeight: 1.2,
   cursor: "pointer",
   outline: "none",
-  boxShadow: "none",
+  boxShadow: "0 1px 3px rgba(15, 23, 42, 0.10)",
   userSelect: "none",
 };
 
 const headerSubtabButtonActiveStyle: React.CSSProperties = {
-  background: "#eff6ff",
-  borderColor: "#bfdbfe",
-  color: "#1d4ed8",
+  background: "#0f172a",
+  borderColor: "#0f172a",
+  color: "#ffffff",
+  boxShadow: "0 1px 3px rgba(15, 23, 42, 0.16)",
 };
 
 const logoImageStyle: React.CSSProperties = {
