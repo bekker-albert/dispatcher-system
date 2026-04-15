@@ -5667,7 +5667,7 @@ function PtoPlanTh({
         ...(width ? { width, minWidth: width, maxWidth: width } : null),
       }}
     >
-      <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{children}</div>
+      <div style={ptoHeaderContentStyle}>{children}</div>
       {columnKey && width && onResizeStart ? (
         <span
           onMouseDown={(event) => onResizeStart(event, columnKey, width)}
@@ -5839,9 +5839,17 @@ const ptoPlanThStyle: React.CSSProperties = {
   fontWeight: 800,
   textAlign: "left",
   verticalAlign: "middle",
-  whiteSpace: "nowrap",
+  whiteSpace: "normal",
   position: "relative",
   overflow: "visible",
+};
+
+const ptoHeaderContentStyle: React.CSSProperties = {
+  minWidth: 0,
+  overflow: "visible",
+  overflowWrap: "anywhere",
+  whiteSpace: "normal",
+  lineHeight: 1.15,
 };
 
 const monthToggleStyle: React.CSSProperties = {
@@ -5853,12 +5861,16 @@ const monthToggleStyle: React.CSSProperties = {
   fontWeight: 800,
   display: "inline-flex",
   alignItems: "center",
+  flexWrap: "wrap",
   gap: 4,
   padding: 0,
   cursor: "pointer",
   maxWidth: "100%",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
+  overflow: "visible",
+  overflowWrap: "anywhere",
+  textAlign: "left",
+  whiteSpace: "normal",
+  lineHeight: 1.15,
 };
 
 const ptoHeaderLabelButtonStyle: React.CSSProperties = {
@@ -5872,9 +5884,11 @@ const ptoHeaderLabelButtonStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
   padding: 0,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
+  overflow: "visible",
+  overflowWrap: "anywhere",
+  textOverflow: "clip",
+  whiteSpace: "normal",
+  lineHeight: 1.15,
 };
 
 const ptoHeaderInputStyle: React.CSSProperties = {
