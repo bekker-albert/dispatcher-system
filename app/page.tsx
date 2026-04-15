@@ -4082,26 +4082,29 @@ export default function App() {
             <div style={headerNavStackStyle}>
               <div style={headerMainTabsStyle}>
                 {topTabs.filter((tab) => tab.visible).map((tab) => (
-                  <TopButton key={tab.id} active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                  tab.id === "pto" && topTab === "pto" ? (
+                    <div key={tab.id} style={headerActiveTabWithSubtabsStyle}>
+                      <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                      <span style={headerSubtabsRoadStyle} aria-hidden />
+                      <div style={headerSubtabsStyle}>
+                        {subTabs.pto.filter((subTab) => subTab.visible).map((subTab) => (
+                          <HeaderSubButton
+                            key={subTab.id}
+                            active={ptoTab === subTab.value}
+                            onClick={() => selectPtoTab(subTab.value)}
+                            label={compactSubTabLabel("pto", subTab)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <TopButton key={tab.id} active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                  )
                 ))}
                 {customTabs.filter((tab) => tab.visible !== false).map((tab) => (
                   <TopButton key={tab.id} active={topTab === customTabKey(tab.id)} onClick={() => selectTopTab(customTabKey(tab.id))} label={tab.title} />
                 ))}
               </div>
-
-              {topTab === "pto" ? (
-                <div style={headerSubtabsStyle}>
-                  <span style={headerSubtabsRoadStyle} aria-hidden />
-                  {subTabs.pto.filter((tab) => tab.visible).map((tab) => (
-                    <HeaderSubButton
-                      key={tab.id}
-                      active={ptoTab === tab.value}
-                      onClick={() => selectPtoTab(tab.value)}
-                      label={compactSubTabLabel("pto", tab)}
-                    />
-                  ))}
-                </div>
-              ) : null}
             </div>
             <div style={workDateStyle}>
               <Field label="Рабочая дата">
@@ -6353,7 +6356,14 @@ const headerMainTabsStyle: React.CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
   gap: 6,
-  alignItems: "center",
+  alignItems: "flex-start",
+};
+
+const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
+  display: "grid",
+  justifyItems: "center",
+  alignItems: "start",
+  gap: 2,
 };
 
 const headerSubtabsStyle: React.CSSProperties = {
@@ -6361,18 +6371,19 @@ const headerSubtabsStyle: React.CSSProperties = {
   flexWrap: "wrap",
   gap: 4,
   alignItems: "center",
-  paddingLeft: 6,
+  justifyContent: "center",
+  marginTop: 1,
 };
 
 const headerSubtabsRoadStyle: React.CSSProperties = {
-  width: 36,
-  height: 14,
-  borderLeft: "2px dashed #94a3b8",
-  borderTop: "2px dashed #94a3b8",
-  borderTopLeftRadius: 7,
-  marginLeft: 10,
-  marginRight: 2,
-  alignSelf: "flex-start",
+  width: 72,
+  height: 16,
+  borderLeft: "2px dashed #2563eb",
+  borderBottom: "2px dashed #2563eb",
+  borderBottomLeftRadius: 8,
+  justifySelf: "center",
+  opacity: 0.72,
+  transform: "translateX(35px)",
 };
 
 const headerSubtabButtonStyle: React.CSSProperties = {
