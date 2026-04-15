@@ -3619,7 +3619,7 @@ export default function App() {
         </div>
 
         <div style={ptoDateTableScrollStyle}>
-          <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth }}>
+          <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth, marginRight: 40 }}>
             <colgroup>
               {tableColumns.map((column) => (
                 <col key={column.key} style={{ width: column.width }} />
@@ -3728,6 +3728,15 @@ export default function App() {
                   >
                     <PtoPlanTd>
                       {dropLineStyle ? <span style={dropLineStyle} /> : null}
+                      <button
+                        type="button"
+                        onClick={() => removeLinkedPtoDateRow(row)}
+                        style={{ ...ptoRowDeleteButtonStyle, left: tableMinWidth + 8 }}
+                        title={`Удалить строку: ${row.structure || "ПТО"}`}
+                        aria-label={`Удалить строку: ${row.structure || "ПТО"}`}
+                      >
+                        <Trash2 size={14} aria-hidden />
+                      </button>
                       <span
                         onMouseDown={(event) => startPtoRowResize(event, rowHeightKey)}
                         style={ptoRowResizeHandleStyle}
@@ -3772,15 +3781,6 @@ export default function App() {
                               <span style={dragHandleDotStyle} />
                               <span style={dragHandleDotStyle} />
                             </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeLinkedPtoDateRow(row)}
-                            style={ptoRowDeleteButtonStyle}
-                            title={`Удалить строку: ${row.structure || "ПТО"}`}
-                            aria-label={`Удалить строку: ${row.structure || "ПТО"}`}
-                          >
-                            <Trash2 size={13} aria-hidden />
                           </button>
                         </div>
                         <input data-pto-row-field={ptoRowFieldDomKey(row.id, "area")} list="pto-area-options" value={row.area} onChange={(e) => updatePtoDateRow(setRows, row.id, "area", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Уч_Аксу" style={ptoPlanInputStyle} />
@@ -5952,7 +5952,8 @@ const ptoDateTableScrollStyle: React.CSSProperties = {
   overflow: "auto",
   border: "1px solid #e2e8f0",
   borderRadius: 8,
-  paddingLeft: 58,
+  paddingLeft: 34,
+  paddingRight: 40,
   background: "#ffffff",
   height: "100%",
   minHeight: 0,
@@ -6048,15 +6049,13 @@ const ptoAreaCellStyle: React.CSSProperties = {
 
 const ptoRowToolsStyle: React.CSSProperties = {
   position: "absolute",
-  left: -56,
+  left: -32,
   top: "50%",
   transform: "translateY(-50%)",
-  width: 50,
+  width: 28,
   height: 30,
-  display: "flex",
-  gap: 4,
-  alignItems: "center",
-  justifyContent: "flex-end",
+  display: "grid",
+  placeItems: "center",
 };
 
 const dragHandleStyle: React.CSSProperties = {
@@ -6074,8 +6073,11 @@ const dragHandleStyle: React.CSSProperties = {
 };
 
 const ptoRowDeleteButtonStyle: React.CSSProperties = {
-  width: 22,
-  height: 24,
+  position: "absolute",
+  top: "50%",
+  transform: "translateY(-50%)",
+  width: 24,
+  height: 26,
   border: "none",
   background: "transparent",
   color: "#991b1b",
@@ -6086,6 +6088,7 @@ const ptoRowDeleteButtonStyle: React.CSSProperties = {
   justifyContent: "center",
   padding: 0,
   opacity: 0.72,
+  zIndex: 6,
 };
 
 const ptoInlineAddRowButtonStyle: React.CSSProperties = {
@@ -6390,7 +6393,7 @@ const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
 
 const headerSubtabsStyle: React.CSSProperties = {
   position: "absolute",
-  top: "calc(100% + 10px)",
+  top: "calc(100% + 14px)",
   left: "50%",
   transform: "translateX(-50%)",
   display: "flex",
@@ -6400,6 +6403,8 @@ const headerSubtabsStyle: React.CSSProperties = {
   justifyContent: "center",
   width: "max-content",
   maxWidth: "min(720px, calc(100vw - 120px))",
+  borderTop: "1px solid #0f172a",
+  paddingTop: 6,
   zIndex: 10,
 };
 
@@ -6411,9 +6416,9 @@ const headerSubtabButtonStyle: React.CSSProperties = {
   background: "#ffffff",
   color: "#0f172a",
   borderRadius: 8,
-  padding: "7px 10px",
+  padding: "5px 8px",
   fontFamily: "inherit",
-  fontSize: 13,
+  fontSize: 12,
   fontWeight: 700,
   lineHeight: 1.2,
   cursor: "pointer",
