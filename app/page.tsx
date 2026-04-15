@@ -4085,7 +4085,6 @@ export default function App() {
                   tab.id === "pto" && topTab === "pto" ? (
                     <div key={tab.id} style={headerActiveTabWithSubtabsStyle}>
                       <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                      <span style={headerSubtabsRoadStyle} aria-hidden />
                       <div style={headerSubtabsStyle}>
                         {subTabs.pto.filter((subTab) => subTab.visible).map((subTab) => (
                           <HeaderSubButton
@@ -6374,7 +6373,7 @@ const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
 
 const headerSubtabsStyle: React.CSSProperties = {
   position: "absolute",
-  top: "calc(100% + 26px)",
+  top: "calc(100% + 16px)",
   left: "50%",
   transform: "translateX(-50%)",
   display: "flex",
@@ -6384,32 +6383,19 @@ const headerSubtabsStyle: React.CSSProperties = {
   justifyContent: "center",
   width: "max-content",
   maxWidth: "min(720px, calc(100vw - 120px))",
+  borderTop: "2px dashed #2563eb",
+  paddingTop: 7,
   zIndex: 10,
-};
-
-const headerSubtabsRoadStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "calc(100% + 5px)",
-  left: "50%",
-  width: 54,
-  height: 18,
-  borderLeft: "2px dashed #2563eb",
-  borderBottom: "2px dashed #2563eb",
-  borderBottomLeftRadius: 8,
-  opacity: 0.72,
-  transform: "translateX(-1px)",
-  pointerEvents: "none",
 };
 
 const headerSubtabButtonStyle: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
   border: "none",
-  borderTop: "2px solid transparent",
   background: "transparent",
   color: "#64748b",
   borderRadius: 0,
-  padding: "4px 7px 3px",
+  padding: "2px 7px 3px",
   fontFamily: "inherit",
   fontSize: 12,
   fontWeight: 800,
@@ -6421,7 +6407,6 @@ const headerSubtabButtonStyle: React.CSSProperties = {
 };
 
 const headerSubtabButtonActiveStyle: React.CSSProperties = {
-  borderTopColor: "#2563eb",
   color: "#1d4ed8",
 };
 
