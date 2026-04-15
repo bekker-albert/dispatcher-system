@@ -5499,7 +5499,10 @@ function HeaderSubButton({ active, onClick, label }: { active: boolean; onClick:
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        onClick();
+        event.currentTarget.blur();
+      }}
       style={{
         ...headerSubtabButtonStyle,
         ...(active ? headerSubtabButtonActiveStyle : null),
@@ -6384,6 +6387,8 @@ const headerSubtabButtonStyle: React.CSSProperties = {
   fontWeight: 800,
   lineHeight: 1.2,
   cursor: "pointer",
+  outline: "none",
+  boxShadow: "none",
 };
 
 const headerSubtabButtonActiveStyle: React.CSSProperties = {
