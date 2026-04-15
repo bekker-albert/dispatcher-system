@@ -916,7 +916,6 @@ const ptoColumnDefaults = {
   yearTotal: 92,
   monthTotal: 76,
   day: 54,
-  actions: 54,
 };
 
 const fuelGeneral: FuelRow[] = [
@@ -3078,8 +3077,7 @@ export default function App() {
       { key: `month-total:${group.month}`, width: columnWidth(`month-total:${group.month}`, ptoColumnDefaults.monthTotal) },
       ...(group.expanded ? group.days.map((day) => ({ key: `day:${day}`, width: columnWidth(`day:${day}`, ptoColumnDefaults.day) })) : []),
     ]);
-    const actionColumn = { key: "actions", width: columnWidth("actions", ptoColumnDefaults.actions) };
-    const tableColumns = [...baseColumns, ...dateColumns, actionColumn];
+    const tableColumns = [...baseColumns, ...dateColumns];
     const tableMinWidth = tableColumns.reduce((sum, column) => sum + column.width, 0);
     const columnWidthByKey = new Map(tableColumns.map((column) => [column.key, column.width]));
     const activeFormulaCell = ptoFormulaCell?.table === ptoTab && ptoFormulaCell.year === ptoPlanYear ? ptoFormulaCell : null;
@@ -3642,9 +3640,6 @@ export default function App() {
                     {renderPtoMonthHeader(group.month, group.label, group.expanded)}
                   </PtoPlanTh>
                 ))}
-                <PtoPlanTh rowSpan={2} columnKey="actions" width={columnWidthByKey.get("actions")} onResizeStart={startPtoColumnResize}>
-                  <span aria-hidden />
-                </PtoPlanTh>
               </tr>
               <tr>
                 {ptoMonthGroups.map((group) => (
@@ -3777,6 +3772,15 @@ export default function App() {
                               <span style={dragHandleDotStyle} />
                               <span style={dragHandleDotStyle} />
                             </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeLinkedPtoDateRow(row)}
+                            style={ptoRowDeleteButtonStyle}
+                            title={`Удалить строку: ${row.structure || "ПТО"}`}
+                            aria-label={`Удалить строку: ${row.structure || "ПТО"}`}
+                          >
+                            <Trash2 size={13} aria-hidden />
                           </button>
                         </div>
                         <input data-pto-row-field={ptoRowFieldDomKey(row.id, "area")} list="pto-area-options" value={row.area} onChange={(e) => updatePtoDateRow(setRows, row.id, "area", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Уч_Аксу" style={ptoPlanInputStyle} />
@@ -3994,11 +3998,6 @@ export default function App() {
                         </Fragment>
                       );
                     })}
-                    <PtoPlanTd>
-                      <IconButton label={`Удалить строку: ${row.structure || "ПТО"}`} onClick={() => removeLinkedPtoDateRow(row)}>
-                        <Trash2 size={16} aria-hidden />
-                      </IconButton>
-                    </PtoPlanTd>
                   </tr>
                 );
               })}
@@ -4049,7 +4048,6 @@ export default function App() {
                     ))}
                   </Fragment>
                 ))}
-                <PtoPlanTd><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
               </tr>
             </tbody>
           </table>
@@ -5954,7 +5952,7 @@ const ptoDateTableScrollStyle: React.CSSProperties = {
   overflow: "auto",
   border: "1px solid #e2e8f0",
   borderRadius: 8,
-  paddingLeft: 24,
+  paddingLeft: 58,
   background: "#ffffff",
   height: "100%",
   minHeight: 0,
@@ -6050,13 +6048,15 @@ const ptoAreaCellStyle: React.CSSProperties = {
 
 const ptoRowToolsStyle: React.CSSProperties = {
   position: "absolute",
-  left: -32,
+  left: -56,
   top: "50%",
   transform: "translateY(-50%)",
-  width: 28,
+  width: 50,
   height: 30,
-  display: "grid",
-  placeItems: "center",
+  display: "flex",
+  gap: 4,
+  alignItems: "center",
+  justifyContent: "flex-end",
 };
 
 const dragHandleStyle: React.CSSProperties = {
@@ -6071,6 +6071,21 @@ const dragHandleStyle: React.CSSProperties = {
   placeItems: "center",
   padding: 0,
   flex: "0 0 auto",
+};
+
+const ptoRowDeleteButtonStyle: React.CSSProperties = {
+  width: 22,
+  height: 24,
+  border: "none",
+  background: "transparent",
+  color: "#991b1b",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  opacity: 0.72,
 };
 
 const ptoInlineAddRowButtonStyle: React.CSSProperties = {
@@ -6375,7 +6390,7 @@ const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
 
 const headerSubtabsStyle: React.CSSProperties = {
   position: "absolute",
-  top: "calc(100% + 14px)",
+  top: "calc(100% + 10px)",
   left: "50%",
   transform: "translateX(-50%)",
   display: "flex",
@@ -6385,8 +6400,6 @@ const headerSubtabsStyle: React.CSSProperties = {
   justifyContent: "center",
   width: "max-content",
   maxWidth: "min(720px, calc(100vw - 120px))",
-  borderTop: "1px solid #0f172a",
-  paddingTop: 6,
   zIndex: 10,
 };
 
@@ -6398,14 +6411,14 @@ const headerSubtabButtonStyle: React.CSSProperties = {
   background: "#ffffff",
   color: "#0f172a",
   borderRadius: 8,
-  padding: "5px 9px",
+  padding: "7px 10px",
   fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
+  fontSize: 13,
+  fontWeight: 700,
   lineHeight: 1.2,
   cursor: "pointer",
   outline: "none",
-  boxShadow: "0 1px 3px rgba(15, 23, 42, 0.10)",
+  boxShadow: "none",
   userSelect: "none",
 };
 
@@ -6413,7 +6426,6 @@ const headerSubtabButtonActiveStyle: React.CSSProperties = {
   background: "#0f172a",
   borderColor: "#0f172a",
   color: "#ffffff",
-  boxShadow: "0 1px 3px rgba(15, 23, 42, 0.16)",
 };
 
 const logoImageStyle: React.CSSProperties = {
