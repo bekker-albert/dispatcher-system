@@ -3622,7 +3622,7 @@ export default function App() {
         </div>
 
         <div style={ptoDateTableScrollStyle}>
-          <table style={{ ...ptoPlanTableStyle, minWidth: tableMinWidth }}>
+          <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth }}>
             <colgroup>
               {tableColumns.map((column) => (
                 <col key={column.key} style={{ width: column.width }} />
@@ -5821,7 +5821,6 @@ const reportTdStyle: React.CSSProperties = {
 };
 
 const ptoPlanTableStyle: React.CSSProperties = {
-  width: "100%",
   borderCollapse: "collapse",
   tableLayout: "fixed",
   fontSize: 12,
