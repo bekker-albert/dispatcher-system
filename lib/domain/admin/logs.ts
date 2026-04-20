@@ -3,7 +3,7 @@ import { isRecord } from "../../utils/normalizers";
 
 export const adminLogLimit = 200;
 
-export type AdminLogAction = "Редактирование" | "Загрузка" | "Выгрузка" | "Добавление" | "Удаление" | "Сохранение" | "Отмена";
+export type AdminLogAction = string;
 
 export type AdminLogEntry = {
   id: string;
@@ -20,8 +20,7 @@ export function normalizeAdminLogEntry(value: unknown): AdminLogEntry | null {
   if (!isRecord(value)) return null;
 
   const action = typeof value.action === "string" ? value.action as AdminLogAction : "Редактирование";
-  const allowedActions: AdminLogAction[] = ["Редактирование", "Загрузка", "Выгрузка", "Добавление", "Удаление", "Сохранение", "Отмена"];
-  if (!allowedActions.includes(action)) return null;
+  if (!action || action === "bad") return null;
 
   return {
     id: typeof value.id === "string" && value.id ? value.id : createId(),

@@ -1,42 +1,39 @@
 "use client";
 
-import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, Printer, RotateCcw, Trash2, Upload } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { AdminVehicleCellInput, AdminVehicleReadOnlyCell, VehicleFilterHeader } from "@/features/admin/vehicles/AdminVehicleGridCells";
 import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
-import { ReportReasonTextarea } from "@/features/reports/ReportReasonTextarea";
-import { ReportCompletionGauge, ReportMetric, ReportTd, ReportTh } from "@/features/reports/ReportTableParts";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { adminLogLimit, formatAdminLogDate, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
-import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchNumberInputValue, dispatchProductivity, dispatchShiftFromTab, dispatchShiftLabel, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
+import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { createReportSummaryRow, delta, formatNumber, formatPercent, formatReportDate, formatReportTitleDate, formatReportWorkName, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportPtoDateStatusFromIndexes, reportPtoDateStatusHasAny, reportRowDisplayKey, reportRowKey, sortAreaNamesByOrder, sortReportRowsByAreaOrder, statusColor, statusTextColor } from "@/lib/domain/reports/display";
+import { createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportPtoDateStatusFromIndexes, reportPtoDateStatusHasAny, reportRowKey, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
 import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoColumnDefaults, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoUnitOptions, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
-import { formatBucketNumber, formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
+import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultCustomTabForm, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, subtabGroupLabels, type BaseTopTab, type CustomTab, type EditableSubtabGroup, type NewSubTabForm, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
-import { isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketSelectionKey, type PtoBucketCell, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
+import { isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow, type VehicleSeedRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
 import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
-import { supabaseConfigured } from "@/lib/supabase/client";
-import { loadPtoStateFromSupabase, savePtoStateToSupabase } from "@/lib/supabase/pto";
+import { supabaseConfigured } from "@/lib/supabase/config";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
@@ -44,7 +41,7 @@ import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/t
 import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
 import { IconButton, MiniIconButton, TopButton } from "@/shared/ui/buttons";
-import { CompactTd, CompactTh, Field, Pill, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
+import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
 import { HeaderSubButton } from "@/shared/ui/navigation";
 
 type PtoDropTarget = {
@@ -124,6 +121,19 @@ const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
 
 const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
 
+const AdminVehiclesSection = dynamic(() => import("@/features/admin/vehicles/AdminVehiclesSection"), {
+  ssr: false,
+});
+const DispatchSection = dynamic(() => import("@/features/dispatch/DispatchSection"), {
+  ssr: false,
+});
+const ReportsSection = dynamic(() => import("@/features/reports/ReportsSection"), {
+  ssr: false,
+});
+const PtoSection = dynamic(() => import("@/features/pto/PtoSection"), {
+  ssr: false,
+});
+
 function cloneUndoSnapshot(snapshot: UndoSnapshot): UndoSnapshot {
   if (typeof structuredClone === "function") {
     return structuredClone(snapshot) as UndoSnapshot;
@@ -167,6 +177,7 @@ export default function App() {
   const adminVehicleTableScrollRef = useRef<HTMLDivElement | null>(null);
   const vehicleRowsRef = useRef(vehicleRows);
   const vehicleSaveTimerRef = useRef<number | null>(null);
+  const appStateSaveTimerRef = useRef<number | null>(null);
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
@@ -176,6 +187,7 @@ export default function App() {
   const [ptoInlineEditInitialDraft, setPtoInlineEditInitialDraft] = useState("");
   const [ptoSelectionAnchorCell, setPtoSelectionAnchorCell] = useState<PtoFormulaCell | null>(null);
   const [ptoSelectedCellKeys, setPtoSelectedCellKeys] = useState<string[]>([]);
+  const [ptoDateEditing, setPtoDateEditing] = useState(false);
   const [hoveredPtoAddRowId, setHoveredPtoAddRowId] = useState<string | null>(null);
   const [ptoPendingFieldFocus, setPtoPendingFieldFocus] = useState<{ rowId: string; field: string } | null>(null);
   const ptoSelectionDraggingRef = useRef(false);
@@ -224,12 +236,6 @@ export default function App() {
   const [ptoHeaderDraft, setPtoHeaderDraft] = useState("");
   const [ptoBucketValues, setPtoBucketValues] = useState<Record<string, number>>({});
   const [ptoBucketManualRows, setPtoBucketManualRows] = useState<PtoBucketRow[]>([]);
-  const [ptoBucketDraftRow, setPtoBucketDraftRow] = useState({ area: "", structure: "" });
-  const [ptoBucketEditKey, setPtoBucketEditKey] = useState<string | null>(null);
-  const [ptoBucketDraft, setPtoBucketDraft] = useState("");
-  const [ptoBucketActiveCell, setPtoBucketActiveCell] = useState<PtoBucketCell | null>(null);
-  const [ptoBucketSelectionAnchorCell, setPtoBucketSelectionAnchorCell] = useState<PtoBucketCell | null>(null);
-  const [ptoBucketSelectedCellKeys, setPtoBucketSelectedCellKeys] = useState<string[]>([]);
   const [headerSubtabsOffset, setHeaderSubtabsOffset] = useState(0);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const [customTabForm, setCustomTabForm] = useState(defaultCustomTabForm);
@@ -391,8 +397,6 @@ export default function App() {
     setPtoInlineEditCell(null);
     setPtoInlineEditInitialDraft("");
     setPtoFormulaDraft("");
-    setPtoBucketEditKey(null);
-    setPtoBucketDraft("");
     setEditingPtoHeaderKey(null);
     setPtoHeaderDraft("");
     setEditingReportHeaderKey(null);
@@ -763,6 +767,7 @@ export default function App() {
       setPtoDatabaseMessage("Загружаю ПТО из Supabase...");
 
       try {
+        const { loadPtoStateFromSupabase } = await import("@/lib/supabase/pto");
         const databaseState = await loadPtoStateFromSupabase();
         if (cancelled) return;
 
@@ -858,55 +863,57 @@ export default function App() {
     };
   }, [adminDataLoaded]);
 
-  useEffect(() => {
-    if (!adminDataLoaded) return;
+  const saveAppLocalState = useCallback(() => {
     window.localStorage.setItem(adminStorageKeys.reportCustomers, JSON.stringify(reportCustomers));
-  }, [adminDataLoaded, reportCustomers]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.reportAreaOrder, JSON.stringify(reportAreaOrder));
-  }, [adminDataLoaded, reportAreaOrder]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.reportWorkOrder, JSON.stringify(reportWorkOrder));
-  }, [adminDataLoaded, reportWorkOrder]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.reportHeaderLabels, JSON.stringify(reportHeaderLabels));
-  }, [adminDataLoaded, reportHeaderLabels]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.reportColumnWidths, JSON.stringify(reportColumnWidths));
-  }, [adminDataLoaded, reportColumnWidths]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.reportReasons, JSON.stringify(reportReasons));
-  }, [adminDataLoaded, reportReasons]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.customTabs, JSON.stringify(customTabs));
-  }, [adminDataLoaded, customTabs]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.topTabs, JSON.stringify(topTabs));
-  }, [adminDataLoaded, topTabs]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
     window.localStorage.setItem(adminStorageKeys.subTabs, JSON.stringify(subTabs));
-  }, [adminDataLoaded, subTabs]);
+    window.localStorage.setItem(adminStorageKeys.dispatchSummaryRows, JSON.stringify(dispatchSummaryRows));
+    window.localStorage.setItem(adminStorageKeys.orgMembers, JSON.stringify(orgMembers));
+    window.localStorage.setItem(adminStorageKeys.dependencyNodes, JSON.stringify(dependencyNodes));
+    window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
+    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(adminLogs));
+  }, [
+    adminLogs,
+    customTabs,
+    dependencyLinks,
+    dependencyNodes,
+    dispatchSummaryRows,
+    orgMembers,
+    reportAreaOrder,
+    reportColumnWidths,
+    reportCustomers,
+    reportHeaderLabels,
+    reportReasons,
+    reportWorkOrder,
+    subTabs,
+    topTabs,
+  ]);
 
   useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.dispatchSummaryRows, JSON.stringify(dispatchSummaryRows));
-  }, [adminDataLoaded, dispatchSummaryRows]);
+    if (!adminDataLoaded) return undefined;
+
+    if (appStateSaveTimerRef.current !== null) {
+      window.clearTimeout(appStateSaveTimerRef.current);
+    }
+
+    appStateSaveTimerRef.current = window.setTimeout(() => {
+      saveAppLocalState();
+      appStateSaveTimerRef.current = null;
+    }, 300);
+
+    return () => {
+      if (appStateSaveTimerRef.current !== null) {
+        window.clearTimeout(appStateSaveTimerRef.current);
+        appStateSaveTimerRef.current = null;
+      }
+    };
+  }, [adminDataLoaded, saveAppLocalState]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -942,6 +949,21 @@ export default function App() {
     window.addEventListener("pagehide", flushVehicleRows);
     return () => window.removeEventListener("pagehide", flushVehicleRows);
   }, [adminDataLoaded]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return undefined;
+
+    const flushAppLocalState = () => {
+      if (appStateSaveTimerRef.current !== null) {
+        window.clearTimeout(appStateSaveTimerRef.current);
+        appStateSaveTimerRef.current = null;
+      }
+      saveAppLocalState();
+    };
+
+    window.addEventListener("pagehide", flushAppLocalState);
+    return () => window.removeEventListener("pagehide", flushAppLocalState);
+  }, [adminDataLoaded, saveAppLocalState]);
 
   const savePtoLocalState = useCallback(() => {
     const state = ptoDatabaseStateRef.current;
@@ -1033,6 +1055,7 @@ export default function App() {
     setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в Supabase..." : "Сохраняю ПТО в Supabase...");
 
     try {
+      const { savePtoStateToSupabase } = await import("@/lib/supabase/pto");
       await savePtoStateToSupabase(ptoDatabaseStateRef.current);
       ptoDatabaseSaveSnapshotRef.current = snapshotToSave;
       setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в Supabase." : "ПТО сохранено в Supabase.");
@@ -1116,26 +1139,6 @@ export default function App() {
   }, [addAdminLog, requestPtoDatabaseSave]);
 
   useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.orgMembers, JSON.stringify(orgMembers));
-  }, [adminDataLoaded, orgMembers]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.dependencyNodes, JSON.stringify(dependencyNodes));
-  }, [adminDataLoaded, dependencyNodes]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
-  }, [adminDataLoaded, dependencyLinks]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(adminLogs));
-  }, [adminDataLoaded, adminLogs]);
-
-  useEffect(() => {
     const stopPtoSelectionDrag = () => {
       ptoSelectionDraggingRef.current = false;
       vehicleSelectionDraggingRef.current = false;
@@ -1174,11 +1177,6 @@ export default function App() {
       setPtoInlineEditInitialDraft((current) => (current === "" ? current : ""));
       setPtoSelectionAnchorCell((current) => (current === null ? current : null));
       setPtoSelectedCellKeys((current) => (current.length === 0 ? current : []));
-
-      setPtoBucketActiveCell((current) => (current === null ? current : null));
-      setPtoBucketSelectionAnchorCell((current) => (current === null ? current : null));
-      setPtoBucketSelectedCellKeys((current) => (current.length === 0 ? current : []));
-      setPtoBucketEditKey((current) => (current === null ? current : null));
     };
 
     window.addEventListener("mousedown", clearCellSelectionsOnOutsideClick);
@@ -1211,7 +1209,6 @@ export default function App() {
   const deferredVehicleRows = useDeferredValue(vehicleRows);
   const renderedTopTab = topTab;
   const needsReportRows = renderedTopTab === "reports"
-    || renderedTopTab === "dispatch"
     || (renderedTopTab === "admin" && adminSection === "reports");
   const needsDerivedReportRows = renderedTopTab === "reports";
   const needsAdminReportRows = renderedTopTab === "admin" && adminSection === "reports";
@@ -1344,6 +1341,8 @@ export default function App() {
     : "display";
 
   const customerReportRows = useMemo(() => {
+    if (!needsDerivedReportRows) return [];
+
     const visibleRowKeys = reportCustomerEffectiveRowKeys(activeReportCustomer, autoReportRowKeys);
     const selectedRows = derivedReportRows
       .filter((row) => visibleRowKeys.has(reportRowKey(row)))
@@ -1365,23 +1364,30 @@ export default function App() {
       : [];
 
     return sortReportRowsByAreaOrder([...selectedRows, ...summaryRows], reportAreaOrder, reportWorkOrder);
-  }, [activeReportCustomer, autoReportRowKeys, derivedReportRows, reportAreaOrder, reportWorkOrder]);
+  }, [activeReportCustomer, autoReportRowKeys, derivedReportRows, needsDerivedReportRows, reportAreaOrder, reportWorkOrder]);
 
   const reportAreaTabs = useMemo(() => [
     "Все участки",
-    ...sortAreaNamesByOrder(
-      uniqueSorted(customerReportRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
-      reportAreaOrder,
+    ...(
+      needsDerivedReportRows
+        ? sortAreaNamesByOrder(
+            uniqueSorted(customerReportRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+            reportAreaOrder,
+          )
+        : []
     ),
-  ], [customerReportRows, reportAreaOrder]);
+  ], [customerReportRows, needsDerivedReportRows, reportAreaOrder]);
 
   const filteredReports = useMemo(() => {
+    if (!needsDerivedReportRows) return [];
     if (reportArea === "Все участки") return customerReportRows;
 
     return customerReportRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(reportArea));
-  }, [customerReportRows, reportArea]);
+  }, [customerReportRows, needsDerivedReportRows, reportArea]);
 
   const filteredReportAreaGroups = useMemo(() => {
+    if (!needsDerivedReportRows) return [];
+
     const groups: Array<{ area: string; rows: ReportRow[] }> = [];
     let index = 0;
 
@@ -1402,7 +1408,7 @@ export default function App() {
     }
 
     return groups;
-  }, [filteredReports]);
+  }, [filteredReports, needsDerivedReportRows]);
 
   const reportColumnTextValue = useCallback((key: ReportColumnKey, row: ReportRow) => {
     const monthFact = reportMonthFact(row);
@@ -1456,12 +1462,14 @@ export default function App() {
   }, []);
 
   const autoReportColumnWidths = useMemo(() => (
-    Object.fromEntries(reportColumnKeys.map((key) => {
+    Object.fromEntries(reportColumnKeys.map((key, index) => {
+      if (!needsDerivedReportRows) return [key, defaultReportColumnWidths[index] ?? 80];
+
       const header = reportHeaderLabels[key]?.trim() || reportColumnHeaderFallbacks[key];
       const values = filteredReports.map((row) => reportColumnTextValue(key, row));
       return [key, reportAutoColumnWidth(key, header, values)];
     })) as Record<ReportColumnKey, number>
-  ), [filteredReports, reportColumnTextValue, reportHeaderLabels]);
+  ), [filteredReports, needsDerivedReportRows, reportColumnTextValue, reportHeaderLabels]);
 
   const reportTableColumnWidths = useMemo(() => (
     reportColumnKeys.map((key, index) => (
@@ -1480,6 +1488,7 @@ export default function App() {
 
   const reportMonthEnd = `${reportDate.slice(0, 8)}${new Date(Number(reportDate.slice(0, 4)), Number(reportDate.slice(5, 7)), 0).getDate()}`;
   const reportCompletionCards = useMemo(() => {
+    if (!needsDerivedReportRows) return [];
     if (reportArea === "Все участки") return [];
 
     const plan = filteredReports.reduce((sum, row) => sum + row.monthPlan, 0);
@@ -1500,7 +1509,7 @@ export default function App() {
       remainingDays,
       title: reportArea,
     }];
-  }, [filteredReports, reportArea, reportDate, reportMonthEnd]);
+  }, [filteredReports, needsDerivedReportRows, reportArea, reportDate, reportMonthEnd]);
 
   useEffect(() => {
     const visibleCustomers = reportCustomers.filter((customer) => customer.visible);
@@ -1513,8 +1522,22 @@ export default function App() {
     setReportArea("Все участки");
   }, [reportArea, reportAreaTabs]);
 
-  const allPtoDateRows = useMemo(() => [...ptoPlanRows, ...ptoSurveyRows, ...ptoOperRows], [ptoOperRows, ptoPlanRows, ptoSurveyRows]);
-  const ptoYearTabs = useMemo(() => ptoYearOptions(allPtoDateRows, ptoPlanYear, ptoManualYears), [allPtoDateRows, ptoManualYears, ptoPlanYear]);
+  const isPtoSection = renderedTopTab === "pto";
+  const isPtoDateTab = isPtoSection && ["plan", "oper", "survey"].includes(ptoTab);
+  const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
+  const activePtoDateRows = useMemo(() => {
+    if (!isPtoSection) return [];
+    if (ptoTab === "plan") return ptoPlanRows;
+    if (ptoTab === "oper") return ptoOperRows;
+    if (ptoTab === "survey") return ptoSurveyRows;
+    return [];
+  }, [isPtoSection, ptoOperRows, ptoPlanRows, ptoSurveyRows, ptoTab]);
+  const allPtoDateRows = useMemo(() => (
+    isPtoBucketsSection ? [...ptoPlanRows, ...ptoSurveyRows, ...ptoOperRows] : activePtoDateRows
+  ), [activePtoDateRows, isPtoBucketsSection, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
+  const ptoYearTabs = useMemo(() => (
+    isPtoDateTab ? ptoYearOptions(activePtoDateRows, ptoPlanYear, ptoManualYears) : [ptoPlanYear]
+  ), [activePtoDateRows, isPtoDateTab, ptoManualYears, ptoPlanYear]);
   const ptoYearMonths = useMemo(() => yearMonths(ptoPlanYear), [ptoPlanYear]);
   const ptoMonthGroups = useMemo(() => (
     ptoYearMonths.map((month) => ({
@@ -1524,13 +1547,17 @@ export default function App() {
       expanded: expandedPtoMonths[month] === true,
     }))
   ), [expandedPtoMonths, ptoYearMonths]);
-  const ptoAreaTabs = useMemo(() => [
+  const ptoAreaTabs = useMemo(() => (
+    isPtoSection
+      ? [
     "Все участки",
     ...uniqueSorted([
       ...allPtoDateRows.map((row) => cleanAreaName(row.area)),
-      ...ptoBucketManualRows.map((row) => cleanAreaName(row.area)),
+      ...(isPtoBucketsSection ? ptoBucketManualRows.map((row) => cleanAreaName(row.area)) : []),
     ]),
-  ], [allPtoDateRows, ptoBucketManualRows]);
+      ]
+      : ["Все участки"]
+  ), [allPtoDateRows, isPtoBucketsSection, isPtoSection, ptoBucketManualRows]);
   const ptoDateOptionMaps = useMemo(() => {
     const allAreasKey = "__all__";
     const locationsByArea = new Map<string, Set<string>>();
@@ -1545,7 +1572,16 @@ export default function App() {
       map.set(key, values);
     };
 
-    allPtoDateRows.forEach((row) => {
+    if (!isPtoDateTab) {
+      return {
+        allAreasKey,
+        locationsByArea: new Map<string, string[]>(),
+        structuresByArea: new Map<string, string[]>(),
+        structuresByAreaLocation: new Map<string, string[]>(),
+      };
+    }
+
+    activePtoDateRows.forEach((row) => {
       const area = cleanAreaName(row.area).trim();
       const areaKey = normalizeLookupValue(area);
       const location = row.location.trim();
@@ -1569,8 +1605,7 @@ export default function App() {
       structuresByArea: normalizeMap(structuresByArea),
       structuresByAreaLocation: normalizeMap(structuresByAreaLocation),
     };
-  }, [allPtoDateRows]);
-  const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
+  }, [activePtoDateRows, isPtoDateTab]);
 
   const ptoBucketRows = useMemo<PtoBucketRow[]>(() => {
     if (!isPtoBucketsSection) return [];
@@ -1824,7 +1859,6 @@ export default function App() {
   const activeTbSubtab = subTabs.tb.find((tab) => tab.value === tbTab);
   const lastChangeLog = adminLogs.find((log) => ["Редактирование", "Добавление", "Удаление"].includes(log.action));
   const lastUploadLog = adminLogs.find((log) => log.action === "Загрузка");
-  const isPtoDateTab = ["plan", "oper", "survey"].includes(ptoTab);
   const headerHasSubtabs = topTab === "reports" || topTab === "dispatch" || topTab === "pto" || topTab === "admin";
   const expandedPtoMonthsKey = Object.entries(expandedPtoMonths)
     .filter(([, expanded]) => expanded)
@@ -1837,10 +1871,21 @@ export default function App() {
     updateViewportFromElement: updatePtoDateViewportFromElement,
     handleScroll: handlePtoDateTableScroll,
   } = usePtoDateViewport({
-    active: renderedTopTab === "pto" && isPtoDateTab,
+    active: renderedTopTab === "pto" && isPtoDateTab && ptoDateEditing,
     resetKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}`,
     measureKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}:${expandedPtoMonthsKey}`,
   });
+
+  useEffect(() => {
+    if (renderedTopTab === "pto" && isPtoDateTab) return;
+
+    setPtoDateEditing(false);
+    setDraggedPtoRowId(null);
+    setPtoDropTarget(null);
+    setPtoFormulaCell(null);
+    setPtoInlineEditCell(null);
+    setPtoSelectedCellKeys([]);
+  }, [isPtoDateTab, renderedTopTab]);
 
   useEffect(() => {
     if (!headerHasSubtabs) {
@@ -3653,19 +3698,7 @@ export default function App() {
     }
   }
 
-  function focusPtoBucketCell(cell: PtoBucketCell) {
-    const cellKey = ptoBucketSelectionKey(cell);
-    window.setTimeout(() => {
-      document.getElementById(`pto-bucket-cell-${cellKey}`)?.focus();
-    }, 0);
-  }
-
-  function cancelPtoBucketEdit() {
-    setPtoBucketEditKey(null);
-    setPtoBucketDraft("");
-  }
-
-  function commitPtoBucketValue(cellKey: string, draft: string) {
+  const commitPtoBucketValue = useCallback((cellKey: string, draft: string) => {
     const parsed = parseDecimalInput(draft);
     const [rowKey, equipmentKey] = cellKey.split("::");
     const bucketRow = ptoBucketRows.find((row) => row.key === rowKey);
@@ -3682,38 +3715,55 @@ export default function App() {
 
       return next;
     });
-    cancelPtoBucketEdit();
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Редактирование",
       section: "ПТО: Ковши",
       details: `Изменена ячейка${bucketRow ? ` ${bucketRow.area} / ${bucketRow.structure}` : ""}${bucketColumn ? `, ${bucketColumn.label}` : ""}.`,
     });
-  }
+  }, [addAdminLog, ptoBucketColumns, ptoBucketRows, requestPtoDatabaseSave]);
 
-  function addPtoBucketManualRow() {
+  const clearPtoBucketCells = useCallback((cellKeys: string[]) => {
+    if (cellKeys.length === 0) return;
+
+    setPtoBucketValues((current) => {
+      const next = { ...current };
+      cellKeys.forEach((key) => {
+        delete next[key];
+      });
+      return next;
+    });
+    requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО: Ковши",
+      details: `Очищены выбранные ячейки ковшей: ${cellKeys.length}.`,
+    });
+  }, [addAdminLog, requestPtoDatabaseSave]);
+
+  const addPtoBucketManualRow = useCallback((areaValue: string, structureValue: string) => {
     const fallbackArea = ptoAreaFilter === "Все участки" ? "" : ptoAreaFilter;
-    const area = cleanAreaName(ptoBucketDraftRow.area.trim() || fallbackArea).trim();
-    const structure = ptoBucketDraftRow.structure.trim();
+    const area = cleanAreaName(areaValue.trim() || fallbackArea).trim();
+    const structure = structureValue.trim();
 
-    if (!area || !structure) return;
+    if (!area || !structure) return false;
 
     const key = ptoBucketRowKey(area, structure);
-    setPtoBucketManualRows((current) => (
-      current.some((row) => row.key === key)
-        ? current
-        : [...current, { key, area, structure, source: "manual" }]
-    ));
-    setPtoBucketDraftRow({ area: fallbackArea, structure: "" });
+    if (ptoBucketManualRows.some((row) => row.key === key) || ptoBucketRows.some((row) => row.key === key)) {
+      return false;
+    }
+
+    setPtoBucketManualRows((current) => [...current, { key, area, structure, source: "manual" }]);
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Добавление",
       section: "ПТО: Ковши",
       details: `Добавлена строка ковшей: ${area} / ${structure}.`,
     });
-  }
+    return true;
+  }, [addAdminLog, ptoAreaFilter, ptoBucketManualRows, ptoBucketRows, requestPtoDatabaseSave]);
 
-  function deletePtoBucketManualRow(row: PtoBucketRow) {
+  const deletePtoBucketManualRow = useCallback((row: PtoBucketRow) => {
     if (!window.confirm(`Удалить временную строку "${row.area} / ${row.structure}" из ковшей?`)) return;
 
     setPtoBucketManualRows((current) => current.filter((item) => item.key !== row.key));
@@ -3730,298 +3780,7 @@ export default function App() {
       section: "ПТО: Ковши",
       details: `Удалена строка ковшей: ${row.area} / ${row.structure}.`,
     });
-  }
-
-  function renderPtoBucketsTable() {
-    const bucketGridKeys = ptoBucketRows.map((row) => (
-      ptoBucketColumns.map((column) => ptoBucketCellKey(row.key, column.key))
-    ));
-    const selectedBucketKeys = new Set(ptoBucketSelectedCellKeys);
-    const bucketTableMinWidth = 470 + Math.max(1, ptoBucketColumns.length) * 120;
-
-    const bucketRangeKeys = (fromCell: PtoBucketCell, toCell: PtoBucketCell) => {
-      return editableGridRangeKeys(bucketGridKeys, ptoBucketSelectionKey(fromCell), ptoBucketSelectionKey(toCell));
-    };
-
-    const selectBucketCell = (cell: PtoBucketCell) => {
-      setPtoBucketActiveCell(cell);
-      setPtoBucketSelectionAnchorCell(cell);
-      setPtoBucketSelectedCellKeys([ptoBucketSelectionKey(cell)]);
-    };
-
-    const toggleBucketCell = (cell: PtoBucketCell) => {
-      const cellKey = ptoBucketSelectionKey(cell);
-      setPtoBucketActiveCell(cell);
-      setPtoBucketSelectionAnchorCell(cell);
-      setPtoBucketSelectedCellKeys((current) => toggleEditableGridSelectionKey(current, cellKey));
-    };
-
-    const selectBucketRange = (cell: PtoBucketCell) => {
-      const anchorCell = ptoBucketSelectionAnchorCell ?? ptoBucketActiveCell ?? cell;
-      setPtoBucketActiveCell(cell);
-      setPtoBucketSelectionAnchorCell(anchorCell);
-      setPtoBucketSelectedCellKeys(bucketRangeKeys(anchorCell, cell));
-    };
-
-    const moveBucketCell = (cell: PtoBucketCell, rowOffset: number, columnOffset: number) => {
-      const nextKey = editableGridKeyAtOffset(bucketGridKeys, ptoBucketSelectionKey(cell), rowOffset, columnOffset);
-      const [rowKey, equipmentKey] = nextKey?.split("::") ?? [];
-      const nextCell = rowKey && equipmentKey ? { rowKey, equipmentKey } : cell;
-
-      selectBucketCell(nextCell);
-      focusPtoBucketCell(nextCell);
-    };
-
-    const clearBucketCells = (fallbackCell: PtoBucketCell) => {
-      const targetKeys = ptoBucketSelectedCellKeys.length ? ptoBucketSelectedCellKeys : [ptoBucketSelectionKey(fallbackCell)];
-      setPtoBucketValues((current) => {
-        const next = { ...current };
-        targetKeys.forEach((key) => {
-          delete next[key];
-        });
-        return next;
-      });
-      cancelPtoBucketEdit();
-      requestPtoDatabaseSave();
-      addAdminLog({
-        action: "Редактирование",
-        section: "ПТО: Ковши",
-        details: `Очищены выбранные ячейки ковшей: ${targetKeys.length}.`,
-      });
-    };
-
-    const startBucketCellEdit = (cell: PtoBucketCell, value: number | undefined, draft?: string) => {
-      const cellKey = ptoBucketSelectionKey(cell);
-      selectBucketCell(cell);
-      setPtoBucketEditKey(cellKey);
-      setPtoBucketDraft(draft ?? formatBucketNumber(value));
-      focusPtoBucketCell(cell);
-    };
-
-    return (
-      <div style={ptoBucketsLayoutStyle}>
-        <div style={ptoToolbarStyle}>
-          <div style={ptoToolbarBlockStyle}>
-            <span style={ptoToolbarLabelStyle}>Участки</span>
-            <div style={ptoToolbarRowStyle}>
-              {ptoAreaTabs.map((area) => (
-                <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {ptoBucketColumns.length === 0 ? (
-          <div style={ptoBucketsHintStyle}>
-            Добавь в админке погрузочную технику с видом «Экскаватор» или «Погрузчик». Здесь автоматически появятся столбцы Марка Модель.
-          </div>
-        ) : null}
-
-        <div style={ptoBucketsScrollStyle}>
-          <table style={{ ...ptoBucketsTableStyle, minWidth: bucketTableMinWidth }}>
-            <colgroup>
-              <col style={{ width: 150 }} />
-              <col style={{ width: 320 }} />
-              {ptoBucketColumns.map((column) => (
-                <col key={column.key} style={{ width: 120 }} />
-              ))}
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={{ ...ptoBucketsThStyle, width: 150 }}>Участок</th>
-                <th style={{ ...ptoBucketsThStyle, width: 320 }}>Структура</th>
-                {ptoBucketColumns.map((column) => (
-                  <th key={column.key} style={ptoBucketsThStyle}>{column.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {ptoBucketRows.map((row) => (
-                <tr key={row.key}>
-                  <td style={ptoBucketsTdStyle}>{row.area}</td>
-                  <td style={{ ...ptoBucketsTdStyle, fontWeight: 700 }}>
-                    <div style={ptoBucketStructureCellStyle}>
-                      <span>{row.structure}</span>
-                      {row.source === "manual" ? (
-                        <span style={ptoBucketManualToolsStyle}>
-                          <span style={ptoBucketManualBadgeStyle}>Временная</span>
-                          <button
-                            type="button"
-                            aria-label={`Удалить ${row.structure}`}
-                            title="Удалить временную строку"
-                            onClick={() => deletePtoBucketManualRow(row)}
-                            style={ptoBucketDeleteButtonStyle}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </span>
-                      ) : null}
-                    </div>
-                  </td>
-                  {ptoBucketColumns.map((column) => {
-                    const cellKey = ptoBucketCellKey(row.key, column.key);
-                    const cell = { rowKey: row.key, equipmentKey: column.key };
-                    const value = ptoBucketValues[cellKey];
-                    const editing = ptoBucketEditKey === cellKey;
-                    const selected = selectedBucketKeys.has(cellKey);
-                    const active = ptoBucketActiveCell?.rowKey === row.key && ptoBucketActiveCell.equipmentKey === column.key;
-
-                    return (
-                      <td key={column.key} style={ptoBucketsTdStyle}>
-                        <input
-                          id={`pto-bucket-cell-${cellKey}`}
-                          data-pto-bucket-cell={cellKey}
-                          inputMode="decimal"
-                          readOnly={!editing}
-                          value={editing ? ptoBucketDraft : formatBucketNumber(value)}
-                          onFocus={() => {
-                            if (!editing && !selected) selectBucketCell(cell);
-                          }}
-                          onMouseDown={(event) => {
-                            if (event.shiftKey) {
-                              selectBucketRange(cell);
-                              return;
-                            }
-
-                            if (event.ctrlKey || event.metaKey) {
-                              toggleBucketCell(cell);
-                              return;
-                            }
-
-                            if (!editing) selectBucketCell(cell);
-                          }}
-                          onDoubleClick={() => startBucketCellEdit(cell, value)}
-                          onChange={(event) => {
-                            if (editing) setPtoBucketDraft(event.target.value);
-                          }}
-                          onBlur={() => {
-                            if (ptoBucketEditKey === cellKey) commitPtoBucketValue(cellKey, ptoBucketDraft);
-                          }}
-                          onKeyDown={(event) => {
-                            const arrowMove: Record<string, [number, number]> = {
-                              ArrowUp: [-1, 0],
-                              ArrowDown: [1, 0],
-                              ArrowLeft: [0, -1],
-                              ArrowRight: [0, 1],
-                            };
-
-                            if (event.key in arrowMove) {
-                              event.preventDefault();
-                              if (editing) commitPtoBucketValue(cellKey, ptoBucketDraft);
-                              const [rowOffset, columnOffset] = arrowMove[event.key];
-                              moveBucketCell(cell, rowOffset, columnOffset);
-                              return;
-                            }
-
-                            if (event.key === "Enter") {
-                              event.preventDefault();
-                              if (editing) {
-                                commitPtoBucketValue(cellKey, ptoBucketDraft);
-                              } else {
-                                startBucketCellEdit(cell, value);
-                              }
-                              return;
-                            }
-
-                            if (event.key === "Escape") {
-                              event.preventDefault();
-                              if (editing) {
-                                cancelPtoBucketEdit();
-                              } else {
-                                setPtoBucketActiveCell(null);
-                                setPtoBucketSelectionAnchorCell(null);
-                                setPtoBucketSelectedCellKeys([]);
-                              }
-                              event.currentTarget.blur();
-                              return;
-                            }
-
-                            if (event.key === "Delete") {
-                              event.preventDefault();
-                              clearBucketCells(cell);
-                              return;
-                            }
-
-                            if (!editing && /^[0-9.,-]$/.test(event.key)) {
-                              event.preventDefault();
-                              startBucketCellEdit(cell, value, event.key);
-                            }
-                          }}
-                          placeholder="0,00"
-                          style={{
-                            ...ptoBucketInputStyle,
-                            ...(selected ? ptoSelectedFormulaCellStyle : null),
-                            ...(active ? ptoActiveFormulaCellStyle : null),
-                            ...(editing ? ptoEditingFormulaCellStyle : null),
-                          }}
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-              <tr style={ptoBucketDraftRowStyle}>
-                <td style={ptoBucketsTdStyle}>
-                  <input
-                    value={ptoBucketDraftRow.area}
-                    list="pto-bucket-area-options"
-                    onChange={(event) => setPtoBucketDraftRow((current) => ({ ...current, area: event.target.value }))}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        addPtoBucketManualRow();
-                      }
-                    }}
-                    placeholder={ptoAreaFilter === "Все участки" ? "Участок" : ptoAreaFilter}
-                    style={ptoBucketTextInputStyle}
-                  />
-                </td>
-                <td style={ptoBucketsTdStyle}>
-                  <div style={ptoBucketDraftCellStyle}>
-                    <input
-                      value={ptoBucketDraftRow.structure}
-                      onChange={(event) => setPtoBucketDraftRow((current) => ({ ...current, structure: event.target.value }))}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          addPtoBucketManualRow();
-                        }
-                      }}
-                      placeholder="Временная структура"
-                      style={ptoBucketTextInputStyle}
-                    />
-                    <button
-                      type="button"
-                      onClick={addPtoBucketManualRow}
-                      title="Добавить временную строку"
-                      style={ptoBucketAddButtonStyle}
-                    >
-                      +
-                    </button>
-                  </div>
-                </td>
-                {ptoBucketColumns.map((column) => (
-                  <td key={column.key} style={ptoBucketsTdStyle} />
-                ))}
-              </tr>
-              {ptoBucketRows.length === 0 ? (
-                <tr>
-                  <td style={ptoBucketsTdStyle} colSpan={Math.max(2, ptoBucketColumns.length + 2)}>
-                    В Плане, Оперучете и Замере пока нет строк с участком и структурой.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-        <datalist id="pto-bucket-area-options">
-          {ptoAreaTabs.filter((area) => area !== "Все участки").map((area) => (
-            <option key={area} value={area} />
-          ))}
-        </datalist>
-      </div>
-    );
-  }
+  }, [addAdminLog, requestPtoDatabaseSave]);
 
   function renderPtoDateTable(
     rows: PtoPlanRow[],
@@ -4032,7 +3791,15 @@ export default function App() {
     const editableMonthTotal = options.editableMonthTotal === true;
     const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
     const rowById = new Map(rows.map((row) => [row.id, row] as const));
-    const rowDateTotalsById = new Map(filteredRows.map((row) => {
+    const rowDateTotalsCache = new Map<string, {
+      monthTotals: Map<string, { hasValue: boolean; value: number }>;
+      yearDailyTotal: number;
+    }>();
+    const effectiveCarryoverCache = new Map<string, number>();
+    const getRowDateTotals = (row: PtoPlanRow) => {
+      const cached = rowDateTotalsCache.get(row.id);
+      if (cached) return cached;
+
       const monthTotals = new Map<string, { hasValue: boolean; value: number }>();
       let yearDailyTotal = 0;
 
@@ -4047,13 +3814,30 @@ export default function App() {
         monthTotals.set(month, current);
       });
 
-      return [row.id, {
+      const totals = {
         monthTotals,
         yearDailyTotal: Math.round(yearDailyTotal * 1000000) / 1000000,
-      }] as const;
-    }));
+      };
+      rowDateTotalsCache.set(row.id, totals);
+      return totals;
+    };
+    const getEffectiveCarryover = (row: PtoPlanRow) => {
+      const cached = effectiveCarryoverCache.get(row.id);
+      if (cached !== undefined) return cached;
+
+      const value = ptoEffectiveCarryover(row, ptoPlanYear, rows);
+      effectiveCarryoverCache.set(row.id, value);
+      return value;
+    };
     const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;
     const columnWidth = (key: string, fallback: number) => Math.min(800, Math.max(44, Math.round(ptoColumnWidths[key] ?? fallback)));
+    const readonlyExpandedMonth = reportDate.startsWith(`${ptoPlanYear}-`) ? reportDate.slice(0, 7) : (ptoYearMonths[0] ?? `${ptoPlanYear}-01`);
+    const displayPtoMonthGroups = ptoDateEditing
+      ? ptoMonthGroups
+      : ptoMonthGroups.map((group) => ({
+          ...group,
+          expanded: group.month === readonlyExpandedMonth,
+        }));
     const baseColumns: PtoTableColumn[] = [
       { key: "area", width: columnWidth("area", ptoColumnDefaults.area) },
       ...(showLocation ? [{ key: "location", width: columnWidth("location", ptoColumnDefaults.location) }] : []),
@@ -4064,46 +3848,253 @@ export default function App() {
       { key: `carryover:${ptoPlanYear}`, width: columnWidth(`carryover:${ptoPlanYear}`, ptoColumnDefaults.carryover) },
       { key: "year-total", width: columnWidth("year-total", ptoColumnDefaults.yearTotal) },
     ];
-    const dateColumns = ptoMonthGroups.flatMap((group) => [
+    const dateColumns = displayPtoMonthGroups.flatMap((group) => [
       { key: `month-total:${group.month}`, width: columnWidth(`month-total:${group.month}`, ptoColumnDefaults.monthTotal) },
       ...(group.expanded ? group.days.map((day) => ({ key: `day:${day}`, width: columnWidth(`day:${day}`, ptoColumnDefaults.day) })) : []),
     ]);
     const tableColumns = [...baseColumns, ...dateColumns];
     const tableMinWidth = tableColumns.reduce((sum, column) => sum + column.width, 0);
     const columnWidthByKey = new Map(tableColumns.map((column) => [column.key, column.width]));
+    const togglePtoDateEditing = () => {
+      const nextEditing = !ptoDateEditing;
+      setPtoDateEditing(nextEditing);
+      setDraggedPtoRowId(null);
+      setPtoDropTarget(null);
+      setPtoFormulaCell(null);
+      setPtoFormulaDraft("");
+      setPtoInlineEditCell(null);
+      setPtoInlineEditInitialDraft("");
+      setPtoSelectionAnchorCell(null);
+      setPtoSelectedCellKeys([]);
+    };
+    const renderReadonlyTextCell = (value: string, align: React.CSSProperties["textAlign"] = "left") => (
+      <div style={{ ...ptoReadonlyCellTextStyle, textAlign: align }} title={value || undefined}>
+        {value || ""}
+      </div>
+    );
+    const renderReadonlyNumberCell = (value: number | undefined, options: { bold?: boolean } = {}) => (
+      <div
+        style={{
+          ...ptoReadonlyCellNumberStyle,
+          ...(options.bold ? { fontWeight: 800 } : null),
+        }}
+        title={formatPtoFormulaNumber(value)}
+      >
+        {formatPtoCellNumber(value)}
+      </div>
+    );
+
+    if (!ptoDateEditing) {
+      return (
+        <div style={ptoDateTableLayoutStyle}>
+          <div style={ptoToolbarStyle}>
+            <div style={ptoToolbarBlockStyle}>
+              <span style={ptoToolbarLabelStyle}>Участки</span>
+              <div style={ptoToolbarRowStyle}>
+                {ptoAreaTabs.map((area) => (
+                  <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
+                ))}
+              </div>
+            </div>
+
+            {(["plan", "oper", "survey"] as string[]).includes(ptoTab) ? (
+              <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
+                <span style={ptoToolbarLabelStyle}>Excel</span>
+                <div style={ptoToolbarRowStyle}>
+                  <PtoToolbarIconButton label={`Скачать ${currentPtoDateExcelMeta().label} в Excel`} onClick={exportPtoDateTableToExcel}>
+                    <Download size={14} aria-hidden />
+                  </PtoToolbarIconButton>
+                  <PtoToolbarIconButton label={`Загрузить ${currentPtoDateExcelMeta().label} из Excel`} onClick={openPtoDateImportFilePicker}>
+                    <Upload size={14} aria-hidden />
+                  </PtoToolbarIconButton>
+                  <PtoToolbarIconButton label="Редактировать таблицу" onClick={togglePtoDateEditing}>
+                    <Pencil size={14} aria-hidden />
+                  </PtoToolbarIconButton>
+                </div>
+                <input
+                  ref={ptoPlanImportInputRef}
+                  accept=".xlsx,.csv"
+                  onChange={importPtoDateTableFromExcel}
+                  style={{ display: "none" }}
+                  type="file"
+                />
+              </div>
+            ) : null}
+
+            <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
+              <span style={ptoToolbarLabelStyle}>Годы</span>
+              <div style={ptoToolbarRowStyle}>
+                <PtoToolbarIconButton label="Удалить выбранный год" onClick={deletePtoYear}>
+                  <span aria-hidden>−</span>
+                </PtoToolbarIconButton>
+                {ptoYearTabs.map((year) => (
+                  <PtoToolbarButton key={year} active={ptoPlanYear === year} onClick={() => {
+                    selectPtoPlanYear(year);
+                  }} label={year} />
+                ))}
+                <PtoToolbarIconButton label="Добавить год" onClick={() => {
+                  setPtoYearInput("");
+                  setPtoYearDialogOpen(true);
+                }}>
+                  <span aria-hidden>+</span>
+                </PtoToolbarIconButton>
+              </div>
+              {ptoYearDialogOpen ? (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    addPtoYear();
+                  }}
+                  style={ptoYearDialogStyle}
+                >
+                  <label style={{ display: "grid", gap: 3 }}>
+                    <span style={ptoToolbarLabelStyle}>Новый год</span>
+                    <input
+                      autoFocus
+                      type="number"
+                      min="1900"
+                      max="2100"
+                      value={ptoYearInput}
+                      onChange={(event) => setPtoYearInput(event.target.value)}
+                      style={{ ...inputStyle, width: 96, padding: "5px 8px", borderRadius: 8, fontSize: 12 }}
+                    />
+                  </label>
+                  <PtoToolbarButton active onClick={addPtoYear} label="ОК" />
+                  <PtoToolbarButton active={false} onClick={() => {
+                    setPtoYearDialogOpen(false);
+                    setPtoYearInput("");
+                  }} label="Отмена" />
+                </form>
+              ) : null}
+            </div>
+          </div>
+
+          <div ref={ptoDateTableScrollRef} style={ptoDateTableScrollStyle}>
+            <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth, marginRight: 40 }}>
+              <colgroup>
+                {tableColumns.map((column) => (
+                  <col key={column.key} style={{ width: column.width }} />
+                ))}
+              </colgroup>
+              <thead>
+                <tr>
+                  <PtoPlanTh rowSpan={2} columnKey="area" width={columnWidthByKey.get("area")}>{ptoHeaderLabel("area", "Участок")}</PtoPlanTh>
+                  {showLocation ? <PtoPlanTh rowSpan={2} columnKey="location" width={columnWidthByKey.get("location")}>{ptoHeaderLabel("location", "Местонахождение")}</PtoPlanTh> : null}
+                  <PtoPlanTh rowSpan={2} columnKey="structure" width={columnWidthByKey.get("structure")}>{ptoHeaderLabel("structure", "Структура")}</PtoPlanTh>
+                  <PtoPlanTh rowSpan={2} align="center" columnKey="unit" width={columnWidthByKey.get("unit")}>{ptoHeaderLabel("unit", "Ед.")}</PtoPlanTh>
+                  <PtoPlanTh rowSpan={2} align="center" columnKey="coefficient" width={columnWidthByKey.get("coefficient")}>{ptoHeaderLabel("coefficient", "Коэфф.")}</PtoPlanTh>
+                  <PtoPlanTh rowSpan={2} align="center" columnKey="status" width={columnWidthByKey.get("status")}>{ptoHeaderLabel("status", "Статус")}</PtoPlanTh>
+                  <PtoPlanTh rowSpan={2} align="center" columnKey={`carryover:${ptoPlanYear}`} width={columnWidthByKey.get(`carryover:${ptoPlanYear}`)}>{ptoHeaderLabel(`carryover:${ptoPlanYear}`, carryoverHeader)}</PtoPlanTh>
+                  <PtoPlanTh rowSpan={2} align="center" columnKey="year-total" width={columnWidthByKey.get("year-total")}>{ptoHeaderLabel("year-total", "Итого год")}</PtoPlanTh>
+                  {displayPtoMonthGroups.map((group) => (
+                    <PtoPlanTh key={group.month} colSpan={1 + (group.expanded ? group.days.length : 0)}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpandedPtoMonths((current) => ({ ...current, [group.month]: !current[group.month] }));
+                          requestPtoDatabaseSave();
+                        }}
+                        style={monthToggleStyle}
+                        title="Клик — свернуть/развернуть"
+                      >
+                        {group.expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+                        {ptoHeaderLabel(`month-group:${group.month}`, group.label)}
+                      </button>
+                    </PtoPlanTh>
+                  ))}
+                </tr>
+                <tr>
+                  {displayPtoMonthGroups.map((group) => (
+                    <Fragment key={`${group.month}-days-readonly`}>
+                      <PtoPlanTh align="center" columnKey={`month-total:${group.month}`} width={columnWidthByKey.get(`month-total:${group.month}`)}>Итого</PtoPlanTh>
+                      {group.expanded && group.days.map((day) => (
+                        <PtoPlanTh key={day} align="center" columnKey={`day:${day}`} width={columnWidthByKey.get(`day:${day}`)}>{day.slice(8, 10)}</PtoPlanTh>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => {
+                  const rowStatus = ptoAutomatedStatus(row, reportDate);
+                  const effectiveCarryover = getEffectiveCarryover(row);
+                  const rowDateTotals = getRowDateTotals(row);
+                  const rowHeightKey = `${ptoTab}:${row.id}`;
+                  const rowHeight = ptoRowHeights[rowHeightKey];
+                  const rowYearTotalWithCarryover = Math.round(((rowDateTotals.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
+
+                  return (
+                    <tr key={row.id} style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}>
+                      <PtoPlanTd>{renderReadonlyTextCell(row.area)}</PtoPlanTd>
+                      {showLocation ? <PtoPlanTd>{renderReadonlyTextCell(row.location)}</PtoPlanTd> : null}
+                      <PtoPlanTd>{renderReadonlyTextCell(row.structure)}</PtoPlanTd>
+                      <PtoPlanTd align="center">{renderReadonlyTextCell(normalizePtoUnit(row.unit), "center")}</PtoPlanTd>
+                      <PtoPlanTd align="center">{renderReadonlyNumberCell(row.coefficient)}</PtoPlanTd>
+                      <PtoPlanTd align="center">
+                        <span
+                          title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
+                          style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}
+                        >
+                          {rowStatus}
+                        </span>
+                      </PtoPlanTd>
+                      <PtoPlanTd align="center">{renderReadonlyNumberCell(effectiveCarryover)}</PtoPlanTd>
+                      <PtoPlanTd align="center">{renderReadonlyNumberCell(rowYearTotalWithCarryover, { bold: true })}</PtoPlanTd>
+                      {displayPtoMonthGroups.map((group) => {
+                        const monthValue = rowDateTotals.monthTotals.get(group.month)?.value;
+                        return (
+                          <Fragment key={`${row.id}-${group.month}-readonly`}>
+                            <PtoPlanTd align="center">{renderReadonlyNumberCell(monthValue, { bold: true })}</PtoPlanTd>
+                            {group.expanded && group.days.map((day) => (
+                              <PtoPlanTd key={`${row.id}-${day}-readonly`} align="center">{renderReadonlyNumberCell(row.dailyPlans[day])}</PtoPlanTd>
+                            ))}
+                          </Fragment>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
     const activeFormulaCell = ptoFormulaCell?.table === ptoTab && ptoFormulaCell.year === ptoPlanYear ? ptoFormulaCell : null;
     const activeInlineEditCell = ptoInlineEditCell?.table === ptoTab && ptoInlineEditCell.year === ptoPlanYear ? ptoInlineEditCell : null;
     const activeFormulaRow = activeFormulaCell ? rowById.get(activeFormulaCell.rowId) : undefined;
-    const activeFormulaRowTotals = activeFormulaRow ? rowDateTotalsById.get(activeFormulaRow.id) : undefined;
+    const activeFormulaRowTotals = activeFormulaRow ? getRowDateTotals(activeFormulaRow) : undefined;
     const activeFormulaValue = activeFormulaRow && activeFormulaCell
       ? activeFormulaCell.kind === "coefficient"
         ? activeFormulaRow.coefficient
         : activeFormulaCell.kind === "carryover"
-          ? ptoEffectiveCarryover(activeFormulaRow, ptoPlanYear, rows)
+          ? getEffectiveCarryover(activeFormulaRow)
           : activeFormulaCell.kind === "month" && activeFormulaCell.month
             ? activeFormulaRowTotals?.monthTotals.get(activeFormulaCell.month)?.value
             : activeFormulaCell.kind === "day" && activeFormulaCell.day
               ? activeFormulaRow.dailyPlans[activeFormulaCell.day]
               : undefined
       : undefined;
-    const formulaInputDisabled = !activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false;
-    const virtualRows = calculatePtoVirtualRows(filteredRows, ptoRowHeights, ptoTab, ptoDateViewport);
-    const {
-      renderedRows,
-      rowHeights: filteredRowHeights,
-      rowOffsets,
-      startIndex: virtualStartIndex,
-      topSpacerHeight,
-      bottomSpacerHeight,
-      totalHeight: virtualRowsTotalHeight,
-    } = virtualRows;
+    const formulaInputDisabled = !ptoDateEditing || !activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false;
+    const virtualRows = ptoDateEditing
+      ? calculatePtoVirtualRows(filteredRows, ptoRowHeights, ptoTab, ptoDateViewport)
+      : null;
+    const renderedRows = virtualRows?.renderedRows ?? filteredRows;
+    const filteredRowHeights = virtualRows?.rowHeights ?? [];
+    const rowOffsets = virtualRows?.rowOffsets ?? [];
+    const virtualStartIndex = virtualRows?.startIndex ?? 0;
+    const topSpacerHeight = virtualRows?.topSpacerHeight ?? 0;
+    const bottomSpacerHeight = virtualRows?.bottomSpacerHeight ?? 0;
+    const virtualRowsTotalHeight = virtualRows?.totalHeight ?? 0;
+    const ptoColumnResizeHandler = ptoDateEditing ? startPtoColumnResize : undefined;
     const rowOffsetAt = (index: number) => rowOffsets[index] ?? virtualRowsTotalHeight;
     const tableSpacerColSpan = tableColumns.length;
     const formulaCellRows = renderedRows.map((row) => {
       const cells: Array<Omit<PtoFormulaCell, "table" | "year">> = [
         { rowId: row.id, kind: "coefficient", label: "Коэфф." },
         { rowId: row.id, kind: "carryover", label: carryoverHeader },
-        ...ptoMonthGroups.flatMap((group) => [
+        ...displayPtoMonthGroups.flatMap((group) => [
           ...(editableMonthTotal
             ? [{
                 rowId: row.id,
@@ -4137,7 +4128,7 @@ export default function App() {
     const formulaCellTemplates: Array<Omit<PtoFormulaCell, "table" | "year" | "rowId">> = [
       { kind: "coefficient", label: "coefficient" },
       { kind: "carryover", label: carryoverHeader },
-      ...ptoMonthGroups.flatMap((group) => [
+      ...displayPtoMonthGroups.flatMap((group) => [
         ...(editableMonthTotal
           ? [{
               kind: "month" as const,
@@ -4181,13 +4172,15 @@ export default function App() {
       if (!row) return undefined;
 
       if (cell.kind === "coefficient") return row.coefficient;
-      if (cell.kind === "carryover") return ptoEffectiveCarryover(row, ptoPlanYear, rows);
-      if (cell.kind === "month" && cell.month) return rowDateTotalsById.get(row.id)?.monthTotals.get(cell.month)?.value;
+      if (cell.kind === "carryover") return getEffectiveCarryover(row);
+      if (cell.kind === "month" && cell.month) return getRowDateTotals(row).monthTotals.get(cell.month)?.value;
       if (cell.kind === "day" && cell.day) return row.dailyPlans[cell.day];
       return undefined;
     };
 
     const scrollFormulaCellIntoView = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
+      if (!ptoDateEditing) return;
+
       const scrollElement = ptoDateTableScrollRef.current;
       const rowIndex = filteredRows.findIndex((row) => row.id === cell.rowId);
       if (!scrollElement || rowIndex < 0) return;
@@ -4261,6 +4254,8 @@ export default function App() {
     };
 
     const selectFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
+      if (!ptoDateEditing) return;
+
       const nextCell = { ...cell, table: ptoTab, year: ptoPlanYear };
       setPtoFormulaCell(nextCell);
       setPtoFormulaDraft(formatPtoFormulaNumber(value));
@@ -4271,6 +4266,8 @@ export default function App() {
     };
 
     const selectFormulaRange = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
+      if (!ptoDateEditing) return;
+
       const targetCell = { ...cell, table: ptoTab, year: ptoPlanYear };
       const anchorCell = ptoSelectionAnchorCell?.table === ptoTab && ptoSelectionAnchorCell.year === ptoPlanYear
         ? ptoSelectionAnchorCell
@@ -4285,6 +4282,8 @@ export default function App() {
     };
 
     const toggleFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
+      if (!ptoDateEditing) return;
+
       const targetCell = { ...cell, table: ptoTab, year: ptoPlanYear };
       const targetKey = formulaSelectionKey(targetCell);
       const selectionScope = `${ptoTab}:${ptoPlanYear}:`;
@@ -4301,6 +4300,8 @@ export default function App() {
     };
 
     const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
+      if (!ptoDateEditing) return;
+
       const nextCell = { ...cell, table: ptoTab, year: ptoPlanYear };
       const draft = draftOverride ?? formatPtoFormulaNumber(value);
       setPtoFormulaCell(nextCell);
@@ -4334,6 +4335,7 @@ export default function App() {
     }));
 
     const commitFormulaCellValue = (cell: PtoFormulaCell, value: string) => {
+      if (!ptoDateEditing) return false;
       if (cell.editable === false) return false;
       if (value.trim() !== "" && parseDecimalInput(value) === null) return false;
 
@@ -4428,6 +4430,8 @@ export default function App() {
     };
 
     const updateFormulaValue = (value: string) => {
+      if (!ptoDateEditing) return;
+
       setPtoFormulaDraft(value);
       if (activeInlineEditCell) return;
       if (!activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false) return;
@@ -4435,6 +4439,7 @@ export default function App() {
     };
 
     const moveFormulaSelection = (key: string) => {
+      if (!ptoDateEditing) return;
       if (!activeFormulaCell || !isEditableGridArrowKey(key)) return;
 
       const offset = editableGridArrowOffset(key);
@@ -4454,6 +4459,8 @@ export default function App() {
     };
 
     const handleFormulaCellKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
+      if (!ptoDateEditing) return;
+
       if (isEditing) {
         if (isEditableGridArrowKey(event.key)) {
           event.preventDefault();
@@ -4506,6 +4513,7 @@ export default function App() {
     };
 
     const handleFormulaCellMouseDown = (event: React.MouseEvent<HTMLElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
+      if (!ptoDateEditing) return;
       if (event.button !== 0 || isEditing) return;
 
       ptoSelectionDraggingRef.current = true;
@@ -4519,11 +4527,14 @@ export default function App() {
     };
 
     const handleFormulaCellMouseEnter = (event: React.MouseEvent<HTMLElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
+      if (!ptoDateEditing) return;
       if (!ptoSelectionDraggingRef.current || event.buttons !== 1 || event.ctrlKey || event.metaKey || isEditing) return;
       selectFormulaRange(cell, value);
     };
 
     const addPtoRowAfter = (row: PtoPlanRow) => {
+      if (!ptoDateEditing) return;
+
       const nextRowId = addLinkedPtoDateRow({
         area: row.area,
         location: row.location,
@@ -4533,6 +4544,7 @@ export default function App() {
     };
 
     const commitPtoDraftField = (field: "area" | "location" | "structure" | "unit" | "coefficient", value: string) => {
+      if (!ptoDateEditing) return;
       if (!value.trim()) return;
       if (field === "coefficient" && parseDecimalInput(value) === null) return;
 
@@ -4544,6 +4556,8 @@ export default function App() {
     };
 
     const addPtoRowFromDraft = () => {
+      if (!ptoDateEditing) return;
+
       const nextRowId = addLinkedPtoDateRow();
       setPtoPendingFieldFocus({ rowId: nextRowId, field: ptoAreaFilter === "Все участки" ? "area" : "structure" });
     };
@@ -4583,11 +4597,12 @@ export default function App() {
         <button
           type="button"
           onDoubleClick={(event) => {
+            if (!ptoDateEditing) return;
             event.stopPropagation();
             startPtoHeaderEdit(key, fallback);
           }}
           style={{ ...ptoHeaderLabelButtonStyle, textAlign: align }}
-          title="Двойной клик — переименовать заголовок"
+          title={ptoDateEditing ? "Двойной клик — переименовать заголовок" : undefined}
         >
           {ptoHeaderLabel(key, fallback)}
         </button>
@@ -4610,6 +4625,7 @@ export default function App() {
             requestPtoDatabaseSave();
           }}
           onDoubleClick={(event) => {
+            if (!ptoDateEditing) return;
             event.stopPropagation();
             startPtoHeaderEdit(key, fallback);
           }}
@@ -4643,6 +4659,9 @@ export default function App() {
                 </PtoToolbarIconButton>
                 <PtoToolbarIconButton label={`Загрузить ${currentPtoDateExcelMeta().label} из Excel`} onClick={openPtoDateImportFilePicker}>
                   <Upload size={14} aria-hidden />
+                </PtoToolbarIconButton>
+                <PtoToolbarIconButton label={ptoDateEditing ? "Завершить редактирование таблицы" : "Редактировать таблицу"} onClick={togglePtoDateEditing}>
+                  {ptoDateEditing ? <Check size={14} aria-hidden /> : <Pencil size={14} aria-hidden />}
                 </PtoToolbarIconButton>
               </div>
               <input
@@ -4703,23 +4722,25 @@ export default function App() {
           </div>
         </div>
 
-        <div style={ptoFormulaBarStyle}>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={activeFormulaCell ? ptoFormulaDraft : ""}
-            onChange={(event) => updateFormulaValue(event.target.value)}
-            onBlur={() => {
-              if (activeFormulaCell) setPtoFormulaDraft(formatPtoFormulaNumber(activeFormulaValue));
-              requestPtoDatabaseSave();
-            }}
-            disabled={formulaInputDisabled}
-            placeholder="Выбери числовую ячейку"
-            style={ptoFormulaInputStyle}
-          />
-        </div>
+        {ptoDateEditing ? (
+          <div style={ptoFormulaBarStyle}>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={activeFormulaCell ? ptoFormulaDraft : ""}
+              onChange={(event) => updateFormulaValue(event.target.value)}
+              onBlur={() => {
+                if (activeFormulaCell) setPtoFormulaDraft(formatPtoFormulaNumber(activeFormulaValue));
+                requestPtoDatabaseSave();
+              }}
+              disabled={formulaInputDisabled}
+              placeholder="Выбери числовую ячейку"
+              style={ptoFormulaInputStyle}
+            />
+          </div>
+        ) : null}
 
-        <div ref={ptoDateTableScrollRef} onScroll={handlePtoDateTableScroll} style={ptoDateTableScrollStyle}>
+        <div ref={ptoDateTableScrollRef} onScroll={ptoDateEditing ? handlePtoDateTableScroll : undefined} style={ptoDateTableScrollStyle}>
           <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth, marginRight: 40 }}>
             <colgroup>
               {tableColumns.map((column) => (
@@ -4728,26 +4749,26 @@ export default function App() {
             </colgroup>
             <thead>
               <tr>
-                <PtoPlanTh rowSpan={2} columnKey="area" width={columnWidthByKey.get("area")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("area", "Участок")}</PtoPlanTh>
-                {showLocation ? <PtoPlanTh rowSpan={2} columnKey="location" width={columnWidthByKey.get("location")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("location", "Местонахождение")}</PtoPlanTh> : null}
-                <PtoPlanTh rowSpan={2} columnKey="structure" width={columnWidthByKey.get("structure")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("structure", "Структура")}</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center" columnKey="unit" width={columnWidthByKey.get("unit")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("unit", "Ед.", "center")}</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center" columnKey="coefficient" width={columnWidthByKey.get("coefficient")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("coefficient", "Коэфф.", "center")}</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center" columnKey="status" width={columnWidthByKey.get("status")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("status", "Статус", "center")}</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center" columnKey={`carryover:${ptoPlanYear}`} width={columnWidthByKey.get(`carryover:${ptoPlanYear}`)} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText(`carryover:${ptoPlanYear}`, carryoverHeader, "center")}</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center" columnKey="year-total" width={columnWidthByKey.get("year-total")} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText("year-total", "Итого год", "center")}</PtoPlanTh>
-                {ptoMonthGroups.map((group) => (
+                <PtoPlanTh rowSpan={2} columnKey="area" width={columnWidthByKey.get("area")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("area", "Участок")}</PtoPlanTh>
+                {showLocation ? <PtoPlanTh rowSpan={2} columnKey="location" width={columnWidthByKey.get("location")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("location", "Местонахождение")}</PtoPlanTh> : null}
+                <PtoPlanTh rowSpan={2} columnKey="structure" width={columnWidthByKey.get("structure")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("structure", "Структура")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="unit" width={columnWidthByKey.get("unit")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("unit", "Ед.", "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="coefficient" width={columnWidthByKey.get("coefficient")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("coefficient", "Коэфф.", "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="status" width={columnWidthByKey.get("status")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("status", "Статус", "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey={`carryover:${ptoPlanYear}`} width={columnWidthByKey.get(`carryover:${ptoPlanYear}`)} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText(`carryover:${ptoPlanYear}`, carryoverHeader, "center")}</PtoPlanTh>
+                <PtoPlanTh rowSpan={2} align="center" columnKey="year-total" width={columnWidthByKey.get("year-total")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("year-total", "Итого год", "center")}</PtoPlanTh>
+                {displayPtoMonthGroups.map((group) => (
                   <PtoPlanTh key={group.month} colSpan={1 + (group.expanded ? group.days.length : 0)}>
                     {renderPtoMonthHeader(group.month, group.label, group.expanded)}
                   </PtoPlanTh>
                 ))}
               </tr>
               <tr>
-                {ptoMonthGroups.map((group) => (
+                {displayPtoMonthGroups.map((group) => (
                   <Fragment key={`${group.month}-days`}>
-                    <PtoPlanTh align="center" columnKey={`month-total:${group.month}`} width={columnWidthByKey.get(`month-total:${group.month}`)} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText(`month-total:${group.month}`, "Итого", "center")}</PtoPlanTh>
+                    <PtoPlanTh align="center" columnKey={`month-total:${group.month}`} width={columnWidthByKey.get(`month-total:${group.month}`)} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText(`month-total:${group.month}`, "Итого", "center")}</PtoPlanTh>
                     {group.expanded && group.days.map((day) => (
-                      <PtoPlanTh key={day} align="center" columnKey={`day:${day}`} width={columnWidthByKey.get(`day:${day}`)} onResizeStart={startPtoColumnResize}>{renderPtoHeaderText(`day:${day}`, day.slice(8, 10), "center")}</PtoPlanTh>
+                      <PtoPlanTh key={day} align="center" columnKey={`day:${day}`} width={columnWidthByKey.get(`day:${day}`)} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText(`day:${day}`, day.slice(8, 10), "center")}</PtoPlanTh>
                     ))}
                   </Fragment>
                 ))}
@@ -4773,23 +4794,23 @@ export default function App() {
                 const locationListId = `pto-location-${row.id}`;
                 const structureListId = `pto-structure-${row.id}`;
                 const isDropTarget = ptoDropTarget?.rowId === row.id;
-                const dropLineStyle = isDropTarget
+                const dropLineStyle = ptoDateEditing && isDropTarget
                   ? {
                       ...ptoDropIndicatorStyle,
                       width: tableMinWidth,
                       ...(ptoDropTarget.position === "before" ? { top: -2 } : { bottom: -2 }),
                     }
                   : null;
-                const showInlineAddRowButton = rowIndex < filteredRows.length - 1;
-                const coefficientCellActive = formulaCellActive(row.id, "coefficient");
-                const carryoverCellActive = formulaCellActive(row.id, "carryover");
-                const coefficientCellSelected = formulaCellSelected(row.id, "coefficient");
-                const carryoverCellSelected = formulaCellSelected(row.id, "carryover");
-                const coefficientCellEditing = formulaCellEditing(row.id, "coefficient");
-                const carryoverCellEditing = formulaCellEditing(row.id, "carryover");
+                const showInlineAddRowButton = ptoDateEditing && rowIndex < filteredRows.length - 1;
+                const coefficientCellActive = ptoDateEditing && formulaCellActive(row.id, "coefficient");
+                const carryoverCellActive = ptoDateEditing && formulaCellActive(row.id, "carryover");
+                const coefficientCellSelected = ptoDateEditing && formulaCellSelected(row.id, "coefficient");
+                const carryoverCellSelected = ptoDateEditing && formulaCellSelected(row.id, "carryover");
+                const coefficientCellEditing = ptoDateEditing && formulaCellEditing(row.id, "coefficient");
+                const carryoverCellEditing = ptoDateEditing && formulaCellEditing(row.id, "carryover");
                 const rowStatus = ptoAutomatedStatus(row, reportDate);
-                const effectiveCarryover = ptoEffectiveCarryover(row, ptoPlanYear, rows);
-                const rowDateTotals = rowDateTotalsById.get(row.id);
+                const effectiveCarryover = getEffectiveCarryover(row);
+                const rowDateTotals = getRowDateTotals(row);
                 const rowYearTotalWithCarryover = Math.round(((rowDateTotals?.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
                 const rowFormulaCells = formulaCellsByRowId.get(row.id) ?? [];
                 const coefficientCell = rowFormulaCells.find((cell) => cell.kind === "coefficient") ?? { rowId: row.id, kind: "coefficient" as const, label: "Коэфф." };
@@ -4802,6 +4823,7 @@ export default function App() {
                     key={row.id}
                     style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}
                     onDragOver={(event) => {
+                      if (!ptoDateEditing) return;
                       event.preventDefault();
                       if (!draggedPtoRowId || draggedPtoRowId === row.id) {
                         setPtoDropTarget(null);
@@ -4816,12 +4838,14 @@ export default function App() {
                       );
                     }}
                     onDragLeave={(event) => {
+                      if (!ptoDateEditing) return;
                       const nextTarget = event.relatedTarget as Node | null;
                       if (nextTarget && event.currentTarget.contains(nextTarget)) return;
 
                       setPtoDropTarget((current) => (current?.rowId === row.id ? null : current));
                     }}
                     onDrop={(event) => {
+                      if (!ptoDateEditing) return;
                       event.preventDefault();
                       if (draggedPtoRowId && draggedPtoRowId !== row.id) {
                         const position = ptoDropTarget?.rowId === row.id ? ptoDropTarget.position : getPtoDropPosition(event);
@@ -4833,21 +4857,25 @@ export default function App() {
                   >
                     <PtoPlanTd>
                       {dropLineStyle ? <span style={dropLineStyle} /> : null}
-                      <button
+                      {ptoDateEditing ? (
+                        <button
                         type="button"
                         onClick={() => removeLinkedPtoDateRow(row)}
                         style={{ ...ptoRowDeleteButtonStyle, left: tableMinWidth + 8 }}
                         title={`Удалить строку: ${row.structure || "ПТО"}`}
                         aria-label={`Удалить строку: ${row.structure || "ПТО"}`}
-                      >
-                        <Trash2 size={14} aria-hidden />
-                      </button>
-                      <span
-                        onMouseDown={(event) => startPtoRowResize(event, rowHeightKey)}
-                        style={ptoRowResizeHandleStyle}
-                        title="Потяни вниз или вверх, чтобы изменить высоту строки"
-                        aria-hidden
-                      />
+                        >
+                          <Trash2 size={14} aria-hidden />
+                        </button>
+                      ) : null}
+                      {ptoDateEditing ? (
+                        <span
+                          onMouseDown={(event) => startPtoRowResize(event, rowHeightKey)}
+                          style={ptoRowResizeHandleStyle}
+                          title="Потяни вниз или вверх, чтобы изменить высоту строки"
+                          aria-hidden
+                        />
+                      ) : null}
                       {showInlineAddRowButton ? (
                         <button
                           type="button"
@@ -4865,7 +4893,8 @@ export default function App() {
                         </button>
                       ) : null}
                       <div style={ptoAreaCellStyle}>
-                        <div style={ptoRowToolsStyle}>
+                        {ptoDateEditing ? (
+                          <div style={ptoRowToolsStyle}>
                           <button
                             type="button"
                             draggable
@@ -4887,66 +4916,81 @@ export default function App() {
                               <span style={dragHandleDotStyle} />
                             </span>
                           </button>
-                        </div>
-                        <input data-pto-row-field={ptoRowFieldDomKey(row.id, "area")} list="pto-area-options" value={row.area} onChange={(e) => updatePtoDateRow(setRows, row.id, "area", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Уч_Аксу" style={ptoPlanInputStyle} />
+                          </div>
+                        ) : null}
+                        {ptoDateEditing ? (
+                          <input data-pto-row-field={ptoRowFieldDomKey(row.id, "area")} list="pto-area-options" value={row.area} onChange={(e) => updatePtoDateRow(setRows, row.id, "area", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Уч_Аксу" style={ptoPlanInputStyle} />
+                        ) : renderReadonlyTextCell(row.area)}
                       </div>
                     </PtoPlanTd>
                     {showLocation ? (
                       <PtoPlanTd>
-                        <input data-pto-row-field={ptoRowFieldDomKey(row.id, "location")} list={locationListId} value={row.location} onChange={(e) => updatePtoDateRow(setRows, row.id, "location", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Карьер" style={ptoPlanInputStyle} />
-                        <datalist id={locationListId}>
-                          {locationOptions.map((location) => (
-                            <option key={location} value={location} />
-                          ))}
-                        </datalist>
+                        {ptoDateEditing ? (
+                          <>
+                            <input data-pto-row-field={ptoRowFieldDomKey(row.id, "location")} list={locationListId} value={row.location} onChange={(e) => updatePtoDateRow(setRows, row.id, "location", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Карьер" style={ptoPlanInputStyle} />
+                            <datalist id={locationListId}>
+                              {locationOptions.map((location) => (
+                                <option key={location} value={location} />
+                              ))}
+                            </datalist>
+                          </>
+                        ) : renderReadonlyTextCell(row.location)}
                       </PtoPlanTd>
                     ) : null}
                     <PtoPlanTd>
-                      <input data-pto-row-field={ptoRowFieldDomKey(row.id, "structure")} list={structureListId} value={row.structure} onChange={(e) => updatePtoDateRow(setRows, row.id, "structure", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Вид работ" style={ptoPlanInputStyle} />
-                      <datalist id={structureListId}>
-                        {structureOptions.map((structure) => (
-                          <option key={structure} value={structure} />
-                        ))}
-                      </datalist>
+                      {ptoDateEditing ? (
+                        <>
+                          <input data-pto-row-field={ptoRowFieldDomKey(row.id, "structure")} list={structureListId} value={row.structure} onChange={(e) => updatePtoDateRow(setRows, row.id, "structure", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Вид работ" style={ptoPlanInputStyle} />
+                          <datalist id={structureListId}>
+                            {structureOptions.map((structure) => (
+                              <option key={structure} value={structure} />
+                            ))}
+                          </datalist>
+                        </>
+                      ) : renderReadonlyTextCell(row.structure)}
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
-                      <select data-pto-row-field={ptoRowFieldDomKey(row.id, "unit")} value={normalizePtoUnit(row.unit)} onChange={(e) => {
-                        updatePtoDateRow(setRows, row.id, "unit", e.target.value);
-                        requestPtoDatabaseSave();
-                      }} style={{ ...ptoPlanInputStyle, textAlign: "center" }}>
-                        {ptoUnitOptions.map((unit) => (
-                          <option key={unit} value={unit}>{unit}</option>
-                        ))}
-                      </select>
+                      {ptoDateEditing ? (
+                        <select data-pto-row-field={ptoRowFieldDomKey(row.id, "unit")} value={normalizePtoUnit(row.unit)} onChange={(e) => {
+                          updatePtoDateRow(setRows, row.id, "unit", e.target.value);
+                          requestPtoDatabaseSave();
+                        }} style={{ ...ptoPlanInputStyle, textAlign: "center" }}>
+                          {ptoUnitOptions.map((unit) => (
+                            <option key={unit} value={unit}>{unit}</option>
+                          ))}
+                        </select>
+                      ) : renderReadonlyTextCell(normalizePtoUnit(row.unit), "center")}
                     </PtoPlanTd>
                     <PtoPlanTd active={coefficientCellActive} selected={coefficientCellSelected} editing={coefficientCellEditing} align="center">
-                      <input
-                        readOnly={!coefficientCellEditing}
-                        data-pto-row-field={ptoRowFieldDomKey(row.id, "coefficient")}
-                        data-pto-cell-key={formulaCellDomKey(coefficientCell)}
-                        type="text"
-                        inputMode="decimal"
-                        value={coefficientCellEditing ? ptoFormulaDraft : formatPtoCellNumber(row.coefficient)}
-                        onFocus={() => {
-                          if (!ptoSelectionDraggingRef.current) selectFormulaCell(coefficientCell, row.coefficient);
-                        }}
-                        onMouseDown={(event) => handleFormulaCellMouseDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
-                        onMouseEnter={(event) => handleFormulaCellMouseEnter(event, coefficientCell, row.coefficient, coefficientCellEditing)}
-                        onClick={(event) => {
-                          if (event.shiftKey && !coefficientCellEditing) selectFormulaRange(coefficientCell, row.coefficient);
-                        }}
-                        onDoubleClick={(event) => {
-                          startInlineFormulaEdit(coefficientCell, row.coefficient);
-                          event.currentTarget.select();
-                        }}
-                        onChange={(event) => updateFormulaValue(event.target.value)}
-                        onBlur={() => {
-                          if (coefficientCellEditing) commitInlineFormulaEdit();
-                        }}
-                        onKeyDown={(event) => handleFormulaCellKeyDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
-                        title={formatPtoFormulaNumber(row.coefficient)}
-                        style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
-                      />
+                      {ptoDateEditing ? (
+                        <input
+                          readOnly={!coefficientCellEditing}
+                          data-pto-row-field={ptoRowFieldDomKey(row.id, "coefficient")}
+                          data-pto-cell-key={formulaCellDomKey(coefficientCell)}
+                          type="text"
+                          inputMode="decimal"
+                          value={coefficientCellEditing ? ptoFormulaDraft : formatPtoCellNumber(row.coefficient)}
+                          onFocus={() => {
+                            if (!ptoSelectionDraggingRef.current) selectFormulaCell(coefficientCell, row.coefficient);
+                          }}
+                          onMouseDown={(event) => handleFormulaCellMouseDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
+                          onMouseEnter={(event) => handleFormulaCellMouseEnter(event, coefficientCell, row.coefficient, coefficientCellEditing)}
+                          onClick={(event) => {
+                            if (event.shiftKey && !coefficientCellEditing) selectFormulaRange(coefficientCell, row.coefficient);
+                          }}
+                          onDoubleClick={(event) => {
+                            startInlineFormulaEdit(coefficientCell, row.coefficient);
+                            event.currentTarget.select();
+                          }}
+                          onChange={(event) => updateFormulaValue(event.target.value)}
+                          onBlur={() => {
+                            if (coefficientCellEditing) commitInlineFormulaEdit();
+                          }}
+                          onKeyDown={(event) => handleFormulaCellKeyDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
+                          title={formatPtoFormulaNumber(row.coefficient)}
+                          style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
+                        />
+                      ) : renderReadonlyNumberCell(row.coefficient)}
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       <span
@@ -4957,42 +5001,44 @@ export default function App() {
                       </span>
                     </PtoPlanTd>
                     <PtoPlanTd active={carryoverCellActive} selected={carryoverCellSelected} editing={carryoverCellEditing} align="center">
-                      <input
-                        readOnly={!carryoverCellEditing}
-                        data-pto-cell-key={formulaCellDomKey(carryoverCell)}
-                        type="text"
-                        inputMode="decimal"
-                        value={carryoverCellEditing ? ptoFormulaDraft : formatPtoCellNumber(effectiveCarryover)}
-                        onFocus={() => {
-                          if (!ptoSelectionDraggingRef.current) selectFormulaCell(carryoverCell, effectiveCarryover);
-                        }}
-                        onMouseDown={(event) => handleFormulaCellMouseDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
-                        onMouseEnter={(event) => handleFormulaCellMouseEnter(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
-                        onClick={(event) => {
-                          if (event.shiftKey && !carryoverCellEditing) selectFormulaRange(carryoverCell, effectiveCarryover);
-                        }}
-                        onDoubleClick={(event) => {
-                          startInlineFormulaEdit(carryoverCell, effectiveCarryover);
-                          event.currentTarget.select();
-                        }}
-                        onChange={(event) => updateFormulaValue(event.target.value)}
-                        onBlur={() => {
-                          if (carryoverCellEditing) commitInlineFormulaEdit();
-                        }}
-                        onKeyDown={(event) => handleFormulaCellKeyDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
-                        title={formatPtoFormulaNumber(effectiveCarryover)}
-                        style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
-                      />
+                      {ptoDateEditing ? (
+                        <input
+                          readOnly={!carryoverCellEditing}
+                          data-pto-cell-key={formulaCellDomKey(carryoverCell)}
+                          type="text"
+                          inputMode="decimal"
+                          value={carryoverCellEditing ? ptoFormulaDraft : formatPtoCellNumber(effectiveCarryover)}
+                          onFocus={() => {
+                            if (!ptoSelectionDraggingRef.current) selectFormulaCell(carryoverCell, effectiveCarryover);
+                          }}
+                          onMouseDown={(event) => handleFormulaCellMouseDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
+                          onMouseEnter={(event) => handleFormulaCellMouseEnter(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
+                          onClick={(event) => {
+                            if (event.shiftKey && !carryoverCellEditing) selectFormulaRange(carryoverCell, effectiveCarryover);
+                          }}
+                          onDoubleClick={(event) => {
+                            startInlineFormulaEdit(carryoverCell, effectiveCarryover);
+                            event.currentTarget.select();
+                          }}
+                          onChange={(event) => updateFormulaValue(event.target.value)}
+                          onBlur={() => {
+                            if (carryoverCellEditing) commitInlineFormulaEdit();
+                          }}
+                          onKeyDown={(event) => handleFormulaCellKeyDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
+                          title={formatPtoFormulaNumber(effectiveCarryover)}
+                          style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
+                        />
+                      ) : renderReadonlyNumberCell(effectiveCarryover)}
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       <div style={{ fontWeight: 800, textAlign: "center" }} title={formatPtoFormulaNumber(rowYearTotalWithCarryover)}>{formatPtoCellNumber(rowYearTotalWithCarryover)}</div>
                     </PtoPlanTd>
-                    {ptoMonthGroups.map((group) => {
+                    {displayPtoMonthGroups.map((group) => {
                       const monthTotal = rowDateTotals?.monthTotals.get(group.month);
                       const monthValue = monthTotal?.hasValue ? monthTotal.value : undefined;
-                      const monthCellActive = formulaCellActive(row.id, "month", group.month);
-                      const monthCellSelected = formulaCellSelected(row.id, "month", group.month);
-                      const monthCellEditing = formulaCellEditing(row.id, "month", group.month);
+                      const monthCellActive = ptoDateEditing && formulaCellActive(row.id, "month", group.month);
+                      const monthCellSelected = ptoDateEditing && formulaCellSelected(row.id, "month", group.month);
+                      const monthCellEditing = ptoDateEditing && formulaCellEditing(row.id, "month", group.month);
                       const monthCell = {
                         rowId: row.id,
                         kind: "month" as const,
@@ -5005,7 +5051,7 @@ export default function App() {
                       return (
                         <Fragment key={`${row.id}-${group.month}`}>
                           <PtoPlanTd active={monthCellActive} selected={monthCellSelected} editing={monthCellEditing} align="center">
-                            {editableMonthTotal ? (
+                            {ptoDateEditing && editableMonthTotal ? (
                               <input
                                 readOnly={!monthCellEditing}
                                 data-pto-cell-key={formulaCellDomKey(monthCell)}
@@ -5033,7 +5079,7 @@ export default function App() {
                                 title={formatPtoFormulaNumber(monthValue)}
                                 style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle, fontWeight: 800 }}
                               />
-                            ) : (
+                            ) : ptoDateEditing ? (
                               <button
                                 type="button"
                                 onMouseDown={(event) => handleFormulaCellMouseDown(event, { ...monthCell, editable: false }, monthValue, false)}
@@ -5054,13 +5100,13 @@ export default function App() {
                               >
                                 {formatPtoCellNumber(monthValue)}
                               </button>
-                            )}
+                            ) : renderReadonlyNumberCell(monthValue, { bold: true })}
                           </PtoPlanTd>
                           {group.expanded && group.days.map((day) => {
                             const dayValue = row.dailyPlans[day];
-                            const dayCellActive = formulaCellActive(row.id, "day", day);
-                            const dayCellSelected = formulaCellSelected(row.id, "day", day);
-                            const dayCellEditing = formulaCellEditing(row.id, "day", day);
+                            const dayCellActive = ptoDateEditing && formulaCellActive(row.id, "day", day);
+                            const dayCellSelected = ptoDateEditing && formulaCellSelected(row.id, "day", day);
+                            const dayCellEditing = ptoDateEditing && formulaCellEditing(row.id, "day", day);
                             const dayLabel = `${day.slice(8, 10)}.${day.slice(5, 7)}`;
                             const dayCell = {
                               rowId: row.id,
@@ -5071,32 +5117,34 @@ export default function App() {
 
                             return (
                               <PtoPlanTd key={day} active={dayCellActive} selected={dayCellSelected} editing={dayCellEditing} align="center">
-                                <input
-                                  readOnly={!dayCellEditing}
-                                  data-pto-cell-key={formulaCellDomKey(dayCell)}
-                                  type="text"
-                                  inputMode="decimal"
-                                  value={dayCellEditing ? ptoFormulaDraft : formatPtoCellNumber(dayValue)}
-                                  onFocus={() => {
-                                    if (!ptoSelectionDraggingRef.current) selectFormulaCell(dayCell, dayValue);
-                                  }}
-                                  onMouseDown={(event) => handleFormulaCellMouseDown(event, dayCell, dayValue, dayCellEditing)}
-                                  onMouseEnter={(event) => handleFormulaCellMouseEnter(event, dayCell, dayValue, dayCellEditing)}
-                                  onClick={(event) => {
-                                    if (event.shiftKey && !dayCellEditing) selectFormulaRange(dayCell, dayValue);
-                                  }}
-                                  onDoubleClick={(event) => {
-                                    startInlineFormulaEdit(dayCell, dayValue);
-                                    event.currentTarget.select();
-                                  }}
-                                  onChange={(event) => updateFormulaValue(event.target.value)}
-                                  onBlur={() => {
-                                    if (dayCellEditing) commitInlineFormulaEdit();
-                                  }}
-                                  onKeyDown={(event) => handleFormulaCellKeyDown(event, dayCell, dayValue, dayCellEditing)}
-                                  title={formatPtoFormulaNumber(dayValue)}
-                                  style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle }}
-                                />
+                                {ptoDateEditing ? (
+                                  <input
+                                    readOnly={!dayCellEditing}
+                                    data-pto-cell-key={formulaCellDomKey(dayCell)}
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={dayCellEditing ? ptoFormulaDraft : formatPtoCellNumber(dayValue)}
+                                    onFocus={() => {
+                                      if (!ptoSelectionDraggingRef.current) selectFormulaCell(dayCell, dayValue);
+                                    }}
+                                    onMouseDown={(event) => handleFormulaCellMouseDown(event, dayCell, dayValue, dayCellEditing)}
+                                    onMouseEnter={(event) => handleFormulaCellMouseEnter(event, dayCell, dayValue, dayCellEditing)}
+                                    onClick={(event) => {
+                                      if (event.shiftKey && !dayCellEditing) selectFormulaRange(dayCell, dayValue);
+                                    }}
+                                    onDoubleClick={(event) => {
+                                      startInlineFormulaEdit(dayCell, dayValue);
+                                      event.currentTarget.select();
+                                    }}
+                                    onChange={(event) => updateFormulaValue(event.target.value)}
+                                    onBlur={() => {
+                                      if (dayCellEditing) commitInlineFormulaEdit();
+                                    }}
+                                    onKeyDown={(event) => handleFormulaCellKeyDown(event, dayCell, dayValue, dayCellEditing)}
+                                    title={formatPtoFormulaNumber(dayValue)}
+                                    style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle }}
+                                  />
+                                ) : renderReadonlyNumberCell(dayValue)}
                               </PtoPlanTd>
                             );
                           })}
@@ -5111,7 +5159,7 @@ export default function App() {
                   <td colSpan={tableSpacerColSpan} style={{ height: bottomSpacerHeight, padding: 0, border: "none", background: "transparent" }} />
                 </tr>
               ) : null}
-              <tr style={ptoDraftRowStyle}>
+              {ptoDateEditing ? <tr style={ptoDraftRowStyle}>
                 <PtoPlanTd>
                   <div style={ptoAreaCellStyle}>
                     <button
@@ -5150,7 +5198,7 @@ export default function App() {
                 </PtoPlanTd>
                 <PtoPlanTd align="center"><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
                 <PtoPlanTd align="center"><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
-                {ptoMonthGroups.map((group) => (
+                {displayPtoMonthGroups.map((group) => (
                   <Fragment key={`draft-${group.month}`}>
                     <PtoPlanTd align="center"><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
                     {group.expanded && group.days.map((day) => (
@@ -5158,7 +5206,7 @@ export default function App() {
                     ))}
                   </Fragment>
                 ))}
-              </tr>
+              </tr> : null}
             </tbody>
           </table>
         </div>
@@ -5327,411 +5375,58 @@ export default function App() {
         </div>
 
         {renderedTopTab === "reports" && (
-          <>
-            <div style={reportAreaTabsToolbarStyle}>
-              <div style={reportAreaTabsListStyle}>
-                {reportAreaTabs.map((area) => (
-                  <TopButton
-                    key={area}
-                    active={reportArea !== "Все участки" && reportArea === area}
-                    onClick={() => setReportArea(area)}
-                    label={area}
-                  />
-                ))}
-              </div>
-              <IconButton label="Печать отчетности: A3, альбомная ориентация" onClick={printReport}>
-                <Printer size={16} aria-hidden />
-              </IconButton>
-            </div>
-
-            <div className="report-print-area" style={reportWorkspaceStyle}>
-              <SectionCard title="" fill>
-                <div className="report-print-panel" style={reportPanelStyle}>
-                  <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                    <div style={{ width: "100%" }}>
-                      <div className="report-print-title" style={reportTitleStyle}>Отчёт {activeReportCustomer.label} по планово-фактическим показателям за {formatReportTitleDate(reportDate)}</div>
-                    </div>
-                  </div>
-
-                  <div style={reportGaugeGridStyle}>
-                    {reportCompletionCards.map((card) => (
-                      <ReportCompletionGauge
-                        key={card.title}
-                        fact={card.fact}
-                        lag={card.lag}
-                        monthPlan={card.monthPlan}
-                        overPlanPerDay={card.overPlanPerDay}
-                        percent={card.percent}
-                        plan={card.plan}
-                        remainingDays={card.remainingDays}
-                        title={card.title}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="report-print-table-scroll" style={reportTableScrollStyle}>
-                    <table className="report-print-table" style={{ ...reportTableStyle, minWidth: reportTableMinWidth }}>
-                      <colgroup>
-                        {reportColumnKeys.map((key, index) => (
-                          <col key={key} style={{ width: reportTableColumnWidths[index] }} />
-                        ))}
-                      </colgroup>
-                      <thead>
-                        <tr>
-                          <ReportTh rowSpan={2} columnKey="area" width={reportColumnWidthByKey.get("area")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("area", "Участок")}</ReportTh>
-                          <ReportTh rowSpan={2} columnKey="work-name" width={reportColumnWidthByKey.get("work-name")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("work-name", "Вид работ")}</ReportTh>
-                          <ReportTh rowSpan={2} columnKey="unit" width={reportColumnWidthByKey.get("unit")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("unit", "Ед.")}</ReportTh>
-                          <ReportTh colSpan={5}>{renderReportHeaderText("day-group", "Текущая дата")}</ReportTh>
-                          <ReportTh colSpan={5}>{renderReportHeaderText("month-group", "С начала месяца")}</ReportTh>
-                          <ReportTh colSpan={4}>{renderReportHeaderText("year-group", "С начала года")}</ReportTh>
-                          <ReportTh colSpan={3}>{renderReportHeaderText("annual-group", "Годовой план")}</ReportTh>
-                        </tr>
-                        <tr>
-                          <ReportTh columnKey="day-plan" width={reportColumnWidthByKey.get("day-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-plan", "План суточный")}</ReportTh>
-                          <ReportTh columnKey="day-fact" width={reportColumnWidthByKey.get("day-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-fact", "Оперучет")}</ReportTh>
-                          <ReportTh columnKey="day-delta" width={reportColumnWidthByKey.get("day-delta")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-delta", "Откл.")}</ReportTh>
-                          <ReportTh columnKey="day-productivity" width={reportColumnWidthByKey.get("day-productivity")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-productivity", "Произв. техники")}</ReportTh>
-                          <ReportTh columnKey="day-reason" width={reportColumnWidthByKey.get("day-reason")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-reason", "Причина за сутки")}</ReportTh>
-                          <ReportTh columnKey="month-total-plan" width={reportColumnWidthByKey.get("month-total-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-total-plan", "План на месяц")}</ReportTh>
-                          <ReportTh columnKey="month-plan" width={reportColumnWidthByKey.get("month-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-plan", "План с начала месяца")}</ReportTh>
-                          <ReportTh columnKey="month-fact" width={reportColumnWidthByKey.get("month-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-fact", "Маркзамер + оперучет")}</ReportTh>
-                          <ReportTh columnKey="month-delta" width={reportColumnWidthByKey.get("month-delta")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-delta", "Откл.")}</ReportTh>
-                          <ReportTh columnKey="month-productivity" width={reportColumnWidthByKey.get("month-productivity")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-productivity", "Произв. накоп.")}</ReportTh>
-                          <ReportTh columnKey="year-plan" width={reportColumnWidthByKey.get("year-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-plan", "План с начала года")}</ReportTh>
-                          <ReportTh columnKey="year-fact" width={reportColumnWidthByKey.get("year-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-fact", "Маркзамер + недостающий оперучет")}</ReportTh>
-                          <ReportTh columnKey="year-delta" width={reportColumnWidthByKey.get("year-delta")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-delta", "Откл.")}</ReportTh>
-                          <ReportTh columnKey="year-reason" width={reportColumnWidthByKey.get("year-reason")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-reason", "Причины с накоплением")}</ReportTh>
-                          <ReportTh columnKey="annual-plan" width={reportColumnWidthByKey.get("annual-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("annual-plan", "Годовой план")}</ReportTh>
-                          <ReportTh columnKey="annual-fact" width={reportColumnWidthByKey.get("annual-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("annual-fact", "Факт годового плана")}</ReportTh>
-                          <ReportTh columnKey="annual-remaining" width={reportColumnWidthByKey.get("annual-remaining")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("annual-remaining", "Остаток")}</ReportTh>
-                        </tr>
-                      </thead>
-                      {filteredReportAreaGroups.map((group) => (
-                        <tbody key={group.area} className="report-print-area-group">
-                          {group.rows.map((row, index) => {
-                          const monthFact = reportMonthFact(row);
-                          const yearFact = reportYearFact(row);
-                          const annualFact = reportAnnualFact(row);
-                          const dayDelta = delta(row.dayPlan, row.dayFact);
-                          const monthDelta = delta(row.monthPlan, monthFact);
-                          const yearDelta = delta(row.yearPlan, yearFact);
-                          const annualRemaining = delta(row.annualPlan, annualFact);
-                          const rowKey = reportRowDisplayKey(row);
-                          const dayReasonKey = reportReasonEntryKey(reportDate, rowKey);
-                          const dayReasonText = dayDelta < 0 ? (reportReasons[dayReasonKey] ?? row.dayReason) : "";
-                          const yearReasonText = yearDelta < 0 ? row.yearReason : "";
-                          const showAreaCell = index === 0;
-
-                          return (
-                            <tr
-                              key={rowKey}
-                              style={showAreaCell ? reportAreaGroupStartRowStyle : undefined}
-                            >
-                              {showAreaCell ? (
-                                <ReportTd rowSpan={group.rows.length} strong align="center" variant="area">{row.area}</ReportTd>
-                              ) : null}
-                              <ReportTd strong variant="work">
-                                {formatReportWorkName(row.name)}
-                              </ReportTd>
-                              <ReportTd>{row.unit}</ReportTd>
-                              <ReportTd align="center">{formatNumber(row.dayPlan)}</ReportTd>
-                              <ReportTd align="center">{formatNumber(row.dayFact)}</ReportTd>
-                              <ReportTd align="center" tone={dayDelta < 0 ? "bad" : "good"}>{formatNumber(dayDelta)}</ReportTd>
-                              <ReportTd align="center">
-                                <ReportMetric value={formatNumber(row.dayProductivity || row.dayFact)} note={formatPercent(row.dayFact, row.dayPlan)} />
-                              </ReportTd>
-                              <ReportTd align="center" tone={dayDelta < 0 ? "warn" : undefined}>
-                                {dayDelta < 0 ? (
-                                  <ReportReasonTextarea
-                                    value={dayReasonText}
-                                    placeholder="Введите причину"
-                                    onCommit={(value) => commitReportDayReason(rowKey, value)}
-                                    onDraftChange={(value) => updateReportDayReasonDraft(rowKey, value)}
-                                  />
-                                ) : null}
-                              </ReportTd>
-                              <ReportTd align="center">{formatNumber(row.monthTotalPlan)}</ReportTd>
-                              <ReportTd align="center">{formatNumber(row.monthPlan)}</ReportTd>
-                              <ReportTd align="center">
-                                <ReportMetric value={formatNumber(monthFact)} note={`марк ${formatNumber(row.monthSurveyFact)} + опер ${formatNumber(row.monthOperFact)}`} />
-                              </ReportTd>
-                              <ReportTd align="center" tone={monthDelta < 0 ? "bad" : "good"}>{formatNumber(monthDelta)}</ReportTd>
-                              <ReportTd align="center">
-                                <ReportMetric value={formatNumber(row.monthProductivity || monthFact)} note={formatPercent(monthFact, row.monthPlan)} />
-                              </ReportTd>
-                              <ReportTd align="center">{formatNumber(row.yearPlan)}</ReportTd>
-                              <ReportTd align="center">
-                                <ReportMetric value={formatNumber(yearFact)} note={`марк ${formatNumber(row.yearSurveyFact)} + опер ${formatNumber(row.yearOperFact)}`} />
-                              </ReportTd>
-                              <ReportTd align="center" tone={yearDelta < 0 ? "bad" : "good"}>{formatNumber(yearDelta)}</ReportTd>
-                              <ReportTd align="center" tone={yearDelta < 0 ? "warn" : undefined}>
-                                {yearDelta < 0 ? (
-                                  <ReportReasonTextarea
-                                    value={yearReasonText}
-                                    placeholder="Введите причину"
-                                    onCommit={(value) => commitReportYearReason(rowKey, value)}
-                                  />
-                                ) : null}
-                              </ReportTd>
-                              <ReportTd align="center">{formatNumber(row.annualPlan)}</ReportTd>
-                              <ReportTd align="center">{formatNumber(annualFact)}</ReportTd>
-                              <ReportTd align="center" tone={annualRemaining < 0 ? "bad" : "good"}>{formatNumber(annualRemaining)}</ReportTd>
-                            </tr>
-                          );
-                          })}
-                        </tbody>
-                      ))}
-                      <tbody>
-                        {filteredReports.length === 0 && (
-                          <tr>
-                            <ReportTd colSpan={20}>По выбранному заказчику пока нет настроенных строк.</ReportTd>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </SectionCard>
-            </div>
-          </>
+          <ReportsSection
+            reportAreaTabs={reportAreaTabs}
+            reportArea={reportArea}
+            onSelectReportArea={setReportArea}
+            onPrintReport={printReport}
+            activeReportCustomerLabel={activeReportCustomer.label}
+            reportDate={reportDate}
+            reportCompletionCards={reportCompletionCards}
+            reportTableMinWidth={reportTableMinWidth}
+            reportTableColumnWidths={reportTableColumnWidths}
+            reportColumnKeys={reportColumnKeys}
+            reportColumnWidthByKey={reportColumnWidthByKey}
+            renderReportHeaderText={renderReportHeaderText}
+            onStartReportColumnResize={startReportColumnResize}
+            filteredReportAreaGroups={filteredReportAreaGroups}
+            filteredReportsCount={filteredReports.length}
+            reportReasons={reportReasons}
+            onCommitReportDayReason={commitReportDayReason}
+            onUpdateReportDayReasonDraft={updateReportDayReasonDraft}
+            onCommitReportYearReason={commitReportYearReason}
+          />
         )}
 
         {renderedTopTab === "dispatch" && (
-          <>
-            <SectionCard title={activeDispatchSubtab?.label ?? "Диспетчерская сводка"}>
-              {dispatchTab.startsWith("custom:") ? (
-                <div style={blockStyle}>{activeDispatchSubtab?.content || "В этой подвкладке пока нет информации."}</div>
-              ) : (
-                <>
-                  <div style={dispatchSummaryHeaderStyle}>
-                    <div>
-                      <div style={{ fontWeight: 800 }}>Заполнение сводки за {formatReportDate(reportDate)}</div>
-                      <div style={{ color: "#64748b", marginTop: 3 }}>
-                        {isDailyDispatchShift
-                          ? "Сутки формируются автоматически из ночной и дневной смены за выбранную дату."
-                          : `${dispatchShiftLabel(currentDispatchShift)}. Строки сохраняются локально и потом могут стать таблицей Supabase.`}
-                      </div>
-                    </div>
-                    <Pill bg={statusColor(dispatchSummaryTotals.percent)} color={statusTextColor(dispatchSummaryTotals.percent)}>
-                      {dispatchSummaryTotals.percent}%
-                    </Pill>
-                  </div>
-
-                  <div style={dispatchSummaryStatsStyle}>
-                    <div style={dispatchSummaryStatCardStyle}>
-                      <span>План</span>
-                      <strong>{formatNumber(dispatchSummaryTotals.plan)}</strong>
-                    </div>
-                    <div style={dispatchSummaryStatCardStyle}>
-                      <span>Факт</span>
-                      <strong>{formatNumber(dispatchSummaryTotals.fact)}</strong>
-                    </div>
-                    <div style={dispatchSummaryStatCardStyle}>
-                      <span>Отклонение</span>
-                      <strong style={{ color: dispatchSummaryTotals.delta < 0 ? "#991b1b" : "#166534" }}>{formatNumber(dispatchSummaryTotals.delta)}</strong>
-                    </div>
-                    <div style={dispatchSummaryStatCardStyle}>
-                      <span>Работа / ремонт / простой</span>
-                      <strong>{formatPtoCellNumber(dispatchSummaryTotals.workHours)} / {formatPtoCellNumber(dispatchSummaryTotals.repairHours)} / {formatPtoCellNumber(dispatchSummaryTotals.downtimeHours)} ч.</strong>
-                    </div>
-                    <div style={dispatchSummaryStatCardStyle}>
-                      <span>Производительность</span>
-                      <strong>{formatPtoCellNumber(dispatchSummaryTotals.productivity)}</strong>
-                    </div>
-                  </div>
-
-                  <div style={isDailyDispatchShift ? dispatchSummaryToolbarDailyStyle : dispatchSummaryToolbarStyle}>
-                    <Field label="Поиск">
-                      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Техника, участок, вид работ, причина..." style={{ ...inputStyle, padding: "9px 10px" }} />
-                    </Field>
-                    <Field label="Участок">
-                      <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} style={{ ...inputStyle, padding: "9px 10px" }}>
-                        {dispatchAreaOptions.map((area) => (
-                          <option key={area}>{area}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    {isDailyDispatchShift ? (
-                      <div style={dispatchSummaryReadonlyNoteStyle}>
-                        Редактирование закрыто: заполняй вкладки Ночь и День, эта вкладка покажет их сумму.
-                      </div>
-                    ) : (
-                      <>
-                        <Field label="Техника">
-                          <select value={dispatchVehicleToAddId} onChange={(e) => setDispatchVehicleToAddId(e.target.value)} style={{ ...inputStyle, padding: "9px 10px" }}>
-                            <option value="">Пустая строка</option>
-                            {dispatchVehicleOptions.map((vehicle) => (
-                              <option key={vehicle.id} value={vehicle.id}>{buildVehicleDisplayName(vehicle)}</option>
-                            ))}
-                          </select>
-                        </Field>
-                        <button onClick={addSelectedDispatchVehicle} style={dispatchSummaryButtonStyle} type="button">
-                          <Plus size={14} aria-hidden />
-                          Добавить строку
-                        </button>
-                        <button onClick={addFilteredVehiclesToDispatchSummary} style={dispatchSummarySecondaryButtonStyle} type="button">
-                          Заполнить из техники
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  <div style={dispatchSuggestionStyle}>
-                    <strong>Черновик для ИИ:</strong> {dispatchAiSuggestion}
-                  </div>
-
-                  <div style={dispatchSummaryTableScrollStyle}>
-                    <table style={dispatchSummaryTableStyle}>
-                      <colgroup>
-                        <col style={{ width: 190 }} />
-                        <col style={{ width: 120 }} />
-                        <col style={{ width: 140 }} />
-                        <col style={{ width: 230 }} />
-                        <col style={{ width: 140 }} />
-                        <col style={{ width: 80 }} />
-                        <col style={{ width: 80 }} />
-                        <col style={{ width: 68 }} />
-                        <col style={{ width: 68 }} />
-                        <col style={{ width: 68 }} />
-                        <col style={{ width: 68 }} />
-                        <col style={{ width: 68 }} />
-                        <col style={{ width: 82 }} />
-                        <col style={{ width: 82 }} />
-                        <col style={{ width: 260 }} />
-                        <col style={{ width: 230 }} />
-                        <col style={{ width: 42 }} />
-                      </colgroup>
-                      <thead>
-                        <tr>
-                          <th style={dispatchSummaryThStyle}>Техника</th>
-                          <th style={dispatchSummaryThStyle}>Участок</th>
-                          <th style={dispatchSummaryThStyle}>Местонахождение</th>
-                          <th style={dispatchSummaryThStyle}>Вид работ</th>
-                          <th style={dispatchSummaryThStyle}>Экскаватор</th>
-                          <th style={dispatchSummaryNumberThStyle}>План</th>
-                          <th style={dispatchSummaryNumberThStyle}>Факт</th>
-                          <th style={dispatchSummaryNumberThStyle}>Работа</th>
-                          <th style={dispatchSummaryNumberThStyle}>Аренда</th>
-                          <th style={dispatchSummaryNumberThStyle}>Ремонт</th>
-                          <th style={dispatchSummaryNumberThStyle}>Простой</th>
-                          <th style={dispatchSummaryNumberThStyle}>Рейсы</th>
-                          <th style={dispatchSummaryNumberThStyle}>Произв.</th>
-                          <th style={dispatchSummaryNumberThStyle}>Итого</th>
-                          <th style={dispatchSummaryThStyle}>Причина за сутки</th>
-                          <th style={dispatchSummaryThStyle}>Комментарий диспетчера</th>
-                          <th style={dispatchSummaryThStyle} />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredDispatchSummaryRows.map((row) => {
-                          const totalRowHours = row.workHours + row.rentHours + row.repairHours + row.downtimeHours;
-                          const rowProductivity = dispatchProductivity(row);
-                          const rowDelta = row.factVolume - row.planVolume;
-
-                          return (
-                            <tr key={row.id} style={rowDelta < 0 ? dispatchSummaryBadRowStyle : undefined}>
-                              <td style={dispatchSummaryTdStyle}>
-                                <select disabled={isDailyDispatchShift} value={row.vehicleId ?? ""} onChange={(e) => updateDispatchSummaryVehicle(row.id, e.target.value)} style={dispatchSummaryInputStyle}>
-                                  <option value="">Вручную</option>
-                                  {dispatchVehicleOptions.map((vehicle) => (
-                                    <option key={vehicle.id} value={vehicle.id}>{buildVehicleDisplayName(vehicle)}</option>
-                                  ))}
-                                </select>
-                                {!row.vehicleId ? (
-                                  <input readOnly={isDailyDispatchShift} value={row.vehicleName} onChange={(e) => updateDispatchSummaryText(row.id, "vehicleName", e.target.value)} placeholder="Название техники" style={{ ...dispatchSummaryInputStyle, marginTop: 4 }} />
-                                ) : null}
-                              </td>
-                              <td style={dispatchSummaryTdStyle}>
-                                <input readOnly={isDailyDispatchShift} list="dispatch-area-options" value={row.area} onChange={(e) => updateDispatchSummaryText(row.id, "area", e.target.value)} style={dispatchSummaryInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdStyle}>
-                                <input readOnly={isDailyDispatchShift} list="dispatch-location-options" value={row.location} onChange={(e) => updateDispatchSummaryText(row.id, "location", e.target.value)} style={dispatchSummaryInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdStyle}>
-                                <textarea readOnly={isDailyDispatchShift} value={row.workType} onChange={(e) => updateDispatchSummaryText(row.id, "workType", e.target.value)} placeholder="Вид работ" style={dispatchSummaryTextareaStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdStyle}>
-                                <input readOnly={isDailyDispatchShift} list="dispatch-excavator-options" value={row.excavator} onChange={(e) => updateDispatchSummaryText(row.id, "excavator", e.target.value)} style={dispatchSummaryInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdNumberStyle}>
-                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.planVolume)} onChange={(e) => updateDispatchSummaryNumber(row.id, "planVolume", e.target.value)} style={dispatchSummaryNumberInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdNumberStyle}>
-                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.factVolume)} onChange={(e) => updateDispatchSummaryNumber(row.id, "factVolume", e.target.value)} style={dispatchSummaryNumberInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdNumberStyle}>
-                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.workHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "workHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdNumberStyle}>
-                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.rentHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "rentHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdNumberStyle}>
-                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.repairHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "repairHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdNumberStyle}>
-                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.downtimeHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "downtimeHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdNumberStyle}>
-                                <input readOnly={isDailyDispatchShift} inputMode="numeric" value={dispatchNumberInputValue(row.trips)} onChange={(e) => updateDispatchSummaryNumber(row.id, "trips", e.target.value)} style={dispatchSummaryNumberInputStyle} />
-                              </td>
-                              <td style={dispatchSummaryReadonlyNumberStyle}>{formatPtoCellNumber(rowProductivity)}</td>
-                              <td style={dispatchSummaryReadonlyNumberStyle}>
-                                <Pill bg={totalRowHours === 11 ? "#dcfce7" : "#fee2e2"} color={totalRowHours === 11 ? "#166534" : "#991b1b"}>
-                                  {formatPtoCellNumber(totalRowHours)}
-                                </Pill>
-                              </td>
-                              <td style={dispatchSummaryTdStyle}>
-                                <textarea readOnly={isDailyDispatchShift} value={row.reason} onChange={(e) => updateDispatchSummaryText(row.id, "reason", e.target.value)} placeholder="Например: Простой ДСК (5 ч.)" style={dispatchSummaryTextareaStyle} />
-                              </td>
-                              <td style={dispatchSummaryTdStyle}>
-                                <textarea readOnly={isDailyDispatchShift} value={row.comment} onChange={(e) => updateDispatchSummaryText(row.id, "comment", e.target.value)} placeholder="Комментарий смены" style={dispatchSummaryTextareaStyle} />
-                              </td>
-                              <td style={dispatchSummaryActionTdStyle}>
-                                {!isDailyDispatchShift ? (
-                                  <MiniIconButton label="Удалить строку сводки" onClick={() => deleteDispatchSummaryRow(row.id)}>
-                                    <Trash2 size={14} aria-hidden />
-                                  </MiniIconButton>
-                                ) : null}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        {filteredDispatchSummaryRows.length === 0 ? (
-                          <tr>
-                            <td colSpan={17} style={dispatchSummaryEmptyStyle}>
-                              {isDailyDispatchShift
-                                ? "Сутки пока пустые: заполни ночную и дневную смену за выбранную дату."
-                                : "По выбранной дате, смене и фильтрам строк пока нет. Добавь строку вручную или заполни из списка техники."}
-                            </td>
-                          </tr>
-                        ) : null}
-                      </tbody>
-                    </table>
-                  </div>
-                  <datalist id="dispatch-area-options">
-                    {dispatchAreaOptions.filter((area) => area !== "Все участки").map((area) => (
-                      <option key={area} value={area} />
-                    ))}
-                  </datalist>
-                  <datalist id="dispatch-location-options">
-                    {dispatchLocationOptions.map((location) => (
-                      <option key={location} value={location} />
-                    ))}
-                  </datalist>
-                  <datalist id="dispatch-worktype-options">
-                    {dispatchWorkTypeOptions.map((workType) => (
-                      <option key={workType} value={workType} />
-                    ))}
-                  </datalist>
-                  <datalist id="dispatch-excavator-options">
-                    {dispatchExcavatorOptions.map((excavator) => (
-                      <option key={excavator} value={excavator} />
-                    ))}
-                  </datalist>
-                </>
-              )}
-            </SectionCard>
-          </>
+          <DispatchSection
+            activeDispatchSubtabLabel={activeDispatchSubtab?.label ?? "Диспетчерская сводка"}
+            dispatchTab={dispatchTab}
+            activeDispatchSubtabContent={activeDispatchSubtab?.content || ""}
+            reportDate={reportDate}
+            isDailyDispatchShift={isDailyDispatchShift}
+            currentDispatchShift={currentDispatchShift}
+            dispatchSummaryTotals={dispatchSummaryTotals}
+            search={search}
+            onSearchChange={setSearch}
+            areaFilter={areaFilter}
+            onAreaFilterChange={setAreaFilter}
+            dispatchAreaOptions={dispatchAreaOptions}
+            dispatchVehicleToAddId={dispatchVehicleToAddId}
+            onDispatchVehicleToAddIdChange={setDispatchVehicleToAddId}
+            dispatchVehicleOptions={dispatchVehicleOptions}
+            onAddSelectedDispatchVehicle={addSelectedDispatchVehicle}
+            onAddFilteredVehiclesToDispatchSummary={addFilteredVehiclesToDispatchSummary}
+            dispatchAiSuggestion={dispatchAiSuggestion}
+            filteredDispatchSummaryRows={filteredDispatchSummaryRows}
+            onUpdateDispatchSummaryVehicle={updateDispatchSummaryVehicle}
+            onUpdateDispatchSummaryText={updateDispatchSummaryText}
+            onUpdateDispatchSummaryNumber={updateDispatchSummaryNumber}
+            onDeleteDispatchSummaryRow={deleteDispatchSummaryRow}
+            dispatchLocationOptions={dispatchLocationOptions}
+            dispatchWorkTypeOptions={dispatchWorkTypeOptions}
+            dispatchExcavatorOptions={dispatchExcavatorOptions}
+          />
         )}
 
         {renderedTopTab === "fleet" && (
@@ -5813,56 +5508,37 @@ export default function App() {
         )}
 
         {renderedTopTab === "pto" && (
-          <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
-            <SectionCard title={isPtoDateTab ? "" : `ПТО: ${activePtoSubtab?.label ?? ptoTab}`} fill={isPtoDateTab}>
-              {ptoTab.startsWith("custom:") && <div style={blockStyle}>{activePtoSubtab?.content || "В этой подвкладке пока нет информации."}</div>}
-              {ptoTab === "bodies" && <div style={blockStyle}>{activePtoSubtab?.content || "Справочник объемов кузовов: модель техники → материал → объем кузова."}</div>}
-              {ptoTab === "performance" && <div style={blockStyle}>{activePtoSubtab?.content || "Расчет производительности: рейсы, кузова, материалы, удельный вес, перевод м³ ↔ тн."}</div>}
-              {ptoTab === "cycle" && <div style={blockStyle}>{activePtoSubtab?.content || "Цикл погрузки: подъезд, погрузка, выезд, разгрузка, обратный путь."}</div>}
-              {ptoTab === "buckets" && (
-                <div style={ptoBucketsPanelStyle}>
-                  {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
-                  {renderPtoBucketsTable()}
-                </div>
-              )}
-              {ptoTab === "plan" && (
-                <div style={ptoDatePanelStyle}>
-                  {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
-                  <div style={ptoDateTableFrameStyle}>
-                    {renderPtoDateTable(
-                      ptoPlanRows,
-                      setPtoPlanRows,
-                      { showLocation: false, editableMonthTotal: true },
-                    )}
-                  </div>
-                </div>
-              )}
-              {ptoTab === "oper" && (
-                <div style={ptoDatePanelStyle}>
-                  {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
-                  <div style={ptoDateTableFrameStyle}>
-                    {renderPtoDateTable(
-                      ptoOperRows,
-                      setPtoOperRows,
-                      { showLocation: false, editableMonthTotal: true },
-                    )}
-                  </div>
-                </div>
-              )}
-              {ptoTab === "survey" && (
-                <div style={ptoDatePanelStyle}>
-                  {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
-                  <div style={ptoDateTableFrameStyle}>
-                    {renderPtoDateTable(
-                      ptoSurveyRows,
-                      setPtoSurveyRows,
-                      { showLocation: false, editableMonthTotal: true },
-                    )}
-                  </div>
-                </div>
-              )}
-            </SectionCard>
-          </div>
+          <PtoSection
+            ptoTab={ptoTab}
+            activePtoSubtabLabel={activePtoSubtab?.label ?? ptoTab}
+            activePtoSubtabContent={activePtoSubtab?.content || ""}
+            isPtoDateTab={isPtoDateTab}
+            ptoAreaTabs={ptoAreaTabs}
+            ptoAreaFilter={ptoAreaFilter}
+            onSelectArea={selectPtoArea}
+            ptoBucketRows={ptoBucketRows}
+            ptoBucketColumns={ptoBucketColumns}
+            ptoBucketValues={ptoBucketValues}
+            onCommitBucketValue={commitPtoBucketValue}
+            onClearBucketCells={clearPtoBucketCells}
+            onAddBucketManualRow={addPtoBucketManualRow}
+            onDeleteBucketManualRow={deletePtoBucketManualRow}
+            renderPlanTable={() => renderPtoDateTable(
+              ptoPlanRows,
+              setPtoPlanRows,
+              { showLocation: false, editableMonthTotal: true },
+            )}
+            renderOperTable={() => renderPtoDateTable(
+              ptoOperRows,
+              setPtoOperRows,
+              { showLocation: false, editableMonthTotal: false },
+            )}
+            renderSurveyTable={() => renderPtoDateTable(
+              ptoSurveyRows,
+              setPtoSurveyRows,
+              { showLocation: false, editableMonthTotal: false },
+            )}
+          />
         )}
 
         {renderedTopTab === "tb" && (
@@ -6711,208 +6387,42 @@ export default function App() {
             )}
 
             {adminSection === "vehicles" && (
-              <div style={adminVehiclePanelStyle}>
-                <div style={adminVehicleToolbarStyle}>
-                  <div style={adminVehicleCounterStyle}>
-                    Техника: {activeVehicleFilterCount ? `${filteredVehicleRows.length} из ${vehicleRows.length}` : vehicleRows.length}
-                    <span style={adminVehicleRenderedCountStyle}>{adminVehiclesEditing ? "редактирование" : "просмотр"}</span>
-                    {activeVehicleFilterCount ? (
-                      <button onClick={clearAllVehicleFilters} style={adminVehicleClearFiltersStyle} type="button">
-                        Сбросить фильтры
-                      </button>
-                    ) : null}
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <IconButton label={adminVehiclesEditing ? "Сохранить редактирование" : "Редактировать список техники"} onClick={adminVehiclesEditing ? finishAdminVehiclesEditing : startAdminVehiclesEditing}>
-                      {adminVehiclesEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                    </IconButton>
-                    {adminVehiclesEditing ? (
-                      <>
-                        <IconButton label="Добавить технику" onClick={addVehicleRow}>
-                          <Plus size={16} aria-hidden />
-                        </IconButton>
-                        <IconButton label="Загрузить список из Excel" onClick={openVehicleImportFilePicker}>
-                          <RotateCcw size={16} aria-hidden />
-                        </IconButton>
-                      </>
-                    ) : null}
-                    <IconButton label="Выгрузить список техники в Excel" onClick={exportVehiclesToExcel}>
-                      <Download size={16} aria-hidden />
-                    </IconButton>
-                    <input
-                      ref={vehicleImportInputRef}
-                      accept=".xlsx,.csv"
-                      onChange={importVehiclesFromExcel}
-                      style={{ display: "none" }}
-                      type="file"
-                    />
-                  </div>
-                </div>
-                <datalist id="admin-vehicle-category-options">
-                  {(vehicleAutocompleteOptions.vehicleType ?? []).filter(Boolean).map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
-                <datalist id="admin-vehicle-equipment-type-options">
-                  {(vehicleAutocompleteOptions.equipmentType ?? []).filter(Boolean).map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
-                <datalist id="admin-vehicle-brand-options">
-                  {(vehicleAutocompleteOptions.brand ?? []).filter(Boolean).map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
-                <datalist id="admin-vehicle-owner-options">
-                  {(vehicleAutocompleteOptions.owner ?? []).filter(Boolean).map((value) => (
-                    <option key={value} value={value} />
-                  ))}
-                </datalist>
-                <div ref={adminVehicleTableScrollRef} style={adminVehicleTableScrollStyle}>
-                  <table style={adminVehicleTableStyle}>
-                    <colgroup>
-                      <col style={{ width: 46 }} />
-                      <col style={{ width: 165 }} />
-                      <col style={{ width: 190 }} />
-                      <col style={{ width: 100 }} />
-                      <col style={{ width: 120 }} />
-                      <col style={{ width: 112 }} />
-                      <col style={{ width: 96 }} />
-                      <col style={{ width: 96 }} />
-                      <col style={{ width: 170 }} />
-                      <col style={{ width: 180 }} />
-                      <col style={{ width: 34 }} />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        {vehicleFilterColumns.map((column) => (
-                          <th key={column.key} style={adminVehicleThStyle}>
-                            <VehicleFilterHeader
-                              column={column}
-                              options={openVehicleFilter === column.key ? activeVehicleFilterOptions : []}
-                              appliedSelectedValues={vehicleFilters[column.key]}
-                              draftSelectedValues={vehicleFilterDrafts[column.key]}
-                              search={vehicleFilterSearch[column.key] ?? ""}
-                              isOpen={openVehicleFilter === column.key}
-                              onToggleOpen={() => openVehicleFilterMenu(column.key)}
-                              onSearchChange={(value) => setVehicleFilterSearch((current) => ({ ...current, [column.key]: value }))}
-                              onToggleValue={(value) => toggleVehicleFilterDraftValue(column.key, value)}
-                              onSelectAll={() => selectAllVehicleFilterDraftValues(column.key)}
-                              onDeselectAll={() => deselectAllVehicleFilterDraftValues(column.key)}
-                              onApply={() => applyVehicleFilter(column.key)}
-                              onClose={() => setOpenVehicleFilter(null)}
-                            />
-                          </th>
-                        ))}
-                        <th style={adminVehicleThStyle} />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleVehicleRows.map((vehicle) => (
-                        <tr key={vehicle.id}>
-                          <td style={{ ...adminVehicleTdStyle, textAlign: "center" }}>
-                            {adminVehiclesEditing ? (
-                              <input
-                                aria-label={`Показывать ${buildVehicleDisplayName(vehicle)}`}
-                                checked={vehicle.visible !== false}
-                                onChange={() => toggleVehicleVisibility(vehicle.id)}
-                                type="checkbox"
-                                style={adminVehicleCheckboxStyle}
-                              />
-                            ) : null}
-                          </td>
-                          <td style={adminVehicleTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "vehicleType")} list="admin-vehicle-category-options" value={vehicle.vehicleType} onChange={(value) => updateVehicleRow(vehicle.id, "vehicleType", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.vehicleType} />
-                            )}
-                          </td>
-                          <td style={adminVehicleNameTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "equipmentType")} list="admin-vehicle-equipment-type-options" value={vehicle.equipmentType} onChange={(value) => updateVehicleRow(vehicle.id, "equipmentType", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.equipmentType} />
-                            )}
-                          </td>
-                          <td style={adminVehicleTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "brand")} list="admin-vehicle-brand-options" value={vehicle.brand} onChange={(value) => updateVehicleRow(vehicle.id, "brand", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.brand} />
-                            )}
-                          </td>
-                          <td style={adminVehicleTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "model")} value={vehicle.model} onChange={(value) => updateVehicleRow(vehicle.id, "model", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.model} />
-                            )}
-                          </td>
-                          <td style={adminVehicleTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "plateNumber")} value={vehicle.plateNumber} onChange={(value) => updateVehicleRow(vehicle.id, "plateNumber", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.plateNumber} />
-                            )}
-                          </td>
-                          <td style={adminVehicleTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "garageNumber")} value={vehicle.garageNumber} onChange={(value) => updateVehicleRow(vehicle.id, "garageNumber", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.garageNumber} />
-                            )}
-                          </td>
-                          <td style={adminVehicleNumberTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "manufactureYear")} type="number" numeric value={vehicle.manufactureYear} onChange={(value) => updateVehicleRow(vehicle.id, "manufactureYear", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell numeric value={vehicle.manufactureYear} />
-                            )}
-                          </td>
-                          <td style={adminVehicleTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "vin")} value={vehicle.vin} onChange={(value) => updateVehicleRow(vehicle.id, "vin", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.vin} />
-                            )}
-                          </td>
-                          <td style={adminVehicleTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "owner")} list="admin-vehicle-owner-options" value={vehicle.owner} onChange={(value) => updateVehicleRow(vehicle.id, "owner", value)} />
-                            ) : (
-                              <AdminVehicleReadOnlyCell value={vehicle.owner} />
-                            )}
-                          </td>
-                          <td style={adminVehicleActionTdStyle}>
-                            {adminVehiclesEditing ? (
-                              <div style={adminVehicleActionsStyle}>
-                                <MiniIconButton label={`Удалить ${buildVehicleDisplayName(vehicle)}`} onClick={() => deleteVehicle(vehicle.id)}>
-                                  <Trash2 size={14} aria-hidden />
-                                </MiniIconButton>
-                              </div>
-                            ) : null}
-                          </td>
-                        </tr>
-                      ))}
-                      {filteredVehicleRows.length === 0 ? (
-                        <tr>
-                          <td colSpan={11} style={adminVehicleEmptyRowStyle}>Нет техники по выбранным фильтрам</td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                </div>
-                {hiddenVehicleRowsCount ? (
-                  <button
-                    onClick={() => setShowAllVehicleRows(true)}
-                    style={adminVehicleShowAllStyle}
-                    type="button"
-                  >
-                    Показать все
-                  </button>
-                ) : null}
-              </div>
+              <AdminVehiclesSection
+                activeVehicleFilterCount={activeVehicleFilterCount}
+                filteredVehicleRowsCount={filteredVehicleRows.length}
+                totalVehicleRowsCount={vehicleRows.length}
+                adminVehiclesEditing={adminVehiclesEditing}
+                visibleVehicleRows={visibleVehicleRows}
+                hiddenVehicleRowsCount={hiddenVehicleRowsCount}
+                vehicleAutocompleteOptions={vehicleAutocompleteOptions}
+                vehicleFilterColumns={vehicleFilterColumns}
+                openVehicleFilter={openVehicleFilter}
+                activeVehicleFilterOptions={activeVehicleFilterOptions}
+                vehicleFilters={vehicleFilters}
+                vehicleFilterDrafts={vehicleFilterDrafts}
+                vehicleFilterSearch={vehicleFilterSearch}
+                adminVehicleTableScrollRef={adminVehicleTableScrollRef}
+                vehicleImportInputRef={vehicleImportInputRef}
+                onClearAllVehicleFilters={clearAllVehicleFilters}
+                onStartEditing={startAdminVehiclesEditing}
+                onFinishEditing={finishAdminVehiclesEditing}
+                onAddVehicleRow={addVehicleRow}
+                onOpenVehicleImportFilePicker={openVehicleImportFilePicker}
+                onExportVehiclesToExcel={exportVehiclesToExcel}
+                onImportVehiclesFromExcel={importVehiclesFromExcel}
+                onOpenVehicleFilterMenu={openVehicleFilterMenu}
+                onVehicleFilterSearchChange={(key, value) => setVehicleFilterSearch((current) => ({ ...current, [key]: value }))}
+                onToggleVehicleFilterDraftValue={toggleVehicleFilterDraftValue}
+                onSelectAllVehicleFilterDraftValues={selectAllVehicleFilterDraftValues}
+                onDeselectAllVehicleFilterDraftValues={deselectAllVehicleFilterDraftValues}
+                onApplyVehicleFilter={applyVehicleFilter}
+                onCloseVehicleFilterMenu={() => setOpenVehicleFilter(null)}
+                onToggleVehicleVisibility={toggleVehicleVisibility}
+                vehicleCellInputProps={vehicleCellInputProps}
+                onVehicleCellChange={updateVehicleRow}
+                onDeleteVehicle={deleteVehicle}
+                onShowAllVehicleRows={() => setShowAllVehicleRows(true)}
+              />
             )}
 
             {adminSection === "logs" && (
@@ -7908,282 +7418,11 @@ const adminReportEmptyTextStyle: React.CSSProperties = {
   fontSize: 13,
 };
 
-const reportTableStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 1768,
-  borderCollapse: "collapse",
-  tableLayout: "fixed",
-  fontSize: 12,
-  background: "#ffffff",
-};
-
-const reportTitleStyle: React.CSSProperties = {
-  fontSize: 18,
-  fontWeight: 700,
-  textAlign: "center",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  width: "100%",
-};
-
-const reportAreaTabsToolbarStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 10,
-  marginBottom: 12,
-};
-
-const reportAreaTabsListStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: 6,
-  minWidth: 0,
-};
-
-const reportWorkspaceStyle: React.CSSProperties = {
-  height: "calc(100dvh - 232px)",
-  minHeight: 320,
-  display: "grid",
-  gridTemplateRows: "minmax(0, 1fr)",
-};
-
-const reportPanelStyle: React.CSSProperties = {
-  flex: "1 1 auto",
-  minHeight: 0,
-  display: "grid",
-  gridTemplateRows: "auto auto minmax(0, 1fr)",
-  gap: 8,
-};
-
-const reportTableScrollStyle: React.CSSProperties = {
-  overflow: "auto",
-  minHeight: 0,
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-};
-
 const reportSourceGridStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   gap: 10,
   marginBottom: 14,
-};
-
-const dispatchSummaryHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 12,
-  flexWrap: "wrap",
-  marginBottom: 12,
-};
-
-const dispatchSummaryStatsStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-  gap: 8,
-  marginBottom: 12,
-};
-
-const dispatchSummaryStatCardStyle: React.CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: "9px 10px",
-  display: "grid",
-  gap: 4,
-  fontSize: 12,
-};
-
-const dispatchSummaryToolbarStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(240px, 360px) auto auto",
-  gap: 8,
-  alignItems: "end",
-  marginBottom: 10,
-};
-
-const dispatchSummaryToolbarDailyStyle: React.CSSProperties = {
-  ...dispatchSummaryToolbarStyle,
-  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(260px, 1fr)",
-};
-
-const dispatchSummaryReadonlyNoteStyle: React.CSSProperties = {
-  alignSelf: "stretch",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  color: "#475569",
-  display: "flex",
-  alignItems: "center",
-  fontSize: 12,
-  fontWeight: 700,
-  lineHeight: 1.25,
-  padding: "8px 10px",
-};
-
-const dispatchSummaryButtonStyle: React.CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#0f172a",
-  borderRadius: 8,
-  background: "#0f172a",
-  color: "#ffffff",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
-  lineHeight: 1.2,
-  padding: "9px 10px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
-  whiteSpace: "nowrap",
-};
-
-const dispatchSummarySecondaryButtonStyle: React.CSSProperties = {
-  ...dispatchSummaryButtonStyle,
-  borderColor: "#cbd5e1",
-  background: "#ffffff",
-  color: "#0f172a",
-};
-
-const dispatchSuggestionStyle: React.CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#475569",
-  fontSize: 13,
-  lineHeight: 1.35,
-  padding: "8px 10px",
-  marginBottom: 10,
-};
-
-const dispatchSummaryTableScrollStyle: React.CSSProperties = {
-  overflow: "auto",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  maxHeight: "calc(100dvh - 430px)",
-  minHeight: 260,
-};
-
-const dispatchSummaryTableStyle: React.CSSProperties = {
-  width: "max-content",
-  minWidth: 1700,
-  borderCollapse: "collapse",
-  tableLayout: "fixed",
-  fontSize: 12,
-};
-
-const dispatchSummaryThStyle: React.CSSProperties = {
-  padding: "7px 8px",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  background: "#f1f5f9",
-  color: "#0f172a",
-  fontWeight: 800,
-  textAlign: "left",
-  whiteSpace: "normal",
-  overflowWrap: "normal",
-  wordBreak: "normal",
-};
-
-const dispatchSummaryNumberThStyle: React.CSSProperties = {
-  ...dispatchSummaryThStyle,
-  textAlign: "center",
-};
-
-const dispatchSummaryTdStyle: React.CSSProperties = {
-  padding: 4,
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  verticalAlign: "top",
-  background: "inherit",
-};
-
-const dispatchSummaryTdNumberStyle: React.CSSProperties = {
-  ...dispatchSummaryTdStyle,
-  verticalAlign: "middle",
-};
-
-const dispatchSummaryReadonlyNumberStyle: React.CSSProperties = {
-  ...dispatchSummaryTdStyle,
-  verticalAlign: "middle",
-  textAlign: "center",
-  fontVariantNumeric: "tabular-nums",
-  fontWeight: 700,
-};
-
-const dispatchSummaryActionTdStyle: React.CSSProperties = {
-  ...dispatchSummaryTdStyle,
-  verticalAlign: "middle",
-  textAlign: "center",
-  overflow: "visible",
-};
-
-const dispatchSummaryInputStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 4,
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 12,
-  lineHeight: 1.25,
-  outline: "none",
-  padding: "5px 6px",
-};
-
-const dispatchSummaryNumberInputStyle: React.CSSProperties = {
-  ...dispatchSummaryInputStyle,
-  textAlign: "center",
-  fontVariantNumeric: "tabular-nums",
-};
-
-const dispatchSummaryTextareaStyle: React.CSSProperties = {
-  ...dispatchSummaryInputStyle,
-  minHeight: 44,
-  resize: "vertical",
-};
-
-const dispatchSummaryBadRowStyle: React.CSSProperties = {
-  background: "#fff7ed",
-};
-
-const dispatchSummaryEmptyStyle: React.CSSProperties = {
-  padding: "16px 10px",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  color: "#64748b",
-  textAlign: "center",
-};
-
-const reportGaugeGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: 10,
-  marginBottom: 4,
 };
 
 const reportHeaderLabelButtonStyle: React.CSSProperties = {
@@ -8219,10 +7458,6 @@ const reportHeaderInputStyle: React.CSSProperties = {
   outline: "none",
   padding: "2px 4px",
   textAlign: "center",
-};
-
-const reportAreaGroupStartRowStyle: React.CSSProperties = {
-  borderTop: "2px solid #334155",
 };
 
 const ptoPlanTableStyle: React.CSSProperties = {
@@ -8290,27 +7525,6 @@ const ptoHeaderInputStyle: React.CSSProperties = {
   padding: "2px 4px",
 };
 
-const ptoWorkspaceStyle: React.CSSProperties = {
-  height: "calc(100dvh - 232px)",
-  minHeight: 320,
-  display: "grid",
-  gridTemplateRows: "minmax(0, 1fr)",
-};
-
-const ptoDatePanelStyle: React.CSSProperties = {
-  flex: "1 1 auto",
-  minHeight: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: 12,
-};
-
-const ptoDateTableFrameStyle: React.CSSProperties = {
-  flex: "1 1 auto",
-  minHeight: 0,
-  height: "100%",
-};
-
 const ptoDateTableLayoutStyle: React.CSSProperties = {
   height: "100%",
   minHeight: 0,
@@ -8328,171 +7542,6 @@ const ptoDateTableScrollStyle: React.CSSProperties = {
   background: "#ffffff",
   height: "100%",
   minHeight: 0,
-};
-
-const ptoBucketsPanelStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 10,
-};
-
-const ptoBucketsLayoutStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 10,
-};
-
-const ptoBucketsHintStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  color: "#475569",
-  padding: "8px 10px",
-  fontSize: 12,
-  fontWeight: 700,
-};
-
-const ptoBucketsScrollStyle: React.CSSProperties = {
-  overflow: "auto",
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-};
-
-const ptoBucketsTableStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 760,
-  borderCollapse: "collapse",
-  tableLayout: "fixed",
-  fontSize: 12,
-};
-
-const ptoBucketsThStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  background: "#f8fafc",
-  color: "#0f172a",
-  padding: "6px 8px",
-  textAlign: "left",
-  verticalAlign: "middle",
-  whiteSpace: "normal",
-  overflowWrap: "normal",
-  wordBreak: "normal",
-  hyphens: "none",
-  lineHeight: 1.2,
-};
-
-const ptoBucketsTdStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  padding: 4,
-  verticalAlign: "middle",
-  background: "#ffffff",
-};
-
-const ptoBucketStructureCellStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 8,
-};
-
-const ptoBucketManualToolsStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
-  flex: "0 0 auto",
-};
-
-const ptoBucketManualBadgeStyle: React.CSSProperties = {
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  color: "#475569",
-  background: "#f8fafc",
-  padding: "2px 5px",
-  fontSize: 10,
-  fontWeight: 700,
-  lineHeight: 1.1,
-};
-
-const ptoBucketDeleteButtonStyle: React.CSSProperties = {
-  appearance: "none",
-  WebkitAppearance: "none",
-  border: "none",
-  background: "transparent",
-  color: "#991b1b",
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 2,
-  outline: "none",
-};
-
-const ptoBucketDraftRowStyle: React.CSSProperties = {
-  background: "#f8fafc",
-};
-
-const ptoBucketDraftCellStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) 24px",
-  gap: 4,
-  alignItems: "center",
-};
-
-const ptoBucketTextInputStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "transparent",
-  borderRadius: 0,
-  background: "transparent",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 12,
-  lineHeight: 1.25,
-  outline: "none",
-  padding: "3px 4px",
-};
-
-const ptoBucketAddButtonStyle: React.CSSProperties = {
-  appearance: "none",
-  WebkitAppearance: "none",
-  width: 22,
-  height: 22,
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#0f172a",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 14,
-  fontWeight: 800,
-  lineHeight: 1,
-  padding: 0,
-  outline: "none",
-};
-
-const ptoBucketInputStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "transparent",
-  borderRadius: 0,
-  background: "transparent",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontVariantNumeric: "tabular-nums",
-  lineHeight: 1.25,
-  outline: "none",
-  padding: "3px 4px",
-  textAlign: "center",
-  whiteSpace: "nowrap",
-  overflow: "visible",
-  textOverflow: "clip",
 };
 
 const ptoToolbarStyle: React.CSSProperties = {
@@ -8765,23 +7814,6 @@ const ptoStatusBadgeStyle: React.CSSProperties = {
   whiteSpace: "normal",
 };
 
-const ptoActiveFormulaCellStyle: React.CSSProperties = {
-  outline: "2px solid #2563eb",
-  outlineOffset: "-2px",
-  zIndex: 2,
-};
-
-const ptoSelectedFormulaCellStyle: React.CSSProperties = {
-  background: "#f0f7ff",
-  outline: "2px solid #2563eb",
-  outlineOffset: "-2px",
-  zIndex: 1,
-};
-
-const ptoEditingFormulaCellStyle: React.CSSProperties = {
-  background: "#eaf4ff",
-};
-
 const ptoReadonlyTotalStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 92,
@@ -8797,6 +7829,28 @@ const ptoReadonlyTotalStyle: React.CSSProperties = {
   lineHeight: 1.25,
   padding: "3px 4px",
   textAlign: "center",
+  whiteSpace: "nowrap",
+  overflow: "visible",
+  textOverflow: "clip",
+};
+
+const ptoReadonlyCellTextStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  lineHeight: 1.25,
+  padding: "4px 5px",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const ptoReadonlyCellNumberStyle: React.CSSProperties = {
+  ...ptoReadonlyCellTextStyle,
+  textAlign: "center",
+  fontVariantNumeric: "tabular-nums",
   whiteSpace: "nowrap",
   overflow: "visible",
   textOverflow: "clip",
@@ -8831,132 +7885,10 @@ const vehicleNameStyle: React.CSSProperties = {
   hyphens: "none",
 };
 
-const adminVehiclePanelStyle: React.CSSProperties = {
-  ...blockStyle,
-  marginBottom: 16,
-  padding: 10,
-};
-
-const adminVehicleToolbarStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 10,
-  alignItems: "center",
-  flexWrap: "wrap",
-  marginBottom: 8,
-};
-
-const adminVehicleCounterStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  flexWrap: "wrap",
-  fontWeight: 700,
-};
-
 const adminVehicleRenderedCountStyle: React.CSSProperties = {
   color: "#64748b",
   fontSize: 11,
   fontWeight: 700,
-};
-
-const adminVehicleClearFiltersStyle: React.CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#0f172a",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 11,
-  fontWeight: 700,
-  padding: "4px 7px",
-};
-
-const adminVehicleTableScrollStyle: React.CSSProperties = {
-  overflow: "auto",
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-};
-
-const adminVehicleShowAllStyle: React.CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#0f172a",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
-  marginTop: 8,
-  padding: "7px 10px",
-};
-
-const adminVehicleTableStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 1309,
-  borderCollapse: "collapse",
-  tableLayout: "fixed",
-  fontSize: 12,
-};
-
-const adminVehicleThStyle: React.CSSProperties = {
-  padding: "5px 6px",
-  borderBottom: "1px solid #cbd5e1",
-  background: "#f1f5f9",
-  color: "#0f172a",
-  fontWeight: 800,
-  textAlign: "left",
-  whiteSpace: "normal",
-  lineHeight: 1.15,
-  position: "relative",
-  overflow: "visible",
-  verticalAlign: "middle",
-  zIndex: 1,
-};
-
-const adminVehicleTdStyle: React.CSSProperties = {
-  padding: "4px 6px",
-  borderBottom: "1px solid #e2e8f0",
-  color: "#0f172a",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  verticalAlign: "middle",
-};
-
-const adminVehicleActionTdStyle: React.CSSProperties = {
-  ...adminVehicleTdStyle,
-  padding: "4px 1px",
-  overflow: "visible",
-};
-
-const adminVehicleNameTdStyle: React.CSSProperties = {
-  ...adminVehicleTdStyle,
-};
-
-const adminVehicleEmptyRowStyle: React.CSSProperties = {
-  ...adminVehicleTdStyle,
-  color: "#64748b",
-  padding: "14px 10px",
-  textAlign: "center",
-};
-
-const adminVehicleNumberTdStyle: React.CSSProperties = {
-  ...adminVehicleTdStyle,
-  textAlign: "center",
-  fontVariantNumeric: "tabular-nums",
-};
-
-const adminVehicleCheckboxStyle: React.CSSProperties = {
-  width: 14,
-  height: 14,
-  margin: 0,
-  verticalAlign: "middle",
 };
 
 const adminLogSummaryGridStyle: React.CSSProperties = {
@@ -9021,13 +7953,6 @@ const adminLogEmptyCellStyle: React.CSSProperties = {
   padding: "14px 10px",
   color: "#64748b",
   textAlign: "center",
-};
-
-const adminVehicleActionsStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 4,
-  justifyContent: "flex-end",
-  alignItems: "center",
 };
 
 const adminDetailCellStyle: React.CSSProperties = {

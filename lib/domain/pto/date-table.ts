@@ -16,7 +16,7 @@ export type PtoPlanRow = {
   years?: string[];
 };
 
-export type PtoStatus = "Новая" | "В работе" | "Завершена" | "Запланировано";
+export type PtoStatus = string;
 
 export type PtoDateTableKey = "plan" | "oper" | "survey";
 export type PtoDropPosition = "before" | "after";
@@ -34,7 +34,7 @@ export const ptoColumnDefaults = {
   monthTotal: 104,
   day: 86,
 };
-export const ptoUnitOptions = ["м2", "м3", "тн"] as const;
+export const ptoUnitOptions = ["\u043c2", "\u043c3", "\u0442\u043d"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -116,11 +116,28 @@ export function ptoYearOptions(rows: PtoPlanRow[], selectedYear: string, manualY
   ].map(normalizePtoYearValue).filter(Boolean));
 
   rows.forEach((row) => {
-    Object.keys(row.dailyPlans).forEach((date) => {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        years.add(date.slice(0, 4));
-      }
+    (row.years ?? []).forEach((year) => {
+      const normalizedYear = normalizePtoYearValue(year);
+      if (normalizedYear) years.add(normalizedYear);
     });
+
+    Object.keys(row.carryovers ?? {}).forEach((year) => {
+      const normalizedYear = normalizePtoYearValue(year);
+      if (normalizedYear) years.add(normalizedYear);
+    });
+
+    (row.carryoverManualYears ?? []).forEach((year) => {
+      const normalizedYear = normalizePtoYearValue(year);
+      if (normalizedYear) years.add(normalizedYear);
+    });
+
+    if ((row.years ?? []).length === 0) {
+      Object.keys(row.dailyPlans).forEach((date) => {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          years.add(date.slice(0, 4));
+        }
+      });
+    }
   });
 
   return Array.from(years).sort((a, b) => Number(a) - Number(b));
@@ -157,9 +174,9 @@ export function removeYearFromPtoRows(rows: PtoPlanRow[], year: string) {
 
 export function ptoRowHasYear(row: PtoPlanRow, year: string) {
   return (row.years ?? []).includes(year)
-    || Object.keys(row.dailyPlans).some((date) => date.startsWith(`${year}-`))
     || row.carryoverManualYears?.includes(year)
-    || row.carryovers?.[year] !== undefined;
+    || row.carryovers?.[year] !== undefined
+    || ((row.years ?? []).length === 0 && Object.keys(row.dailyPlans).some((date) => date.startsWith(`${year}-`)));
 }
 
 export function ptoMonthTotal(row: PtoPlanRow, month: string) {
@@ -181,11 +198,11 @@ export function ptoYearTotal(row: PtoPlanRow, year: string) {
 export function normalizePtoUnit(value: string | undefined) {
   const text = (value ?? "").trim().toLowerCase().replace(/\s+/g, "");
 
-  if (text === "м2" || text === "м²" || text.includes("кв")) return "м2";
-  if (text === "м3" || text === "м³" || text.includes("куб")) return "м3";
-  if (text === "т" || text === "тн" || text.includes("тон")) return "тн";
+  if (text === "\u043c2" || text === "\u043c\u00b2" || text.includes("\u043a\u0432")) return "\u043c2";
+  if (text === "\u043c3" || text === "\u043c\u00b3" || text.includes("\u043a\u0443\u0431")) return "\u043c3";
+  if (text === "\u0442" || text === "\u0442\u043d" || text.includes("\u0442\u043e\u043d")) return "\u0442\u043d";
   if ((ptoUnitOptions as readonly string[]).includes(text)) return text;
-  return "м3";
+  return "\u043c3";
 }
 
 export function ptoAutomatedStatus(row: PtoPlanRow, selectedDate: string): PtoStatus {
@@ -195,22 +212,22 @@ export function ptoAutomatedStatus(row: PtoPlanRow, selectedDate: string): PtoSt
     .map(([date]) => date)
     .sort();
 
-  if (filledDates.length === 0) return "Новая";
-  if (filledDates.some((date) => date.startsWith(month) && date <= selectedDate)) return "В работе";
-  if (filledDates.some((date) => date > selectedDate)) return "Запланировано";
-  return "Завершена";
+  if (filledDates.length === 0) return "\u041d\u043e\u0432\u0430\u044f";
+  if (filledDates.some((date) => date.startsWith(month) && date <= selectedDate)) return "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435";
+  if (filledDates.some((date) => date > selectedDate)) return "\u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043e";
+  return "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0430";
 }
 
 export function ptoStatusRowBackground(status: PtoStatus) {
-  if (status === "Новая") return "#f8fafc";
-  if (status === "В работе") return "#f0fdf4";
-  if (status === "Завершена") return "#fff1f2";
+  if (status === "\u041d\u043e\u0432\u0430\u044f") return "#f8fafc";
+  if (status === "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435") return "#f0fdf4";
+  if (status === "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0430") return "#fff1f2";
   return "#eff6ff";
 }
 
 export function previousPtoYearLabel(year: string) {
   const numericYear = Number(year);
-  return Number.isFinite(numericYear) ? String(numericYear - 1) : "прошлого года";
+  return Number.isFinite(numericYear) ? String(numericYear - 1) : "\u041f\u0440\u043e\u0448\u043b\u043e\u0433\u043e \u0433\u043e\u0434\u0430";
 }
 
 export function ptoLinkedRowSignature(row: PtoPlanRow) {
@@ -224,7 +241,7 @@ export function ptoLinkedRowSignature(row: PtoPlanRow) {
 }
 
 export function ptoAreaMatches(rowArea: string, filterArea: string) {
-  return filterArea === "Все участки" || normalizeLookupValue(rowArea) === normalizeLookupValue(filterArea);
+  return filterArea === "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043a\u0438" || normalizeLookupValue(rowArea) === normalizeLookupValue(filterArea);
 }
 
 export function ptoLinkedRowMatches(row: PtoPlanRow, id: string, signature: string) {
@@ -261,9 +278,11 @@ export function createEmptyPtoDateRow(
   id = createId(),
   overrides: Partial<PtoPlanRow> = {},
 ): PtoPlanRow {
+  const resolvedArea = overrides.area ?? (selectedArea === "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043a\u0438" ? "" : `\u0423\u0447_${selectedArea}`);
+
   return {
     id,
-    area: overrides.area ?? (selectedArea === "Все участки" ? "" : `Уч_${selectedArea}`),
+    area: resolvedArea,
     location: overrides.location ?? "",
     structure: overrides.structure ?? "",
     unit: normalizePtoUnit(overrides.unit),
@@ -293,12 +312,12 @@ export function insertPtoRowAfter(current: PtoPlanRow[], targetRow: PtoPlanRow |
 
 export function ptoFieldLogLabel(field: string) {
   const labels: Record<string, string> = {
-    area: "Участок",
-    location: "Местонахождение",
-    structure: "Структура",
-    unit: "Ед.",
-    coefficient: "Коэфф.",
-    carryover: "Остатки",
+    area: "\u0423\u0447\u0430\u0441\u0442\u043e\u043a",
+    location: "\u041c\u0435\u0441\u0442\u043e\u043d\u0430\u0445\u043e\u0436\u0434\u0435\u043d\u0438\u0435",
+    structure: "\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430",
+    unit: "\u0415\u0434.",
+    coefficient: "\u041a\u043e\u044d\u0444\u0444.",
+    carryover: "\u041e\u0441\u0442\u0430\u0442\u043a\u0438",
   };
 
   return labels[field] ?? field;
@@ -382,7 +401,7 @@ export function normalizePtoPlanRow(row: Partial<PtoPlanRow>): PtoPlanRow {
     structure: row.structure ?? "",
     unit: normalizePtoUnit(row.unit),
     coefficient: Number(row.coefficient ?? 0),
-    status: row.status ?? "В работе",
+    status: row.status ?? "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435",
     carryover: legacyCarryover,
     carryovers: storedCarryovers,
     carryoverManualYears: uniqueSorted(carryoverManualYears),

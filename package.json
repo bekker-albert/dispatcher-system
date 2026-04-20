@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:domain": "jiti tests/domain-checks.ts"
+    "check:domain": "jiti tests/domain-checks.ts",
+    "verify": "npm run lint && npm run build && npm run check:domain"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
