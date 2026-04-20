@@ -1,87 +1,51 @@
 "use client";
 
-import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, Printer, RotateCcw, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { AdminVehicleCellInput, AdminVehicleReadOnlyCell, VehicleFilterHeader } from "@/features/admin/vehicles/AdminVehicleGridCells";
+import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
+import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
+import { ReportReasonTextarea } from "@/features/reports/ReportReasonTextarea";
+import { ReportCompletionGauge, ReportMetric, ReportTd, ReportTh } from "@/features/reports/ReportTableParts";
+import { reportPrintCss } from "@/features/reports/printCss";
+import { adminLogLimit, formatAdminLogDate, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
+import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
+import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
+import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchNumberInputValue, dispatchProductivity, dispatchShiftFromTab, dispatchShiftLabel, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
+import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
+import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
+import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
+import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
+import { createReportSummaryRow, delta, formatNumber, formatPercent, formatReportDate, formatReportTitleDate, formatReportWorkName, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportPtoDateStatusFromIndexes, reportPtoDateStatusHasAny, reportRowDisplayKey, reportRowKey, sortAreaNamesByOrder, sortReportRowsByAreaOrder, statusColor, statusTextColor } from "@/lib/domain/reports/display";
+import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
+import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
+import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
+import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoColumnDefaults, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoUnitOptions, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
+import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
+import { formatBucketNumber, formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
+import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
+import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultCustomTabForm, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, subtabGroupLabels, type BaseTopTab, type CustomTab, type EditableSubtabGroup, type NewSubTabForm, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
+import { isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketSelectionKey, type PtoBucketCell, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
+import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "@/lib/domain/reference/defaults";
+import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow, type VehicleSeedRow } from "@/lib/domain/vehicles/defaults";
+import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
+import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
+import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
+import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { supabaseConfigured } from "@/lib/supabase/client";
 import { loadPtoStateFromSupabase, savePtoStateToSupabase } from "@/lib/supabase/pto";
-
-type VehicleRow = {
-  id: number;
-  name: string;
-  brand: string;
-  model: string;
-  plateNumber: string;
-  garageNumber: string;
-  vehicleType: string;
-  fuelNormWinter: number;
-  fuelNormSummer: number;
-  fuelCalcType: "Моточасы" | "Пробег";
-  vin: string;
-  owner: string;
-  area: string;
-  location: string;
-  workType: string;
-  excavator: string;
-  contractor?: string;
-  work: number;
-  rent: number;
-  repair: number;
-  downtime: number;
-  trips: number;
-  active: boolean;
-  visible?: boolean;
-};
-
-type FuelRow = {
-  unit: string;
-  liters: number;
-  mode: string;
-  debt: number;
-  contractor?: string;
-};
-
-type ReportRow = {
-  area: string;
-  name: string;
-  unit: string;
-  dayPlan: number;
-  dayFact: number;
-  dayProductivity: number;
-  dayReason: string;
-  monthTotalPlan: number;
-  monthPlan: number;
-  monthFact: number;
-  monthSurveyFact: number;
-  monthOperFact: number;
-  monthProductivity: number;
-  yearPlan: number;
-  yearFact: number;
-  yearSurveyFact: number;
-  yearOperFact: number;
-  yearReason: string;
-  annualPlan: number;
-  annualFact: number;
-};
-
-type PtoPlanRow = {
-  id: string;
-  area: string;
-  location: string;
-  structure: string;
-  unit: string;
-  coefficient: number;
-  status: string;
-  carryover: number;
-  carryovers?: Record<string, number>;
-  carryoverManualYears?: string[];
-  dailyPlans: Record<string, number>;
-  years?: string[];
-};
-
-type PtoStatus = "Новая" | "В работе" | "Завершена" | "Запланировано";
-
-type PtoDropPosition = "before" | "after";
+import { adminStorageKeys } from "@/lib/storage/keys";
+import { createId } from "@/lib/utils/id";
+import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
+import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
+import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
+import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
+import { IconButton, MiniIconButton, TopButton } from "@/shared/ui/buttons";
+import { CompactTd, CompactTh, Field, Pill, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
+import { HeaderSubButton } from "@/shared/ui/navigation";
 
 type PtoDropTarget = {
   rowId: string;
@@ -104,1538 +68,75 @@ type PtoResizeState =
   | { type: "column"; key: string; startX: number; startWidth: number }
   | { type: "row"; key: string; startY: number; startHeight: number };
 
+type ReportResizeState = {
+  key: string;
+  startX: number;
+  startWidth: number;
+};
+
 type PtoTableColumn = {
   key: string;
   width: number;
 };
 
-type CustomTab = {
-  id: string;
-  title: string;
-  description: string;
-  items: string[];
-  visible?: boolean;
+type UndoSnapshot = {
+  reportCustomers: ReportCustomerConfig[];
+  reportAreaOrder: string[];
+  reportWorkOrder: Record<string, string[]>;
+  reportHeaderLabels: Record<string, string>;
+  reportColumnWidths: Record<string, number>;
+  reportReasons: Record<string, string>;
+  customTabs: CustomTab[];
+  topTabs: TopTabDefinition[];
+  subTabs: Record<EditableSubtabGroup, SubTabConfig[]>;
+  vehicleRows: VehicleRow[];
+  ptoManualYears: string[];
+  expandedPtoMonths: Record<string, boolean>;
+  ptoPlanRows: PtoPlanRow[];
+  ptoSurveyRows: PtoPlanRow[];
+  ptoOperRows: PtoPlanRow[];
+  ptoColumnWidths: Record<string, number>;
+  ptoRowHeights: Record<string, number>;
+  ptoHeaderLabels: Record<string, string>;
+  ptoBucketValues: Record<string, number>;
+  ptoBucketManualRows: PtoBucketRow[];
+  orgMembers: OrgMember[];
+  dependencyNodes: DependencyNode[];
+  dependencyLinks: DependencyLink[];
 };
 
-type BaseTopTab =
-  | "reports"
-  | "dispatch"
-  | "fleet"
-  | "contractors"
-  | "fuel"
-  | "pto"
-  | "tb"
-  | "user"
-  | "admin";
-
-type TopTab = BaseTopTab | `custom:${string}`;
-
-type TopTabDefinition = {
-  id: BaseTopTab;
-  label: string;
-  visible: boolean;
-  locked?: boolean;
-};
-
-type EditableSubtabGroup = "reports" | "dispatch" | "fleet" | "contractors" | "fuel" | "pto" | "tb";
-
-type SubTabConfig = {
-  id: string;
-  label: string;
-  value: string;
-  visible: boolean;
-  builtIn?: boolean;
-  content?: string;
-};
-
-type NewSubTabForm = {
-  group: EditableSubtabGroup;
-  label: string;
-  content: string;
-};
-
-type OrgMember = {
-  id: string;
-  name: string;
-  position: string;
-  department: string;
-  area: string;
-  linearManagerId: string;
-  functionalManagerId: string;
-  active: boolean;
-};
-
-type DependencyLinkType = "Линейная" | "Функциональная";
-
-type DependencyNode = {
-  id: string;
-  name: string;
-  kind: string;
-  owner: string;
-  visible: boolean;
-};
-
-type DependencyLink = {
-  id: string;
-  fromNodeId: string;
-  toNodeId: string;
-  linkType: DependencyLinkType;
-  rule: string;
-  owner: string;
-  visible: boolean;
-};
-
-type StructureSection = "scheme" | "elements" | "links" | "roles";
-
-type AdminSection = "menu" | "subtabs" | "structure" | "vehicles" | "reports" | "content";
-
-const defaultVehicles: VehicleRow[] = [
-  {
-    id: 1,
-    name: "Komatsu HD785 №12",
-    brand: "Komatsu",
-    model: "HD785",
-    plateNumber: "",
-    garageNumber: "12",
-    vehicleType: "Карьерный самосвал",
-    fuelNormWinter: 0,
-    fuelNormSummer: 0,
-    fuelCalcType: "Моточасы",
-    vin: "",
-    owner: "AA Mining",
-    area: "Аксу",
-    location: "Карьер №6",
-    workType: "Перевозка на Фазу 1",
-    excavator: "PC1250 №3",
-    contractor: "AA Mining",
-    work: 6,
-    rent: 0,
-    repair: 2,
-    downtime: 3,
-    trips: 18,
-    active: true,
-  },
-  {
-    id: 2,
-    name: "Howo №21",
-    brand: "Howo",
-    model: "",
-    plateNumber: "",
-    garageNumber: "21",
-    vehicleType: "Самосвал",
-    fuelNormWinter: 0,
-    fuelNormSummer: 0,
-    fuelCalcType: "Пробег",
-    vin: "",
-    owner: "AA Mining",
-    area: "Аксу",
-    location: "Фаза 1",
-    workType: "Перевозка с карьера №6",
-    excavator: "EX1200 №2",
-    contractor: "AA Mining",
-    work: 11,
-    rent: 0,
-    repair: 0,
-    downtime: 0,
-    trips: 24,
-    active: true,
-  },
-  {
-    id: 3,
-    name: "Toyota Hilux P128",
-    brand: "Toyota",
-    model: "Hilux",
-    plateNumber: "P128",
-    garageNumber: "",
-    vehicleType: "Легковой",
-    fuelNormWinter: 0,
-    fuelNormSummer: 0,
-    fuelCalcType: "Пробег",
-    vin: "",
-    owner: "Qaz Trucks",
-    area: "Акбакай",
-    location: "АБК",
-    workType: "Служебные перевозки",
-    excavator: "—",
-    contractor: "Qaz Trucks",
-    work: 4,
-    rent: 7,
-    repair: 0,
-    downtime: 0,
-    trips: 0,
-    active: true,
-  },
-  {
-    id: 4,
-    name: "Shacman №8",
-    brand: "Shacman",
-    model: "",
-    plateNumber: "",
-    garageNumber: "8",
-    vehicleType: "Самосвал",
-    fuelNormWinter: 0,
-    fuelNormSummer: 0,
-    fuelCalcType: "Пробег",
-    vin: "",
-    owner: "Proline Logistic",
-    area: "Аксу",
-    location: "Ремзона",
-    workType: "Резерв",
-    excavator: "—",
-    contractor: "Proline Logistic",
-    work: 0,
-    rent: 0,
-    repair: 11,
-    downtime: 0,
-    trips: 0,
-    active: true,
-  },
-  {
-    id: 5,
-    name: "Shacman №22",
-    brand: "Shacman",
-    model: "",
-    plateNumber: "",
-    garageNumber: "22",
-    vehicleType: "Самосвал",
-    fuelNormWinter: 0,
-    fuelNormSummer: 0,
-    fuelCalcType: "Пробег",
-    vin: "",
-    owner: "Эко-Сервис",
-    area: "Жолымбет",
-    location: "Стоянка",
-    workType: "Не задействована",
-    excavator: "—",
-    contractor: "Эко-Сервис",
-    work: 0,
-    rent: 0,
-    repair: 0,
-    downtime: 0,
-    trips: 0,
-    active: false,
-  },
-];
-
-const defaultVehicleForm: VehicleRow = {
-  id: 0,
-  name: "",
-  brand: "",
-  model: "",
-  plateNumber: "",
-  garageNumber: "",
-  vehicleType: "",
-  fuelNormWinter: 0,
-  fuelNormSummer: 0,
-  fuelCalcType: "Моточасы",
-  vin: "",
-  owner: "",
-  area: "Аксу",
-  location: "",
-  workType: "",
-  excavator: "—",
-  contractor: "",
-  work: 0,
-  rent: 0,
-  repair: 0,
-  downtime: 0,
-  trips: 0,
-  active: true,
-  visible: true,
-};
-
-const contractors: Record<string, string[]> = {
-  "AA Mining": ["Komatsu HD785 №12", "Howo №21"],
-  "Qaz Trucks": ["Toyota Hilux P128", "Howo №41", "Shacman №17"],
-  "Proline Logistic": ["Shacman №8", "Howo №55"],
-  "Эко-Сервис": ["Shacman №22", "Howo №61"],
-};
-
-const defaultTopTabs: TopTabDefinition[] = [
-  { id: "reports", label: "Отчетность", visible: true },
-  { id: "dispatch", label: "Сводка", visible: true },
-  { id: "fleet", label: "Техника", visible: true },
-  { id: "contractors", label: "Подрядчики", visible: true },
-  { id: "fuel", label: "Топливо", visible: true },
-  { id: "pto", label: "ПТО", visible: true },
-  { id: "tb", label: "ТБ", visible: true },
-  { id: "user", label: "Профиль", visible: true },
-  { id: "admin", label: "Админка", visible: true, locked: true },
-];
-
-const defaultSubTabs: Record<EditableSubtabGroup, SubTabConfig[]> = {
-  reports: [
-    { id: "reports-all", label: "Все участки", value: "Все участки", visible: true, builtIn: true },
-    { id: "reports-aksu", label: "Аксу", value: "Аксу", visible: true, builtIn: true },
-    { id: "reports-akbakai", label: "Акбакай", value: "Акбакай", visible: true, builtIn: true },
-    { id: "reports-zholymbet", label: "Жолымбет", value: "Жолымбет", visible: true, builtIn: true },
-  ],
-  dispatch: [
-    { id: "dispatch-daily", label: "Сутки", value: "daily", visible: true, builtIn: true },
-    { id: "dispatch-night", label: "Ночь", value: "night", visible: true, builtIn: true },
-    { id: "dispatch-day", label: "День", value: "day", visible: true, builtIn: true },
-  ],
-  fleet: [
-    { id: "fleet-all", label: "Все", value: "all", visible: true, builtIn: true },
-    { id: "fleet-rent", label: "Аренда", value: "rent", visible: true, builtIn: true },
-    { id: "fleet-work", label: "Работа", value: "work", visible: true, builtIn: true },
-    { id: "fleet-idle", label: "Простой", value: "idle", visible: true, builtIn: true },
-    { id: "fleet-repair", label: "Ремонт", value: "repair", visible: true, builtIn: true },
-    { id: "fleet-free", label: "Свободна", value: "free", visible: true, builtIn: true },
-  ],
-  contractors: Object.keys(contractors).map((name) => ({
-    id: `contractors-${name}`,
-    label: name,
-    value: name,
-    visible: true,
-    builtIn: true,
-  })),
-  fuel: [
-    { id: "fuel-general", label: "Общая", value: "general", visible: true, builtIn: true },
-    { id: "fuel-contractors", label: "Подрядчики", value: "contractors", visible: true, builtIn: true },
-  ],
-  pto: [
-    { id: "pto-bodies", label: "Кузова", value: "bodies", visible: true, builtIn: true },
-    { id: "pto-performance", label: "Произв.", value: "performance", visible: true, builtIn: true },
-    { id: "pto-cycle", label: "Цикл", value: "cycle", visible: true, builtIn: true },
-    { id: "pto-buckets", label: "Ковши", value: "buckets", visible: true, builtIn: true },
-    { id: "pto-plan", label: "План", value: "plan", visible: true, builtIn: true },
-    { id: "pto-oper", label: "Оперучет", value: "oper", visible: true, builtIn: true },
-    { id: "pto-survey", label: "Замер", value: "survey", visible: true, builtIn: true },
-  ],
-  tb: [
-    { id: "tb-list", label: "Техника", value: "list", visible: true, builtIn: true },
-    { id: "tb-driving", label: "Вождение", value: "driving", visible: true, builtIn: true },
-    { id: "tb-contractors", label: "Подрядчики", value: "contractors", visible: true, builtIn: true },
-  ],
-};
-
-const subtabGroupLabels: Record<EditableSubtabGroup, string> = {
-  reports: "Отчетность",
-  dispatch: "Диспетчерская сводка",
-  fleet: "Список техники",
-  contractors: "Подрядчики",
-  fuel: "Топливо",
-  pto: "ПТО",
-  tb: "ТБ",
-};
-
-const defaultReportRows: ReportRow[] = [
-  {
-    area: "Аксу",
-    name: "Подача руды в бункер ЗИФ КАТех",
-    unit: "тн",
-    dayPlan: 2064,
-    dayFact: 2102,
-    dayProductivity: 2102,
-    dayReason: "",
-    monthTotalPlan: 62892,
-    monthPlan: 23988,
-    monthFact: 25100,
-    monthSurveyFact: 22998,
-    monthOperFact: 2102,
-    monthProductivity: 25100,
-    yearPlan: 208500,
-    yearFact: 216698,
-    yearSurveyFact: 214596,
-    yearOperFact: 2102,
-    yearReason: "",
-    annualPlan: 734781,
-    annualFact: 216698,
-  },
-  {
-    area: "Аксу",
-    name: "Перевозка руды с карьера Котенко на ЗИФ КАТех",
-    unit: "тн",
-    dayPlan: 500,
-    dayFact: 665,
-    dayProductivity: 665,
-    dayReason: "",
-    monthTotalPlan: 53200,
-    monthPlan: 10600,
-    monthFact: 6721,
-    monthSurveyFact: 6056,
-    monthOperFact: 665,
-    monthProductivity: 6721,
-    yearPlan: 194793,
-    yearFact: 109050,
-    yearSurveyFact: 108385,
-    yearOperFact: 665,
-    yearReason: "Ремонт транспортировочной техники; перевозка приостановлена по инициативе ТОО \"Казахалтын Technology\"; погодные условия; перенаправление на перевозку дробленной руды.",
-    annualPlan: 629956,
-    annualFact: 109050,
-  },
-  {
-    area: "Аксу",
-    name: "Отсыпка тела дамбы 2 секция ААМ",
-    unit: "м3",
-    dayPlan: 4624,
-    dayFact: 7780,
-    dayProductivity: 7780,
-    dayReason: "",
-    monthTotalPlan: 134720,
-    monthPlan: 51488,
-    monthFact: 63727,
-    monthSurveyFact: 55947,
-    monthOperFact: 7780,
-    monthProductivity: 63727,
-    yearPlan: 51488,
-    yearFact: 76138,
-    yearSurveyFact: 68358,
-    yearOperFact: 7780,
-    yearReason: "",
-    annualPlan: 240107,
-    annualFact: 76138,
-  },
-  {
-    area: "Акбакай",
-    name: "Перевозка горной массы с карьера",
-    unit: "м3",
-    dayPlan: 10352,
-    dayFact: 11171,
-    dayProductivity: 11171,
-    dayReason: "",
-    monthTotalPlan: 314239,
-    monthPlan: 123630,
-    monthFact: 125674,
-    monthSurveyFact: 114503,
-    monthOperFact: 11171,
-    monthProductivity: 125674,
-    yearPlan: 980026,
-    yearFact: 965596,
-    yearSurveyFact: 954425,
-    yearOperFact: 11171,
-    yearReason: "Ожидание сортового плана; ожидание ВР; ремонт погрузочной техники; ремонт транспортировочной техники; погодные условия.",
-    annualPlan: 3827026,
-    annualFact: 965596,
-  },
-  {
-    area: "Акбакай",
-    name: "Подача руды на ЗИФ",
-    unit: "тн",
-    dayPlan: 3331,
-    dayFact: 1227,
-    dayProductivity: 1227,
-    dayReason: "Простой ДСК.",
-    monthTotalPlan: 91102,
-    monthPlan: 31145,
-    monthFact: 38224,
-    monthSurveyFact: 36997,
-    monthOperFact: 1227,
-    monthProductivity: 38224,
-    yearPlan: 338528,
-    yearFact: 350767,
-    yearSurveyFact: 349540,
-    yearOperFact: 1227,
-    yearReason: "",
-    annualPlan: 1200000,
-    annualFact: 350767,
-  },
-];
-
-const defaultReportForm: ReportRow = {
-  area: "Аксу",
-  name: "",
-  unit: "м3",
-  dayPlan: 0,
-  dayFact: 0,
-  dayProductivity: 0,
-  dayReason: "",
-  monthTotalPlan: 0,
-  monthPlan: 0,
-  monthFact: 0,
-  monthSurveyFact: 0,
-  monthOperFact: 0,
-  monthProductivity: 0,
-  yearPlan: 0,
-  yearFact: 0,
-  yearSurveyFact: 0,
-  yearOperFact: 0,
-  yearReason: "",
-  annualPlan: 0,
-  annualFact: 0,
-};
-
-const defaultReportDate = "2026-04-12";
-
-const defaultPtoPlanMonth = "2026-04";
-const ptoUnitOptions = ["м2", "м3", "тн"] as const;
-
-function dateRange(start: string, end: string) {
-  const result: string[] = [];
-  const current = new Date(`${start}T00:00:00`);
-  const last = new Date(`${end}T00:00:00`);
-
-  while (current <= last) {
-    result.push(current.toISOString().slice(0, 10));
-    current.setDate(current.getDate() + 1);
-  }
-
-  return result;
-}
-
-function distributeTotal(target: Record<string, number>, days: string[], total: number) {
-  if (!days.length || !total) return;
-  const dailyValue = total / days.length;
-
-  days.forEach((day) => {
-    target[day] = Number(dailyValue.toFixed(6));
-  });
-}
-
-function buildPlanDailyValues(dayPlan: number, monthPlan: number, monthTotalPlan: number, yearPlan: number, annualPlan: number) {
-  const values: Record<string, number> = {};
-  const currentDate = defaultReportDate;
-  const remainingMonthPlan = monthTotalPlan - monthPlan;
-
-  distributeTotal(values, dateRange("2026-01-01", "2026-03-31"), yearPlan - monthPlan);
-  distributeTotal(values, dateRange("2026-04-01", "2026-04-11"), monthPlan - dayPlan);
-  values[currentDate] = dayPlan;
-  distributeTotal(values, dateRange("2026-04-13", "2026-04-30"), remainingMonthPlan);
-  distributeTotal(values, dateRange("2026-05-01", "2026-12-31"), annualPlan - yearPlan - remainingMonthPlan);
-
-  return values;
-}
-
-function buildFactDailyValues(monthSurveyFact: number, monthOperFact: number, yearSurveyFact: number, yearOperFact: number) {
-  const survey: Record<string, number> = {};
-  const oper: Record<string, number> = {};
-
-  survey["2026-03-31"] = yearSurveyFact - monthSurveyFact;
-  survey["2026-04-10"] = monthSurveyFact;
-  oper[defaultReportDate] = yearOperFact || monthOperFact;
-
-  return { survey, oper };
-}
-
-const defaultPtoPlanRows: PtoPlanRow[] = [
-  {
-    id: "pto-plan-aksu-feed",
-    area: "Уч_Аксу",
-    location: "Котенко_Подача",
-    structure: "Подача руды в бункер ЗИФ КАТех",
-    unit: "Тонна",
-    coefficient: 2.01,
-    status: "В работе",
-    carryover: 0,
-    dailyPlans: buildPlanDailyValues(2064, 23988, 62892, 208500, 734781),
-  },
-  {
-    id: "pto-plan-aksu-kotenko",
-    area: "Уч_Аксу",
-    location: "Котенко_Перевозка",
-    structure: "Перевозка руды с карьера Котенко на ЗИФ КАТех",
-    unit: "Тонна",
-    coefficient: 2.01,
-    status: "В работе",
-    carryover: 0,
-    dailyPlans: buildPlanDailyValues(500, 10600, 53200, 194793, 629956),
-  },
-  {
-    id: "pto-plan-aksu-dam-aam",
-    area: "Уч_Аксу",
-    location: "Дамба",
-    structure: "Отсыпка тела дамбы 2 секция ААМ",
-    unit: "Куб",
-    coefficient: 0,
-    status: "В работе",
-    carryover: 0,
-    dailyPlans: buildPlanDailyValues(4624, 51488, 134720, 51488, 240107),
-  },
-  {
-    id: "pto-plan-akbakai-ogr",
-    area: "Уч_Акбакай",
-    location: "Карьер_ОГР",
-    structure: "Перевозка горной массы с карьера",
-    unit: "Куб",
-    coefficient: 2.68,
-    status: "В работе",
-    carryover: 0,
-    dailyPlans: buildPlanDailyValues(10352, 123630, 314239, 980026, 3827026),
-  },
-  {
-    id: "pto-plan-akbakai-zif",
-    area: "Уч_Акбакай",
-    location: "Перевозка_Подача_руды",
-    structure: "Подача руды на ЗИФ",
-    unit: "Тонна",
-    coefficient: 2.68,
-    status: "В работе",
-    carryover: 0,
-    dailyPlans: buildPlanDailyValues(3331, 31145, 91102, 338528, 1200000),
-  },
-];
-
-const defaultPtoSurveyRows: PtoPlanRow[] = [
-  {
-    id: "pto-survey-aksu-feed",
-    area: "Уч_Аксу",
-    location: "Котенко_Подача",
-    structure: "Подача руды в бункер ЗИФ КАТех",
-    unit: "Тонна",
-    coefficient: 2.01,
-    status: "Маркзамер",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(22998, 2102, 214596, 2102).survey,
-  },
-  {
-    id: "pto-survey-aksu-kotenko",
-    area: "Уч_Аксу",
-    location: "Котенко_Перевозка",
-    structure: "Перевозка руды с карьера Котенко на ЗИФ КАТех",
-    unit: "Тонна",
-    coefficient: 2.01,
-    status: "Маркзамер",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(6056, 665, 108385, 665).survey,
-  },
-  {
-    id: "pto-survey-aksu-dam-aam",
-    area: "Уч_Аксу",
-    location: "Дамба",
-    structure: "Отсыпка тела дамбы 2 секция ААМ",
-    unit: "Куб",
-    coefficient: 0,
-    status: "Маркзамер",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(55947, 7780, 68358, 7780).survey,
-  },
-  {
-    id: "pto-survey-akbakai-ogr",
-    area: "Уч_Акбакай",
-    location: "Карьер_ОГР",
-    structure: "Перевозка горной массы с карьера",
-    unit: "Куб",
-    coefficient: 2.68,
-    status: "Маркзамер",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(114503, 11171, 954425, 11171).survey,
-  },
-  {
-    id: "pto-survey-akbakai-zif",
-    area: "Уч_Акбакай",
-    location: "Перевозка_Подача_руды",
-    structure: "Подача руды на ЗИФ",
-    unit: "Тонна",
-    coefficient: 2.68,
-    status: "Маркзамер",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(36997, 1227, 349540, 1227).survey,
-  },
-];
-
-const defaultPtoOperRows: PtoPlanRow[] = [
-  {
-    id: "pto-oper-aksu-feed",
-    area: "Уч_Аксу",
-    location: "Котенко_Подача",
-    structure: "Подача руды в бункер ЗИФ КАТех",
-    unit: "Тонна",
-    coefficient: 2.01,
-    status: "Оперучет",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(22998, 2102, 214596, 2102).oper,
-  },
-  {
-    id: "pto-oper-aksu-kotenko",
-    area: "Уч_Аксу",
-    location: "Котенко_Перевозка",
-    structure: "Перевозка руды с карьера Котенко на ЗИФ КАТех",
-    unit: "Тонна",
-    coefficient: 2.01,
-    status: "Оперучет",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(6056, 665, 108385, 665).oper,
-  },
-  {
-    id: "pto-oper-aksu-dam-aam",
-    area: "Уч_Аксу",
-    location: "Дамба",
-    structure: "Отсыпка тела дамбы 2 секция ААМ",
-    unit: "Куб",
-    coefficient: 0,
-    status: "Оперучет",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(55947, 7780, 68358, 7780).oper,
-  },
-  {
-    id: "pto-oper-akbakai-ogr",
-    area: "Уч_Акбакай",
-    location: "Карьер_ОГР",
-    structure: "Перевозка горной массы с карьера",
-    unit: "Куб",
-    coefficient: 2.68,
-    status: "Оперучет",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(114503, 11171, 954425, 11171).oper,
-  },
-  {
-    id: "pto-oper-akbakai-zif",
-    area: "Уч_Акбакай",
-    location: "Перевозка_Подача_руды",
-    structure: "Подача руды на ЗИФ",
-    unit: "Тонна",
-    coefficient: 2.68,
-    status: "Оперучет",
-    carryover: 0,
-    dailyPlans: buildFactDailyValues(36997, 1227, 349540, 1227).oper,
-  },
-];
-
-const defaultCustomTabForm = {
-  title: "",
-  description: "",
-};
-
-const defaultOrgMembers: OrgMember[] = [
-  {
-    id: "director-dispatch",
-    name: "Альберт",
-    position: "Начальник диспетчерской службы",
-    department: "Диспетчерская служба",
-    area: "Все участки",
-    linearManagerId: "",
-    functionalManagerId: "",
-    active: true,
-  },
-  {
-    id: "pto-engineer",
-    name: "ПТО",
-    position: "Инженер ПТО",
-    department: "ПТО",
-    area: "Все участки",
-    linearManagerId: "director-dispatch",
-    functionalManagerId: "",
-    active: true,
-  },
-  {
-    id: "shift-dispatcher",
-    name: "Диспетчер смены",
-    position: "Диспетчер",
-    department: "Диспетчерская служба",
-    area: "Аксу",
-    linearManagerId: "director-dispatch",
-    functionalManagerId: "pto-engineer",
-    active: true,
-  },
-];
-
-const defaultOrgMemberForm: OrgMember = {
-  id: "",
-  name: "",
-  position: "",
-  department: "",
-  area: "",
-  linearManagerId: "",
-  functionalManagerId: "",
-  active: true,
-};
-
-const defaultDependencyNodes: DependencyNode[] = [
-  { id: "sites", name: "Участки", kind: "Справочник", owner: "Админка", visible: true },
-  { id: "vehicles", name: "Техника / СводТехники", kind: "Справочник", owner: "Админка / Диспетчер", visible: true },
-  { id: "body-measurements", name: "Замеры кузовов", kind: "ПТО", owner: "ПТО", visible: true },
-  { id: "volumes", name: "Объемы кузова", kind: "Расчет", owner: "ПТО", visible: true },
-  { id: "pto-plan", name: "План / ПланС / График", kind: "План", owner: "ПТО", visible: true },
-  { id: "shift-summary", name: "БД сменных записей", kind: "Факт смены", owner: "Диспетчер", visible: true },
-  { id: "oper-accounting", name: "Оперативный учет", kind: "Агрегатор факта", owner: "ПТО", visible: true },
-  { id: "survey-measurements", name: "Маркзамер", kind: "Корректировка каждые 5 дней", owner: "Маркшейдер", visible: true },
-  { id: "performance", name: "Производительность", kind: "Рейсы / объемы / часы", owner: "ПТО", visible: true },
-  { id: "reasons", name: "Причины: ремонт, простой, аренда", kind: "Объяснение отклонений", owner: "Диспетчер / Механик", visible: true },
-  { id: "reports", name: "Отчетность AAM", kind: "Итог", owner: "Руководитель / ПТО", visible: true },
-];
-
-const defaultDependencyLinks: DependencyLink[] = [
-  { id: "sites-vehicles", fromNodeId: "sites", toNodeId: "vehicles", linkType: "Линейная", rule: "Техника закрепляется за участком.", owner: "Админка", visible: true },
-  { id: "vehicles-body-measurements", fromNodeId: "vehicles", toNodeId: "body-measurements", linkType: "Функциональная", rule: "Для техники выбирается замер кузова по модели, материалу и актуальности.", owner: "ПТО", visible: true },
-  { id: "body-measurements-volumes", fromNodeId: "body-measurements", toNodeId: "volumes", linkType: "Функциональная", rule: "Объем подтягивается из замеров кузовов и используется в расчетах.", owner: "ПТО", visible: true },
-  { id: "vehicles-shift-summary", fromNodeId: "vehicles", toNodeId: "shift-summary", linkType: "Линейная", rule: "По технике заполняются рейсы, часы, статус, ремонт, простой и аренда.", owner: "Диспетчер", visible: true },
-  { id: "shift-summary-oper-accounting", fromNodeId: "shift-summary", toNodeId: "oper-accounting", linkType: "Линейная", rule: "БД сменных записей агрегируется по участку, структуре работ и дате.", owner: "Диспетчер / ПТО", visible: true },
-  { id: "volumes-oper-accounting", fromNodeId: "volumes", toNodeId: "oper-accounting", linkType: "Функциональная", rule: "Рейсы умножаются на объем и коэффициенты материала.", owner: "ПТО", visible: true },
-  { id: "oper-accounting-survey", fromNodeId: "oper-accounting", toNodeId: "survey-measurements", linkType: "Функциональная", rule: "Маркзамер берет оперучет для дней после последнего замера.", owner: "Маркшейдер / ПТО", visible: true },
-  { id: "shift-summary-performance", fromNodeId: "shift-summary", toNodeId: "performance", linkType: "Функциональная", rule: "Рейсы, часы и объемы техники собираются в производительность.", owner: "ПТО", visible: true },
-  { id: "shift-summary-reasons", fromNodeId: "shift-summary", toNodeId: "reasons", linkType: "Линейная", rule: "Ремонт, простой и аренда превращаются в причины отклонения.", owner: "Диспетчер / Механик", visible: true },
-  { id: "pto-plan-reports", fromNodeId: "pto-plan", toNodeId: "reports", linkType: "Функциональная", rule: "План дает суточный план, план месяца, план с начала года и годовой план.", owner: "ПТО", visible: true },
-  { id: "survey-measurements-reports", fromNodeId: "survey-measurements", toNodeId: "reports", linkType: "Функциональная", rule: "Факт отчетности = маркзамер + оперучет недостающих дней до выбранной даты.", owner: "Маркшейдер / ПТО", visible: true },
-  { id: "performance-reports", fromNodeId: "performance", toNodeId: "reports", linkType: "Функциональная", rule: "Производительность техники попадает в отдельные колонки отчета.", owner: "ПТО", visible: true },
-  { id: "reasons-reports", fromNodeId: "reasons", toNodeId: "reports", linkType: "Функциональная", rule: "Причины показываются за сутки и накоплением с начала года.", owner: "Диспетчер / ПТО", visible: true },
-];
-
-const dependencyStages = [
-  { title: "1. База", nodeIds: ["sites", "vehicles"] },
-  { title: "2. ПТО", nodeIds: ["body-measurements", "volumes", "pto-plan"] },
-  { title: "3. Факт смены", nodeIds: ["shift-summary"] },
-  { title: "4. Расчеты", nodeIds: ["oper-accounting", "survey-measurements", "performance", "reasons"] },
-  { title: "5. Итог", nodeIds: ["reports"] },
-];
-
-const defaultDependencyNodeForm: DependencyNode = {
-  id: "",
-  name: "",
-  kind: "",
-  owner: "",
-  visible: true,
-};
-
-const defaultDependencyLinkForm: DependencyLink = {
-  id: "",
-  fromNodeId: "sites",
-  toNodeId: "vehicles",
-  linkType: "Линейная",
-  rule: "",
-  owner: "",
-  visible: true,
-};
-
-const adminStorageKeys = {
-  reports: "dispatcher:reports",
-  customTabs: "dispatcher:custom-tabs",
-  topTabs: "dispatcher:top-tabs",
-  subTabs: "dispatcher:sub-tabs",
-  vehicles: "dispatcher:vehicles",
-  ptoYears: "dispatcher:pto-years",
-  ptoPlanRows: "dispatcher:pto-plan-rows",
-  ptoSurveyRows: "dispatcher:pto-survey-rows",
-  ptoOperRows: "dispatcher:pto-oper-rows",
-  ptoColumnWidths: "dispatcher:pto-column-widths",
-  ptoRowHeights: "dispatcher:pto-row-heights",
-  ptoHeaderLabels: "dispatcher:pto-header-labels",
-  orgMembers: "dispatcher:org-members",
-  dependencyNodes: "dispatcher:dependency-nodes",
-  dependencyLinks: "dispatcher:dependency-links",
-};
-
-const ptoColumnDefaults = {
-  area: 138,
-  location: 150,
-  structure: 250,
-  unit: 58,
-  coefficient: 72,
-  status: 118,
-  carryover: 92,
-  yearTotal: 92,
-  monthTotal: 76,
-  day: 54,
-};
-
-const fuelGeneral: FuelRow[] = [
-  { unit: "Howo №21", liters: 320, mode: "Наша по договору", debt: 0 },
-  { unit: "Komatsu HD785 №12", liters: 450, mode: "С перевыставлением", debt: 0 },
-];
-
-const fuelContractors: FuelRow[] = [
-  { contractor: "Qaz Trucks", unit: "Toyota Hilux P128", liters: 70, mode: "В долг", debt: 210 },
-  { contractor: "Proline Logistic", unit: "Howo №55", liters: 180, mode: "В долг", debt: 520 },
-];
-
-const userCard = {
-  fullName: "Альберт",
-  role: "Начальник диспетчерской службы",
-  department: "Диспетчерская служба",
-  access: "Полный доступ",
-};
-
-function totalHours(v: VehicleRow) {
-  return v.work + v.rent + v.repair + v.downtime;
-}
-
-function ktg(v: VehicleRow) {
-  return Math.round(((v.work + v.rent) / 11) * 100);
-}
-
-function escapeExcelCell(value: string | number | boolean | null | undefined) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function statusColor(value: number) {
-  if (value >= 80) return "#dcfce7";
-  if (value >= 50) return "#fef3c7";
-  return "#fee2e2";
-}
-
-function statusTextColor(value: number) {
-  if (value >= 80) return "#166534";
-  if (value >= 50) return "#92400e";
-  return "#991b1b";
-}
-
-function delta(plan: number, fact: number) {
-  return fact - plan;
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(value);
-}
-
-function parseDecimalInput(value: string | number) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-
-  const normalized = value.trim().replace(/\s/g, "").replace(",", ".");
-  if (!normalized || normalized === "-" || normalized === "." || normalized === "-.") return null;
-
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseDecimalValue(value: string | number) {
-  return parseDecimalInput(value) ?? 0;
-}
-
-function formatPtoCellNumber(value: number | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "";
-
-  return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatPtoFormulaNumber(value: number | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "";
-
-  return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 6,
-    useGrouping: false,
-  }).format(value);
-}
-
-function formatPercent(fact: number, plan: number) {
-  if (!plan) return fact ? "100%" : "0%";
-
-  return `${Math.round((fact / plan) * 100)}%`;
-}
-
-function formatReportDate(value: string) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    weekday: "long",
-  }).format(new Date(`${value}T00:00:00`));
-}
-
-function reportReason(fact: number, plan: number, reason: string) {
-  if (fact >= plan) return "План выполнен";
-  return reason || "Причина не заполнена";
-}
-
-function reportMonthFact(row: ReportRow) {
-  const combined = row.monthSurveyFact + row.monthOperFact;
-  return combined || row.monthFact;
-}
-
-function reportYearFact(row: ReportRow) {
-  const combined = row.yearSurveyFact + row.yearOperFact;
-  return combined || row.yearFact;
-}
-
-function reportAnnualFact(row: ReportRow) {
-  return row.annualFact || reportYearFact(row);
-}
-
-function reportSurveyCheckpoint(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  const checkpointDay = Math.floor(day / 5) * 5 || day;
-
-  return `${year}-${String(month).padStart(2, "0")}-${String(checkpointDay).padStart(2, "0")}`;
-}
-
-function monthDays(month: string) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const daysCount = new Date(year, monthNumber, 0).getDate();
-
-  return Array.from({ length: daysCount }, (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`);
-}
-
-function yearMonths(year: string) {
-  return Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
-}
-
-function normalizePtoYearValue(value: string | number) {
-  const year = Number(value);
-
-  if (!Number.isInteger(year) || year < 1900 || year > 2100) return "";
-  return String(year);
-}
-
-function ptoYearOptions(rows: PtoPlanRow[], selectedYear: string, manualYears: string[]) {
-  const years = new Set<string>([
-    selectedYear,
-    ...manualYears,
-  ].map(normalizePtoYearValue).filter(Boolean));
-
-  rows.forEach((row) => {
-    Object.keys(row.dailyPlans).forEach((date) => {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        years.add(date.slice(0, 4));
-      }
-    });
-  });
-
-  return Array.from(years).sort((a, b) => Number(a) - Number(b));
-}
-
-function normalizeStoredPtoYears(value: unknown) {
-  if (!Array.isArray(value)) return [defaultPtoPlanMonth.slice(0, 4)];
-
-  const years = value
-    .map((year) => normalizePtoYearValue(typeof year === "string" || typeof year === "number" ? year : ""))
-    .filter(Boolean);
-
-  const normalizedYears = uniqueSorted(years);
-  return normalizedYears.length ? normalizedYears : [defaultPtoPlanMonth.slice(0, 4)];
-}
-
-function removeYearFromPtoRows(rows: PtoPlanRow[], year: string) {
-  return rows.map((row) => {
-    const dailyPlans = Object.fromEntries(
-      Object.entries(row.dailyPlans).filter(([date]) => !date.startsWith(`${year}-`)),
-    );
-    const carryovers = { ...(row.carryovers ?? {}) };
-    delete carryovers[year];
-
-    return {
-      ...row,
-      dailyPlans,
-      carryovers,
-      carryoverManualYears: (row.carryoverManualYears ?? []).filter((rowYear) => rowYear !== year),
-      years: (row.years ?? []).filter((rowYear) => rowYear !== year),
-    };
-  });
-}
-
-function ptoRowHasYear(row: PtoPlanRow, year: string) {
-  return (row.years ?? []).includes(year) || Object.keys(row.dailyPlans).some((date) => date.startsWith(`${year}-`)) || row.carryoverManualYears?.includes(year) || row.carryovers?.[year] !== undefined;
-}
-
-function formatMonthName(month: string) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    month: "long",
-  }).format(new Date(`${month}-01T00:00:00`));
-}
-
-function ptoMonthTotal(row: PtoPlanRow, month: string) {
-  const total = Object.entries(row.dailyPlans).reduce((sum, [date, value]) => (
-    date.startsWith(month) ? sum + value : sum
-  ), 0);
-
-  return Math.round(total * 1000000) / 1000000;
-}
-
-function ptoYearTotal(row: PtoPlanRow, year: string) {
-  const total = Object.entries(row.dailyPlans).reduce((sum, [date, value]) => (
-    date.startsWith(year) ? sum + value : sum
-  ), 0);
-
-  return Math.round(total * 1000000) / 1000000;
-}
-
-function normalizePtoUnit(value: string | undefined) {
-  const text = (value ?? "").trim().toLowerCase().replace(/\s+/g, "");
-
-  if (text === "м2" || text === "м²" || text.includes("кв")) return "м2";
-  if (text === "м3" || text === "м³" || text.includes("куб")) return "м3";
-  if (text === "т" || text === "тн" || text.includes("тон")) return "тн";
-  if ((ptoUnitOptions as readonly string[]).includes(text)) return text;
-  return "м3";
-}
-
-function ptoAutomatedStatus(row: PtoPlanRow, selectedDate: string): PtoStatus {
-  const month = selectedDate.slice(0, 7);
-  const filledDates = Object.entries(row.dailyPlans)
-    .filter(([, value]) => Number.isFinite(value))
-    .map(([date]) => date)
-    .sort();
-
-  if (filledDates.length === 0) return "Новая";
-  if (filledDates.some((date) => date.startsWith(month) && date <= selectedDate)) return "В работе";
-  if (filledDates.some((date) => date > selectedDate)) return "Запланировано";
-  return "Завершена";
-}
-
-function ptoStatusRowBackground(status: PtoStatus) {
-  if (status === "Новая") return "#f8fafc";
-  if (status === "В работе") return "#f0fdf4";
-  if (status === "Завершена") return "#fff1f2";
-  return "#eff6ff";
-}
-
-function ptoStatusControlStyle(status: PtoStatus): React.CSSProperties {
-  if (status === "Новая") {
-    return {
-      background: "#f1f5f9",
-      borderColor: "#cbd5e1",
-      color: "#334155",
-    };
-  }
-
-  if (status === "В работе") {
-    return {
-      background: "#dcfce7",
-      borderColor: "#86efac",
-      color: "#166534",
-    };
-  }
-
-  if (status === "Завершена") {
-    return {
-      background: "#ffe4e6",
-      borderColor: "#fda4af",
-      color: "#9f1239",
-    };
-  }
+const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
+
+async function loadDefaultVehicleSeed() {
+  const seedModule = await import("@/data/default-vehicles.json");
+  const seedRows = seedModule.default as VehicleSeedRow[];
 
   return {
-    background: "#dbeafe",
-    borderColor: "#93c5fd",
-    color: "#1e40af",
+    rows: seedRows,
+    version: createVehicleSeedVersion(seedRows),
+    vehicles: createDefaultVehicles(seedRows),
   };
 }
 
-function previousPtoYearLabel(year: string) {
-  const numericYear = Number(year);
-  return Number.isFinite(numericYear) ? String(numericYear - 1) : "прошлого года";
-}
+const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
+  column.key === "visible" ? { ...column, icon: <Eye size={14} aria-hidden /> } : column
+));
 
-function ptoStoredCarryover(row: PtoPlanRow, year: string) {
-  return row.carryovers?.[year] ?? (year === defaultPtoPlanMonth.slice(0, 4) ? row.carryover : 0);
-}
+const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
 
-function ptoCarryoverIsManual(row: PtoPlanRow, year: string) {
-  if (row.carryoverManualYears?.includes(year)) return true;
-  return !row.carryovers && year === defaultPtoPlanMonth.slice(0, 4) && row.carryover !== 0;
-}
-
-function ptoAutoCarryover(row: PtoPlanRow, year: string, rows: PtoPlanRow[], visited = new Set<string>()): number {
-  const numericYear = Number(year);
-  if (!Number.isFinite(numericYear)) return 0;
-
-  const previousYear = String(numericYear - 1);
-  const signature = ptoLinkedRowSignature(row);
-  if (!signature) return 0;
-
-  return rows
-    .filter((item) => ptoLinkedRowSignature(item) === signature && ptoRowHasYear(item, previousYear))
-    .reduce((sum, item) => sum + ptoYearTotalWithCarryover(item, previousYear, rows, visited), 0);
-}
-
-function ptoEffectiveCarryover(row: PtoPlanRow, year: string, rows: PtoPlanRow[], visited = new Set<string>()): number {
-  if (ptoCarryoverIsManual(row, year)) return ptoStoredCarryover(row, year);
-  return ptoAutoCarryover(row, year, rows, visited);
-}
-
-function ptoYearTotalWithCarryover(row: PtoPlanRow, year: string, rows: PtoPlanRow[] = [row], visited = new Set<string>()): number {
-  const key = `${row.id}:${year}`;
-  if (visited.has(key)) return ptoYearTotal(row, year);
-
-  const nextVisited = new Set(visited);
-  nextVisited.add(key);
-
-  return Math.round((ptoEffectiveCarryover(row, year, rows, nextVisited) + ptoYearTotal(row, year)) * 1000000) / 1000000;
-}
-
-function normalizeLookupValue(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/^уч[._\s-]*/, "")
-    .replace(/[^a-zа-яё0-9]+/g, "");
-}
-
-function cleanAreaName(value: string) {
-  return value.replace(/^Уч[._\s-]*/i, "").replace(/^уч[._\s-]*/i, "");
-}
-
-function uniqueSorted(values: string[]) {
-  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b, "ru"));
-}
-
-function ptoAreaMatches(rowArea: string, filterArea: string) {
-  return filterArea === "Все участки" || normalizeLookupValue(rowArea) === normalizeLookupValue(filterArea);
-}
-
-function ptoLinkedRowSignature(row: PtoPlanRow) {
-  const signature = [
-    cleanAreaName(row.area),
-    row.structure,
-    row.unit,
-  ].map(normalizeLookupValue).join(":");
-
-  return signature === "::" ? "" : signature;
-}
-
-function ptoLinkedRowMatches(row: PtoPlanRow, id: string, signature: string) {
-  return row.id === id || (signature !== "" && ptoLinkedRowSignature(row) === signature);
-}
-
-function reorderPtoRows(rows: PtoPlanRow[], sourceId: string, sourceSignature: string, targetId: string, targetSignature: string, position: PtoDropPosition) {
-  const sourceIndex = rows.findIndex((row) => ptoLinkedRowMatches(row, sourceId, sourceSignature));
-  const targetIndex = rows.findIndex((row) => ptoLinkedRowMatches(row, targetId, targetSignature));
-
-  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return rows;
-
-  const nextRows = [...rows];
-  const [movedRow] = nextRows.splice(sourceIndex, 1);
-  const nextTargetIndex = nextRows.findIndex((row) => ptoLinkedRowMatches(row, targetId, targetSignature));
-  if (nextTargetIndex < 0) return rows;
-
-  nextRows.splice(position === "after" ? nextTargetIndex + 1 : nextTargetIndex, 0, movedRow);
-
-  return nextRows;
-}
-
-function ptoRowMatchesReport(row: PtoPlanRow, report: ReportRow) {
-  return normalizeLookupValue(row.area) === normalizeLookupValue(report.area)
-    && normalizeLookupValue(row.structure) === normalizeLookupValue(report.name);
-}
-
-function ptoRowsForReport(rows: PtoPlanRow[], report: ReportRow) {
-  return rows.filter((row) => ptoRowMatchesReport(row, report));
-}
-
-function sumPtoRows(rows: PtoPlanRow[], report: ReportRow, includeDate: (date: string) => boolean, options: { includeCarryover?: boolean; carryoverYear?: string } = {}) {
-  const matchedRows = ptoRowsForReport(rows, report);
-
-  return {
-    matched: matchedRows.length > 0,
-    value: matchedRows.reduce((sum, row) => (
-      sum + (options.includeCarryover && options.carryoverYear ? ptoEffectiveCarryover(row, options.carryoverYear, rows) : 0) + Object.entries(row.dailyPlans).reduce((rowSum, [date, value]) => (
-        includeDate(date) ? rowSum + value : rowSum
-      ), 0)
-    ), 0),
-  };
-}
-
-function sourceValue(source: { matched: boolean; value: number }, fallback: number) {
-  return source.matched ? source.value : fallback;
-}
-
-function normalizePtoPlanRow(row: Partial<PtoPlanRow>): PtoPlanRow {
-  const dailyPlans = row.dailyPlans ?? {};
-  const storedCarryovers = isRecord(row.carryovers)
-    ? Object.fromEntries(
-        Object.entries(row.carryovers)
-          .map(([year, value]) => [normalizePtoYearValue(year), typeof value === "number" ? value : Number(value)])
-          .filter(([year, value]) => year && Number.isFinite(value)),
-      )
-    : {};
-  const carryoverManualYears = uniqueSorted(
-    Array.isArray(row.carryoverManualYears)
-      ? row.carryoverManualYears
-          .map((year) => normalizePtoYearValue(year))
-          .filter(Boolean)
-      : [],
-  );
-  const legacyCarryover = Number(row.carryover ?? 0);
-  const legacyYear = defaultPtoPlanMonth.slice(0, 4);
-  if (!Object.keys(storedCarryovers).length && legacyCarryover !== 0) {
-    storedCarryovers[legacyYear] = legacyCarryover;
-    carryoverManualYears.push(legacyYear);
+function cloneUndoSnapshot(snapshot: UndoSnapshot): UndoSnapshot {
+  if (typeof structuredClone === "function") {
+    return structuredClone(snapshot) as UndoSnapshot;
   }
-  const years = uniqueSorted([
-    ...(row.years ?? []),
-    ...Object.keys(dailyPlans)
-      .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
-      .map((date) => date.slice(0, 4)),
-    ...Object.keys(storedCarryovers),
-  ]);
 
-  return {
-    id: row.id || createId(),
-    area: row.area ?? "",
-    location: row.location ?? "",
-    structure: row.structure ?? "",
-    unit: normalizePtoUnit(row.unit),
-    coefficient: Number(row.coefficient ?? 0),
-    status: row.status ?? "В работе",
-    carryover: legacyCarryover,
-    carryovers: storedCarryovers,
-    carryoverManualYears: uniqueSorted(carryoverManualYears),
-    dailyPlans,
-    years: years.length ? years : [defaultPtoPlanMonth.slice(0, 4)],
-  };
-}
-
-function normalizeReportRow(row: Partial<ReportRow>): ReportRow {
-  const normalized = {
-    ...defaultReportForm,
-    ...row,
-  };
-
-  return {
-    ...normalized,
-    dayProductivity: row.dayProductivity ?? normalized.dayFact,
-    dayReason: normalized.dayReason ?? "",
-    monthTotalPlan: normalized.monthTotalPlan || normalized.monthPlan,
-    monthSurveyFact: row.monthSurveyFact ?? normalized.monthFact,
-    monthOperFact: row.monthOperFact ?? 0,
-    monthProductivity: row.monthProductivity ?? normalized.monthFact,
-    yearSurveyFact: row.yearSurveyFact ?? normalized.yearFact,
-    yearOperFact: row.yearOperFact ?? 0,
-    yearReason: normalized.yearReason ?? "",
-    annualPlan: normalized.annualPlan || normalized.yearPlan,
-    annualFact: row.annualFact ?? normalized.yearFact,
-  };
-}
-
-function createReportRowFromPtoPlan(row: PtoPlanRow): ReportRow {
-  return normalizeReportRow({
-    area: cleanAreaName(row.area),
-    name: row.structure,
-    unit: row.unit === "Тонна" ? "тн" : row.unit === "Куб" ? "м3" : row.unit,
-    dayReason: "",
-    yearReason: "",
-  });
-}
-
-function deriveReportRowFromPto(row: ReportRow, reportDateValue: string, planRows: PtoPlanRow[], surveyRows: PtoPlanRow[], operRows: PtoPlanRow[]): ReportRow {
-  const year = reportDateValue.slice(0, 4);
-  const month = reportDateValue.slice(0, 7);
-  const cutoffDate = reportSurveyCheckpoint(reportDateValue);
-
-  const dayPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date === reportDateValue),
-    row.dayPlan,
-  );
-  const monthTotalPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(month)),
-    row.monthTotalPlan,
-  );
-  const monthPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(month) && date <= reportDateValue),
-    row.monthPlan,
-  );
-  const yearPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(year) && date <= reportDateValue, { includeCarryover: true, carryoverYear: year }),
-    row.yearPlan,
-  );
-  const annualPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(year), { includeCarryover: true, carryoverYear: year }),
-    row.annualPlan,
-  );
-
-  const dayOperFact = sumPtoRows(operRows, row, (date) => date === reportDateValue);
-  const daySurveyFact = sumPtoRows(surveyRows, row, (date) => date === reportDateValue);
-  const dayFact = dayOperFact.value || daySurveyFact.value || (dayOperFact.matched || daySurveyFact.matched ? 0 : row.dayFact);
-
-  const monthSurveyFact = sourceValue(
-    sumPtoRows(surveyRows, row, (date) => date.startsWith(month) && date <= cutoffDate),
-    row.monthSurveyFact,
-  );
-  const monthOperFact = sourceValue(
-    sumPtoRows(operRows, row, (date) => date.startsWith(month) && date > cutoffDate && date <= reportDateValue),
-    row.monthOperFact,
-  );
-  const yearSurveyFact = sourceValue(
-    sumPtoRows(surveyRows, row, (date) => date.startsWith(year) && date <= cutoffDate, { includeCarryover: true, carryoverYear: year }),
-    row.yearSurveyFact,
-  );
-  const yearOperFact = sourceValue(
-    sumPtoRows(operRows, row, (date) => date.startsWith(year) && date > cutoffDate && date <= reportDateValue, { includeCarryover: true, carryoverYear: year }),
-    row.yearOperFact,
-  );
-
-  const monthFact = monthSurveyFact + monthOperFact || row.monthFact;
-  const yearFact = yearSurveyFact + yearOperFact || row.yearFact;
-
-  return {
-    ...row,
-    dayPlan,
-    dayFact,
-    dayProductivity: row.dayProductivity || dayFact,
-    monthTotalPlan,
-    monthPlan,
-    monthSurveyFact,
-    monthOperFact,
-    monthFact,
-    monthProductivity: row.monthProductivity || monthFact,
-    yearPlan,
-    yearSurveyFact,
-    yearOperFact,
-    yearFact,
-    annualPlan,
-    annualFact: yearFact,
-  };
-}
-
-function mergeDefaultsById<T extends { id: string }>(items: T[], defaults: T[]) {
-  const existingIds = new Set(items.map((item) => item.id));
-  return [...items, ...defaults.filter((item) => !existingIds.has(item.id))];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function normalizeNumberRecord(value: unknown, minValue: number, maxValue: number) {
-  if (!isRecord(value)) return {};
-
-  return Object.fromEntries(
-    Object.entries(value)
-      .map(([key, item]) => [key, Number(item)] as const)
-      .filter(([key, item]) => key.trim() && Number.isFinite(item))
-      .map(([key, item]) => [key, Math.min(maxValue, Math.max(minValue, Math.round(item)))])
-  ) as Record<string, number>;
-}
-
-function normalizeStringRecord(value: unknown) {
-  if (!isRecord(value)) return {};
-
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter((entry): entry is [string, string] => entry[0].trim() !== "" && typeof entry[1] === "string")
-      .map(([key, item]) => [key, item.trim()])
-      .filter(([, item]) => item !== ""),
-  ) as Record<string, string>;
-}
-
-function errorToMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function normalizeStoredTopTabs(value: unknown) {
-  if (!Array.isArray(value)) return defaultTopTabs;
-
-  const defaultById = new Map(defaultTopTabs.map((tab) => [tab.id, tab]));
-  const normalized = value.flatMap((item) => {
-    if (!isRecord(item) || typeof item.id !== "string") return [];
-
-    const defaultTab = defaultById.get(item.id as BaseTopTab);
-    if (!defaultTab) return [];
-
-    return [{
-      ...defaultTab,
-      label: typeof item.label === "string" && item.label.trim() ? item.label : defaultTab.label,
-      visible: defaultTab.locked ? true : item.visible !== false,
-    }];
-  });
-
-  return mergeDefaultsById(normalized, defaultTopTabs);
-}
-
-function normalizeStoredSubTabs(value: unknown): Record<EditableSubtabGroup, SubTabConfig[]> {
-  const stored = isRecord(value) ? value : {};
-  const groups = Object.keys(defaultSubTabs) as EditableSubtabGroup[];
-
-  return groups.reduce((result, group) => {
-    const storedGroup = stored[group];
-    const normalizedGroup = Array.isArray(storedGroup)
-      ? storedGroup.flatMap((item) => {
-        if (!isRecord(item) || typeof item.id !== "string") return [];
-
-        return [{
-          id: item.id,
-          label: typeof item.label === "string" && item.label.trim() ? item.label : "Подвкладка",
-          value: typeof item.value === "string" && item.value.trim() ? item.value : item.id,
-          visible: item.visible !== false,
-          builtIn: item.builtIn === true,
-          content: typeof item.content === "string" ? item.content : undefined,
-        }];
-      })
-      : [];
-
-    return {
-      ...result,
-      [group]: mergeDefaultsById(normalizedGroup, defaultSubTabs[group]),
-    };
-  }, {} as Record<EditableSubtabGroup, SubTabConfig[]>);
-}
-
-function distributeMonthlyTotal(total: number, days: string[]) {
-  if (!Number.isFinite(total) || days.length === 0) return {};
-
-  const totalThousands = Math.round(total * 1000);
-  const sign = totalThousands < 0 ? -1 : 1;
-  const absoluteThousands = Math.abs(totalThousands);
-  const baseThousands = Math.floor(absoluteThousands / days.length);
-  const remainderThousands = absoluteThousands % days.length;
-
-  return days.reduce<Record<string, number>>((values, day, index) => {
-    values[day] = (sign * (baseThousands + (index < remainderThousands ? 1 : 0))) / 1000;
-    return values;
-  }, {});
-}
-
-function customTabKey(id: string): TopTab {
-  return `custom:${id}`;
-}
-
-function compactTopTabLabel(tab: TopTabDefinition) {
-  const labels: Partial<Record<BaseTopTab, Record<string, string>>> = {
-    dispatch: { "Диспетчерская сводка": "Сводка" },
-    fleet: { "Список техники по участкам": "Техника" },
-    contractors: { "Действующие подрядчики": "Подрядчики" },
-    user: { "Пользователь": "Профиль" },
-  };
-
-  return labels[tab.id]?.[tab.label] ?? tab.label;
-}
-
-function compactSubTabLabel(group: EditableSubtabGroup, tab: SubTabConfig) {
-  const labels: Partial<Record<EditableSubtabGroup, Record<string, string>>> = {
-    dispatch: {
-      "Суточная сводка (Общее)": "Сутки",
-      "Ночная сводка - 1 смена": "Ночь",
-      "Дневная сводка - 2 смена": "День",
-    },
-    fleet: {
-      "Общий список": "Все",
-      "В аренде": "Аренда",
-      "В работе": "Работа",
-      "В простое": "Простой",
-      "В ремонте": "Ремонт",
-      "Не задействована": "Свободна",
-    },
-    pto: {
-      "Замеры кузовов": "Кузова",
-      "Расчет производительности": "Произв.",
-      "Цикл погрузки": "Цикл",
-      "Объемы ковшей": "Ковши",
-      "Маркшейдерский замер": "Замер",
-    },
-    tb: {
-      "Список техники": "Техника",
-      "Качество вождения": "Вождение",
-    },
-  };
-
-  return labels[group]?.[tab.label] ?? tab.label;
-}
-
-function buildVehicleDisplayName(vehicle: Pick<VehicleRow, "name" | "brand" | "model" | "garageNumber" | "plateNumber">) {
-  const title = [vehicle.brand, vehicle.model].map((value) => value.trim()).filter(Boolean).join(" ");
-  const garageNumber = vehicle.garageNumber.trim();
-  const plateNumber = vehicle.plateNumber.trim();
-  const numberBlock = garageNumber && plateNumber
-    ? `${garageNumber}(${plateNumber})`
-    : garageNumber || (plateNumber ? `(${plateNumber})` : "");
-
-  return [title, numberBlock].filter(Boolean).join(" - ") || vehicle.name.trim() || "Без названия";
-}
-
-function orgMemberLabel(member?: OrgMember) {
-  if (!member) return "Не назначен";
-
-  return [member.name, member.position ? `(${member.position})` : ""].filter(Boolean).join(" ");
-}
-
-function dependencyNodeLabel(nodes: DependencyNode[], id: string) {
-  return nodes.find((node) => node.id === id)?.name ?? "Не выбрано";
-}
-
-function createId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function ptoRowFieldDomKey(rowId: string, field: string) {
-  return `${rowId}:${field}`;
+  return JSON.parse(JSON.stringify(snapshot)) as UndoSnapshot;
 }
 
 export default function App() {
   const [topTab, setTopTab] = useState<TopTab>("dispatch");
+  const headerNavRef = useRef<HTMLDivElement | null>(null);
+  const activeHeaderTabRef = useRef<HTMLDivElement | null>(null);
+  const headerSubtabsRef = useRef<HTMLDivElement | null>(null);
 
   const [dispatchTab, setDispatchTab] = useState("daily");
   const [fleetTab, setFleetTab] = useState("all");
@@ -1643,8 +144,30 @@ export default function App() {
   const [fuelTab, setFuelTab] = useState("general");
   const [ptoTab, setPtoTab] = useState("bodies");
   const [tbTab, setTbTab] = useState("list");
+  const [adminVehiclesEditing, setAdminVehiclesEditing] = useState(false);
+  const [showAllVehicleRows, setShowAllVehicleRows] = useState(false);
+  const [vehiclePreviewRowLimit, setVehiclePreviewRowLimit] = useState(adminVehicleFallbackPreviewRows);
   const [vehicleRows, setVehicleRows] = useState<VehicleRow[]>(defaultVehicles);
-  const [vehicleCard, setVehicleCard] = useState<VehicleRow | null>(null);
+  const [dispatchSummaryRows, setDispatchSummaryRows] = useState<DispatchSummaryRow[]>(() => createDefaultDispatchSummaryRows(defaultVehicles, defaultReportDate));
+  const [dispatchVehicleToAddId, setDispatchVehicleToAddId] = useState("");
+  const [vehicleFilters, setVehicleFilters] = useState<VehicleFilters>({});
+  const [vehicleFilterDrafts, setVehicleFilterDrafts] = useState<VehicleFilters>({});
+  const [openVehicleFilter, setOpenVehicleFilter] = useState<VehicleFilterKey | null>(null);
+  const [vehicleFilterSearch, setVehicleFilterSearch] = useState<Partial<Record<VehicleFilterKey, string>>>({});
+  const [pendingVehicleFocus, setPendingVehicleFocus] = useState<{ id: number; field: VehicleInlineField; edit?: boolean; selectContents?: boolean } | null>(null);
+  const [activeVehicleCell, setActiveVehicleCell] = useState<string | null>(null);
+  const [vehicleSelectionAnchorCell, setVehicleSelectionAnchorCell] = useState<{ id: number; field: VehicleInlineField } | null>(null);
+  const [selectedVehicleCellKeys, setSelectedVehicleCellKeys] = useState<string[]>([]);
+  const [editingVehicleCell, setEditingVehicleCell] = useState<string | null>(null);
+  const [vehicleCellDraft, setVehicleCellDraft] = useState("");
+  const [vehicleCellInitialDraft, setVehicleCellInitialDraft] = useState("");
+  const vehicleCellSkipBlurCommitRef = useRef(false);
+  const vehicleSelectionDraggingRef = useRef(false);
+  const vehicleSelectionAnchorRef = useRef<{ id: number; field: VehicleInlineField } | null>(null);
+  const adminVehicleTableScrollRef = useRef<HTMLDivElement | null>(null);
+  const vehicleRowsRef = useRef(vehicleRows);
+  const vehicleSaveTimerRef = useRef<number | null>(null);
+  const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
   const [ptoFormulaCell, setPtoFormulaCell] = useState<PtoFormulaCell | null>(null);
@@ -1657,16 +180,34 @@ export default function App() {
   const [ptoPendingFieldFocus, setPtoPendingFieldFocus] = useState<{ rowId: string; field: string } | null>(null);
   const ptoSelectionDraggingRef = useRef(false);
   const ptoResizeStateRef = useRef<PtoResizeState | null>(null);
+  const reportResizeStateRef = useRef<ReportResizeState | null>(null);
+  const vehicleImportInputRef = useRef<HTMLInputElement | null>(null);
+  const ptoPlanImportInputRef = useRef<HTMLInputElement | null>(null);
+  const hasStoredPtoStateRef = useRef(false);
   const ptoDatabaseLoadedRef = useRef(false);
   const ptoDatabaseSavingRef = useRef(false);
   const ptoDatabaseSaveQueuedRef = useRef(false);
   const ptoDatabaseSaveSnapshotRef = useRef("");
+  const ptoLocalSaveTimerRef = useRef<number | null>(null);
+  const reportReasonDraftTimerRef = useRef<number | null>(null);
   const [topTabs, setTopTabs] = useState<TopTabDefinition[]>(defaultTopTabs);
   const [subTabs, setSubTabs] = useState<Record<EditableSubtabGroup, SubTabConfig[]>>(defaultSubTabs);
   const [reportArea, setReportArea] = useState("Все участки");
+  const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
+  const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
+  const [adminReportTab, setAdminReportTab] = useState<"order" | "customer">("order");
+  const [adminReportCustomerSettingsTab, setAdminReportCustomerSettingsTab] = useState<AdminReportCustomerSettingsTab>("display");
+  const [editingReportRowLabelKeys, setEditingReportRowLabelKeys] = useState<string[]>([]);
+  const [expandedReportSummaryIds, setExpandedReportSummaryIds] = useState<string[]>([]);
+  const [reportCustomers, setReportCustomers] = useState<ReportCustomerConfig[]>(defaultReportCustomers);
+  const [reportAreaOrder, setReportAreaOrder] = useState<string[]>([]);
+  const [reportWorkOrder, setReportWorkOrder] = useState<Record<string, string[]>>({});
+  const [reportHeaderLabels, setReportHeaderLabels] = useState<Record<string, string>>({});
+  const [reportColumnWidths, setReportColumnWidths] = useState<Record<string, number>>({});
+  const [reportReasons, setReportReasons] = useState<Record<string, string>>({});
+  const [editingReportHeaderKey, setEditingReportHeaderKey] = useState<string | null>(null);
+  const [reportHeaderDraft, setReportHeaderDraft] = useState("");
   const [reportDate, setReportDate] = useState(defaultReportDate);
-  const [reportRows, setReportRows] = useState<ReportRow[]>(defaultReportRows);
-  const [reportForm, setReportForm] = useState<ReportRow>(defaultReportForm);
   const [ptoPlanYear, setPtoPlanYear] = useState(defaultPtoPlanMonth.slice(0, 4));
   const [ptoYearInput, setPtoYearInput] = useState("");
   const [ptoYearDialogOpen, setPtoYearDialogOpen] = useState(false);
@@ -1681,10 +222,17 @@ export default function App() {
   const [ptoHeaderLabels, setPtoHeaderLabels] = useState<Record<string, string>>({});
   const [editingPtoHeaderKey, setEditingPtoHeaderKey] = useState<string | null>(null);
   const [ptoHeaderDraft, setPtoHeaderDraft] = useState("");
+  const [ptoBucketValues, setPtoBucketValues] = useState<Record<string, number>>({});
+  const [ptoBucketManualRows, setPtoBucketManualRows] = useState<PtoBucketRow[]>([]);
+  const [ptoBucketDraftRow, setPtoBucketDraftRow] = useState({ area: "", structure: "" });
+  const [ptoBucketEditKey, setPtoBucketEditKey] = useState<string | null>(null);
+  const [ptoBucketDraft, setPtoBucketDraft] = useState("");
+  const [ptoBucketActiveCell, setPtoBucketActiveCell] = useState<PtoBucketCell | null>(null);
+  const [ptoBucketSelectionAnchorCell, setPtoBucketSelectionAnchorCell] = useState<PtoBucketCell | null>(null);
+  const [ptoBucketSelectedCellKeys, setPtoBucketSelectedCellKeys] = useState<string[]>([]);
+  const [headerSubtabsOffset, setHeaderSubtabsOffset] = useState(0);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const [customTabForm, setCustomTabForm] = useState(defaultCustomTabForm);
-  const [customInfoForm, setCustomInfoForm] = useState("");
-  const [customInfoTabId, setCustomInfoTabId] = useState("");
   const [newSubTabForm, setNewSubTabForm] = useState<NewSubTabForm>({ group: "reports", label: "", content: "" });
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>(defaultOrgMembers);
   const [orgMemberForm, setOrgMemberForm] = useState<OrgMember>(defaultOrgMemberForm);
@@ -1697,12 +245,11 @@ export default function App() {
   const [editingDependencyLinkId, setEditingDependencyLinkId] = useState<string | null>(null);
   const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
   const [adminSection, setAdminSection] = useState<AdminSection>("menu");
+  const [adminLogs, setAdminLogs] = useState<AdminLogEntry[]>([]);
   const [expandedAdminTab, setExpandedAdminTab] = useState<string | null>("reports");
   const [editingTopTabId, setEditingTopTabId] = useState<string | null>(null);
   const [editingSubTabId, setEditingSubTabId] = useState<string | null>(null);
-  const [saveMessage, setSaveMessage] = useState("Изменения сохраняются в этом браузере.");
-  const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База Supabase подключается..." : "База Supabase не настроена.");
-  const [ptoDatabaseSaving, setPtoDatabaseSaving] = useState(false);
+  const [, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База Supabase подключается..." : "База Supabase не настроена.");
   const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
@@ -1712,29 +259,318 @@ export default function App() {
     planRows: ptoPlanRows,
     operRows: ptoOperRows,
     surveyRows: ptoSurveyRows,
+    bucketValues: ptoBucketValues,
+    bucketRows: ptoBucketManualRows,
     uiState: {
       reportDate,
-      topTab,
       ptoTab,
       ptoPlanYear,
       ptoAreaFilter,
       expandedPtoMonths,
+      reportColumnWidths,
+      reportReasons,
       ptoColumnWidths,
       ptoRowHeights,
       ptoHeaderLabels,
     },
-  }), [expandedPtoMonths, ptoAreaFilter, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportDate, topTab]);
-  const ptoDatabaseSnapshot = useMemo(() => JSON.stringify(ptoDatabaseState), [ptoDatabaseState]);
+  }), [expandedPtoMonths, ptoAreaFilter, ptoBucketManualRows, ptoBucketValues, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportColumnWidths, reportDate, reportReasons]);
   const ptoDatabaseStateRef = useRef(ptoDatabaseState);
-  const ptoDatabaseSnapshotRef = useRef(ptoDatabaseSnapshot);
+  const undoHistoryRef = useRef<UndoSnapshot[]>([]);
+  const undoCurrentSnapshotRef = useRef<UndoSnapshot | null>(null);
+  const undoSnapshotTimerRef = useRef<number | null>(null);
+  const undoRestoringRef = useRef(false);
+  const createUndoSnapshot = useCallback((): UndoSnapshot => ({
+    reportCustomers,
+    reportAreaOrder,
+    reportWorkOrder,
+    reportHeaderLabels,
+    reportColumnWidths,
+    reportReasons,
+    customTabs,
+    topTabs,
+    subTabs,
+    vehicleRows: cloneVehicleRows(vehicleRowsRef.current),
+    ptoManualYears,
+    expandedPtoMonths,
+    ptoPlanRows,
+    ptoSurveyRows,
+    ptoOperRows,
+    ptoColumnWidths,
+    ptoRowHeights,
+    ptoHeaderLabels,
+    ptoBucketValues,
+    ptoBucketManualRows,
+    orgMembers,
+    dependencyNodes,
+    dependencyLinks,
+  }), [
+    customTabs,
+    dependencyLinks,
+    dependencyNodes,
+    expandedPtoMonths,
+    orgMembers,
+    ptoBucketManualRows,
+    ptoBucketValues,
+    ptoColumnWidths,
+    ptoHeaderLabels,
+    ptoManualYears,
+    ptoOperRows,
+    ptoPlanRows,
+    ptoRowHeights,
+    ptoSurveyRows,
+    reportAreaOrder,
+    reportColumnWidths,
+    reportReasons,
+    reportWorkOrder,
+    reportHeaderLabels,
+    reportCustomers,
+    subTabs,
+    topTabs,
+  ]);
+
+  const addAdminLog = useCallback((entry: Omit<AdminLogEntry, "id" | "at" | "user">) => {
+    const nextEntry: AdminLogEntry = {
+      id: createId(),
+      at: new Date().toISOString(),
+      user: defaultUserCard.fullName || "Пользователь",
+      ...entry,
+    };
+
+    setAdminLogs((current) => {
+      const previousEntry = current[0];
+      const previousDate = previousEntry ? new Date(previousEntry.at).getTime() : 0;
+      const shouldMerge = previousEntry
+        && previousEntry.action === nextEntry.action
+        && previousEntry.section === nextEntry.section
+        && previousEntry.details === nextEntry.details
+        && Date.now() - previousDate < 10000;
+      const nextLogs = shouldMerge
+        ? [{ ...previousEntry, ...nextEntry }, ...current.slice(1)]
+        : [nextEntry, ...current].slice(0, adminLogLimit);
+
+      window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(nextLogs));
+      return nextLogs;
+    });
+  }, []);
+
+  function pushVehicleUndoSnapshot() {
+    vehicleUndoHistoryRef.current = [
+      ...vehicleUndoHistoryRef.current,
+      cloneVehicleRows(vehicleRowsRef.current),
+    ].slice(-10);
+  }
+
+  const restoreUndoSnapshot = useCallback((snapshot: UndoSnapshot) => {
+    setReportCustomers(snapshot.reportCustomers);
+    setReportAreaOrder(snapshot.reportAreaOrder);
+    setReportWorkOrder(snapshot.reportWorkOrder);
+    setReportHeaderLabels(snapshot.reportHeaderLabels);
+    setReportColumnWidths(snapshot.reportColumnWidths);
+    setReportReasons(snapshot.reportReasons);
+    setCustomTabs(snapshot.customTabs);
+    setTopTabs(snapshot.topTabs);
+    setSubTabs(snapshot.subTabs);
+    setVehicleRows(snapshot.vehicleRows);
+    setPtoManualYears(snapshot.ptoManualYears);
+    setExpandedPtoMonths(snapshot.expandedPtoMonths);
+    setPtoPlanRows(snapshot.ptoPlanRows);
+    setPtoSurveyRows(snapshot.ptoSurveyRows);
+    setPtoOperRows(snapshot.ptoOperRows);
+    setPtoColumnWidths(snapshot.ptoColumnWidths);
+    setPtoRowHeights(snapshot.ptoRowHeights);
+    setPtoHeaderLabels(snapshot.ptoHeaderLabels);
+    setPtoBucketValues(snapshot.ptoBucketValues);
+    setPtoBucketManualRows(snapshot.ptoBucketManualRows);
+    setOrgMembers(snapshot.orgMembers);
+    setDependencyNodes(snapshot.dependencyNodes);
+    setDependencyLinks(snapshot.dependencyLinks);
+
+    setEditingVehicleCell(null);
+    setVehicleCellDraft("");
+    setVehicleCellInitialDraft("");
+    setPtoInlineEditCell(null);
+    setPtoInlineEditInitialDraft("");
+    setPtoFormulaDraft("");
+    setPtoBucketEditKey(null);
+    setPtoBucketDraft("");
+    setEditingPtoHeaderKey(null);
+    setPtoHeaderDraft("");
+    setEditingReportHeaderKey(null);
+    setReportHeaderDraft("");
+    setOpenVehicleFilter(null);
+
+    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+      setPtoSaveRevision((revision) => revision + 1);
+    }
+
+    addAdminLog({
+      action: "Отмена",
+      section: "Система",
+      details: "Выполнен возврат на шаг назад через Ctrl+Z.",
+    });
+  }, [addAdminLog]);
+
+  const restoreVehicleUndoSnapshot = useCallback(() => {
+    const previousVehicleRows = vehicleUndoHistoryRef.current.pop();
+    if (!previousVehicleRows) return;
+
+    setVehicleRows(cloneVehicleRows(previousVehicleRows));
+    setEditingVehicleCell(null);
+    setVehicleCellDraft("");
+    setVehicleCellInitialDraft("");
+    setOpenVehicleFilter(null);
+    addAdminLog({
+      action: "Отмена",
+      section: "Техника",
+      details: "Выполнен возврат списка техники на шаг назад через Ctrl+Z.",
+    });
+  }, [addAdminLog]);
+
+  useEffect(() => {
+    vehicleRowsRef.current = vehicleRows;
+    if (undoCurrentSnapshotRef.current) {
+      undoCurrentSnapshotRef.current = {
+        ...undoCurrentSnapshotRef.current,
+        vehicleRows: cloneVehicleRows(vehicleRows),
+      };
+    }
+  }, [vehicleRows]);
+
+  useEffect(() => {
+    if (undoSnapshotTimerRef.current !== null) {
+      window.clearTimeout(undoSnapshotTimerRef.current);
+    }
+
+    undoSnapshotTimerRef.current = window.setTimeout(() => {
+      const nextSnapshot = cloneUndoSnapshot(createUndoSnapshot());
+
+      if (!adminDataLoaded) {
+        undoHistoryRef.current = [];
+        undoCurrentSnapshotRef.current = nextSnapshot;
+        undoRestoringRef.current = false;
+        undoSnapshotTimerRef.current = null;
+        return;
+      }
+
+      if (!undoCurrentSnapshotRef.current) {
+        undoCurrentSnapshotRef.current = nextSnapshot;
+        undoSnapshotTimerRef.current = null;
+        return;
+      }
+
+      if (undoRestoringRef.current) {
+        undoRestoringRef.current = false;
+        undoCurrentSnapshotRef.current = nextSnapshot;
+        undoSnapshotTimerRef.current = null;
+        return;
+      }
+
+      undoHistoryRef.current = [
+        ...undoHistoryRef.current,
+        cloneUndoSnapshot(undoCurrentSnapshotRef.current),
+      ].slice(-10);
+      undoCurrentSnapshotRef.current = nextSnapshot;
+
+      undoSnapshotTimerRef.current = null;
+    }, 700);
+
+    return () => {
+      if (undoSnapshotTimerRef.current !== null) {
+        window.clearTimeout(undoSnapshotTimerRef.current);
+        undoSnapshotTimerRef.current = null;
+      }
+    };
+  }, [adminDataLoaded, createUndoSnapshot]);
+
+  useEffect(() => {
+    const handleGlobalUndo = (event: KeyboardEvent) => {
+      const isUndo = (event.ctrlKey || event.metaKey)
+        && !event.shiftKey
+        && (event.key.toLowerCase() === "z" || event.code === "KeyZ");
+
+      const canUndoVehicleRows = topTab === "admin" && adminSection === "vehicles" && vehicleUndoHistoryRef.current.length > 0;
+      if (!isUndo || (!canUndoVehicleRows && undoHistoryRef.current.length === 0)) return;
+
+      const target = event.target;
+      const targetElement = target instanceof HTMLElement ? target : null;
+      const isNativeEditable = Boolean(targetElement?.closest("input, textarea, select, [contenteditable='true']"));
+      if (isNativeEditable) return;
+
+      event.preventDefault();
+
+      if (canUndoVehicleRows) {
+        restoreVehicleUndoSnapshot();
+        return;
+      }
+
+      const previousSnapshot = undoHistoryRef.current.pop();
+      if (!previousSnapshot) return;
+
+      undoRestoringRef.current = true;
+      undoCurrentSnapshotRef.current = cloneUndoSnapshot(previousSnapshot);
+      restoreUndoSnapshot(previousSnapshot);
+    };
+
+    window.addEventListener("keydown", handleGlobalUndo);
+    return () => window.removeEventListener("keydown", handleGlobalUndo);
+  }, [adminSection, restoreUndoSnapshot, restoreVehicleUndoSnapshot, topTab]);
 
   useEffect(() => {
     ptoDatabaseStateRef.current = ptoDatabaseState;
-    ptoDatabaseSnapshotRef.current = ptoDatabaseSnapshot;
-  }, [ptoDatabaseSnapshot, ptoDatabaseState]);
+  }, [ptoDatabaseState]);
 
   useEffect(() => {
-    queueMicrotask(() => {
+    if (!openVehicleFilter) return undefined;
+
+    const closeVehicleFilter = () => setOpenVehicleFilter(null);
+    window.addEventListener("click", closeVehicleFilter);
+
+    return () => window.removeEventListener("click", closeVehicleFilter);
+  }, [openVehicleFilter]);
+
+  useEffect(() => {
+    if (!pendingVehicleFocus) return undefined;
+
+    const fieldKey = vehicleInlineFieldDomKey(pendingVehicleFocus.id, pendingVehicleFocus.field);
+    setActiveVehicleCell(fieldKey);
+    setEditingVehicleCell(pendingVehicleFocus.edit ? fieldKey : null);
+    vehicleSelectionAnchorRef.current = { id: pendingVehicleFocus.id, field: pendingVehicleFocus.field };
+    setVehicleSelectionAnchorCell({ id: pendingVehicleFocus.id, field: pendingVehicleFocus.field });
+    setSelectedVehicleCellKeys([fieldKey]);
+
+    const timeoutId = window.setTimeout(() => {
+      if (pendingVehicleFocus.edit) {
+        const input = document.querySelector<HTMLInputElement>(`[data-admin-vehicle-input="${fieldKey}"]`);
+        input?.focus();
+
+        if (pendingVehicleFocus.selectContents !== false) {
+          try {
+            input?.select();
+          } catch {
+            // Number inputs do not support text selection APIs in some browsers.
+          }
+        } else {
+          const cursorPosition = String(input?.value ?? "").length;
+          try {
+            input?.setSelectionRange(cursorPosition, cursorPosition);
+          } catch {
+            // Number inputs do not support text selection APIs in some browsers.
+          }
+        }
+      } else {
+        document.querySelector<HTMLElement>(`[data-admin-vehicle-cell="${fieldKey}"]`)?.focus();
+      }
+
+      setPendingVehicleFocus(null);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pendingVehicleFocus]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    queueMicrotask(async () => {
       const readStoredValue = (key: string) => {
         const storedValue = window.localStorage.getItem(key);
         if (!storedValue) return null;
@@ -1748,11 +584,17 @@ export default function App() {
       };
 
       try {
-        const savedReports = readStoredValue(adminStorageKeys.reports);
+        const savedReportCustomers = readStoredValue(adminStorageKeys.reportCustomers);
+        const savedReportAreaOrder = readStoredValue(adminStorageKeys.reportAreaOrder);
+        const savedReportWorkOrder = readStoredValue(adminStorageKeys.reportWorkOrder);
+        const savedReportHeaderLabels = readStoredValue(adminStorageKeys.reportHeaderLabels);
+        const savedReportColumnWidths = readStoredValue(adminStorageKeys.reportColumnWidths);
+        const savedReportReasons = readStoredValue(adminStorageKeys.reportReasons);
         const savedCustomTabs = readStoredValue(adminStorageKeys.customTabs);
         const savedTopTabs = readStoredValue(adminStorageKeys.topTabs);
         const savedSubTabs = readStoredValue(adminStorageKeys.subTabs);
         const savedVehicles = readStoredValue(adminStorageKeys.vehicles);
+        const savedDispatchSummaryRows = readStoredValue(adminStorageKeys.dispatchSummaryRows);
         const savedPtoYears = readStoredValue(adminStorageKeys.ptoYears);
         const savedPtoPlanRows = readStoredValue(adminStorageKeys.ptoPlanRows);
         const savedPtoSurveyRows = readStoredValue(adminStorageKeys.ptoSurveyRows);
@@ -1760,53 +602,70 @@ export default function App() {
         const savedPtoColumnWidths = readStoredValue(adminStorageKeys.ptoColumnWidths);
         const savedPtoRowHeights = readStoredValue(adminStorageKeys.ptoRowHeights);
         const savedPtoHeaderLabels = readStoredValue(adminStorageKeys.ptoHeaderLabels);
+        const savedPtoBucketValues = readStoredValue(adminStorageKeys.ptoBucketValues);
+        const savedPtoBucketRows = readStoredValue(adminStorageKeys.ptoBucketRows);
         const savedOrgMembers = readStoredValue(adminStorageKeys.orgMembers);
         const savedDependencyNodes = readStoredValue(adminStorageKeys.dependencyNodes);
         const savedDependencyLinks = readStoredValue(adminStorageKeys.dependencyLinks);
-
-        if (Array.isArray(savedReports)) {
-          setReportRows(savedReports.map((row) => normalizeReportRow(isRecord(row) ? row : {})));
+        const savedAdminLogs = readStoredValue(adminStorageKeys.adminLogs);
+        const hasSavedPtoState = Boolean(
+          savedPtoYears
+          || Array.isArray(savedPtoPlanRows)
+          || Array.isArray(savedPtoSurveyRows)
+          || Array.isArray(savedPtoOperRows)
+          || savedPtoColumnWidths
+          || savedPtoRowHeights
+          || savedPtoHeaderLabels
+          || savedPtoBucketValues
+          || savedPtoBucketRows,
+        );
+        hasStoredPtoStateRef.current = hasSavedPtoState;
+        if (hasSavedPtoState && !window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt)) {
+          window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
         }
 
-        if (Array.isArray(savedCustomTabs)) {
-          const parsedTabs = savedCustomTabs.flatMap((tab): CustomTab[] => {
-            if (!isRecord(tab) || typeof tab.id !== "string" || typeof tab.title !== "string") return [];
+        setReportCustomers(normalizeStoredReportCustomers(savedReportCustomers, defaultReportCustomers));
+        setReportAreaOrder(normalizeStringList(savedReportAreaOrder));
+        setReportWorkOrder(normalizeStringListRecord(savedReportWorkOrder));
+        setReportHeaderLabels(normalizeStringRecord(savedReportHeaderLabels));
+        setReportColumnWidths(normalizeNumberRecord(savedReportColumnWidths, 42, 520));
+        setReportReasons(normalizeStringRecord(savedReportReasons));
 
-            return [{
-              id: tab.id,
-              title: tab.title,
-              description: typeof tab.description === "string" ? tab.description : "",
-              items: Array.isArray(tab.items) ? tab.items.filter((item): item is string => typeof item === "string") : [],
-              visible: tab.visible !== false,
-            }];
-          });
-
-          setCustomTabs(parsedTabs);
-          setCustomInfoTabId(parsedTabs[0]?.id ?? "");
-        }
+        setCustomTabs(normalizeStoredCustomTabs(savedCustomTabs));
 
         if (savedTopTabs) {
           setTopTabs(normalizeStoredTopTabs(savedTopTabs));
         }
 
         if (savedSubTabs) {
-          setSubTabs(normalizeStoredSubTabs(savedSubTabs));
+          setSubTabs(normalizeStoredSubTabs(savedSubTabs, defaultSubTabs));
         }
 
-        if (Array.isArray(savedVehicles)) {
-          setVehicleRows(
-            savedVehicles.map((vehicle) => {
-              const mergedVehicle = {
-                ...defaultVehicleForm,
-                ...(isRecord(vehicle) ? vehicle : {}),
-              } as VehicleRow;
+        const savedVehicleSeedVersion = window.localStorage.getItem(adminStorageKeys.vehiclesSeedVersion);
+        const needsVehicleSeed = !Array.isArray(savedVehicles) || savedVehicles.length <= defaultVehicleSeedReplaceLimit;
+        const defaultVehicleSeed = needsVehicleSeed ? await loadDefaultVehicleSeed() : null;
+        if (cancelled) return;
+        const shouldUseVehicleSeed = defaultVehicleSeed !== null && defaultVehicleSeed.rows.length > 0 && (
+          !Array.isArray(savedVehicles)
+          || savedVehicleSeedVersion !== defaultVehicleSeed.version
+        );
 
-              return {
-                ...mergedVehicle,
-                name: buildVehicleDisplayName(mergedVehicle),
-              };
-            }),
-          );
+        if (shouldUseVehicleSeed && defaultVehicleSeed) {
+          setVehicleRows(defaultVehicleSeed.vehicles);
+          window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(defaultVehicleSeed.vehicles));
+          window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, defaultVehicleSeed.version);
+        } else if (Array.isArray(savedVehicles)) {
+          setVehicleRows(savedVehicles.map((vehicle) => normalizeVehicleRow(vehicle)));
+        }
+
+        const parsedDispatchSummaryRows = normalizeDispatchSummaryRows(savedDispatchSummaryRows, defaultReportDate);
+        if (parsedDispatchSummaryRows) {
+          const hasEditableDispatchRows = parsedDispatchSummaryRows.some((row) => row.shift === "night" || row.shift === "day");
+          setDispatchSummaryRows(hasEditableDispatchRows
+            ? parsedDispatchSummaryRows
+            : parsedDispatchSummaryRows.map((row) => (row.shift === "daily" ? { ...row, shift: "night" } : row)));
+        } else if (shouldUseVehicleSeed) {
+          setDispatchSummaryRows(createDefaultDispatchSummaryRows(defaultVehicleSeed.vehicles, defaultReportDate));
         }
 
         if (savedPtoYears) {
@@ -1828,6 +687,8 @@ export default function App() {
         setPtoColumnWidths(normalizeNumberRecord(savedPtoColumnWidths, 44, 800));
         setPtoRowHeights(normalizeNumberRecord(savedPtoRowHeights, 28, 180));
         setPtoHeaderLabels(normalizeStringRecord(savedPtoHeaderLabels));
+        setPtoBucketValues(normalizeDecimalRecord(savedPtoBucketValues, 0, 100000));
+        setPtoBucketManualRows(normalizePtoBucketManualRows(savedPtoBucketRows));
 
         if (Array.isArray(savedOrgMembers)) {
           setOrgMembers(
@@ -1870,10 +731,22 @@ export default function App() {
             ),
           );
         }
+
+        if (Array.isArray(savedAdminLogs)) {
+          setAdminLogs(savedAdminLogs.flatMap((entry) => {
+            const normalizedEntry = normalizeAdminLogEntry(entry);
+            return normalizedEntry ? [normalizedEntry] : [];
+          }).slice(0, adminLogLimit));
+        }
       } finally {
+        if (cancelled) return;
         setAdminDataLoaded(true);
       }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1896,7 +769,27 @@ export default function App() {
         if (!databaseState) {
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
-          setPtoDatabaseMessage("База подключена. Данных ПТО пока нет — внеси изменение, оно сохранится автоматически.");
+          if (hasStoredPtoStateRef.current) {
+            setPtoSaveRevision((revision) => revision + 1);
+            setPtoDatabaseMessage("В Supabase данных ПТО нет — оставил локальные данные и поставил сохранение в базу.");
+          } else {
+            setPtoDatabaseMessage("База подключена. Данных ПТО пока нет — внеси изменение, оно сохранится автоматически.");
+          }
+          return;
+        }
+
+        const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt);
+        const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
+        const databaseUpdatedTime = databaseState.updatedAt ? Date.parse(databaseState.updatedAt) : 0;
+        const shouldKeepLocalPto = hasStoredPtoStateRef.current
+          && localUpdatedTime > 0
+          && (!databaseUpdatedTime || localUpdatedTime > databaseUpdatedTime);
+
+        if (shouldKeepLocalPto) {
+          ptoDatabaseLoadedRef.current = true;
+          ptoDatabaseSaveSnapshotRef.current = "";
+          setPtoSaveRevision((revision) => revision + 1);
+          setPtoDatabaseMessage("Локальные данные ПТО новее Supabase — оставил локальные данные и поставил сохранение в базу.");
           return;
         }
 
@@ -1904,22 +797,29 @@ export default function App() {
         const nextPlanRows = databaseState.planRows.map((row) => normalizePtoPlanRow(row));
         const nextOperRows = databaseState.operRows.map((row) => normalizePtoPlanRow(row));
         const nextSurveyRows = databaseState.surveyRows.map((row) => normalizePtoPlanRow(row));
+        const nextBucketValues = normalizeDecimalRecord(databaseState.bucketValues, 0, 100000);
+        const nextBucketRows = normalizePtoBucketManualRows(databaseState.bucketRows);
         const nextUiState = databaseState.uiState ?? {};
         const fallbackUiState = ptoDatabaseStateRef.current.uiState;
 
         ptoDatabaseLoadedRef.current = true;
+        undoHistoryRef.current = [];
+        undoRestoringRef.current = true;
         ptoDatabaseSaveSnapshotRef.current = JSON.stringify({
           manualYears: nextManualYears,
           planRows: nextPlanRows,
           operRows: nextOperRows,
           surveyRows: nextSurveyRows,
+          bucketValues: nextBucketValues,
+          bucketRows: nextBucketRows,
           uiState: {
             reportDate: nextUiState.reportDate ?? fallbackUiState.reportDate,
-            topTab: nextUiState.topTab ?? fallbackUiState.topTab,
             ptoTab: nextUiState.ptoTab ?? fallbackUiState.ptoTab,
             ptoPlanYear: nextUiState.ptoPlanYear ?? fallbackUiState.ptoPlanYear,
             ptoAreaFilter: nextUiState.ptoAreaFilter ?? fallbackUiState.ptoAreaFilter,
             expandedPtoMonths: nextUiState.expandedPtoMonths ?? fallbackUiState.expandedPtoMonths,
+            reportColumnWidths: nextUiState.reportColumnWidths ?? fallbackUiState.reportColumnWidths,
+            reportReasons: nextUiState.reportReasons ?? fallbackUiState.reportReasons,
             ptoColumnWidths: nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths,
             ptoRowHeights: nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights,
             ptoHeaderLabels: nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels,
@@ -1929,8 +829,9 @@ export default function App() {
         setPtoPlanRows(nextPlanRows);
         setPtoOperRows(nextOperRows);
         setPtoSurveyRows(nextSurveyRows);
+        setPtoBucketValues(nextBucketValues);
+        setPtoBucketManualRows(nextBucketRows);
         if (typeof nextUiState.reportDate === "string") setReportDate(nextUiState.reportDate);
-        if (typeof nextUiState.topTab === "string") setTopTab(nextUiState.topTab as TopTab);
         if (typeof nextUiState.ptoTab === "string") setPtoTab(nextUiState.ptoTab);
         if (typeof nextUiState.ptoPlanYear === "string") setPtoPlanYear(nextUiState.ptoPlanYear);
         if (typeof nextUiState.ptoAreaFilter === "string") setPtoAreaFilter(nextUiState.ptoAreaFilter);
@@ -1939,6 +840,8 @@ export default function App() {
             Object.entries(nextUiState.expandedPtoMonths).filter((entry): entry is [string, boolean] => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
           ));
         }
+        setReportColumnWidths(normalizeNumberRecord(nextUiState.reportColumnWidths ?? fallbackUiState.reportColumnWidths, 42, 520));
+        setReportReasons(normalizeStringRecord(nextUiState.reportReasons ?? fallbackUiState.reportReasons));
         setPtoColumnWidths(normalizeNumberRecord(nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths, 44, 800));
         setPtoRowHeights(normalizeNumberRecord(nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights, 28, 180));
         setPtoHeaderLabels(normalizeStringRecord(nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels));
@@ -1957,8 +860,33 @@ export default function App() {
 
   useEffect(() => {
     if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.reports, JSON.stringify(reportRows));
-  }, [adminDataLoaded, reportRows]);
+    window.localStorage.setItem(adminStorageKeys.reportCustomers, JSON.stringify(reportCustomers));
+  }, [adminDataLoaded, reportCustomers]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.reportAreaOrder, JSON.stringify(reportAreaOrder));
+  }, [adminDataLoaded, reportAreaOrder]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.reportWorkOrder, JSON.stringify(reportWorkOrder));
+  }, [adminDataLoaded, reportWorkOrder]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.reportHeaderLabels, JSON.stringify(reportHeaderLabels));
+  }, [adminDataLoaded, reportHeaderLabels]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.reportColumnWidths, JSON.stringify(reportColumnWidths));
+  }, [adminDataLoaded, reportColumnWidths]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.reportReasons, JSON.stringify(reportReasons));
+  }, [adminDataLoaded, reportReasons]);
 
   useEffect(() => {
     if (!adminDataLoaded) return;
@@ -1977,43 +905,110 @@ export default function App() {
 
   useEffect(() => {
     if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRows));
+    window.localStorage.setItem(adminStorageKeys.dispatchSummaryRows, JSON.stringify(dispatchSummaryRows));
+  }, [adminDataLoaded, dispatchSummaryRows]);
+
+  useEffect(() => {
+    if (!adminDataLoaded) return undefined;
+
+    if (vehicleSaveTimerRef.current !== null) {
+      window.clearTimeout(vehicleSaveTimerRef.current);
+    }
+
+    vehicleSaveTimerRef.current = window.setTimeout(() => {
+      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
+      vehicleSaveTimerRef.current = null;
+    }, 700);
+
+    return () => {
+      if (vehicleSaveTimerRef.current !== null) {
+        window.clearTimeout(vehicleSaveTimerRef.current);
+        vehicleSaveTimerRef.current = null;
+      }
+    };
   }, [adminDataLoaded, vehicleRows]);
 
   useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.ptoYears, JSON.stringify(ptoManualYears));
-  }, [adminDataLoaded, ptoManualYears]);
+    if (!adminDataLoaded) return undefined;
+
+    const flushVehicleRows = () => {
+      if (vehicleSaveTimerRef.current !== null) {
+        window.clearTimeout(vehicleSaveTimerRef.current);
+        vehicleSaveTimerRef.current = null;
+      }
+      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
+    };
+
+    window.addEventListener("pagehide", flushVehicleRows);
+    return () => window.removeEventListener("pagehide", flushVehicleRows);
+  }, [adminDataLoaded]);
+
+  const savePtoLocalState = useCallback(() => {
+    const state = ptoDatabaseStateRef.current;
+    const uiState = state.uiState ?? {};
+
+    window.localStorage.setItem(adminStorageKeys.ptoYears, JSON.stringify(state.manualYears));
+    window.localStorage.setItem(adminStorageKeys.ptoPlanRows, JSON.stringify(state.planRows));
+    window.localStorage.setItem(adminStorageKeys.ptoSurveyRows, JSON.stringify(state.surveyRows));
+    window.localStorage.setItem(adminStorageKeys.ptoOperRows, JSON.stringify(state.operRows));
+    window.localStorage.setItem(adminStorageKeys.ptoColumnWidths, JSON.stringify(uiState.ptoColumnWidths ?? {}));
+    window.localStorage.setItem(adminStorageKeys.ptoRowHeights, JSON.stringify(uiState.ptoRowHeights ?? {}));
+    window.localStorage.setItem(adminStorageKeys.ptoHeaderLabels, JSON.stringify(uiState.ptoHeaderLabels ?? {}));
+    window.localStorage.setItem(adminStorageKeys.ptoBucketValues, JSON.stringify(state.bucketValues ?? {}));
+    window.localStorage.setItem(adminStorageKeys.ptoBucketRows, JSON.stringify(state.bucketRows ?? []));
+
+    if (ptoDatabaseLoadedRef.current) {
+      window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
+      hasStoredPtoStateRef.current = true;
+    }
+  }, []);
 
   useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.ptoPlanRows, JSON.stringify(ptoPlanRows));
-  }, [adminDataLoaded, ptoPlanRows]);
+    if (!adminDataLoaded) return undefined;
+
+    if (ptoLocalSaveTimerRef.current !== null) {
+      window.clearTimeout(ptoLocalSaveTimerRef.current);
+    }
+
+    ptoLocalSaveTimerRef.current = window.setTimeout(() => {
+      savePtoLocalState();
+      ptoLocalSaveTimerRef.current = null;
+    }, 600);
+
+    return () => {
+      if (ptoLocalSaveTimerRef.current !== null) {
+        window.clearTimeout(ptoLocalSaveTimerRef.current);
+        ptoLocalSaveTimerRef.current = null;
+      }
+    };
+  }, [
+    adminDataLoaded,
+    ptoBucketManualRows,
+    ptoBucketValues,
+    ptoColumnWidths,
+    ptoHeaderLabels,
+    ptoManualYears,
+    ptoOperRows,
+    ptoPlanRows,
+    ptoRowHeights,
+    ptoSurveyRows,
+    savePtoLocalState,
+  ]);
 
   useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.ptoSurveyRows, JSON.stringify(ptoSurveyRows));
-  }, [adminDataLoaded, ptoSurveyRows]);
+    if (!adminDataLoaded) return undefined;
 
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.ptoOperRows, JSON.stringify(ptoOperRows));
-  }, [adminDataLoaded, ptoOperRows]);
+    const flushPtoRows = () => {
+      if (ptoLocalSaveTimerRef.current !== null) {
+        window.clearTimeout(ptoLocalSaveTimerRef.current);
+        ptoLocalSaveTimerRef.current = null;
+      }
+      savePtoLocalState();
+    };
 
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.ptoColumnWidths, JSON.stringify(ptoColumnWidths));
-  }, [adminDataLoaded, ptoColumnWidths]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.ptoRowHeights, JSON.stringify(ptoRowHeights));
-  }, [adminDataLoaded, ptoRowHeights]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-    window.localStorage.setItem(adminStorageKeys.ptoHeaderLabels, JSON.stringify(ptoHeaderLabels));
-  }, [adminDataLoaded, ptoHeaderLabels]);
+    window.addEventListener("pagehide", flushPtoRows);
+    return () => window.removeEventListener("pagehide", flushPtoRows);
+  }, [adminDataLoaded, savePtoLocalState]);
 
   const savePtoDatabaseChanges = useCallback(async (mode: "auto" | "manual" = "manual") => {
     if (!supabaseConfigured) {
@@ -2023,7 +1018,7 @@ export default function App() {
 
     if (!ptoDatabaseLoadedRef.current) return;
 
-    const snapshotToSave = ptoDatabaseSnapshotRef.current;
+    const snapshotToSave = JSON.stringify(ptoDatabaseStateRef.current);
     if (mode === "auto" && snapshotToSave === ptoDatabaseSaveSnapshotRef.current) {
       setPtoDatabaseMessage("ПТО сохранено в Supabase.");
       return;
@@ -2035,7 +1030,6 @@ export default function App() {
     }
 
     ptoDatabaseSavingRef.current = true;
-    setPtoDatabaseSaving(true);
     setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в Supabase..." : "Сохраняю ПТО в Supabase...");
 
     try {
@@ -2046,10 +1040,9 @@ export default function App() {
       setPtoDatabaseMessage(`Не удалось сохранить в Supabase: ${errorToMessage(error)}`);
     } finally {
       ptoDatabaseSavingRef.current = false;
-      setPtoDatabaseSaving(false);
       if (ptoDatabaseSaveQueuedRef.current) {
         ptoDatabaseSaveQueuedRef.current = false;
-        if (ptoDatabaseSnapshotRef.current !== ptoDatabaseSaveSnapshotRef.current) {
+        if (JSON.stringify(ptoDatabaseStateRef.current) !== ptoDatabaseSaveSnapshotRef.current) {
           setPtoSaveRevision((current) => current + 1);
         }
       }
@@ -2075,24 +1068,41 @@ export default function App() {
 
     const handleResizeMove = (event: MouseEvent) => {
       const resizeState = ptoResizeStateRef.current;
-      if (!resizeState) return;
+      if (resizeState) {
+        if (resizeState.type === "column") {
+          const nextWidth = Math.min(800, Math.max(44, Math.round(resizeState.startWidth + event.clientX - resizeState.startX)));
+          setPtoColumnWidths((current) => (current[resizeState.key] === nextWidth ? current : { ...current, [resizeState.key]: nextWidth }));
+          return;
+        }
 
-      if (resizeState.type === "column") {
-        const nextWidth = Math.min(800, Math.max(44, Math.round(resizeState.startWidth + event.clientX - resizeState.startX)));
-        setPtoColumnWidths((current) => (current[resizeState.key] === nextWidth ? current : { ...current, [resizeState.key]: nextWidth }));
+        const nextHeight = Math.min(180, Math.max(28, Math.round(resizeState.startHeight + event.clientY - resizeState.startY)));
+        setPtoRowHeights((current) => (current[resizeState.key] === nextHeight ? current : { ...current, [resizeState.key]: nextHeight }));
         return;
       }
 
-      const nextHeight = Math.min(180, Math.max(28, Math.round(resizeState.startHeight + event.clientY - resizeState.startY)));
-      setPtoRowHeights((current) => (current[resizeState.key] === nextHeight ? current : { ...current, [resizeState.key]: nextHeight }));
+      const reportResizeState = reportResizeStateRef.current;
+      if (!reportResizeState) return;
+
+      const nextWidth = Math.min(520, Math.max(42, Math.round(reportResizeState.startWidth + event.clientX - reportResizeState.startX)));
+      setReportColumnWidths((current) => (current[reportResizeState.key] === nextWidth ? current : { ...current, [reportResizeState.key]: nextWidth }));
     };
 
     const handleResizeEnd = () => {
-      if (!ptoResizeStateRef.current) return;
+      const resizeState = ptoResizeStateRef.current;
+      const reportResizeState = reportResizeStateRef.current;
+      if (!resizeState && !reportResizeState) return;
 
       ptoResizeStateRef.current = null;
+      reportResizeStateRef.current = null;
       clearResizeCursor();
       requestPtoDatabaseSave();
+      addAdminLog({
+        action: "Редактирование",
+        section: reportResizeState ? "Отчетность" : "ПТО",
+        details: reportResizeState
+          ? "Изменена ширина столбца отчетности."
+          : resizeState?.type === "column" ? "Изменена ширина столбца." : "Изменена высота строки.",
+      });
     };
 
     window.addEventListener("mousemove", handleResizeMove);
@@ -2103,7 +1113,7 @@ export default function App() {
       window.removeEventListener("mouseup", handleResizeEnd);
       clearResizeCursor();
     };
-  }, [requestPtoDatabaseSave]);
+  }, [addAdminLog, requestPtoDatabaseSave]);
 
   useEffect(() => {
     if (!adminDataLoaded) return;
@@ -2121,12 +1131,58 @@ export default function App() {
   }, [adminDataLoaded, dependencyLinks]);
 
   useEffect(() => {
+    if (!adminDataLoaded) return;
+    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(adminLogs));
+  }, [adminDataLoaded, adminLogs]);
+
+  useEffect(() => {
     const stopPtoSelectionDrag = () => {
       ptoSelectionDraggingRef.current = false;
+      vehicleSelectionDraggingRef.current = false;
     };
 
     window.addEventListener("mouseup", stopPtoSelectionDrag);
     return () => window.removeEventListener("mouseup", stopPtoSelectionDrag);
+  }, []);
+
+  useEffect(() => {
+    const clearCellSelectionsOnOutsideClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const isCellClick = target.closest([
+        "[data-admin-vehicle-cell]",
+        "[data-admin-vehicle-input]",
+        "[data-pto-cell-key]",
+        "[data-pto-bucket-cell]",
+      ].join(","));
+
+      if (isCellClick) return;
+
+      vehicleSelectionDraggingRef.current = false;
+      vehicleSelectionAnchorRef.current = null;
+      ptoSelectionDraggingRef.current = false;
+
+      setActiveVehicleCell((current) => (current === null ? current : null));
+      setVehicleSelectionAnchorCell((current) => (current === null ? current : null));
+      setSelectedVehicleCellKeys((current) => (current.length === 0 ? current : []));
+      setEditingVehicleCell((current) => (current === null ? current : null));
+
+      setPtoFormulaCell((current) => (current === null ? current : null));
+      setPtoFormulaDraft((current) => (current === "" ? current : ""));
+      setPtoInlineEditCell((current) => (current === null ? current : null));
+      setPtoInlineEditInitialDraft((current) => (current === "" ? current : ""));
+      setPtoSelectionAnchorCell((current) => (current === null ? current : null));
+      setPtoSelectedCellKeys((current) => (current.length === 0 ? current : []));
+
+      setPtoBucketActiveCell((current) => (current === null ? current : null));
+      setPtoBucketSelectionAnchorCell((current) => (current === null ? current : null));
+      setPtoBucketSelectedCellKeys((current) => (current.length === 0 ? current : []));
+      setPtoBucketEditKey((current) => (current === null ? current : null));
+    };
+
+    window.addEventListener("mousedown", clearCellSelectionsOnOutsideClick);
+    return () => window.removeEventListener("mousedown", clearCellSelectionsOnOutsideClick);
   }, []);
 
   useEffect(() => {
@@ -2149,76 +1205,314 @@ export default function App() {
     return () => window.cancelAnimationFrame(frame);
   }, [ptoPendingFieldFocus, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
 
-  function saveAdminChanges() {
-    window.localStorage.setItem(adminStorageKeys.reports, JSON.stringify(reportRows));
-    window.localStorage.setItem(adminStorageKeys.customTabs, JSON.stringify(customTabs));
-    window.localStorage.setItem(adminStorageKeys.topTabs, JSON.stringify(topTabs));
-    window.localStorage.setItem(adminStorageKeys.subTabs, JSON.stringify(subTabs));
-    window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRows));
-    window.localStorage.setItem(adminStorageKeys.ptoYears, JSON.stringify(ptoManualYears));
-    window.localStorage.setItem(adminStorageKeys.ptoPlanRows, JSON.stringify(ptoPlanRows));
-    window.localStorage.setItem(adminStorageKeys.ptoSurveyRows, JSON.stringify(ptoSurveyRows));
-    window.localStorage.setItem(adminStorageKeys.ptoOperRows, JSON.stringify(ptoOperRows));
-    window.localStorage.setItem(adminStorageKeys.ptoColumnWidths, JSON.stringify(ptoColumnWidths));
-    window.localStorage.setItem(adminStorageKeys.ptoRowHeights, JSON.stringify(ptoRowHeights));
-    window.localStorage.setItem(adminStorageKeys.ptoHeaderLabels, JSON.stringify(ptoHeaderLabels));
-    window.localStorage.setItem(adminStorageKeys.orgMembers, JSON.stringify(orgMembers));
-    window.localStorage.setItem(adminStorageKeys.dependencyNodes, JSON.stringify(dependencyNodes));
-    window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
-    void savePtoDatabaseChanges();
-    setSaveMessage("Сохранено. Редактирование можно завершить.");
-  }
-
-  const reportAreas = useMemo(() => {
-    return subTabs.reports
-      .filter((tab) => tab.visible && tab.value !== "Все участки")
-      .map((tab) => tab.value);
-  }, [subTabs.reports]);
+  const deferredPtoPlanRows = useDeferredValue(ptoPlanRows);
+  const deferredPtoSurveyRows = useDeferredValue(ptoSurveyRows);
+  const deferredPtoOperRows = useDeferredValue(ptoOperRows);
+  const deferredVehicleRows = useDeferredValue(vehicleRows);
+  const renderedTopTab = topTab;
+  const needsReportRows = renderedTopTab === "reports"
+    || renderedTopTab === "dispatch"
+    || (renderedTopTab === "admin" && adminSection === "reports");
+  const needsDerivedReportRows = renderedTopTab === "reports";
+  const needsAdminReportRows = renderedTopTab === "admin" && adminSection === "reports";
+  const needsReportIndexes = needsDerivedReportRows || needsAdminReportRows;
+  const needsAutoReportRows = needsDerivedReportRows || needsAdminReportRows;
 
   const reportBaseRows = useMemo(() => {
-    const existingKeys = new Set(reportRows.map((row) => `${normalizeLookupValue(row.area)}:${normalizeLookupValue(row.name)}`));
-    const rowsFromPlan = ptoPlanRows
-      .filter((row) => row.structure.trim())
-      .filter((row) => !existingKeys.has(`${normalizeLookupValue(cleanAreaName(row.area))}:${normalizeLookupValue(row.structure)}`))
-      .map(createReportRowFromPtoPlan);
+    if (!needsReportRows) return [];
 
-    return [...reportRows, ...rowsFromPlan];
-  }, [ptoPlanRows, reportRows]);
+    const rowsByKey = new Map<string, ReportRow>();
 
-  const filteredReports = useMemo(() => {
-    return reportBaseRows
-      .map((row) => deriveReportRowFromPto(row, reportDate, ptoPlanRows, ptoSurveyRows, ptoOperRows))
-      .filter((row) => reportArea === "Все участки" || normalizeLookupValue(row.area) === normalizeLookupValue(reportArea));
-  }, [ptoOperRows, ptoPlanRows, ptoSurveyRows, reportArea, reportBaseRows, reportDate]);
-  const reportMonthStart = `${reportDate.slice(0, 8)}01`;
-  const reportMonthEnd = `${reportDate.slice(0, 8)}${new Date(Number(reportDate.slice(0, 4)), Number(reportDate.slice(5, 7)), 0).getDate()}`;
-  const reportCompletionCards = useMemo(() => {
-    const areaNames = reportArea === "Все участки"
-      ? uniqueSorted([...reportAreas, ...filteredReports.map((row) => row.area)])
-      : [reportArea];
+    [...deferredPtoPlanRows, ...deferredPtoSurveyRows, ...deferredPtoOperRows].forEach((row) => {
+      if (!row.structure.trim()) return;
 
-    return areaNames.map((areaName) => {
-      const areaRows = filteredReports.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(areaName));
-      const plan = areaRows.reduce((sum, row) => sum + row.monthPlan, 0);
-      const monthPlan = areaRows.reduce((sum, row) => sum + row.monthTotalPlan, 0);
-      const fact = areaRows.reduce((sum, row) => sum + reportMonthFact(row), 0);
-      const percent = plan ? Math.round((fact / plan) * 100) : fact ? 100 : 0;
-      const lag = Math.max(plan - fact, 0);
-      const remainingDays = Math.max(Number(reportMonthEnd.slice(8, 10)) - Number(reportDate.slice(8, 10)), 0);
-      const overPlanPerDay = remainingDays ? Math.ceil(lag / remainingDays) : lag;
+      const reportRow = createReportRowFromPtoPlan(row);
+      const key = reportRowKey(reportRow);
+      if (!rowsByKey.has(key)) rowsByKey.set(key, reportRow);
+    });
+
+    return Array.from(rowsByKey.values()).sort((a, b) => (
+      a.area.localeCompare(b.area, "ru") || a.name.localeCompare(b.name, "ru")
+    ));
+  }, [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, needsReportRows]);
+  const reportPtoIndexes = useMemo(() => (
+    needsReportIndexes
+      ? {
+        plan: buildReportPtoIndex(deferredPtoPlanRows),
+        survey: buildReportPtoIndex(deferredPtoSurveyRows),
+        oper: buildReportPtoIndex(deferredPtoOperRows),
+      }
+      : null
+  ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, needsReportIndexes]);
+
+  const reportAreaOrderOptions = useMemo(() => (
+    needsAdminReportRows
+      ? sortAreaNamesByOrder(
+      uniqueSorted(reportBaseRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+        reportAreaOrder,
+      )
+      : []
+  ), [needsAdminReportRows, reportAreaOrder, reportBaseRows]);
+
+  const derivedReportRows = useMemo(() => (
+    needsDerivedReportRows && reportPtoIndexes ? reportBaseRows.map((row) => {
+      const derivedRow = deriveReportRowFromPtoIndex(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper);
+      const rowKey = reportRowKey(row);
+      const dayReason = reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? derivedRow.dayReason;
+      const yearDelta = delta(derivedRow.yearPlan, reportYearFact(derivedRow));
+      const accumulationStartDate = yearDelta < 0
+        ? reportReasonAccumulationStartDateFromIndexes(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper)
+        : reportDate;
+      const fallbackYearReason = accumulationStartDate === `${reportDate.slice(0, 4)}-01-01`
+        ? derivedRow.yearReason
+        : "";
+      const yearReason = yearDelta < 0
+        ? reportYearReasonValue(reportReasons, rowKey, reportDate, fallbackYearReason, accumulationStartDate)
+        : "";
 
       return {
-        fact,
-        lag,
-        monthPlan,
-        overPlanPerDay,
-        percent,
-        plan,
-        remainingDays,
-        title: areaName,
+        ...derivedRow,
+        dayReason,
+        yearReason,
       };
-    });
-  }, [filteredReports, reportArea, reportAreas, reportDate, reportMonthEnd]);
+    }) : []
+  ), [needsDerivedReportRows, reportBaseRows, reportDate, reportPtoIndexes, reportReasons]);
+
+  const activeReportCustomer = useMemo(() => (
+    reportCustomers.find((customer) => customer.id === reportCustomerId)
+    ?? reportCustomers.find((customer) => customer.visible)
+    ?? reportCustomers[0]
+    ?? defaultReportCustomers[0]
+  ), [reportCustomerId, reportCustomers]);
+
+  const activeAdminReportCustomer = useMemo(() => (
+    reportCustomers.find((customer) => customer.id === adminReportCustomerId)
+    ?? reportCustomers[0]
+    ?? defaultReportCustomers[0]
+  ), [adminReportCustomerId, reportCustomers]);
+
+  const adminReportBaseRows = useMemo(() => (
+    needsAdminReportRows ? sortReportRowsByAreaOrder(reportBaseRows, reportAreaOrder, reportWorkOrder) : []
+  ), [needsAdminReportRows, reportAreaOrder, reportBaseRows, reportWorkOrder]);
+  const adminReportRowsByKey = useMemo(() => (
+    new Map(adminReportBaseRows.map((row) => [reportRowKey(row), row]))
+  ), [adminReportBaseRows]);
+  const reportPtoDateStatusByKey = useMemo(() => (
+    (needsAdminReportRows || renderedTopTab === "reports") && reportPtoIndexes
+      ? new Map(reportBaseRows.map((row) => [reportRowKey(row), reportPtoDateStatusFromIndexes(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper)]))
+      : new Map<string, ReturnType<typeof reportPtoDateStatusFromIndexes>>()
+  ), [needsAdminReportRows, renderedTopTab, reportBaseRows, reportDate, reportPtoIndexes]);
+  const autoReportRowKeys = useMemo(() => (
+    needsAutoReportRows
+      ? new Set(
+        reportBaseRows
+          .filter((row) => reportPtoDateStatusHasAny(reportPtoDateStatusByKey.get(reportRowKey(row))))
+          .map(reportRowKey),
+      )
+      : new Set<string>()
+  ), [needsAutoReportRows, reportBaseRows, reportPtoDateStatusByKey]);
+
+  const adminReportWorkOrderGroups = useMemo(() => (
+    needsAdminReportRows
+      ? reportAreaOrderOptions.map((area) => ({
+        area,
+        rows: sortReportRowsByAreaOrder(
+          reportBaseRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(area)),
+          [area],
+          reportWorkOrder,
+        ),
+      }))
+      : []
+  ), [needsAdminReportRows, reportAreaOrderOptions, reportBaseRows, reportWorkOrder]);
+
+  const activeAdminReportSelectedCount = useMemo(() => (
+    needsAdminReportRows
+      ? adminReportBaseRows.filter((row) => reportCustomerEffectiveRowKeys(activeAdminReportCustomer, autoReportRowKeys).has(reportRowKey(row))).length
+      : 0
+  ), [activeAdminReportCustomer, adminReportBaseRows, autoReportRowKeys, needsAdminReportRows]);
+  const activeAdminReportRowLabelEntries = useMemo(() => (
+    needsAdminReportRows
+      ? Object.entries(activeAdminReportCustomer.rowLabels).flatMap(([rowKey, label]) => {
+        const row = adminReportRowsByKey.get(rowKey);
+        return row ? [{ rowKey, label, row }] : [];
+      })
+      : []
+  ), [activeAdminReportCustomer, adminReportRowsByKey, needsAdminReportRows]);
+  const activeAdminReportUsesSummaryRows = reportCustomerUsesSummaryRows(activeAdminReportCustomer);
+  const visibleAdminReportCustomerSettingsTab: AdminReportCustomerSettingsTab = activeAdminReportUsesSummaryRows || adminReportCustomerSettingsTab !== "summary"
+    ? adminReportCustomerSettingsTab
+    : "display";
+
+  const customerReportRows = useMemo(() => {
+    const visibleRowKeys = reportCustomerEffectiveRowKeys(activeReportCustomer, autoReportRowKeys);
+    const selectedRows = derivedReportRows
+      .filter((row) => visibleRowKeys.has(reportRowKey(row)))
+      .map((row) => {
+        const rowKey = reportRowKey(row);
+        const customerLabel = activeReportCustomer.rowLabels[rowKey]?.trim();
+
+        return customerLabel ? { ...row, name: customerLabel, displayKey: rowKey } : row;
+      });
+    const rowsByKey = new Map(derivedReportRows.map((row) => [reportRowKey(row), row]));
+    const summaryRows = reportCustomerUsesSummaryRows(activeReportCustomer)
+      ? activeReportCustomer.summaryRows.flatMap((summary) => {
+        const sourceRows = summary.rowKeys
+          .map((key) => rowsByKey.get(key))
+          .filter((row): row is ReportRow => Boolean(row));
+        const summaryRow = createReportSummaryRow(summary, sourceRows);
+        return summaryRow ? [summaryRow] : [];
+      })
+      : [];
+
+    return sortReportRowsByAreaOrder([...selectedRows, ...summaryRows], reportAreaOrder, reportWorkOrder);
+  }, [activeReportCustomer, autoReportRowKeys, derivedReportRows, reportAreaOrder, reportWorkOrder]);
+
+  const reportAreaTabs = useMemo(() => [
+    "Все участки",
+    ...sortAreaNamesByOrder(
+      uniqueSorted(customerReportRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+      reportAreaOrder,
+    ),
+  ], [customerReportRows, reportAreaOrder]);
+
+  const filteredReports = useMemo(() => {
+    if (reportArea === "Все участки") return customerReportRows;
+
+    return customerReportRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(reportArea));
+  }, [customerReportRows, reportArea]);
+
+  const filteredReportAreaGroups = useMemo(() => {
+    const groups: Array<{ area: string; rows: ReportRow[] }> = [];
+    let index = 0;
+
+    while (index < filteredReports.length) {
+      const currentArea = normalizeLookupValue(filteredReports[index].area);
+      let nextIndex = index + 1;
+
+      while (nextIndex < filteredReports.length && normalizeLookupValue(filteredReports[nextIndex].area) === currentArea) {
+        nextIndex += 1;
+      }
+
+      groups.push({
+        area: filteredReports[index].area,
+        rows: filteredReports.slice(index, nextIndex),
+      });
+
+      index = nextIndex;
+    }
+
+    return groups;
+  }, [filteredReports]);
+
+  const reportColumnTextValue = useCallback((key: ReportColumnKey, row: ReportRow) => {
+    const monthFact = reportMonthFact(row);
+    const yearFact = reportYearFact(row);
+    const annualFact = reportAnnualFact(row);
+
+    switch (key) {
+      case "area":
+        return row.area;
+      case "work-name":
+        return row.name;
+      case "unit":
+        return row.unit;
+      case "day-plan":
+        return formatNumber(row.dayPlan);
+      case "day-fact":
+        return formatNumber(row.dayFact);
+      case "day-delta":
+        return formatNumber(delta(row.dayPlan, row.dayFact));
+      case "day-productivity":
+        return `${formatNumber(row.dayProductivity || row.dayFact)} ${formatPercent(row.dayFact, row.dayPlan)}`;
+      case "day-reason":
+        return reportReason(row.dayFact, row.dayPlan, row.dayReason);
+      case "month-total-plan":
+        return formatNumber(row.monthTotalPlan);
+      case "month-plan":
+        return formatNumber(row.monthPlan);
+      case "month-fact":
+        return `${formatNumber(monthFact)} марк ${formatNumber(row.monthSurveyFact)} + опер ${formatNumber(row.monthOperFact)}`;
+      case "month-delta":
+        return formatNumber(delta(row.monthPlan, monthFact));
+      case "month-productivity":
+        return `${formatNumber(row.monthProductivity || monthFact)} ${formatPercent(monthFact, row.monthPlan)}`;
+      case "year-plan":
+        return formatNumber(row.yearPlan);
+      case "year-fact":
+        return `${formatNumber(yearFact)} марк ${formatNumber(row.yearSurveyFact)} + опер ${formatNumber(row.yearOperFact)}`;
+      case "year-delta":
+        return formatNumber(delta(row.yearPlan, yearFact));
+      case "year-reason":
+        return delta(row.yearPlan, yearFact) < 0 ? row.yearReason : "";
+      case "annual-plan":
+        return formatNumber(row.annualPlan);
+      case "annual-fact":
+        return formatNumber(annualFact);
+      case "annual-remaining":
+        return formatNumber(delta(row.annualPlan, annualFact));
+      default:
+        return "";
+    }
+  }, []);
+
+  const autoReportColumnWidths = useMemo(() => (
+    Object.fromEntries(reportColumnKeys.map((key) => {
+      const header = reportHeaderLabels[key]?.trim() || reportColumnHeaderFallbacks[key];
+      const values = filteredReports.map((row) => reportColumnTextValue(key, row));
+      return [key, reportAutoColumnWidth(key, header, values)];
+    })) as Record<ReportColumnKey, number>
+  ), [filteredReports, reportColumnTextValue, reportHeaderLabels]);
+
+  const reportTableColumnWidths = useMemo(() => (
+    reportColumnKeys.map((key, index) => (
+      Math.min(520, Math.max(
+        autoReportColumnWidths[key] ?? defaultReportColumnWidths[index] ?? 80,
+        Math.round(reportColumnWidths[key] ?? 0),
+      ))
+    ))
+  ), [autoReportColumnWidths, reportColumnWidths]);
+  const reportColumnWidthByKey = useMemo(() => (
+    new Map(reportColumnKeys.map((key, index) => [key, reportTableColumnWidths[index]]))
+  ), [reportTableColumnWidths]);
+  const reportTableMinWidth = useMemo(() => (
+    reportTableColumnWidths.reduce((sum, width) => sum + width, 0)
+  ), [reportTableColumnWidths]);
+
+  const reportMonthEnd = `${reportDate.slice(0, 8)}${new Date(Number(reportDate.slice(0, 4)), Number(reportDate.slice(5, 7)), 0).getDate()}`;
+  const reportCompletionCards = useMemo(() => {
+    if (reportArea === "Все участки") return [];
+
+    const plan = filteredReports.reduce((sum, row) => sum + row.monthPlan, 0);
+    const monthPlan = filteredReports.reduce((sum, row) => sum + row.monthTotalPlan, 0);
+    const fact = filteredReports.reduce((sum, row) => sum + reportMonthFact(row), 0);
+    const percent = plan ? Math.round((fact / plan) * 100) : fact ? 100 : 0;
+    const lag = Math.max(plan - fact, 0);
+    const remainingDays = Math.max(Number(reportMonthEnd.slice(8, 10)) - Number(reportDate.slice(8, 10)), 0);
+    const overPlanPerDay = remainingDays ? Math.ceil(lag / remainingDays) : lag;
+
+    return [{
+      fact,
+      lag,
+      monthPlan,
+      overPlanPerDay,
+      percent,
+      plan,
+      remainingDays,
+      title: reportArea,
+    }];
+  }, [filteredReports, reportArea, reportDate, reportMonthEnd]);
+
+  useEffect(() => {
+    const visibleCustomers = reportCustomers.filter((customer) => customer.visible);
+    if (visibleCustomers.some((customer) => customer.id === reportCustomerId)) return;
+    setReportCustomerId(visibleCustomers[0]?.id ?? reportCustomers[0]?.id ?? defaultReportCustomerId);
+  }, [reportCustomerId, reportCustomers]);
+
+  useEffect(() => {
+    if (reportAreaTabs.some((area) => normalizeLookupValue(area) === normalizeLookupValue(reportArea))) return;
+    setReportArea("Все участки");
+  }, [reportArea, reportAreaTabs]);
+
   const allPtoDateRows = useMemo(() => [...ptoPlanRows, ...ptoSurveyRows, ...ptoOperRows], [ptoOperRows, ptoPlanRows, ptoSurveyRows]);
   const ptoYearTabs = useMemo(() => ptoYearOptions(allPtoDateRows, ptoPlanYear, ptoManualYears), [allPtoDateRows, ptoManualYears, ptoPlanYear]);
   const ptoYearMonths = useMemo(() => yearMonths(ptoPlanYear), [ptoPlanYear]);
@@ -2230,9 +1524,183 @@ export default function App() {
       expanded: expandedPtoMonths[month] === true,
     }))
   ), [expandedPtoMonths, ptoYearMonths]);
-  const ptoAreaTabs = useMemo(() => ["Все участки", ...uniqueSorted(allPtoDateRows.map((row) => cleanAreaName(row.area)))], [allPtoDateRows]);
+  const ptoAreaTabs = useMemo(() => [
+    "Все участки",
+    ...uniqueSorted([
+      ...allPtoDateRows.map((row) => cleanAreaName(row.area)),
+      ...ptoBucketManualRows.map((row) => cleanAreaName(row.area)),
+    ]),
+  ], [allPtoDateRows, ptoBucketManualRows]);
+  const ptoDateOptionMaps = useMemo(() => {
+    const allAreasKey = "__all__";
+    const locationsByArea = new Map<string, Set<string>>();
+    const structuresByArea = new Map<string, Set<string>>();
+    const structuresByAreaLocation = new Map<string, Set<string>>();
+    const addValue = (map: Map<string, Set<string>>, key: string, value: string) => {
+      const text = value.trim();
+      if (!text) return;
+
+      const values = map.get(key) ?? new Set<string>();
+      values.add(text);
+      map.set(key, values);
+    };
+
+    allPtoDateRows.forEach((row) => {
+      const area = cleanAreaName(row.area).trim();
+      const areaKey = normalizeLookupValue(area);
+      const location = row.location.trim();
+      const structure = row.structure.trim();
+      const areaKeys = [allAreasKey, areaKey].filter(Boolean);
+
+      areaKeys.forEach((key) => {
+        addValue(locationsByArea, key, location);
+        addValue(structuresByArea, key, structure);
+        addValue(structuresByAreaLocation, `${key}:${normalizeLookupValue(location)}`, structure);
+      });
+    });
+
+    const normalizeMap = (map: Map<string, Set<string>>) => new Map(
+      Array.from(map.entries()).map(([key, values]) => [key, uniqueSorted(Array.from(values))] as const),
+    );
+
+    return {
+      allAreasKey,
+      locationsByArea: normalizeMap(locationsByArea),
+      structuresByArea: normalizeMap(structuresByArea),
+      structuresByAreaLocation: normalizeMap(structuresByAreaLocation),
+    };
+  }, [allPtoDateRows]);
+  const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
+
+  const ptoBucketRows = useMemo<PtoBucketRow[]>(() => {
+    if (!isPtoBucketsSection) return [];
+
+    const rowsByKey = new Map<string, PtoBucketRow>();
+
+    allPtoDateRows.forEach((row) => {
+      const area = cleanAreaName(row.area).trim();
+      const structure = row.structure.trim();
+      if (!area || !structure) return;
+
+      const key = ptoBucketRowKey(area, structure);
+      if (!rowsByKey.has(key)) rowsByKey.set(key, { key, area, structure, source: "auto" });
+    });
+
+    ptoBucketManualRows.forEach((row) => {
+      if (!rowsByKey.has(row.key)) rowsByKey.set(row.key, { ...row, source: "manual" });
+    });
+
+    return Array.from(rowsByKey.values())
+      .filter((row) => ptoAreaMatches(row.area, ptoAreaFilter));
+  }, [allPtoDateRows, isPtoBucketsSection, ptoAreaFilter, ptoBucketManualRows]);
+  const ptoBucketColumns = useMemo<PtoBucketColumn[]>(() => {
+    if (!isPtoBucketsSection) return [];
+
+    const columnsByKey = new Map<string, PtoBucketColumn>();
+
+    deferredVehicleRows
+      .filter((vehicle) => vehicle.visible !== false)
+      .filter(isLoadingEquipment)
+      .forEach((vehicle) => {
+        const label = loadingEquipmentLabel(vehicle);
+        if (!label) return;
+
+        const key = normalizeLookupValue(label);
+        if (!columnsByKey.has(key)) columnsByKey.set(key, { key, label });
+      });
+
+    return Array.from(columnsByKey.values())
+      .sort((left, right) => left.label.localeCompare(right.label, "ru"));
+  }, [deferredVehicleRows, isPtoBucketsSection]);
+
+  const isAdminVehiclesSection = renderedTopTab === "admin" && adminSection === "vehicles";
+
+  useEffect(() => {
+    if (!isAdminVehiclesSection && adminVehiclesEditing) {
+      setAdminVehiclesEditing(false);
+    }
+
+    if (!isAdminVehiclesSection && showAllVehicleRows) {
+      setShowAllVehicleRows(false);
+    }
+  }, [adminVehiclesEditing, isAdminVehiclesSection, showAllVehicleRows]);
+
+  useEffect(() => {
+    setShowAllVehicleRows(false);
+  }, [vehicleFilters]);
+
+  const vehicleAutocompleteOptions = useMemo(() => (
+    isAdminVehiclesSection && adminVehiclesEditing
+      ? Object.fromEntries(
+          vehicleFilterColumns
+            .filter((column) => vehicleAutocompleteFilterKeys.includes(column.key))
+            .map((column) => [column.key, createVehicleFilterOptions(deferredVehicleRows, column)]),
+        ) as Partial<Record<VehicleFilterKey, string[]>>
+      : {}
+  ), [adminVehiclesEditing, deferredVehicleRows, isAdminVehiclesSection]);
+
+  const activeVehicleFilterOptions = useMemo(() => {
+    if (!isAdminVehiclesSection || !openVehicleFilter) return [];
+
+    const column = vehicleFilterColumns.find((item) => item.key === openVehicleFilter);
+    if (!column) return [];
+
+      const rowsForColumn = deferredVehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns, column.key));
+    const options = createVehicleFilterOptions(rowsForColumn, column);
+    const selectedValues = vehicleFilters[column.key] ?? [];
+
+    return Array.from(new Set([...options, ...selectedValues]))
+      .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
+  }, [deferredVehicleRows, isAdminVehiclesSection, openVehicleFilter, vehicleFilters]);
+
+  const filteredVehicleRows = useMemo(() => (
+    isAdminVehiclesSection
+      ? vehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns))
+      : []
+  ), [isAdminVehiclesSection, vehicleFilters, vehicleRows]);
+
+  useEffect(() => {
+    if (!isAdminVehiclesSection || showAllVehicleRows) return undefined;
+
+    const updateVehiclePreviewLimit = () => {
+      const tableScroll = adminVehicleTableScrollRef.current;
+      if (!tableScroll) return;
+
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const tableTop = tableScroll.getBoundingClientRect().top;
+      const headerHeight = tableScroll.querySelector("thead")?.getBoundingClientRect().height ?? 30;
+      const firstRowHeight = tableScroll.querySelector("tbody tr")?.getBoundingClientRect().height ?? 28;
+      const availableRowsHeight = viewportHeight - tableTop - headerHeight - adminVehicleViewportBottomReserve;
+      const nextLimit = Math.max(adminVehicleMinPreviewRows, Math.floor(availableRowsHeight / Math.max(1, firstRowHeight)));
+      const boundedLimit = Math.max(
+        adminVehicleMinPreviewRows,
+        Math.min(filteredVehicleRows.length || adminVehicleFallbackPreviewRows, nextLimit),
+      );
+
+      setVehiclePreviewRowLimit((current) => (current === boundedLimit ? current : boundedLimit));
+    };
+
+    const frame = window.requestAnimationFrame(updateVehiclePreviewLimit);
+    window.addEventListener("resize", updateVehiclePreviewLimit);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateVehiclePreviewLimit);
+    };
+  }, [adminVehiclesEditing, filteredVehicleRows.length, isAdminVehiclesSection, showAllVehicleRows]);
+
+  const visibleVehicleRows = showAllVehicleRows
+    ? filteredVehicleRows
+    : filteredVehicleRows.slice(0, vehiclePreviewRowLimit);
+  const hiddenVehicleRowsCount = Math.max(filteredVehicleRows.length - visibleVehicleRows.length, 0);
+
+  const activeVehicleFilterCount = useMemo(() => (
+    Object.values(vehicleFilters).filter((values) => values !== undefined).length
+  ), [vehicleFilters]);
 
   const filteredDispatch = useMemo(() => {
+    if (renderedTopTab !== "dispatch") return [];
+
     return vehicleRows.filter((v) => {
       if (v.visible === false) return false;
       const areaOk = areaFilter === "Все участки" || v.area === areaFilter;
@@ -2240,9 +1708,94 @@ export default function App() {
       const textOk = q === "" || [buildVehicleDisplayName(v), v.area, v.location, v.workType, v.excavator].join(" ").toLowerCase().includes(q);
       return areaOk && textOk;
     });
-  }, [areaFilter, search, vehicleRows]);
+  }, [areaFilter, renderedTopTab, search, vehicleRows]);
+
+  const currentDispatchShift = dispatchShiftFromTab(dispatchTab);
+  const isDailyDispatchShift = currentDispatchShift === "daily";
+  const dispatchAreaOptions = useMemo(() => [
+    "Все участки",
+    ...(renderedTopTab === "dispatch"
+      ? uniqueSorted([
+          ...vehicleRows.map((vehicle) => vehicle.area),
+          ...dispatchSummaryRows.map((row) => row.area),
+          ...reportBaseRows.map((row) => row.area),
+        ]).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))
+      : []),
+  ], [dispatchSummaryRows, renderedTopTab, reportBaseRows, vehicleRows]);
+  const dispatchVehicleOptions = useMemo(() => (
+    renderedTopTab === "dispatch"
+      ? vehicleRows
+          .filter((vehicle) => vehicle.visible !== false)
+          .sort((left, right) => buildVehicleDisplayName(left).localeCompare(buildVehicleDisplayName(right), "ru"))
+      : []
+  ), [renderedTopTab, vehicleRows]);
+  const dispatchLocationOptions = useMemo(() => uniqueSorted([
+    ...(renderedTopTab === "dispatch" ? vehicleRows.map((vehicle) => vehicle.location) : []),
+    ...(renderedTopTab === "dispatch" ? dispatchSummaryRows.map((row) => row.location) : []),
+  ]), [dispatchSummaryRows, renderedTopTab, vehicleRows]);
+  const dispatchWorkTypeOptions = useMemo(() => uniqueSorted([
+    ...(renderedTopTab === "dispatch" ? vehicleRows.map((vehicle) => vehicle.workType) : []),
+    ...(renderedTopTab === "dispatch" ? dispatchSummaryRows.map((row) => row.workType) : []),
+    ...(renderedTopTab === "dispatch" ? reportBaseRows.map((row) => row.name) : []),
+  ]), [dispatchSummaryRows, renderedTopTab, reportBaseRows, vehicleRows]);
+  const dispatchExcavatorOptions = useMemo(() => uniqueSorted([
+    ...(renderedTopTab === "dispatch" ? vehicleRows.map((vehicle) => vehicle.excavator) : []),
+    ...(renderedTopTab === "dispatch" ? dispatchSummaryRows.map((row) => row.excavator) : []),
+  ]), [dispatchSummaryRows, renderedTopTab, vehicleRows]);
+  const currentDispatchSummaryRows = useMemo(() => (
+    renderedTopTab !== "dispatch"
+      ? []
+      : isDailyDispatchShift
+      ? consolidateDispatchSummaryRows(dispatchSummaryRows, reportDate)
+      : dispatchSummaryRows.filter((row) => row.date === reportDate && row.shift === currentDispatchShift)
+  ), [currentDispatchShift, dispatchSummaryRows, isDailyDispatchShift, renderedTopTab, reportDate]);
+  const filteredDispatchSummaryRows = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return currentDispatchSummaryRows.filter((row) => {
+      const areaOk = areaFilter === "Все участки" || normalizeLookupValue(row.area) === normalizeLookupValue(areaFilter);
+      const textOk = normalizedSearch === "" || [
+        row.vehicleName,
+        row.area,
+        row.location,
+        row.workType,
+        row.excavator,
+        row.reason,
+        row.comment,
+      ].join(" ").toLowerCase().includes(normalizedSearch);
+
+      return areaOk && textOk;
+    });
+  }, [areaFilter, currentDispatchSummaryRows, search]);
+  const dispatchSummaryTotals = useMemo(() => {
+    const totals = filteredDispatchSummaryRows.reduce((result, row) => ({
+      plan: result.plan + row.planVolume,
+      fact: result.fact + row.factVolume,
+      workHours: result.workHours + row.workHours,
+      repairHours: result.repairHours + row.repairHours,
+      downtimeHours: result.downtimeHours + row.downtimeHours,
+      trips: result.trips + row.trips,
+    }), {
+      plan: 0,
+      fact: 0,
+      workHours: 0,
+      repairHours: 0,
+      downtimeHours: 0,
+      trips: 0,
+    });
+    const delta = totals.fact - totals.plan;
+    const percent = totals.plan > 0 ? Math.round((totals.fact / totals.plan) * 100) : totals.fact > 0 ? 100 : 0;
+    const productivity = totals.workHours > 0 ? totals.fact / totals.workHours : 0;
+
+    return { ...totals, delta, percent, productivity };
+  }, [filteredDispatchSummaryRows]);
+  const dispatchAiSuggestion = useMemo(() => (
+    buildDispatchAiSuggestion(filteredDispatchSummaryRows)
+  ), [filteredDispatchSummaryRows]);
 
   const filteredFleet = useMemo(() => {
+    if (renderedTopTab !== "fleet") return [];
+
     return vehicleRows.filter((v) => {
       if (v.visible === false) return false;
       switch (fleetTab) {
@@ -2260,40 +1813,292 @@ export default function App() {
           return true;
       }
     });
-  }, [fleetTab, vehicleRows]);
+  }, [fleetTab, renderedTopTab, vehicleRows]);
 
-  const activeCustomTab = customTabs.find((tab) => tab.visible !== false && customTabKey(tab.id) === topTab);
+  const activeCustomTab = customTabs.find((tab) => tab.visible !== false && customTabKey(tab.id) === renderedTopTab);
   const activeDispatchSubtab = subTabs.dispatch.find((tab) => tab.value === dispatchTab);
   const activeFleetSubtab = subTabs.fleet.find((tab) => tab.value === fleetTab);
   const activeContractorSubtab = subTabs.contractors.find((tab) => tab.value === contractorTab);
   const activeFuelSubtab = subTabs.fuel.find((tab) => tab.value === fuelTab);
   const activePtoSubtab = subTabs.pto.find((tab) => tab.value === ptoTab);
   const activeTbSubtab = subTabs.tb.find((tab) => tab.value === tbTab);
+  const lastChangeLog = adminLogs.find((log) => ["Редактирование", "Добавление", "Удаление"].includes(log.action));
+  const lastUploadLog = adminLogs.find((log) => log.action === "Загрузка");
   const isPtoDateTab = ["plan", "oper", "survey"].includes(ptoTab);
+  const headerHasSubtabs = topTab === "reports" || topTab === "dispatch" || topTab === "pto" || topTab === "admin";
+  const expandedPtoMonthsKey = Object.entries(expandedPtoMonths)
+    .filter(([, expanded]) => expanded)
+    .map(([month]) => month)
+    .sort()
+    .join("|");
+  const {
+    viewport: ptoDateViewport,
+    scrollRef: ptoDateTableScrollRef,
+    updateViewportFromElement: updatePtoDateViewportFromElement,
+    handleScroll: handlePtoDateTableScroll,
+  } = usePtoDateViewport({
+    active: renderedTopTab === "pto" && isPtoDateTab,
+    resetKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}`,
+    measureKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}:${expandedPtoMonthsKey}`,
+  });
+
+  useEffect(() => {
+    if (!headerHasSubtabs) {
+      setHeaderSubtabsOffset(0);
+      return;
+    }
+
+    const measureHeaderSubtabs = () => {
+      const nav = headerNavRef.current;
+      const activeTab = activeHeaderTabRef.current;
+      const subtabs = headerSubtabsRef.current;
+      if (!nav || !activeTab || !subtabs) return;
+
+      const navRect = nav.getBoundingClientRect();
+      const activeRect = activeTab.getBoundingClientRect();
+      const subtabsRect = subtabs.getBoundingClientRect();
+      const desiredLeft = activeRect.left - navRect.left + activeRect.width / 2 - subtabsRect.width / 2;
+      const maxLeft = Math.max(0, navRect.width - subtabsRect.width);
+      const nextLeft = Math.round(Math.min(maxLeft, Math.max(0, desiredLeft)));
+
+      setHeaderSubtabsOffset((current) => (current === nextLeft ? current : nextLeft));
+    };
+
+    const frame = window.requestAnimationFrame(measureHeaderSubtabs);
+    window.addEventListener("resize", measureHeaderSubtabs);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measureHeaderSubtabs);
+    };
+  }, [adminSection, dispatchTab, headerHasSubtabs, ptoTab, reportCustomerId, reportCustomers, subTabs.dispatch, subTabs.pto, topTab]);
 
   function selectTopTab(tab: TopTab) {
     setTopTab(tab);
-    requestPtoDatabaseSave();
   }
 
   function selectPtoTab(tab: string) {
     setPtoTab(tab);
-    requestPtoDatabaseSave();
   }
 
   function selectPtoPlanYear(year: string) {
     setPtoPlanYear(year);
-    requestPtoDatabaseSave();
   }
 
   function selectPtoArea(area: string) {
     setPtoAreaFilter(area);
-    requestPtoDatabaseSave();
   }
 
   function selectReportDate(value: string) {
     setReportDate(value);
-    requestPtoDatabaseSave();
+  }
+
+  function addDispatchSummaryRow(vehicle?: VehicleRow) {
+    if (isDailyDispatchShift) return;
+
+    const nextRow = createDispatchSummaryRow(vehicle, reportDate, currentDispatchShift);
+    setDispatchSummaryRows((current) => [nextRow, ...current]);
+    setDispatchVehicleToAddId("");
+    addAdminLog({
+      action: "Добавление",
+      section: "Диспетчерская сводка",
+      details: vehicle
+        ? `Добавлена техника в сводку: ${buildVehicleDisplayName(vehicle)}.`
+        : "Добавлена пустая строка сводки.",
+    });
+  }
+
+  function addSelectedDispatchVehicle() {
+    const selectedVehicleId = Number(dispatchVehicleToAddId);
+    const selectedVehicle = dispatchVehicleOptions.find((vehicle) => vehicle.id === selectedVehicleId);
+    addDispatchSummaryRow(selectedVehicle);
+  }
+
+  function addFilteredVehiclesToDispatchSummary() {
+    if (isDailyDispatchShift) return;
+
+    const existingVehicleIds = new Set(
+      currentDispatchSummaryRows
+        .map((row) => row.vehicleId)
+        .filter((id): id is number => typeof id === "number"),
+    );
+    const rowsToAdd = filteredDispatch.filter((vehicle) => !existingVehicleIds.has(vehicle.id));
+
+    if (rowsToAdd.length === 0) {
+      window.alert("В выбранной дате и смене уже есть строки по текущему фильтру.");
+      return;
+    }
+
+    setDispatchSummaryRows((current) => [
+      ...rowsToAdd.map((vehicle) => createDispatchSummaryRow(vehicle, reportDate, currentDispatchShift)),
+      ...current,
+    ]);
+    addAdminLog({
+      action: "Добавление",
+      section: "Диспетчерская сводка",
+      details: `Добавлены строки из списка техники: ${rowsToAdd.length}.`,
+      rowsCount: rowsToAdd.length,
+    });
+  }
+
+  function updateDispatchSummaryText(id: string, field: DispatchSummaryTextField, value: string) {
+    if (isDailyDispatchShift) return;
+
+    setDispatchSummaryRows((current) => current.map((row) => (
+      row.id === id ? { ...row, [field]: value } : row
+    )));
+  }
+
+  function updateDispatchSummaryNumber(id: string, field: DispatchSummaryNumberField, value: string) {
+    if (isDailyDispatchShift) return;
+
+    setDispatchSummaryRows((current) => current.map((row) => (
+      row.id === id ? { ...row, [field]: parseDecimalValue(value) } : row
+    )));
+  }
+
+  function updateDispatchSummaryVehicle(id: string, vehicleIdValue: string) {
+    if (isDailyDispatchShift) return;
+
+    const vehicleId = Number(vehicleIdValue);
+    const vehicle = dispatchVehicleOptions.find((item) => item.id === vehicleId);
+
+    setDispatchSummaryRows((current) => current.map((row) => {
+      if (row.id !== id) return row;
+      if (!vehicle) return { ...row, vehicleId: null, vehicleName: "" };
+
+      const nextVehicleRow = createDispatchSummaryRow(vehicle, row.date, row.shift, row.id);
+      return {
+        ...row,
+        vehicleId: vehicle.id,
+        vehicleName: nextVehicleRow.vehicleName,
+        area: nextVehicleRow.area,
+        location: nextVehicleRow.location,
+        workType: nextVehicleRow.workType,
+        excavator: nextVehicleRow.excavator,
+        planVolume: nextVehicleRow.planVolume,
+        factVolume: nextVehicleRow.factVolume,
+        workHours: nextVehicleRow.workHours,
+        rentHours: nextVehicleRow.rentHours,
+        repairHours: nextVehicleRow.repairHours,
+        downtimeHours: nextVehicleRow.downtimeHours,
+        trips: nextVehicleRow.trips,
+      };
+    }));
+  }
+
+  function deleteDispatchSummaryRow(id: string) {
+    if (isDailyDispatchShift) return;
+
+    const row = dispatchSummaryRows.find((item) => item.id === id);
+    const label = row?.vehicleName || row?.workType || "строку";
+    if (!window.confirm(`Удалить ${label} из сводки?`)) return;
+
+    setDispatchSummaryRows((current) => current.filter((item) => item.id !== id));
+    addAdminLog({
+      action: "Удаление",
+      section: "Диспетчерская сводка",
+      details: `Удалена строка сводки: ${label}.`,
+    });
+  }
+
+  function openVehicleFilterMenu(key: VehicleFilterKey) {
+    if (openVehicleFilter === key) {
+      setOpenVehicleFilter(null);
+      return;
+    }
+
+    setVehicleFilterDrafts((current) => {
+      const nextDrafts = { ...current };
+      const appliedValues = vehicleFilters[key];
+
+      if (appliedValues === undefined) {
+        delete nextDrafts[key];
+      } else {
+        nextDrafts[key] = appliedValues;
+      }
+
+      return nextDrafts;
+    });
+    setOpenVehicleFilter(key);
+  }
+
+  function getVehicleFilterOptionsForKey(key: VehicleFilterKey) {
+    if (openVehicleFilter === key) return activeVehicleFilterOptions;
+
+    const column = vehicleFilterColumns.find((item) => item.key === key);
+    if (!column) return [];
+
+      const rowsForColumn = vehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns, key));
+    const options = createVehicleFilterOptions(rowsForColumn, column);
+    const selectedValues = vehicleFilters[key] ?? [];
+
+    return Array.from(new Set([...options, ...selectedValues]))
+      .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
+  }
+
+  function toggleVehicleFilterDraftValue(key: VehicleFilterKey, value: string) {
+    const allOptions = getVehicleFilterOptionsForKey(key);
+
+    setVehicleFilterDrafts((current) => {
+      const selected = current[key];
+      const nextSelection = new Set(selected === undefined ? allOptions : selected);
+
+      if (nextSelection.has(value)) {
+        nextSelection.delete(value);
+      } else {
+        nextSelection.add(value);
+      }
+
+      const nextValues = allOptions.filter((option) => nextSelection.has(option));
+      const nextDrafts = { ...current };
+
+      if (nextValues.length === allOptions.length) {
+        delete nextDrafts[key];
+      } else {
+        nextDrafts[key] = nextValues;
+      }
+
+      return nextDrafts;
+    });
+  }
+
+  function selectAllVehicleFilterDraftValues(key: VehicleFilterKey) {
+    setVehicleFilterDrafts((current) => {
+      const nextDrafts = { ...current };
+      delete nextDrafts[key];
+      return nextDrafts;
+    });
+  }
+
+  function deselectAllVehicleFilterDraftValues(key: VehicleFilterKey) {
+    setVehicleFilterDrafts((current) => ({
+      ...current,
+      [key]: [],
+    }));
+  }
+
+  function applyVehicleFilter(key: VehicleFilterKey) {
+    const draftValues = vehicleFilterDrafts[key];
+
+    setVehicleFilters((current) => {
+      const nextFilters = { ...current };
+
+      if (draftValues === undefined) {
+        delete nextFilters[key];
+      } else {
+        nextFilters[key] = draftValues;
+      }
+
+      return nextFilters;
+    });
+    setOpenVehicleFilter(null);
+  }
+
+  function clearAllVehicleFilters() {
+    setVehicleFilters({});
+    setVehicleFilterDrafts({});
+    setOpenVehicleFilter(null);
   }
 
   function startPtoColumnResize(event: React.MouseEvent<HTMLElement>, key: string, width: number) {
@@ -2302,6 +2107,79 @@ export default function App() {
     ptoResizeStateRef.current = { type: "column", key, startX: event.clientX, startWidth: width };
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
+  }
+
+  function startReportColumnResize(event: React.MouseEvent<HTMLElement>, key: string, width: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    reportResizeStateRef.current = { key, startX: event.clientX, startWidth: width };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  function commitReportDayReason(rowKey: string, value: string) {
+    const key = reportReasonEntryKey(reportDate, rowKey);
+
+    if (reportReasonDraftTimerRef.current !== null) {
+      window.clearTimeout(reportReasonDraftTimerRef.current);
+      reportReasonDraftTimerRef.current = null;
+    }
+
+    setReportReasons((current) => {
+      const next = { ...current };
+      if (value !== "") {
+        next[key] = value;
+      } else {
+        delete next[key];
+      }
+
+      return next;
+    });
+    window.setTimeout(requestPtoDatabaseSave, 0);
+  }
+
+  function commitReportYearReason(rowKey: string, value: string) {
+    const key = reportYearReasonOverrideKey(reportDate, rowKey);
+    const normalizedValue = value.trim();
+
+    if (reportReasonDraftTimerRef.current !== null) {
+      window.clearTimeout(reportReasonDraftTimerRef.current);
+      reportReasonDraftTimerRef.current = null;
+    }
+
+    setReportReasons((current) => {
+      const next = { ...current };
+      if (normalizedValue === "") {
+        delete next[key];
+      } else {
+        next[key] = normalizedValue;
+      }
+
+      return next;
+    });
+    window.setTimeout(requestPtoDatabaseSave, 0);
+  }
+
+  function updateReportDayReasonDraft(rowKey: string, value: string) {
+    const key = reportReasonEntryKey(reportDate, rowKey);
+
+    if (reportReasonDraftTimerRef.current !== null) {
+      window.clearTimeout(reportReasonDraftTimerRef.current);
+    }
+
+    reportReasonDraftTimerRef.current = window.setTimeout(() => {
+      setReportReasons((current) => {
+        const next = { ...current };
+        if (value !== "") {
+          next[key] = value;
+        } else {
+          delete next[key];
+        }
+
+        return next;
+      });
+      reportReasonDraftTimerRef.current = null;
+    }, 180);
   }
 
   function startPtoRowResize(event: React.MouseEvent<HTMLElement>, key: string) {
@@ -2344,66 +2222,410 @@ export default function App() {
     setEditingPtoHeaderKey(null);
     setPtoHeaderDraft("");
     requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО",
+      details: `Изменен заголовок таблицы: ${fallback}.`,
+    });
   }
 
-  function updateReportForm(field: keyof ReportRow, value: string) {
-    const textFields: Array<keyof ReportRow> = ["area", "name", "unit", "dayReason", "yearReason"];
-    setReportForm((current) => ({
-      ...current,
-      [field]: textFields.includes(field) ? value : Number(value),
-    }));
+  function reportHeaderLabel(key: string, fallback: string) {
+    return reportHeaderLabels[key]?.trim() || fallback;
   }
 
-  function addReportRow() {
-    if (!reportForm.name.trim()) return;
-    setReportRows((current) => [...current, normalizeReportRow({ ...reportForm, name: reportForm.name.trim() })]);
-    setReportForm(defaultReportForm);
+  function startReportHeaderEdit(key: string, fallback: string) {
+    setEditingReportHeaderKey(key);
+    setReportHeaderDraft(reportHeaderLabel(key, fallback));
   }
 
-  function removeReportRow(index: number) {
-    setReportRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
+  function cancelReportHeaderEdit() {
+    setEditingReportHeaderKey(null);
+    setReportHeaderDraft("");
   }
 
-  function updateReportRow(index: number, field: keyof ReportRow, value: string) {
-    const textFields: Array<keyof ReportRow> = ["area", "name", "unit", "dayReason", "yearReason"];
-    setReportRows((current) =>
-      current.map((row, rowIndex) =>
-        rowIndex === index
-          ? { ...row, [field]: textFields.includes(field) ? value : Number(value) }
-          : row,
-      ),
-    );
+  function commitReportHeaderEdit(key: string, fallback: string) {
+    const nextLabel = reportHeaderDraft.trim();
+
+    setReportHeaderLabels((current) => {
+      const next = { ...current };
+      if (!nextLabel || nextLabel === fallback) {
+        delete next[key];
+      } else {
+        next[key] = nextLabel;
+      }
+      return next;
+    });
+    setEditingReportHeaderKey(null);
+    setReportHeaderDraft("");
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: `Изменен заголовок таблицы: ${fallback}.`,
+    });
   }
 
-  function createEmptyPtoDateRow(status: PtoStatus, id = createId(), overrides: Partial<PtoPlanRow> = {}): PtoPlanRow {
-    return {
-      id,
-      area: overrides.area ?? (ptoAreaFilter === "Все участки" ? "" : `Уч_${ptoAreaFilter}`),
-      location: overrides.location ?? "",
-      structure: overrides.structure ?? "",
-      unit: normalizePtoUnit(overrides.unit),
-      coefficient: Number(overrides.coefficient ?? 0),
-      status,
-      carryover: Number(overrides.carryover ?? 0),
-      carryovers: overrides.carryovers,
-      carryoverManualYears: overrides.carryoverManualYears,
-      dailyPlans: overrides.dailyPlans ?? {},
-      years: uniqueSorted([...(overrides.years ?? []), ptoPlanYear]),
+  function clearAdminLogs() {
+    if (!window.confirm("Очистить журнал логов?")) return;
+
+    setAdminLogs([]);
+    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify([]));
+  }
+
+  function updateReportCustomer(customerId: string, patch: Partial<Pick<ReportCustomerConfig, "label" | "visible" | "autoShowRows">>) {
+    setReportCustomers((current) => current.map((customer) => (
+      customer.id === customerId ? { ...customer, ...patch } : customer
+    )));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменены настройки заказчика отчета.",
+    });
+  }
+
+  function addReportCustomer() {
+    const customerId = createId();
+    const customer: ReportCustomerConfig = {
+      id: customerId,
+      label: `Заказчик ${reportCustomers.length + 1}`,
+      visible: true,
+      autoShowRows: false,
+      rowKeys: [],
+      hiddenRowKeys: [],
+      rowLabels: {},
+      summaryRows: [],
     };
+
+    setReportCustomers((current) => [...current, customer]);
+    setAdminReportCustomerId(customerId);
+    setAdminReportTab("customer");
+    setReportCustomerId(customerId);
+    addAdminLog({
+      action: "Добавление",
+      section: "Отчетность",
+      details: "Добавлен заказчик отчета.",
+    });
   }
 
-  function insertPtoRowAfter(current: PtoPlanRow[], targetRow: PtoPlanRow | undefined, nextRow: PtoPlanRow) {
-    if (!targetRow) return [...current, nextRow];
+  function deleteReportCustomer(customerId: string) {
+    const customer = reportCustomers.find((item) => item.id === customerId);
+    if (!customer) return;
 
-    const targetSignature = ptoLinkedRowSignature(targetRow);
-    const targetIndex = current.findIndex((row) => ptoLinkedRowMatches(row, targetRow.id, targetSignature));
-    if (targetIndex < 0) return [...current, nextRow];
+    if (reportCustomers.length <= 1) {
+      window.alert("Нельзя удалить последнего заказчика.");
+      return;
+    }
 
-    return [
-      ...current.slice(0, targetIndex + 1),
-      nextRow,
-      ...current.slice(targetIndex + 1),
-    ];
+    if (!window.confirm(`Удалить заказчика "${customer.label}"?`)) return;
+
+    const customerIndex = reportCustomers.findIndex((item) => item.id === customerId);
+    const nextCustomers = reportCustomers.filter((item) => item.id !== customerId);
+    const nextCustomer = nextCustomers[Math.min(customerIndex, nextCustomers.length - 1)] ?? nextCustomers[0];
+    const nextCustomerId = nextCustomer?.id ?? defaultReportCustomerId;
+
+    setReportCustomers(nextCustomers);
+    setAdminReportCustomerId(nextCustomerId);
+    setReportCustomerId((current) => (current === customerId ? nextCustomerId : current));
+    setAdminReportTab("customer");
+    addAdminLog({
+      action: "Удаление",
+      section: "Отчетность",
+      details: `Удален заказчик отчета: ${customer.label}.`,
+    });
+  }
+
+  function moveReportAreaOrder(area: string, direction: -1 | 1) {
+    const sourceIndex = reportAreaOrderOptions.findIndex((item) => normalizeLookupValue(item) === normalizeLookupValue(area));
+    const targetIndex = sourceIndex + direction;
+    if (sourceIndex === -1 || targetIndex < 0 || targetIndex >= reportAreaOrderOptions.length) return;
+
+    const nextOrder = [...reportAreaOrderOptions];
+    [nextOrder[sourceIndex], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[sourceIndex]];
+    setReportAreaOrder(nextOrder);
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменен порядок отображения участков.",
+    });
+  }
+
+  function moveReportWorkOrder(area: string, rowKey: string, direction: -1 | 1) {
+    const areaKey = normalizeLookupValue(area);
+    const areaRows = sortReportRowsByAreaOrder(
+      reportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey),
+      [area],
+      reportWorkOrder,
+    );
+    const rowKeys = areaRows.map(reportRowKey);
+    const sourceIndex = rowKeys.indexOf(rowKey);
+    const targetIndex = sourceIndex + direction;
+    if (sourceIndex === -1 || targetIndex < 0 || targetIndex >= rowKeys.length) return;
+
+    const nextRowKeys = [...rowKeys];
+    [nextRowKeys[sourceIndex], nextRowKeys[targetIndex]] = [nextRowKeys[targetIndex], nextRowKeys[sourceIndex]];
+    setReportWorkOrder((current) => ({ ...current, [areaKey]: nextRowKeys }));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменен порядок видов работ внутри участка.",
+    });
+  }
+
+  function toggleReportCustomerRow(customerId: string, rowKey: string) {
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      const effectiveRowKeys = reportCustomerEffectiveRowKeys(customer, autoReportRowKeys);
+      const currentlyVisible = effectiveRowKeys.has(rowKey);
+      const autoCanShow = customer.autoShowRows && autoReportRowKeys.has(rowKey);
+      const nextRowKeys = currentlyVisible
+        ? customer.rowKeys.filter((key) => key !== rowKey)
+        : Array.from(new Set([...customer.rowKeys, rowKey]));
+      const nextHiddenRowKeys = currentlyVisible && autoCanShow
+        ? Array.from(new Set([...customer.hiddenRowKeys, rowKey]))
+        : customer.hiddenRowKeys.filter((key) => key !== rowKey);
+
+      return { ...customer, rowKeys: nextRowKeys, hiddenRowKeys: nextHiddenRowKeys };
+    }));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменен показ строки для заказчика.",
+    });
+  }
+
+  function updateReportCustomerRowLabel(customerId: string, rowKey: string, value: string, fallback: string) {
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      const nextLabels = { ...customer.rowLabels };
+      const nextLabel = value.trim();
+      if (!nextLabel || nextLabel === fallback.trim()) {
+        delete nextLabels[rowKey];
+      } else {
+        nextLabels[rowKey] = value;
+      }
+
+      return { ...customer, rowLabels: nextLabels };
+    }));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменено название строки отчета для заказчика.",
+    });
+  }
+
+  function addReportCustomerRowLabel(customerId: string) {
+    const customer = reportCustomers.find((item) => item.id === customerId);
+    if (!customer) return;
+
+    const customerVisibleRowKeys = reportCustomerEffectiveRowKeys(customer, autoReportRowKeys);
+    const selectedRows = adminReportBaseRows.filter((row) => customerVisibleRowKeys.has(reportRowKey(row)));
+    const sourceRows = selectedRows.length > 0 ? selectedRows : adminReportBaseRows;
+    const targetRow = sourceRows.find((item) => !customer.rowLabels[reportRowKey(item)]) ?? sourceRows[0];
+    if (!targetRow) return;
+
+    const targetRowKey = reportRowKey(targetRow);
+
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      return {
+        ...customer,
+        rowKeys: customer.rowKeys.includes(targetRowKey) ? customer.rowKeys : [...customer.rowKeys, targetRowKey],
+        rowLabels: { ...customer.rowLabels, [targetRowKey]: customer.rowLabels[targetRowKey] ?? targetRow.name },
+      };
+    }));
+    startReportRowLabelEdit(targetRowKey);
+    addAdminLog({
+      action: "Добавление",
+      section: "Отчетность",
+      details: "Добавлено переименование строки для заказчика.",
+    });
+  }
+
+  function changeReportCustomerRowLabelSource(customerId: string, currentRowKey: string, nextRowKey: string) {
+    if (currentRowKey === nextRowKey) return;
+
+    const currentRow = adminReportRowsByKey.get(currentRowKey);
+    const nextRow = adminReportRowsByKey.get(nextRowKey);
+    if (!nextRow) return;
+
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      const nextLabels = { ...customer.rowLabels };
+      const currentLabel = nextLabels[currentRowKey];
+      const labelIsDefault = !currentLabel || currentLabel.trim() === currentRow?.name.trim();
+      delete nextLabels[currentRowKey];
+      nextLabels[nextRowKey] = labelIsDefault ? nextRow.name : currentLabel;
+
+      return {
+        ...customer,
+        rowKeys: customer.rowKeys.includes(nextRowKey) ? customer.rowKeys : [...customer.rowKeys, nextRowKey],
+        rowLabels: nextLabels,
+      };
+    }));
+    setEditingReportRowLabelKeys((current) => (
+      current.includes(currentRowKey)
+        ? Array.from(new Set([...current.filter((key) => key !== currentRowKey), nextRowKey]))
+        : current
+    ));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменена строка для переименования заказчика.",
+    });
+  }
+
+  function removeReportCustomerRowLabel(customerId: string, rowKey: string) {
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      const nextLabels = { ...customer.rowLabels };
+      delete nextLabels[rowKey];
+      return { ...customer, rowLabels: nextLabels };
+    }));
+    setEditingReportRowLabelKeys((current) => current.filter((key) => key !== rowKey));
+    addAdminLog({
+      action: "Удаление",
+      section: "Отчетность",
+      details: "Удалено переименование строки для заказчика.",
+    });
+  }
+
+  function startReportRowLabelEdit(rowKey: string) {
+    setEditingReportRowLabelKeys((current) => (
+      current.includes(rowKey) ? current : [...current, rowKey]
+    ));
+  }
+
+  function finishReportRowLabelEdit(rowKey: string) {
+    setEditingReportRowLabelKeys((current) => current.filter((key) => key !== rowKey));
+    addAdminLog({
+      action: "Сохранение",
+      section: "Отчетность",
+      details: "Завершено редактирование переименования строки.",
+    });
+  }
+
+  function reportRowsForSummaryArea(area: string) {
+    const areaKey = normalizeLookupValue(area);
+    return adminReportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey);
+  }
+
+  function reportRowKeysForSummaryArea(area: string) {
+    return reportRowsForSummaryArea(area).map(reportRowKey);
+  }
+
+  function addReportSummaryRow(customerId: string) {
+    const customer = reportCustomers.find((item) => item.id === customerId);
+    if (!customer || !reportCustomerUsesSummaryRows(customer)) return;
+    const area = reportAreaOrderOptions[0] ?? adminReportBaseRows[0]?.area ?? "";
+    const summaryId = createId();
+
+    setReportCustomers((current) => current.map((customer) => (
+      customer.id === customerId
+        ? {
+          ...customer,
+          summaryRows: [
+            ...customer.summaryRows,
+            { id: summaryId, label: "Итоговая строка", unit: "", area, rowKeys: reportRowKeysForSummaryArea(area) },
+          ],
+        }
+        : customer
+    )));
+    setExpandedReportSummaryIds((current) => Array.from(new Set([...current, summaryId])));
+    addAdminLog({
+      action: "Добавление",
+      section: "Отчетность",
+      details: "Добавлена итоговая строка для заказчика.",
+    });
+  }
+
+  function startReportSummaryEdit(summaryId: string) {
+    setExpandedReportSummaryIds((current) => (
+      current.includes(summaryId) ? current : [...current, summaryId]
+    ));
+  }
+
+  function finishReportSummaryEdit(summaryId: string) {
+    setExpandedReportSummaryIds((current) => current.filter((id) => id !== summaryId));
+    addAdminLog({
+      action: "Сохранение",
+      section: "Отчетность",
+      details: "Завершено редактирование состава итоговой строки.",
+    });
+  }
+
+  function updateReportSummaryRow(
+    customerId: string,
+    summaryId: string,
+    field: Exclude<keyof ReportSummaryRowConfig, "id" | "rowKeys">,
+    value: string,
+  ) {
+    setReportCustomers((current) => current.map((customer) => (
+      customer.id === customerId
+        ? {
+          ...customer,
+          summaryRows: customer.summaryRows.map((summary) => {
+            if (summary.id !== summaryId) return summary;
+
+            if (field === "area") {
+              return { ...summary, area: value, rowKeys: reportRowKeysForSummaryArea(value) };
+            }
+
+            return { ...summary, [field]: value };
+          }),
+        }
+        : customer
+    )));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменена итоговая строка заказчика.",
+    });
+  }
+
+  function toggleReportSummaryRowKey(customerId: string, summaryId: string, rowKey: string) {
+    setReportCustomers((current) => current.map((customer) => (
+      customer.id === customerId
+        ? {
+          ...customer,
+          summaryRows: customer.summaryRows.map((summary) => {
+            if (summary.id !== summaryId) return summary;
+            const rowKeys = summary.rowKeys.includes(rowKey)
+              ? summary.rowKeys.filter((key) => key !== rowKey)
+              : [...summary.rowKeys, rowKey];
+            return { ...summary, rowKeys };
+          }),
+        }
+        : customer
+    )));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменен состав итоговой строки заказчика.",
+    });
+  }
+
+  function removeReportSummaryRow(customerId: string, summaryId: string) {
+    if (!window.confirm("Удалить итоговую строку из отчетности заказчика?")) return;
+
+    setExpandedReportSummaryIds((current) => current.filter((id) => id !== summaryId));
+    setReportCustomers((current) => current.map((customer) => (
+      customer.id === customerId
+        ? { ...customer, summaryRows: customer.summaryRows.filter((summary) => summary.id !== summaryId) }
+        : customer
+    )));
+    addAdminLog({
+      action: "Удаление",
+      section: "Отчетность",
+      details: "Удалена итоговая строка заказчика.",
+    });
+  }
+
+  function currentPtoTableLabel() {
+    return subTabs.pto.find((tab) => tab.value === ptoTab)?.label ?? ptoTab;
   }
 
   function addLinkedPtoDateRow(overrides: Partial<PtoPlanRow> = {}, insertAfterRow?: PtoPlanRow) {
@@ -2416,14 +2638,19 @@ export default function App() {
       coefficient: overrides.coefficient,
       years: overrides.years,
     };
-    const planRow = createEmptyPtoDateRow("Новая", id, ptoTab === "plan" ? overrides : sharedOverrides);
-    const operRow = createEmptyPtoDateRow("Новая", id, ptoTab === "oper" ? overrides : sharedOverrides);
-    const surveyRow = createEmptyPtoDateRow("Новая", id, ptoTab === "survey" ? overrides : sharedOverrides);
+    const planRow = createEmptyPtoDateRow("Новая", ptoAreaFilter, ptoPlanYear, id, ptoTab === "plan" ? overrides : sharedOverrides);
+    const operRow = createEmptyPtoDateRow("Новая", ptoAreaFilter, ptoPlanYear, id, ptoTab === "oper" ? overrides : sharedOverrides);
+    const surveyRow = createEmptyPtoDateRow("Новая", ptoAreaFilter, ptoPlanYear, id, ptoTab === "survey" ? overrides : sharedOverrides);
 
     setPtoPlanRows((current) => insertPtoRowAfter(current, insertAfterRow, planRow));
     setPtoOperRows((current) => insertPtoRowAfter(current, insertAfterRow, operRow));
     setPtoSurveyRows((current) => insertPtoRowAfter(current, insertAfterRow, surveyRow));
     requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Добавление",
+      section: "ПТО",
+      details: `Добавлена строка в ${currentPtoTableLabel()}.`,
+    });
 
     return id;
   }
@@ -2438,6 +2665,11 @@ export default function App() {
     setPtoYearDialogOpen(false);
     setPtoYearInput("");
     requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Добавление",
+      section: "ПТО",
+      details: `Добавлен год ${nextYear}.`,
+    });
   }
 
   function deletePtoYear() {
@@ -2457,6 +2689,11 @@ export default function App() {
     setPtoYearInput("");
     setPtoYearDialogOpen(false);
     requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Удаление",
+      section: "ПТО",
+      details: `Удален год ${year}.`,
+    });
   }
 
   function updatePtoDateRow(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, field: keyof Omit<PtoPlanRow, "id" | "dailyPlans">, value: string) {
@@ -2483,6 +2720,11 @@ export default function App() {
           };
         }),
       );
+      addAdminLog({
+        action: "Редактирование",
+        section: "ПТО",
+        details: `Изменено поле "${ptoFieldLogLabel(field)}" в ${currentPtoTableLabel()}.`,
+      });
       return;
     }
 
@@ -2497,12 +2739,22 @@ export default function App() {
       setPtoPlanRows(updateLinkedRows);
       setPtoOperRows(updateLinkedRows);
       setPtoSurveyRows(updateLinkedRows);
+      addAdminLog({
+        action: "Редактирование",
+        section: "ПТО",
+        details: `Изменено поле "${ptoFieldLogLabel(field)}" в связанных строках ПТО.`,
+      });
       return;
     }
 
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, [field]: updatedValue } : row)),
     );
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО",
+      details: `Изменено поле "${ptoFieldLogLabel(field)}" в ${currentPtoTableLabel()}.`,
+    });
   }
 
   function clearPtoCarryoverOverride(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, year: string) {
@@ -2521,6 +2773,11 @@ export default function App() {
         };
       }),
     );
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО",
+      details: `Очищены остатки за ${year} год в ${currentPtoTableLabel()}.`,
+    });
   }
 
   function updatePtoDateDay(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, day: string, value: string) {
@@ -2543,6 +2800,11 @@ export default function App() {
         };
       }),
     );
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО",
+      details: `Изменено значение за день ${day} в ${currentPtoTableLabel()}.`,
+    });
   }
 
   function updatePtoMonthTotal(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, days: string[], value: string) {
@@ -2566,6 +2828,11 @@ export default function App() {
         };
       }),
     );
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО",
+      details: `Распределен итог месяца в ${currentPtoTableLabel()}.`,
+    });
   }
 
   function removeLinkedPtoDateRow(row: PtoPlanRow) {
@@ -2580,6 +2847,11 @@ export default function App() {
     setPtoOperRows(removeRow);
     setPtoSurveyRows(removeRow);
     requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Удаление",
+      section: "ПТО",
+      details: `Удалена строка: ${rowName}.`,
+    });
   }
 
   function getPtoDropPosition(event: React.DragEvent<HTMLTableRowElement>): PtoDropPosition {
@@ -2600,6 +2872,11 @@ export default function App() {
     setPtoOperRows(reorderRows);
     setPtoSurveyRows(reorderRows);
     requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО",
+      details: `Изменен порядок строк в ${currentPtoTableLabel()}.`,
+    });
   }
 
   function addCustomTab() {
@@ -2616,43 +2893,7 @@ export default function App() {
 
     setCustomTabs((current) => [...current, nextTab]);
     setCustomTabForm(defaultCustomTabForm);
-    setCustomInfoTabId(nextTab.id);
     setTopTab(customTabKey(nextTab.id));
-  }
-
-  function addCustomInfo() {
-    const text = customInfoForm.trim();
-    if (!text || !customInfoTabId) return;
-
-    setCustomTabs((current) =>
-      current.map((tab) =>
-        tab.id === customInfoTabId ? { ...tab, items: [...tab.items, text] } : tab,
-      ),
-    );
-    setCustomInfoForm("");
-  }
-
-  function updateCustomInfo(tabId: string, itemIndex: number, value: string) {
-    setCustomTabs((current) =>
-      current.map((tab) =>
-        tab.id === tabId
-          ? {
-              ...tab,
-              items: tab.items.map((item, index) => (index === itemIndex ? value : item)),
-            }
-          : tab,
-      ),
-    );
-  }
-
-  function deleteCustomInfo(tabId: string, itemIndex: number) {
-    setCustomTabs((current) =>
-      current.map((tab) =>
-        tab.id === tabId
-          ? { ...tab, items: tab.items.filter((_, index) => index !== itemIndex) }
-          : tab,
-      ),
-    );
   }
 
   function updateTopTabLabel(id: BaseTopTab, label: string) {
@@ -2686,6 +2927,10 @@ export default function App() {
   }
 
   function deleteCustomTab(id: string) {
+    const tab = customTabs.find((item) => item.id === id);
+    if (!tab) return;
+    if (!window.confirm(`Удалить вкладку "${tab.title}"?`)) return;
+
     setCustomTabs((current) => current.filter((tab) => tab.id !== id));
     if (topTab === customTabKey(id)) {
       setTopTab("admin");
@@ -2705,12 +2950,6 @@ export default function App() {
     }));
 
     if (group === "reports" && currentTab && currentTab.value !== "Все участки") {
-      setReportRows((current) =>
-        current.map((row) => (row.area === currentTab.value ? { ...row, area: label } : row)),
-      );
-      setReportForm((current) =>
-        current.area === currentTab.value ? { ...current, area: label } : current,
-      );
       if (reportArea === currentTab.value) {
         setReportArea(label);
       }
@@ -2937,120 +3176,851 @@ export default function App() {
     setSubTabs(defaultSubTabs);
   }
 
-  function openNewVehicleCard() {
+  function startAdminVehiclesEditing() {
+    setAdminVehiclesEditing(true);
+  }
+
+  function finishAdminVehiclesEditing() {
+    if (editingVehicleCell) {
+      const parsedCell = parseVehicleInlineFieldDomKey(editingVehicleCell);
+
+      if (parsedCell) {
+        commitVehicleInlineCellEdit(parsedCell.vehicleId, parsedCell.field);
+      }
+    }
+
+    setAdminVehiclesEditing(false);
+    setShowAllVehicleRows(false);
+    setActiveVehicleCell(null);
+    setVehicleSelectionAnchorCell(null);
+    setSelectedVehicleCellKeys([]);
+    setEditingVehicleCell(null);
+    window.setTimeout(() => {
+      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
+    }, 0);
+  }
+
+  function addVehicleRow() {
     const nextId = Math.max(0, ...vehicleRows.map((vehicle) => vehicle.id)) + 1;
-    setVehicleCard({ ...defaultVehicleForm, id: nextId });
-  }
-
-  function openVehicleCard(vehicle: VehicleRow) {
-    setVehicleCard({ ...defaultVehicleForm, ...vehicle, visible: vehicle.visible !== false });
-  }
-
-  function updateVehicleCard(field: keyof VehicleRow, value: string | boolean) {
-    setVehicleCard((current) => {
-      if (!current) return current;
-
-      const numericFields: Array<keyof VehicleRow> = [
-        "id",
-        "work",
-        "rent",
-        "repair",
-        "downtime",
-        "trips",
-        "fuelNormWinter",
-        "fuelNormSummer",
-      ];
-
-      return {
-        ...current,
-        [field]: numericFields.includes(field) ? Number(value) : value,
-      };
-    });
-  }
-
-  function saveVehicleCard() {
-    if (!vehicleCard) return;
-
     const nextVehicle: VehicleRow = {
-      ...vehicleCard,
-      brand: vehicleCard.brand.trim(),
-      model: vehicleCard.model.trim(),
-      plateNumber: vehicleCard.plateNumber.trim(),
-      garageNumber: vehicleCard.garageNumber.trim(),
-      vehicleType: vehicleCard.vehicleType.trim(),
-      vin: vehicleCard.vin.trim(),
-      owner: vehicleCard.owner.trim(),
-      contractor: vehicleCard.contractor?.trim(),
+      ...defaultVehicleForm,
+      id: nextId,
+      area: "",
+      excavator: "",
+      visible: true,
     };
     nextVehicle.name = buildVehicleDisplayName(nextVehicle);
 
-    if (nextVehicle.name === "Без названия") return;
-
-    setVehicleRows((current) => {
-      const exists = current.some((vehicle) => vehicle.id === nextVehicle.id);
-      return exists
-        ? current.map((vehicle) => (vehicle.id === nextVehicle.id ? nextVehicle : vehicle))
-        : [...current, nextVehicle];
+    pushVehicleUndoSnapshot();
+    clearAllVehicleFilters();
+    setVehicleRows((current) => [nextVehicle, ...current]);
+    setPendingVehicleFocus({ id: nextId, field: "vehicleType", edit: true });
+    addAdminLog({
+      action: "Добавление",
+      section: "Техника",
+      details: "Добавлена новая строка техники.",
     });
-    setVehicleCard(null);
+  }
+
+  function updateVehicleRow(id: number, field: VehicleInlineField, value: string) {
+    pushVehicleUndoSnapshot();
+    setVehicleRows((current) =>
+      current.map((vehicle) => {
+        if (vehicle.id !== id) return vehicle;
+
+        const nextVehicle = {
+          ...vehicle,
+          [field]: value,
+        } as VehicleRow;
+
+        if (field === "owner") nextVehicle.contractor = value.trim();
+        nextVehicle.name = buildVehicleDisplayName(nextVehicle);
+
+        return nextVehicle;
+      }),
+    );
+  }
+
+  function vehicleCellValue(id: number, field: VehicleInlineField) {
+    const vehicle = vehicleRows.find((item) => item.id === id);
+    return String(vehicle?.[field] ?? "");
+  }
+
+  function vehicleCellRangeKeys(anchor: { id: number; field: VehicleInlineField }, target: { id: number; field: VehicleInlineField }) {
+    const vehicleGridKeys = visibleVehicleRows.map((vehicle) => (
+      vehicleInlineFields.map((inlineField) => vehicleInlineFieldDomKey(vehicle.id, inlineField))
+    ));
+
+    return editableGridRangeKeys(
+      vehicleGridKeys,
+      vehicleInlineFieldDomKey(anchor.id, anchor.field),
+      vehicleInlineFieldDomKey(target.id, target.field),
+    );
+  }
+
+  function selectVehicleInlineCell(id: number, field: VehicleInlineField, event?: React.MouseEvent<HTMLElement>) {
+    const fieldKey = vehicleInlineFieldDomKey(id, field);
+    const targetCell = { id, field };
+
+    setActiveVehicleCell(fieldKey);
+    setEditingVehicleCell((current) => (current === fieldKey ? current : null));
+
+    if (event?.ctrlKey || event?.metaKey) {
+      vehicleSelectionAnchorRef.current = targetCell;
+      setVehicleSelectionAnchorCell(targetCell);
+      setSelectedVehicleCellKeys((currentKeys) => toggleEditableGridSelectionKey(currentKeys, fieldKey));
+      return;
+    }
+
+    if (event?.shiftKey && vehicleSelectionAnchorCell) {
+      setSelectedVehicleCellKeys(vehicleCellRangeKeys(vehicleSelectionAnchorCell, targetCell));
+      return;
+    }
+
+    vehicleSelectionAnchorRef.current = targetCell;
+    setVehicleSelectionAnchorCell(targetCell);
+    setSelectedVehicleCellKeys([fieldKey]);
+  }
+
+  function extendVehicleInlineSelection(id: number, field: VehicleInlineField, event: React.MouseEvent<HTMLElement>) {
+    if (!vehicleSelectionDraggingRef.current || event.buttons !== 1 || event.ctrlKey || event.metaKey) return;
+
+    const targetCell = { id, field };
+    const anchorCell = vehicleSelectionAnchorRef.current ?? vehicleSelectionAnchorCell ?? targetCell;
+    setActiveVehicleCell(vehicleInlineFieldDomKey(id, field));
+    setEditingVehicleCell(null);
+    setSelectedVehicleCellKeys(vehicleCellRangeKeys(anchorCell, targetCell));
+  }
+
+  function startVehicleInlineSelection(id: number, field: VehicleInlineField, event: React.MouseEvent<HTMLElement>) {
+    if (event.button !== 0) return;
+
+    vehicleSelectionDraggingRef.current = true;
+    selectVehicleInlineCell(id, field, event);
+  }
+
+  function startVehicleInlineCellEdit(id: number, field: VehicleInlineField, draftOverride?: string) {
+    const fieldKey = vehicleInlineFieldDomKey(id, field);
+    const currentValue = vehicleCellValue(id, field);
+    const draft = draftOverride ?? currentValue;
+
+    vehicleCellSkipBlurCommitRef.current = false;
+    setActiveVehicleCell(fieldKey);
+    vehicleSelectionAnchorRef.current = { id, field };
+    setVehicleSelectionAnchorCell({ id, field });
+    setSelectedVehicleCellKeys([fieldKey]);
+    setEditingVehicleCell(fieldKey);
+    setVehicleCellDraft(draft);
+    setVehicleCellInitialDraft(currentValue);
+    setPendingVehicleFocus({ id, field, edit: true, selectContents: draftOverride === undefined });
+  }
+
+  function commitVehicleInlineCellEdit(id: number, field: VehicleInlineField) {
+    const fieldKey = vehicleInlineFieldDomKey(id, field);
+    setEditingVehicleCell((current) => (current === fieldKey ? null : current));
+    if (vehicleCellDraft !== vehicleCellInitialDraft) {
+      updateVehicleRow(id, field, vehicleCellDraft);
+      const vehicle = vehicleRows.find((item) => item.id === id);
+      addAdminLog({
+        action: "Редактирование",
+        section: "Техника",
+        details: `Изменено поле "${vehicleFilterColumns.find((column) => column.key === field)?.label ?? field}"${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
+      });
+    }
+    setVehicleCellInitialDraft("");
+  }
+
+  function cancelVehicleInlineCellEdit(id: number, field: VehicleInlineField) {
+    const fieldKey = vehicleInlineFieldDomKey(id, field);
+    vehicleCellSkipBlurCommitRef.current = true;
+    setVehicleCellDraft(vehicleCellInitialDraft);
+    setVehicleCellInitialDraft("");
+    setEditingVehicleCell((current) => (current === fieldKey ? null : current));
+    setPendingVehicleFocus({ id, field });
+  }
+
+  function focusVehicleInlineCell(id: number, field: VehicleInlineField, edit = false) {
+    setPendingVehicleFocus({ id, field, edit });
+  }
+
+  function clearSelectedVehicleCells(id: number, field: VehicleInlineField) {
+    const fallbackKey = vehicleInlineFieldDomKey(id, field);
+    const targetKeys = selectedVehicleCellKeys.length ? selectedVehicleCellKeys : [fallbackKey];
+    const targetFieldsById = new Map<number, Set<VehicleInlineField>>();
+
+    targetKeys.forEach((key) => {
+      const parsedCell = parseVehicleInlineFieldDomKey(key);
+      if (!parsedCell) return;
+
+      const fields = targetFieldsById.get(parsedCell.vehicleId) ?? new Set<VehicleInlineField>();
+      fields.add(parsedCell.field);
+      targetFieldsById.set(parsedCell.vehicleId, fields);
+    });
+
+    pushVehicleUndoSnapshot();
+    setVehicleRows((current) =>
+      current.map((vehicle) => {
+        const fields = targetFieldsById.get(vehicle.id);
+        if (!fields) return vehicle;
+
+        const nextVehicle = { ...vehicle };
+        fields.forEach((inlineField) => {
+          nextVehicle[inlineField] = "";
+          if (inlineField === "owner") nextVehicle.contractor = "";
+        });
+        nextVehicle.name = buildVehicleDisplayName(nextVehicle);
+
+        return nextVehicle;
+      }),
+    );
+    addAdminLog({
+      action: "Редактирование",
+      section: "Техника",
+      details: `Очищены выбранные ячейки: ${targetKeys.length}.`,
+    });
+  }
+
+  function focusVehicleCellByOffset(id: number, field: VehicleInlineField, rowOffset: number, fieldOffset: number) {
+    const vehicleGridKeys = visibleVehicleRows.map((vehicle) => (
+      vehicleInlineFields.map((inlineField) => vehicleInlineFieldDomKey(vehicle.id, inlineField))
+    ));
+    const nextKey = editableGridKeyAtOffset(vehicleGridKeys, vehicleInlineFieldDomKey(id, field), rowOffset, fieldOffset);
+    if (!nextKey) return;
+
+    const parsedCell = parseVehicleInlineFieldDomKey(nextKey);
+
+    if (!parsedCell) return;
+    focusVehicleInlineCell(parsedCell.vehicleId, parsedCell.field);
+  }
+
+  function handleVehicleCellKeyDown(event: React.KeyboardEvent<HTMLElement>, id: number, field: VehicleInlineField, editing: boolean) {
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+    if (editing) {
+      if (isEditableGridArrowKey(event.key)) {
+        event.preventDefault();
+        commitVehicleInlineCellEdit(id, field);
+        const offset = editableGridArrowOffset(event.key);
+        focusVehicleCellByOffset(id, field, offset.rowOffset, offset.columnOffset);
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commitVehicleInlineCellEdit(id, field);
+        setPendingVehicleFocus({ id, field });
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelVehicleInlineCellEdit(id, field);
+        return;
+      }
+
+      return;
+    }
+
+    if (event.key.length === 1 && (!vehicleFieldIsNumeric(field) || /^[0-9]$/.test(event.key))) {
+      event.preventDefault();
+      startVehicleInlineCellEdit(id, field, event.key);
+    } else if (event.key === "Backspace") {
+      event.preventDefault();
+      clearSelectedVehicleCells(id, field);
+    } else if (event.key === "F2") {
+      event.preventDefault();
+      startVehicleInlineCellEdit(id, field);
+    } else if (isEditableGridArrowKey(event.key)) {
+      event.preventDefault();
+      const offset = editableGridArrowOffset(event.key);
+      focusVehicleCellByOffset(id, field, offset.rowOffset, offset.columnOffset);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      startVehicleInlineCellEdit(id, field);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setEditingVehicleCell(null);
+      setSelectedVehicleCellKeys(activeVehicleCell ? [activeVehicleCell] : []);
+    } else if (event.key === "Delete") {
+      event.preventDefault();
+      clearSelectedVehicleCells(id, field);
+    }
+  }
+
+  function vehicleCellInputProps(id: number, field: VehicleInlineField) {
+    const fieldKey = vehicleInlineFieldDomKey(id, field);
+
+    return {
+      active: activeVehicleCell === fieldKey,
+      selected: selectedVehicleCellKeys.includes(fieldKey),
+      editing: editingVehicleCell === fieldKey,
+      draft: vehicleCellDraft,
+      fieldKey,
+      onSelect: (event: React.MouseEvent<HTMLElement>) => startVehicleInlineSelection(id, field, event),
+      onExtendSelection: (event: React.MouseEvent<HTMLElement>) => extendVehicleInlineSelection(id, field, event),
+      onStartEdit: () => startVehicleInlineCellEdit(id, field),
+      onDraftChange: setVehicleCellDraft,
+      onCommitEdit: () => {
+        if (vehicleCellSkipBlurCommitRef.current) {
+          vehicleCellSkipBlurCommitRef.current = false;
+          return;
+        }
+
+        if (editingVehicleCell === fieldKey) commitVehicleInlineCellEdit(id, field);
+      },
+      onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => handleVehicleCellKeyDown(event, id, field, editingVehicleCell === fieldKey),
+    };
   }
 
   function toggleVehicleVisibility(id: number) {
+    const vehicle = vehicleRows.find((item) => item.id === id);
+    pushVehicleUndoSnapshot();
     setVehicleRows((current) =>
       current.map((vehicle) =>
         vehicle.id === id ? { ...vehicle, visible: vehicle.visible === false } : vehicle,
       ),
     );
+    addAdminLog({
+      action: "Редактирование",
+      section: "Техника",
+      details: `Изменен показ техники${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
+    });
   }
 
   function deleteVehicle(id: number) {
+    const vehicle = vehicleRows.find((item) => item.id === id);
+    pushVehicleUndoSnapshot();
     setVehicleRows((current) => current.filter((vehicle) => vehicle.id !== id));
-    setVehicleCard((current) => (current?.id === id ? null : current));
+    addAdminLog({
+      action: "Удаление",
+      section: "Техника",
+      details: `Удалена техника${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
+    });
+  }
+
+  function openVehicleImportFilePicker() {
+    vehicleImportInputRef.current?.click();
+  }
+
+  async function importVehiclesFromExcel(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      const importedVehicles = await parseVehicleImportFile(file, defaultVehicleForm);
+      if (!importedVehicles.length) {
+        window.alert("В выбранном файле не найден список техники.");
+        return;
+      }
+
+      if (!window.confirm(`Заменить текущий список техники данными из файла? Будет загружено строк: ${importedVehicles.length}.`)) return;
+
+      pushVehicleUndoSnapshot();
+      setVehicleRows(importedVehicles);
+      setVehicleFilters({});
+      setVehicleFilterDrafts({});
+      setOpenVehicleFilter(null);
+      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
+      window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
+      addAdminLog({
+        action: "Загрузка",
+        section: "Техника",
+        details: `Загружен список техники: ${importedVehicles.length} строк.`,
+        fileName: file.name,
+        rowsCount: importedVehicles.length,
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Не удалось прочитать Excel-файл.");
+    }
   }
 
   function exportVehiclesToExcel() {
-    const headers = [
-      "Отображаемое имя",
-      "Марка",
-      "Модель",
-      "Госномер",
-      "Гаражный номер",
-      "Вид техники",
-      "Норма расхода: Зима",
-      "Норма расхода: Лето",
-      "Расчет расхода",
-      "VIN",
-      "Собственник",
-      "Отображение",
-    ];
-    const rows = vehicleRows.map((vehicle) => [
-      buildVehicleDisplayName(vehicle),
-      vehicle.brand,
-      vehicle.model,
-      vehicle.plateNumber,
-      vehicle.garageNumber,
-      vehicle.vehicleType,
-      vehicle.fuelNormWinter,
-      vehicle.fuelNormSummer,
-      vehicle.fuelCalcType,
-      vehicle.vin,
-      vehicle.owner,
-      vehicle.visible === false ? "Скрыта" : "Показывается",
-    ]);
-    const tableRows = [headers, ...rows]
-      .map((row) => `<tr>${row.map((cell) => `<td>${escapeExcelCell(cell)}</td>`).join("")}</tr>`)
-      .join("");
-    const html = `<html><head><meta charset="utf-8" /></head><body><table>${tableRows}</table></body></html>`;
-    const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
+    const blob = createXlsxBlob(createVehicleExportRows(vehicleRows));
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "spisok-tehniki.xls";
+    link.download = "spisok-tehniki.xlsx";
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    addAdminLog({
+      action: "Выгрузка",
+      section: "Техника",
+      details: `Выгружен список техники: ${vehicleRows.length} строк.`,
+      fileName: "spisok-tehniki.xlsx",
+      rowsCount: vehicleRows.length,
+    });
+  }
+
+  function openPtoDateImportFilePicker() {
+    ptoPlanImportInputRef.current?.click();
+  }
+
+  function currentPtoDateExcelMeta(tab = ptoTab): { table: PtoDateTableKey; label: string; slug: string; section: string; rows: PtoPlanRow[] } {
+    const meta = ptoDateTableMeta(tab);
+    const rowsByTable: Record<PtoDateTableKey, PtoPlanRow[]> = {
+      plan: ptoPlanRows,
+      oper: ptoOperRows,
+      survey: ptoSurveyRows,
+    };
+
+    return { ...meta, rows: rowsByTable[meta.table] };
+  }
+
+  function exportPtoDateTableToExcel() {
+    const meta = currentPtoDateExcelMeta();
+    const rows = createPtoPlanExportRows(meta.rows, ptoPlanYear, ptoAreaFilter);
+    const fileName = ptoDateExportFileName(meta, ptoPlanYear, ptoAreaFilter);
+    const blob = createXlsxBlob(rows, meta.label, {
+      columns: createPtoPlanExportColumns(ptoPlanYear),
+      outlineSummaryRight: false,
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    addAdminLog({
+      action: "Выгрузка",
+      section: meta.section,
+      details: `Выгружена таблица "${meta.label}" за ${ptoPlanYear} год: ${Math.max(0, rows.length - 1)} строк.`,
+      fileName,
+      rowsCount: Math.max(0, rows.length - 1),
+    });
+  }
+
+  function mergeImportedRowsIntoPtoDateTable(table: PtoDateTableKey, importedRows: PtoPlanRow[]) {
+    if (table === "oper") {
+      setPtoOperRows((current) => mergeImportedPtoPlanRows(current, importedRows));
+      setPtoPlanRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
+      setPtoSurveyRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
+      return;
+    }
+
+    if (table === "survey") {
+      setPtoSurveyRows((current) => mergeImportedPtoPlanRows(current, importedRows));
+      setPtoPlanRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
+      setPtoOperRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
+      return;
+    }
+
+    setPtoPlanRows((current) => mergeImportedPtoPlanRows(current, importedRows));
+    setPtoOperRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
+    setPtoSurveyRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
+  }
+
+  async function importPtoDateTableFromExcel(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const meta = currentPtoDateExcelMeta();
+
+    try {
+      const importedRows = createPtoPlanRowsFromImportTable(await parseTableImportFile(file), ptoPlanYear, meta.rows);
+      if (!importedRows.length) {
+        window.alert(`В выбранном файле не найдены строки таблицы "${meta.label}".`);
+        return;
+      }
+
+      if (!window.confirm(`Загрузить таблицу "${meta.label}" из файла? Будет обновлено или добавлено строк: ${importedRows.length}.`)) return;
+
+      const firstImportedMonth = importedRows
+        .flatMap((row) => Object.keys(row.dailyPlans))
+        .filter((date) => date.startsWith(`${ptoPlanYear}-`))
+        .sort()[0]?.slice(0, 7) ?? `${ptoPlanYear}-01`;
+
+      mergeImportedRowsIntoPtoDateTable(meta.table, importedRows);
+      setPtoManualYears((current) => uniqueSorted([...current, ptoPlanYear]));
+      setExpandedPtoMonths((current) => ({ ...current, [firstImportedMonth]: true }));
+      requestPtoDatabaseSave();
+      addAdminLog({
+        action: "Загрузка",
+        section: meta.section,
+        details: `Загружена таблица "${meta.label}" за ${ptoPlanYear} год: ${importedRows.length} строк.`,
+        fileName: file.name,
+        rowsCount: importedRows.length,
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : `Не удалось прочитать Excel-файл таблицы "${meta.label}".`);
+    }
+  }
+
+  function focusPtoBucketCell(cell: PtoBucketCell) {
+    const cellKey = ptoBucketSelectionKey(cell);
+    window.setTimeout(() => {
+      document.getElementById(`pto-bucket-cell-${cellKey}`)?.focus();
+    }, 0);
+  }
+
+  function cancelPtoBucketEdit() {
+    setPtoBucketEditKey(null);
+    setPtoBucketDraft("");
+  }
+
+  function commitPtoBucketValue(cellKey: string, draft: string) {
+    const parsed = parseDecimalInput(draft);
+    const [rowKey, equipmentKey] = cellKey.split("::");
+    const bucketRow = ptoBucketRows.find((row) => row.key === rowKey);
+    const bucketColumn = ptoBucketColumns.find((column) => column.key === equipmentKey);
+
+    setPtoBucketValues((current) => {
+      const next = { ...current };
+
+      if (parsed === null) {
+        delete next[cellKey];
+      } else {
+        next[cellKey] = Math.round(parsed * 100) / 100;
+      }
+
+      return next;
+    });
+    cancelPtoBucketEdit();
+    requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Редактирование",
+      section: "ПТО: Ковши",
+      details: `Изменена ячейка${bucketRow ? ` ${bucketRow.area} / ${bucketRow.structure}` : ""}${bucketColumn ? `, ${bucketColumn.label}` : ""}.`,
+    });
+  }
+
+  function addPtoBucketManualRow() {
+    const fallbackArea = ptoAreaFilter === "Все участки" ? "" : ptoAreaFilter;
+    const area = cleanAreaName(ptoBucketDraftRow.area.trim() || fallbackArea).trim();
+    const structure = ptoBucketDraftRow.structure.trim();
+
+    if (!area || !structure) return;
+
+    const key = ptoBucketRowKey(area, structure);
+    setPtoBucketManualRows((current) => (
+      current.some((row) => row.key === key)
+        ? current
+        : [...current, { key, area, structure, source: "manual" }]
+    ));
+    setPtoBucketDraftRow({ area: fallbackArea, structure: "" });
+    requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Добавление",
+      section: "ПТО: Ковши",
+      details: `Добавлена строка ковшей: ${area} / ${structure}.`,
+    });
+  }
+
+  function deletePtoBucketManualRow(row: PtoBucketRow) {
+    if (!window.confirm(`Удалить временную строку "${row.area} / ${row.structure}" из ковшей?`)) return;
+
+    setPtoBucketManualRows((current) => current.filter((item) => item.key !== row.key));
+    setPtoBucketValues((current) => {
+      const next = { ...current };
+      Object.keys(next).forEach((key) => {
+        if (key.startsWith(`${row.key}::`)) delete next[key];
+      });
+      return next;
+    });
+    requestPtoDatabaseSave();
+    addAdminLog({
+      action: "Удаление",
+      section: "ПТО: Ковши",
+      details: `Удалена строка ковшей: ${row.area} / ${row.structure}.`,
+    });
+  }
+
+  function renderPtoBucketsTable() {
+    const bucketGridKeys = ptoBucketRows.map((row) => (
+      ptoBucketColumns.map((column) => ptoBucketCellKey(row.key, column.key))
+    ));
+    const selectedBucketKeys = new Set(ptoBucketSelectedCellKeys);
+    const bucketTableMinWidth = 470 + Math.max(1, ptoBucketColumns.length) * 120;
+
+    const bucketRangeKeys = (fromCell: PtoBucketCell, toCell: PtoBucketCell) => {
+      return editableGridRangeKeys(bucketGridKeys, ptoBucketSelectionKey(fromCell), ptoBucketSelectionKey(toCell));
+    };
+
+    const selectBucketCell = (cell: PtoBucketCell) => {
+      setPtoBucketActiveCell(cell);
+      setPtoBucketSelectionAnchorCell(cell);
+      setPtoBucketSelectedCellKeys([ptoBucketSelectionKey(cell)]);
+    };
+
+    const toggleBucketCell = (cell: PtoBucketCell) => {
+      const cellKey = ptoBucketSelectionKey(cell);
+      setPtoBucketActiveCell(cell);
+      setPtoBucketSelectionAnchorCell(cell);
+      setPtoBucketSelectedCellKeys((current) => toggleEditableGridSelectionKey(current, cellKey));
+    };
+
+    const selectBucketRange = (cell: PtoBucketCell) => {
+      const anchorCell = ptoBucketSelectionAnchorCell ?? ptoBucketActiveCell ?? cell;
+      setPtoBucketActiveCell(cell);
+      setPtoBucketSelectionAnchorCell(anchorCell);
+      setPtoBucketSelectedCellKeys(bucketRangeKeys(anchorCell, cell));
+    };
+
+    const moveBucketCell = (cell: PtoBucketCell, rowOffset: number, columnOffset: number) => {
+      const nextKey = editableGridKeyAtOffset(bucketGridKeys, ptoBucketSelectionKey(cell), rowOffset, columnOffset);
+      const [rowKey, equipmentKey] = nextKey?.split("::") ?? [];
+      const nextCell = rowKey && equipmentKey ? { rowKey, equipmentKey } : cell;
+
+      selectBucketCell(nextCell);
+      focusPtoBucketCell(nextCell);
+    };
+
+    const clearBucketCells = (fallbackCell: PtoBucketCell) => {
+      const targetKeys = ptoBucketSelectedCellKeys.length ? ptoBucketSelectedCellKeys : [ptoBucketSelectionKey(fallbackCell)];
+      setPtoBucketValues((current) => {
+        const next = { ...current };
+        targetKeys.forEach((key) => {
+          delete next[key];
+        });
+        return next;
+      });
+      cancelPtoBucketEdit();
+      requestPtoDatabaseSave();
+      addAdminLog({
+        action: "Редактирование",
+        section: "ПТО: Ковши",
+        details: `Очищены выбранные ячейки ковшей: ${targetKeys.length}.`,
+      });
+    };
+
+    const startBucketCellEdit = (cell: PtoBucketCell, value: number | undefined, draft?: string) => {
+      const cellKey = ptoBucketSelectionKey(cell);
+      selectBucketCell(cell);
+      setPtoBucketEditKey(cellKey);
+      setPtoBucketDraft(draft ?? formatBucketNumber(value));
+      focusPtoBucketCell(cell);
+    };
+
+    return (
+      <div style={ptoBucketsLayoutStyle}>
+        <div style={ptoToolbarStyle}>
+          <div style={ptoToolbarBlockStyle}>
+            <span style={ptoToolbarLabelStyle}>Участки</span>
+            <div style={ptoToolbarRowStyle}>
+              {ptoAreaTabs.map((area) => (
+                <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {ptoBucketColumns.length === 0 ? (
+          <div style={ptoBucketsHintStyle}>
+            Добавь в админке погрузочную технику с видом «Экскаватор» или «Погрузчик». Здесь автоматически появятся столбцы Марка Модель.
+          </div>
+        ) : null}
+
+        <div style={ptoBucketsScrollStyle}>
+          <table style={{ ...ptoBucketsTableStyle, minWidth: bucketTableMinWidth }}>
+            <colgroup>
+              <col style={{ width: 150 }} />
+              <col style={{ width: 320 }} />
+              {ptoBucketColumns.map((column) => (
+                <col key={column.key} style={{ width: 120 }} />
+              ))}
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ ...ptoBucketsThStyle, width: 150 }}>Участок</th>
+                <th style={{ ...ptoBucketsThStyle, width: 320 }}>Структура</th>
+                {ptoBucketColumns.map((column) => (
+                  <th key={column.key} style={ptoBucketsThStyle}>{column.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ptoBucketRows.map((row) => (
+                <tr key={row.key}>
+                  <td style={ptoBucketsTdStyle}>{row.area}</td>
+                  <td style={{ ...ptoBucketsTdStyle, fontWeight: 700 }}>
+                    <div style={ptoBucketStructureCellStyle}>
+                      <span>{row.structure}</span>
+                      {row.source === "manual" ? (
+                        <span style={ptoBucketManualToolsStyle}>
+                          <span style={ptoBucketManualBadgeStyle}>Временная</span>
+                          <button
+                            type="button"
+                            aria-label={`Удалить ${row.structure}`}
+                            title="Удалить временную строку"
+                            onClick={() => deletePtoBucketManualRow(row)}
+                            style={ptoBucketDeleteButtonStyle}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  {ptoBucketColumns.map((column) => {
+                    const cellKey = ptoBucketCellKey(row.key, column.key);
+                    const cell = { rowKey: row.key, equipmentKey: column.key };
+                    const value = ptoBucketValues[cellKey];
+                    const editing = ptoBucketEditKey === cellKey;
+                    const selected = selectedBucketKeys.has(cellKey);
+                    const active = ptoBucketActiveCell?.rowKey === row.key && ptoBucketActiveCell.equipmentKey === column.key;
+
+                    return (
+                      <td key={column.key} style={ptoBucketsTdStyle}>
+                        <input
+                          id={`pto-bucket-cell-${cellKey}`}
+                          data-pto-bucket-cell={cellKey}
+                          inputMode="decimal"
+                          readOnly={!editing}
+                          value={editing ? ptoBucketDraft : formatBucketNumber(value)}
+                          onFocus={() => {
+                            if (!editing && !selected) selectBucketCell(cell);
+                          }}
+                          onMouseDown={(event) => {
+                            if (event.shiftKey) {
+                              selectBucketRange(cell);
+                              return;
+                            }
+
+                            if (event.ctrlKey || event.metaKey) {
+                              toggleBucketCell(cell);
+                              return;
+                            }
+
+                            if (!editing) selectBucketCell(cell);
+                          }}
+                          onDoubleClick={() => startBucketCellEdit(cell, value)}
+                          onChange={(event) => {
+                            if (editing) setPtoBucketDraft(event.target.value);
+                          }}
+                          onBlur={() => {
+                            if (ptoBucketEditKey === cellKey) commitPtoBucketValue(cellKey, ptoBucketDraft);
+                          }}
+                          onKeyDown={(event) => {
+                            const arrowMove: Record<string, [number, number]> = {
+                              ArrowUp: [-1, 0],
+                              ArrowDown: [1, 0],
+                              ArrowLeft: [0, -1],
+                              ArrowRight: [0, 1],
+                            };
+
+                            if (event.key in arrowMove) {
+                              event.preventDefault();
+                              if (editing) commitPtoBucketValue(cellKey, ptoBucketDraft);
+                              const [rowOffset, columnOffset] = arrowMove[event.key];
+                              moveBucketCell(cell, rowOffset, columnOffset);
+                              return;
+                            }
+
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              if (editing) {
+                                commitPtoBucketValue(cellKey, ptoBucketDraft);
+                              } else {
+                                startBucketCellEdit(cell, value);
+                              }
+                              return;
+                            }
+
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              if (editing) {
+                                cancelPtoBucketEdit();
+                              } else {
+                                setPtoBucketActiveCell(null);
+                                setPtoBucketSelectionAnchorCell(null);
+                                setPtoBucketSelectedCellKeys([]);
+                              }
+                              event.currentTarget.blur();
+                              return;
+                            }
+
+                            if (event.key === "Delete") {
+                              event.preventDefault();
+                              clearBucketCells(cell);
+                              return;
+                            }
+
+                            if (!editing && /^[0-9.,-]$/.test(event.key)) {
+                              event.preventDefault();
+                              startBucketCellEdit(cell, value, event.key);
+                            }
+                          }}
+                          placeholder="0,00"
+                          style={{
+                            ...ptoBucketInputStyle,
+                            ...(selected ? ptoSelectedFormulaCellStyle : null),
+                            ...(active ? ptoActiveFormulaCellStyle : null),
+                            ...(editing ? ptoEditingFormulaCellStyle : null),
+                          }}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              <tr style={ptoBucketDraftRowStyle}>
+                <td style={ptoBucketsTdStyle}>
+                  <input
+                    value={ptoBucketDraftRow.area}
+                    list="pto-bucket-area-options"
+                    onChange={(event) => setPtoBucketDraftRow((current) => ({ ...current, area: event.target.value }))}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addPtoBucketManualRow();
+                      }
+                    }}
+                    placeholder={ptoAreaFilter === "Все участки" ? "Участок" : ptoAreaFilter}
+                    style={ptoBucketTextInputStyle}
+                  />
+                </td>
+                <td style={ptoBucketsTdStyle}>
+                  <div style={ptoBucketDraftCellStyle}>
+                    <input
+                      value={ptoBucketDraftRow.structure}
+                      onChange={(event) => setPtoBucketDraftRow((current) => ({ ...current, structure: event.target.value }))}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addPtoBucketManualRow();
+                        }
+                      }}
+                      placeholder="Временная структура"
+                      style={ptoBucketTextInputStyle}
+                    />
+                    <button
+                      type="button"
+                      onClick={addPtoBucketManualRow}
+                      title="Добавить временную строку"
+                      style={ptoBucketAddButtonStyle}
+                    >
+                      +
+                    </button>
+                  </div>
+                </td>
+                {ptoBucketColumns.map((column) => (
+                  <td key={column.key} style={ptoBucketsTdStyle} />
+                ))}
+              </tr>
+              {ptoBucketRows.length === 0 ? (
+                <tr>
+                  <td style={ptoBucketsTdStyle} colSpan={Math.max(2, ptoBucketColumns.length + 2)}>
+                    В Плане, Оперучете и Замере пока нет строк с участком и структурой.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+        <datalist id="pto-bucket-area-options">
+          {ptoAreaTabs.filter((area) => area !== "Все участки").map((area) => (
+            <option key={area} value={area} />
+          ))}
+        </datalist>
+      </div>
+    );
   }
 
   function renderPtoDateTable(
@@ -3061,6 +4031,27 @@ export default function App() {
     const showLocation = options.showLocation !== false;
     const editableMonthTotal = options.editableMonthTotal === true;
     const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
+    const rowById = new Map(rows.map((row) => [row.id, row] as const));
+    const rowDateTotalsById = new Map(filteredRows.map((row) => {
+      const monthTotals = new Map<string, { hasValue: boolean; value: number }>();
+      let yearDailyTotal = 0;
+
+      Object.entries(row.dailyPlans).forEach(([date, value]) => {
+        if (!date.startsWith(ptoPlanYear) || !Number.isFinite(value)) return;
+
+        yearDailyTotal += value;
+        const month = date.slice(0, 7);
+        const current = monthTotals.get(month) ?? { hasValue: false, value: 0 };
+        current.hasValue = true;
+        current.value += value;
+        monthTotals.set(month, current);
+      });
+
+      return [row.id, {
+        monthTotals,
+        yearDailyTotal: Math.round(yearDailyTotal * 1000000) / 1000000,
+      }] as const;
+    }));
     const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;
     const columnWidth = (key: string, fallback: number) => Math.min(800, Math.max(44, Math.round(ptoColumnWidths[key] ?? fallback)));
     const baseColumns: PtoTableColumn[] = [
@@ -3082,20 +4073,33 @@ export default function App() {
     const columnWidthByKey = new Map(tableColumns.map((column) => [column.key, column.width]));
     const activeFormulaCell = ptoFormulaCell?.table === ptoTab && ptoFormulaCell.year === ptoPlanYear ? ptoFormulaCell : null;
     const activeInlineEditCell = ptoInlineEditCell?.table === ptoTab && ptoInlineEditCell.year === ptoPlanYear ? ptoInlineEditCell : null;
-    const activeFormulaRow = activeFormulaCell ? rows.find((row) => row.id === activeFormulaCell.rowId) : undefined;
+    const activeFormulaRow = activeFormulaCell ? rowById.get(activeFormulaCell.rowId) : undefined;
+    const activeFormulaRowTotals = activeFormulaRow ? rowDateTotalsById.get(activeFormulaRow.id) : undefined;
     const activeFormulaValue = activeFormulaRow && activeFormulaCell
       ? activeFormulaCell.kind === "coefficient"
         ? activeFormulaRow.coefficient
         : activeFormulaCell.kind === "carryover"
           ? ptoEffectiveCarryover(activeFormulaRow, ptoPlanYear, rows)
           : activeFormulaCell.kind === "month" && activeFormulaCell.month
-            ? ptoMonthTotal(activeFormulaRow, activeFormulaCell.month)
+            ? activeFormulaRowTotals?.monthTotals.get(activeFormulaCell.month)?.value
             : activeFormulaCell.kind === "day" && activeFormulaCell.day
               ? activeFormulaRow.dailyPlans[activeFormulaCell.day]
               : undefined
       : undefined;
     const formulaInputDisabled = !activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false;
-    const formulaCellRows = filteredRows.map((row) => {
+    const virtualRows = calculatePtoVirtualRows(filteredRows, ptoRowHeights, ptoTab, ptoDateViewport);
+    const {
+      renderedRows,
+      rowHeights: filteredRowHeights,
+      rowOffsets,
+      startIndex: virtualStartIndex,
+      topSpacerHeight,
+      bottomSpacerHeight,
+      totalHeight: virtualRowsTotalHeight,
+    } = virtualRows;
+    const rowOffsetAt = (index: number) => rowOffsets[index] ?? virtualRowsTotalHeight;
+    const tableSpacerColSpan = tableColumns.length;
+    const formulaCellRows = renderedRows.map((row) => {
       const cells: Array<Omit<PtoFormulaCell, "table" | "year">> = [
         { rowId: row.id, kind: "coefficient", label: "Коэфф." },
         { rowId: row.id, kind: "carryover", label: carryoverHeader },
@@ -3127,43 +4131,133 @@ export default function App() {
     const formulaCellKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${cell.rowId}:${cell.kind}:${cell.month ?? cell.day ?? ""}`;
     const formulaCellDomKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${ptoTab}:${ptoPlanYear}:${formulaCellKey(cell)}`;
     const formulaSelectionKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => formulaCellDomKey(cell);
+    const formulaCellsByRowId = new Map(formulaCellRows.map((formulaRow) => [formulaRow.row.id, formulaRow.cells] as const));
     const formulaSelectionScope = `${ptoTab}:${ptoPlanYear}:`;
     const selectedFormulaCellKeys = new Set(ptoSelectedCellKeys.filter((key) => key.startsWith(formulaSelectionScope)));
-    const arrowKeys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+    const formulaCellTemplates: Array<Omit<PtoFormulaCell, "table" | "year" | "rowId">> = [
+      { kind: "coefficient", label: "coefficient" },
+      { kind: "carryover", label: carryoverHeader },
+      ...ptoMonthGroups.flatMap((group) => [
+        ...(editableMonthTotal
+          ? [{
+              kind: "month" as const,
+              month: group.month,
+              days: group.days,
+              label: group.label,
+              editable: true,
+            }]
+          : []),
+        ...(group.expanded
+          ? group.days.map((day) => ({
+              kind: "day" as const,
+              day,
+              label: `${day.slice(8, 10)}.${day.slice(5, 7)}`,
+            }))
+          : []),
+      ]),
+    ];
+    const formulaTemplateKey = (cell: Pick<PtoFormulaCell, "kind" | "day" | "month">) => `${cell.kind}:${cell.month ?? cell.day ?? ""}`;
+    const formulaTemplateIndexByKey = new Map(formulaCellTemplates.map((cell, index) => [formulaTemplateKey(cell), index] as const));
+    const formulaRowIndexById = new Map(filteredRows.map((row, index) => [row.id, index] as const));
+    const formulaCellFromTemplate = (
+      rowId: string,
+      template: Omit<PtoFormulaCell, "table" | "year" | "rowId">,
+    ): Omit<PtoFormulaCell, "table" | "year"> => ({ rowId, ...template });
+    const formulaCellFromSelectionKey = (key: string): Omit<PtoFormulaCell, "table" | "year"> | null => {
+      if (!key.startsWith(formulaSelectionScope)) return null;
+
+      const [rowId, kind, value = ""] = key.slice(formulaSelectionScope.length).split(":");
+      if (!rowId || !formulaRowIndexById.has(rowId)) return null;
+
+      const template = formulaCellTemplates.find((cell) => (
+        cell.kind === kind
+          && (kind === "month" ? cell.month === value : kind === "day" ? cell.day === value : value === "")
+      ));
+
+      return template ? formulaCellFromTemplate(rowId, template) : null;
+    };
     const getFormulaCellValue = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
-      const row = rows.find((item) => item.id === cell.rowId);
+      const row = rowById.get(cell.rowId);
       if (!row) return undefined;
 
       if (cell.kind === "coefficient") return row.coefficient;
       if (cell.kind === "carryover") return ptoEffectiveCarryover(row, ptoPlanYear, rows);
-      if (cell.kind === "month" && cell.month) return ptoMonthTotal(row, cell.month);
+      if (cell.kind === "month" && cell.month) return rowDateTotalsById.get(row.id)?.monthTotals.get(cell.month)?.value;
       if (cell.kind === "day" && cell.day) return row.dailyPlans[cell.day];
       return undefined;
     };
 
+    const scrollFormulaCellIntoView = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
+      const scrollElement = ptoDateTableScrollRef.current;
+      const rowIndex = filteredRows.findIndex((row) => row.id === cell.rowId);
+      if (!scrollElement || rowIndex < 0) return;
+
+      const rowTop = ptoDateVirtualHeaderOffset + rowOffsetAt(rowIndex);
+      const rowBottom = rowTop + (filteredRowHeights[rowIndex] ?? ptoDateVirtualDefaultRowHeight);
+      const viewTop = scrollElement.scrollTop;
+      const viewBottom = viewTop + scrollElement.clientHeight;
+
+      if (rowTop < viewTop + 24) {
+        scrollElement.scrollTop = Math.max(0, rowTop - 24);
+      } else if (rowBottom > viewBottom - 24) {
+        scrollElement.scrollTop = Math.max(0, rowBottom - scrollElement.clientHeight + 48);
+      }
+
+      updatePtoDateViewportFromElement(scrollElement);
+    };
+
     const focusFormulaCell = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
+      const focusTarget = () => {
+        const target = document.querySelector<HTMLInputElement>(`[data-pto-cell-key="${formulaCellDomKey(cell)}"]`);
+        if (!target) return false;
+
+        target.focus();
+        return true;
+      };
+
       window.requestAnimationFrame(() => {
-        document.querySelector<HTMLInputElement>(`[data-pto-cell-key="${formulaCellDomKey(cell)}"]`)?.focus();
+        const focused = focusTarget();
+        if (focused) return;
+
+        scrollFormulaCellIntoView(cell);
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(focusTarget);
+        });
       });
     };
 
     const formulaRangeKeys = (anchor: PtoFormulaCell, target: PtoFormulaCell) => {
-      const anchorRowIndex = formulaCellRows.findIndex((row) => row.cells.some((cell) => formulaCellKey(cell) === formulaCellKey(anchor)));
-      const targetRowIndex = formulaCellRows.findIndex((row) => row.cells.some((cell) => formulaCellKey(cell) === formulaCellKey(target)));
-      if (anchorRowIndex < 0 || targetRowIndex < 0) return [formulaSelectionKey(target)];
+      const anchorRowIndex = formulaRowIndexById.get(anchor.rowId);
+      const targetRowIndex = formulaRowIndexById.get(target.rowId);
+      const anchorColumnIndex = formulaTemplateIndexByKey.get(formulaTemplateKey(anchor));
+      const targetColumnIndex = formulaTemplateIndexByKey.get(formulaTemplateKey(target));
 
-      const anchorColumnIndex = formulaCellRows[anchorRowIndex].cells.findIndex((cell) => formulaCellKey(cell) === formulaCellKey(anchor));
-      const targetColumnIndex = formulaCellRows[targetRowIndex].cells.findIndex((cell) => formulaCellKey(cell) === formulaCellKey(target));
-      if (anchorColumnIndex < 0 || targetColumnIndex < 0) return [formulaSelectionKey(target)];
+      if (
+        anchorRowIndex === undefined
+        || targetRowIndex === undefined
+        || anchorColumnIndex === undefined
+        || targetColumnIndex === undefined
+      ) {
+        return [formulaSelectionKey(target)];
+      }
 
       const rowStart = Math.min(anchorRowIndex, targetRowIndex);
       const rowEnd = Math.max(anchorRowIndex, targetRowIndex);
       const columnStart = Math.min(anchorColumnIndex, targetColumnIndex);
       const columnEnd = Math.max(anchorColumnIndex, targetColumnIndex);
+      const keys: string[] = [];
 
-      return formulaCellRows
-        .slice(rowStart, rowEnd + 1)
-        .flatMap((row) => row.cells.slice(columnStart, columnEnd + 1).map((cell) => formulaSelectionKey(cell)));
+      for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
+        const row = filteredRows[rowIndex];
+        if (!row) continue;
+
+        for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex += 1) {
+          const template = formulaCellTemplates[columnIndex];
+          if (template) keys.push(formulaSelectionKey(formulaCellFromTemplate(row.id, template)));
+        }
+      }
+
+      return keys.length ? keys : [formulaSelectionKey(target)];
     };
 
     const selectFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
@@ -3174,7 +4268,6 @@ export default function App() {
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(nextCell);
       setPtoSelectedCellKeys([formulaSelectionKey(nextCell)]);
-      requestPtoDatabaseSave();
     };
 
     const selectFormulaRange = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
@@ -3189,7 +4282,6 @@ export default function App() {
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(anchorCell);
       setPtoSelectedCellKeys(formulaRangeKeys(anchorCell, targetCell));
-      requestPtoDatabaseSave();
     };
 
     const toggleFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
@@ -3204,13 +4296,8 @@ export default function App() {
       setPtoSelectionAnchorCell(targetCell);
       setPtoSelectedCellKeys((currentKeys) => {
         const scopedKeys = currentKeys.filter((key) => key.startsWith(selectionScope));
-        const nextKeys = scopedKeys.includes(targetKey)
-          ? scopedKeys.filter((key) => key !== targetKey)
-          : [...scopedKeys, targetKey];
-
-        return nextKeys.length ? nextKeys : [targetKey];
+        return toggleEditableGridSelectionKey(scopedKeys, targetKey);
       });
-      requestPtoDatabaseSave();
     };
 
     const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
@@ -3278,9 +4365,9 @@ export default function App() {
       return false;
     };
 
-    const selectedFormulaCells = () => formulaCellRows
-      .flatMap((row) => row.cells)
-      .filter((formulaCell) => selectedFormulaCellKeys.has(formulaSelectionKey(formulaCell)));
+    const selectedFormulaCells = () => Array.from(selectedFormulaCellKeys)
+      .map((key) => formulaCellFromSelectionKey(key))
+      .filter((formulaCell): formulaCell is Omit<PtoFormulaCell, "table" | "year"> => formulaCell !== null);
 
     const clearSelectedFormulaCells = (fallbackCell: Omit<PtoFormulaCell, "table" | "year">) => {
       const cellsToClear = selectedFormulaCells();
@@ -3348,26 +4435,18 @@ export default function App() {
     };
 
     const moveFormulaSelection = (key: string) => {
-      if (!activeFormulaCell) return;
+      if (!activeFormulaCell || !isEditableGridArrowKey(key)) return;
 
-      const currentRowIndex = formulaCellRows.findIndex((row) => row.cells.some((cell) => formulaCellKey(cell) === formulaCellKey(activeFormulaCell)));
-      if (currentRowIndex < 0) return;
+      const offset = editableGridArrowOffset(key);
+      const currentRowIndex = formulaRowIndexById.get(activeFormulaCell.rowId);
+      const currentColumnIndex = formulaTemplateIndexByKey.get(formulaTemplateKey(activeFormulaCell));
+      if (currentRowIndex === undefined || currentColumnIndex === undefined || formulaCellTemplates.length === 0) return;
 
-      const currentCells = formulaCellRows[currentRowIndex].cells;
-      const currentColumnIndex = currentCells.findIndex((cell) => formulaCellKey(cell) === formulaCellKey(activeFormulaCell));
-      if (currentColumnIndex < 0) return;
-
-      let nextCell: Omit<PtoFormulaCell, "table" | "year"> | undefined;
-      if (key === "ArrowLeft") nextCell = currentCells[Math.max(currentColumnIndex - 1, 0)];
-      if (key === "ArrowRight") nextCell = currentCells[Math.min(currentColumnIndex + 1, currentCells.length - 1)];
-      if (key === "ArrowUp") {
-        const nextRow = formulaCellRows[Math.max(currentRowIndex - 1, 0)];
-        nextCell = nextRow?.cells[Math.min(currentColumnIndex, nextRow.cells.length - 1)];
-      }
-      if (key === "ArrowDown") {
-        const nextRow = formulaCellRows[Math.min(currentRowIndex + 1, formulaCellRows.length - 1)];
-        nextCell = nextRow?.cells[Math.min(currentColumnIndex, nextRow.cells.length - 1)];
-      }
+      const nextRowIndex = Math.min(filteredRows.length - 1, Math.max(0, currentRowIndex + offset.rowOffset));
+      const nextColumnIndex = Math.min(formulaCellTemplates.length - 1, Math.max(0, currentColumnIndex + offset.columnOffset));
+      const nextRow = filteredRows[nextRowIndex];
+      const nextTemplate = formulaCellTemplates[nextColumnIndex];
+      const nextCell = nextRow && nextTemplate ? formulaCellFromTemplate(nextRow.id, nextTemplate) : null;
 
       if (!nextCell) return;
       selectFormulaCell(nextCell, getFormulaCellValue(nextCell));
@@ -3376,7 +4455,7 @@ export default function App() {
 
     const handleFormulaCellKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
       if (isEditing) {
-        if (arrowKeys.includes(event.key)) {
+        if (isEditableGridArrowKey(event.key)) {
           event.preventDefault();
           if (!activeInlineEditCell) return;
 
@@ -3394,7 +4473,7 @@ export default function App() {
         return;
       }
 
-      if (arrowKeys.includes(event.key)) {
+      if (isEditableGridArrowKey(event.key)) {
         event.preventDefault();
         moveFormulaSelection(event.key);
         return;
@@ -3547,31 +4626,52 @@ export default function App() {
       <div style={ptoDateTableLayoutStyle}>
         <div style={ptoToolbarStyle}>
           <div style={ptoToolbarBlockStyle}>
-            <span style={fieldLabelStyle}>Участки</span>
+            <span style={ptoToolbarLabelStyle}>Участки</span>
             <div style={ptoToolbarRowStyle}>
               {ptoAreaTabs.map((area) => (
-                <TopButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
+                <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
               ))}
             </div>
           </div>
 
+          {(["plan", "oper", "survey"] as string[]).includes(ptoTab) ? (
+            <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
+              <span style={ptoToolbarLabelStyle}>Excel</span>
+              <div style={ptoToolbarRowStyle}>
+                <PtoToolbarIconButton label={`Скачать ${currentPtoDateExcelMeta().label} в Excel`} onClick={exportPtoDateTableToExcel}>
+                  <Download size={14} aria-hidden />
+                </PtoToolbarIconButton>
+                <PtoToolbarIconButton label={`Загрузить ${currentPtoDateExcelMeta().label} из Excel`} onClick={openPtoDateImportFilePicker}>
+                  <Upload size={14} aria-hidden />
+                </PtoToolbarIconButton>
+              </div>
+              <input
+                ref={ptoPlanImportInputRef}
+                accept=".xlsx,.csv"
+                onChange={importPtoDateTableFromExcel}
+                style={{ display: "none" }}
+                type="file"
+              />
+            </div>
+          ) : null}
+
           <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
-            <span style={fieldLabelStyle}>Годы</span>
+            <span style={ptoToolbarLabelStyle}>Годы</span>
             <div style={ptoToolbarRowStyle}>
-              <IconButton label="Удалить выбранный год" onClick={deletePtoYear}>
+              <PtoToolbarIconButton label="Удалить выбранный год" onClick={deletePtoYear}>
                 <span aria-hidden>−</span>
-              </IconButton>
+              </PtoToolbarIconButton>
               {ptoYearTabs.map((year) => (
-                <TopButton key={year} active={ptoPlanYear === year} onClick={() => {
+                <PtoToolbarButton key={year} active={ptoPlanYear === year} onClick={() => {
                   selectPtoPlanYear(year);
                 }} label={year} />
               ))}
-              <IconButton label="Добавить год" onClick={() => {
+              <PtoToolbarIconButton label="Добавить год" onClick={() => {
                 setPtoYearInput("");
                 setPtoYearDialogOpen(true);
               }}>
                 <span aria-hidden>+</span>
-              </IconButton>
+              </PtoToolbarIconButton>
             </div>
             {ptoYearDialogOpen ? (
               <form
@@ -3581,7 +4681,8 @@ export default function App() {
                 }}
                 style={ptoYearDialogStyle}
               >
-                <Field label="Новый год">
+                <label style={{ display: "grid", gap: 3 }}>
+                  <span style={ptoToolbarLabelStyle}>Новый год</span>
                   <input
                     autoFocus
                     type="number"
@@ -3589,11 +4690,11 @@ export default function App() {
                     max="2100"
                     value={ptoYearInput}
                     onChange={(event) => setPtoYearInput(event.target.value)}
-                    style={{ ...inputStyle, width: 120, padding: "7px 10px", borderRadius: 8 }}
+                    style={{ ...inputStyle, width: 96, padding: "5px 8px", borderRadius: 8, fontSize: 12 }}
                   />
-                </Field>
-                <TopButton active onClick={addPtoYear} label="ОК" />
-                <TopButton active={false} onClick={() => {
+                </label>
+                <PtoToolbarButton active onClick={addPtoYear} label="ОК" />
+                <PtoToolbarButton active={false} onClick={() => {
                   setPtoYearDialogOpen(false);
                   setPtoYearInput("");
                 }} label="Отмена" />
@@ -3618,7 +4719,7 @@ export default function App() {
           />
         </div>
 
-        <div style={ptoDateTableScrollStyle}>
+        <div ref={ptoDateTableScrollRef} onScroll={handlePtoDateTableScroll} style={ptoDateTableScrollStyle}>
           <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth, marginRight: 40 }}>
             <colgroup>
               {tableColumns.map((column) => (
@@ -3653,17 +4754,22 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row, rowIndex) => {
+              {topSpacerHeight > 0 ? (
+                <tr aria-hidden>
+                  <td colSpan={tableSpacerColSpan} style={{ height: topSpacerHeight, padding: 0, border: "none", background: "transparent" }} />
+                </tr>
+              ) : null}
+              {renderedRows.map((row, renderedRowIndex) => {
+                const rowIndex = virtualStartIndex + renderedRowIndex;
                 const rowAreaFilter = cleanAreaName(row.area) || "Все участки";
+                const rowAreaKey = rowAreaFilter === "Все участки" ? ptoDateOptionMaps.allAreasKey : normalizeLookupValue(rowAreaFilter);
+                const rowLocationKey = normalizeLookupValue(row.location);
                 const locationOptions = showLocation
-                  ? uniqueSorted(allPtoDateRows
-                    .filter((item) => ptoAreaMatches(item.area, rowAreaFilter))
-                    .map((item) => item.location))
+                  ? ptoDateOptionMaps.locationsByArea.get(rowAreaKey) ?? []
                   : [];
-                const structureOptions = uniqueSorted(allPtoDateRows
-                  .filter((item) => ptoAreaMatches(item.area, rowAreaFilter))
-                  .filter((item) => !showLocation || !row.location || normalizeLookupValue(item.location) === normalizeLookupValue(row.location))
-                  .map((item) => item.structure));
+                const structureOptions = showLocation && rowLocationKey
+                  ? ptoDateOptionMaps.structuresByAreaLocation.get(`${rowAreaKey}:${rowLocationKey}`) ?? []
+                  : ptoDateOptionMaps.structuresByArea.get(rowAreaKey) ?? [];
                 const locationListId = `pto-location-${row.id}`;
                 const structureListId = `pto-structure-${row.id}`;
                 const isDropTarget = ptoDropTarget?.rowId === row.id;
@@ -3683,12 +4789,11 @@ export default function App() {
                 const carryoverCellEditing = formulaCellEditing(row.id, "carryover");
                 const rowStatus = ptoAutomatedStatus(row, reportDate);
                 const effectiveCarryover = ptoEffectiveCarryover(row, ptoPlanYear, rows);
-                const coefficientCell = formulaCellRows
-                  .find((item) => item.row.id === row.id)
-                  ?.cells.find((cell) => cell.kind === "coefficient") ?? { rowId: row.id, kind: "coefficient" as const, label: "Коэфф." };
-                const carryoverCell = formulaCellRows
-                  .find((item) => item.row.id === row.id)
-                  ?.cells.find((cell) => cell.kind === "carryover") ?? { rowId: row.id, kind: "carryover" as const, label: carryoverHeader };
+                const rowDateTotals = rowDateTotalsById.get(row.id);
+                const rowYearTotalWithCarryover = Math.round(((rowDateTotals?.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
+                const rowFormulaCells = formulaCellsByRowId.get(row.id) ?? [];
+                const coefficientCell = rowFormulaCells.find((cell) => cell.kind === "coefficient") ?? { rowId: row.id, kind: "coefficient" as const, label: "Коэфф." };
+                const carryoverCell = rowFormulaCells.find((cell) => cell.kind === "carryover") ?? { rowId: row.id, kind: "carryover" as const, label: carryoverHeader };
                 const rowHeightKey = `${ptoTab}:${row.id}`;
                 const rowHeight = ptoRowHeights[rowHeightKey];
 
@@ -3880,11 +4985,11 @@ export default function App() {
                       />
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
-                      <div style={{ fontWeight: 800, textAlign: "center" }} title={formatPtoFormulaNumber(ptoYearTotalWithCarryover(row, ptoPlanYear, rows))}>{formatPtoCellNumber(ptoYearTotalWithCarryover(row, ptoPlanYear, rows))}</div>
+                      <div style={{ fontWeight: 800, textAlign: "center" }} title={formatPtoFormulaNumber(rowYearTotalWithCarryover)}>{formatPtoCellNumber(rowYearTotalWithCarryover)}</div>
                     </PtoPlanTd>
                     {ptoMonthGroups.map((group) => {
-                      const monthHasValue = group.days.some((day) => row.dailyPlans[day] !== undefined);
-                      const monthValue = monthHasValue ? ptoMonthTotal(row, group.month) : undefined;
+                      const monthTotal = rowDateTotals?.monthTotals.get(group.month);
+                      const monthValue = monthTotal?.hasValue ? monthTotal.value : undefined;
                       const monthCellActive = formulaCellActive(row.id, "month", group.month);
                       const monthCellSelected = formulaCellSelected(row.id, "month", group.month);
                       const monthCellEditing = formulaCellEditing(row.id, "month", group.month);
@@ -4001,6 +5106,11 @@ export default function App() {
                   </tr>
                 );
               })}
+              {bottomSpacerHeight > 0 ? (
+                <tr aria-hidden>
+                  <td colSpan={tableSpacerColSpan} style={{ height: bottomSpacerHeight, padding: 0, border: "none", background: "transparent" }} />
+                </tr>
+              ) : null}
               <tr style={ptoDraftRowStyle}>
                 <PtoPlanTd>
                   <div style={ptoAreaCellStyle}>
@@ -4061,240 +5171,570 @@ export default function App() {
     );
   }
 
+  function renderReportHeaderText(key: string, fallback: string) {
+    const isEditing = editingReportHeaderKey === key;
+
+    if (isEditing) {
+      return (
+        <input
+          autoFocus
+          value={reportHeaderDraft}
+          onChange={(event) => setReportHeaderDraft(event.target.value)}
+          onBlur={(event) => {
+            if (event.currentTarget.dataset.cancelReportHeaderEdit === "true") return;
+            commitReportHeaderEdit(key, fallback);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commitReportHeaderEdit(key, fallback);
+            }
+
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.currentTarget.dataset.cancelReportHeaderEdit = "true";
+              cancelReportHeaderEdit();
+            }
+          }}
+          onClick={(event) => event.stopPropagation()}
+          style={reportHeaderInputStyle}
+        />
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          startReportHeaderEdit(key, fallback);
+        }}
+        style={reportHeaderLabelButtonStyle}
+        title="Двойной клик — переименовать заголовок"
+      >
+        {reportHeaderLabel(key, fallback)}
+      </button>
+    );
+  }
+
+  const printReport = useCallback(() => {
+    window.print();
+  }, []);
+
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
+      <style>{reportPrintCss}</style>
       <div style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
         <div style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
           <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ width: 130, flex: "0 0 130px" }}>
               <Image src="/mining-logo.png" alt="Логотип" width={112} height={72} style={logoImageStyle} priority />
             </div>
-            <div style={{ ...headerNavStackStyle, ...(topTab === "pto" ? headerNavStackPtoStyle : null) }}>
+            <div ref={headerNavRef} style={{ ...headerNavStackStyle, ...(headerHasSubtabs ? headerNavStackPtoStyle : null) }}>
               <div style={headerMainTabsStyle}>
-                {topTabs.filter((tab) => tab.visible).map((tab) => (
-                  tab.id === "pto" && topTab === "pto" ? (
-                    <div key={tab.id} style={headerActiveTabWithSubtabsStyle}>
-                      <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                      <div style={headerSubtabsStyle}>
-                        {subTabs.pto.filter((subTab) => subTab.visible).map((subTab) => (
-                          <HeaderSubButton
-                            key={subTab.id}
-                            active={ptoTab === subTab.value}
-                            onClick={() => selectPtoTab(subTab.value)}
-                            label={compactSubTabLabel("pto", subTab)}
-                          />
-                        ))}
+                {topTabs.filter((tab) => tab.visible).map((tab) => {
+                  if (tab.id === "reports" && topTab === "reports") {
+                    return (
+                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
+                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
                       </div>
-                    </div>
-                  ) : (
+                    );
+                  }
+
+                  if (tab.id === "dispatch" && topTab === "dispatch") {
+                    return (
+                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
+                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                      </div>
+                    );
+                  }
+
+                  if (tab.id === "pto" && topTab === "pto") {
+                    return (
+                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
+                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                      </div>
+                    );
+                  }
+
+                  if (tab.id === "admin" && topTab === "admin") {
+                    return (
+                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
+                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
+                      </div>
+                    );
+                  }
+
+                  return (
                     <TopButton key={tab.id} active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                  )
-                ))}
+                  );
+                })}
                 {customTabs.filter((tab) => tab.visible !== false).map((tab) => (
-                  <TopButton key={tab.id} active={topTab === customTabKey(tab.id)} onClick={() => selectTopTab(customTabKey(tab.id))} label={tab.title} />
+                  <TopButton
+                    key={tab.id}
+                    active={topTab === customTabKey(tab.id)}
+                    onClick={() => selectTopTab(customTabKey(tab.id))}
+                    label={tab.title}
+                    showDelete={topTab === customTabKey(tab.id)}
+                    deleteLabel={`Удалить вкладку ${tab.title}`}
+                    onDelete={() => deleteCustomTab(tab.id)}
+                  />
                 ))}
               </div>
+              {headerHasSubtabs && (
+                <div ref={headerSubtabsRef} style={{ ...headerSubtabsStyle, marginLeft: headerSubtabsOffset }}>
+                  {topTab === "reports" && reportCustomers.filter((customer) => customer.visible).map((customer) => (
+                    <HeaderSubButton
+                      key={customer.id}
+                      active={reportCustomerId === customer.id}
+                      onClick={() => setReportCustomerId(customer.id)}
+                      label={customer.label}
+                    />
+                  ))}
+                  {topTab === "dispatch" && subTabs.dispatch.filter((subTab) => subTab.visible).map((subTab) => (
+                    <HeaderSubButton
+                      key={subTab.id}
+                      active={dispatchTab === subTab.value}
+                      onClick={() => setDispatchTab(subTab.value)}
+                      label={compactSubTabLabel("dispatch", subTab)}
+                    />
+                  ))}
+                  {topTab === "pto" && subTabs.pto.filter((subTab) => subTab.visible).map((subTab) => (
+                    <HeaderSubButton
+                      key={subTab.id}
+                      active={ptoTab === subTab.value}
+                      onClick={() => selectPtoTab(subTab.value)}
+                      label={compactSubTabLabel("pto", subTab)}
+                    />
+                  ))}
+                  {topTab === "admin" && adminSectionTabs.map((section) => (
+                    <HeaderSubButton
+                      key={section.value}
+                      active={adminSection === section.value}
+                      onClick={() => setAdminSection(section.value)}
+                      label={section.label}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
             <div style={workDateStyle}>
               <Field label="Рабочая дата">
-                <input type="date" value={reportDate} min={reportMonthStart} max={reportMonthEnd} onChange={(e) => selectReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
+                <input type="date" value={reportDate} onChange={(e) => selectReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
               </Field>
             </div>
           </div>
         </div>
 
-        {topTab === "reports" && (
+        {renderedTopTab === "reports" && (
           <>
-            <SubTabs>
-              {subTabs.reports.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={reportArea === tab.value} onClick={() => setReportArea(tab.value)} label={compactSubTabLabel("reports", tab)} />
-              ))}
-            </SubTabs>
-
-            <SectionCard title="">
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", flexWrap: "wrap", marginBottom: 14 }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>Отчёт ТОО &quot;АА Mining&quot; по планово-фактическим показателям</div>
-                  <div style={{ color: "#64748b", marginTop: 4 }}>за {formatReportDate(reportDate)}</div>
-                </div>
-              </div>
-
-              <div style={reportGaugeGridStyle}>
-                {reportCompletionCards.map((card) => (
-                  <ReportCompletionGauge
-                    key={card.title}
-                    fact={card.fact}
-                    lag={card.lag}
-                    monthPlan={card.monthPlan}
-                    overPlanPerDay={card.overPlanPerDay}
-                    percent={card.percent}
-                    plan={card.plan}
-                    remainingDays={card.remainingDays}
-                    title={card.title}
+            <div style={reportAreaTabsToolbarStyle}>
+              <div style={reportAreaTabsListStyle}>
+                {reportAreaTabs.map((area) => (
+                  <TopButton
+                    key={area}
+                    active={reportArea !== "Все участки" && reportArea === area}
+                    onClick={() => setReportArea(area)}
+                    label={area}
                   />
                 ))}
               </div>
+              <IconButton label="Печать отчетности: A3, альбомная ориентация" onClick={printReport}>
+                <Printer size={16} aria-hidden />
+              </IconButton>
+            </div>
 
-              <div style={{ overflowX: "auto" }}>
-                <table style={reportTableStyle}>
-                  <thead>
-                    <tr>
-                      <ReportTh rowSpan={2}>Участок</ReportTh>
-                      <ReportTh rowSpan={2}>Вид работ</ReportTh>
-                      <ReportTh rowSpan={2}>Ед.</ReportTh>
-                      <ReportTh colSpan={5}>Текущая дата</ReportTh>
-                      <ReportTh colSpan={5}>С начала месяца</ReportTh>
-                      <ReportTh colSpan={4}>С начала года</ReportTh>
-                      <ReportTh colSpan={3}>Годовой план</ReportTh>
-                    </tr>
-                    <tr>
-                      <ReportTh>План суточный</ReportTh>
-                      <ReportTh>Оперучет</ReportTh>
-                      <ReportTh>Откл.</ReportTh>
-                      <ReportTh>Произв. техники</ReportTh>
-                      <ReportTh>Причина за сутки</ReportTh>
-                      <ReportTh>План на месяц</ReportTh>
-                      <ReportTh>План с начала месяца</ReportTh>
-                      <ReportTh>Маркзамер + оперучет</ReportTh>
-                      <ReportTh>Откл.</ReportTh>
-                      <ReportTh>Произв. накоп.</ReportTh>
-                      <ReportTh>План с начала года</ReportTh>
-                      <ReportTh>Маркзамер + недостающий оперучет</ReportTh>
-                      <ReportTh>Откл.</ReportTh>
-                      <ReportTh>Причины с накоплением</ReportTh>
-                      <ReportTh>Годовой план</ReportTh>
-                      <ReportTh>Факт годового плана</ReportTh>
-                      <ReportTh>Остаток</ReportTh>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredReports.map((row) => {
-                      const monthFact = reportMonthFact(row);
-                      const yearFact = reportYearFact(row);
-                      const annualFact = reportAnnualFact(row);
-                      const dayDelta = delta(row.dayPlan, row.dayFact);
-                      const monthDelta = delta(row.monthPlan, monthFact);
-                      const yearDelta = delta(row.yearPlan, yearFact);
-                      const annualRemaining = delta(row.annualPlan, annualFact);
+            <div className="report-print-area" style={reportWorkspaceStyle}>
+              <SectionCard title="" fill>
+                <div className="report-print-panel" style={reportPanelStyle}>
+                  <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                    <div style={{ width: "100%" }}>
+                      <div className="report-print-title" style={reportTitleStyle}>Отчёт {activeReportCustomer.label} по планово-фактическим показателям за {formatReportTitleDate(reportDate)}</div>
+                    </div>
+                  </div>
 
-                      return (
-                        <tr key={`${row.area}-${row.name}`}>
-                          <ReportTd strong>{row.area}</ReportTd>
-                          <ReportTd strong>{row.name}</ReportTd>
-                          <ReportTd>{row.unit}</ReportTd>
-                          <ReportTd align="right">{formatNumber(row.dayPlan)}</ReportTd>
-                          <ReportTd align="right">{formatNumber(row.dayFact)}</ReportTd>
-                          <ReportTd align="right" tone={dayDelta < 0 ? "bad" : "good"}>{formatNumber(dayDelta)}</ReportTd>
-                          <ReportTd align="right">
-                            <ReportMetric value={formatNumber(row.dayProductivity || row.dayFact)} note={formatPercent(row.dayFact, row.dayPlan)} />
-                          </ReportTd>
-                          <ReportTd>{reportReason(row.dayFact, row.dayPlan, row.dayReason)}</ReportTd>
-                          <ReportTd align="right">{formatNumber(row.monthTotalPlan)}</ReportTd>
-                          <ReportTd align="right">{formatNumber(row.monthPlan)}</ReportTd>
-                          <ReportTd align="right">
-                            <ReportMetric value={formatNumber(monthFact)} note={`марк ${formatNumber(row.monthSurveyFact)} + опер ${formatNumber(row.monthOperFact)}`} />
-                          </ReportTd>
-                          <ReportTd align="right" tone={monthDelta < 0 ? "bad" : "good"}>{formatNumber(monthDelta)}</ReportTd>
-                          <ReportTd align="right">
-                            <ReportMetric value={formatNumber(row.monthProductivity || monthFact)} note={formatPercent(monthFact, row.monthPlan)} />
-                          </ReportTd>
-                          <ReportTd align="right">{formatNumber(row.yearPlan)}</ReportTd>
-                          <ReportTd align="right">
-                            <ReportMetric value={formatNumber(yearFact)} note={`марк ${formatNumber(row.yearSurveyFact)} + опер ${formatNumber(row.yearOperFact)}`} />
-                          </ReportTd>
-                          <ReportTd align="right" tone={yearDelta < 0 ? "bad" : "good"}>{formatNumber(yearDelta)}</ReportTd>
-                          <ReportTd>{reportReason(yearFact, row.yearPlan, row.yearReason)}</ReportTd>
-                          <ReportTd align="right">{formatNumber(row.annualPlan)}</ReportTd>
-                          <ReportTd align="right">{formatNumber(annualFact)}</ReportTd>
-                          <ReportTd align="right" tone={annualRemaining < 0 ? "bad" : "good"}>{formatNumber(annualRemaining)}</ReportTd>
+                  <div style={reportGaugeGridStyle}>
+                    {reportCompletionCards.map((card) => (
+                      <ReportCompletionGauge
+                        key={card.title}
+                        fact={card.fact}
+                        lag={card.lag}
+                        monthPlan={card.monthPlan}
+                        overPlanPerDay={card.overPlanPerDay}
+                        percent={card.percent}
+                        plan={card.plan}
+                        remainingDays={card.remainingDays}
+                        title={card.title}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="report-print-table-scroll" style={reportTableScrollStyle}>
+                    <table className="report-print-table" style={{ ...reportTableStyle, minWidth: reportTableMinWidth }}>
+                      <colgroup>
+                        {reportColumnKeys.map((key, index) => (
+                          <col key={key} style={{ width: reportTableColumnWidths[index] }} />
+                        ))}
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <ReportTh rowSpan={2} columnKey="area" width={reportColumnWidthByKey.get("area")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("area", "Участок")}</ReportTh>
+                          <ReportTh rowSpan={2} columnKey="work-name" width={reportColumnWidthByKey.get("work-name")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("work-name", "Вид работ")}</ReportTh>
+                          <ReportTh rowSpan={2} columnKey="unit" width={reportColumnWidthByKey.get("unit")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("unit", "Ед.")}</ReportTh>
+                          <ReportTh colSpan={5}>{renderReportHeaderText("day-group", "Текущая дата")}</ReportTh>
+                          <ReportTh colSpan={5}>{renderReportHeaderText("month-group", "С начала месяца")}</ReportTh>
+                          <ReportTh colSpan={4}>{renderReportHeaderText("year-group", "С начала года")}</ReportTh>
+                          <ReportTh colSpan={3}>{renderReportHeaderText("annual-group", "Годовой план")}</ReportTh>
                         </tr>
-                      );
-                    })}
-                    {filteredReports.length === 0 && (
-                      <tr>
-                        <ReportTd colSpan={20}>По выбранному участку пока нет данных.</ReportTd>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
+                        <tr>
+                          <ReportTh columnKey="day-plan" width={reportColumnWidthByKey.get("day-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-plan", "План суточный")}</ReportTh>
+                          <ReportTh columnKey="day-fact" width={reportColumnWidthByKey.get("day-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-fact", "Оперучет")}</ReportTh>
+                          <ReportTh columnKey="day-delta" width={reportColumnWidthByKey.get("day-delta")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-delta", "Откл.")}</ReportTh>
+                          <ReportTh columnKey="day-productivity" width={reportColumnWidthByKey.get("day-productivity")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-productivity", "Произв. техники")}</ReportTh>
+                          <ReportTh columnKey="day-reason" width={reportColumnWidthByKey.get("day-reason")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("day-reason", "Причина за сутки")}</ReportTh>
+                          <ReportTh columnKey="month-total-plan" width={reportColumnWidthByKey.get("month-total-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-total-plan", "План на месяц")}</ReportTh>
+                          <ReportTh columnKey="month-plan" width={reportColumnWidthByKey.get("month-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-plan", "План с начала месяца")}</ReportTh>
+                          <ReportTh columnKey="month-fact" width={reportColumnWidthByKey.get("month-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-fact", "Маркзамер + оперучет")}</ReportTh>
+                          <ReportTh columnKey="month-delta" width={reportColumnWidthByKey.get("month-delta")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-delta", "Откл.")}</ReportTh>
+                          <ReportTh columnKey="month-productivity" width={reportColumnWidthByKey.get("month-productivity")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("month-productivity", "Произв. накоп.")}</ReportTh>
+                          <ReportTh columnKey="year-plan" width={reportColumnWidthByKey.get("year-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-plan", "План с начала года")}</ReportTh>
+                          <ReportTh columnKey="year-fact" width={reportColumnWidthByKey.get("year-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-fact", "Маркзамер + недостающий оперучет")}</ReportTh>
+                          <ReportTh columnKey="year-delta" width={reportColumnWidthByKey.get("year-delta")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-delta", "Откл.")}</ReportTh>
+                          <ReportTh columnKey="year-reason" width={reportColumnWidthByKey.get("year-reason")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("year-reason", "Причины с накоплением")}</ReportTh>
+                          <ReportTh columnKey="annual-plan" width={reportColumnWidthByKey.get("annual-plan")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("annual-plan", "Годовой план")}</ReportTh>
+                          <ReportTh columnKey="annual-fact" width={reportColumnWidthByKey.get("annual-fact")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("annual-fact", "Факт годового плана")}</ReportTh>
+                          <ReportTh columnKey="annual-remaining" width={reportColumnWidthByKey.get("annual-remaining")} onResizeStart={startReportColumnResize}>{renderReportHeaderText("annual-remaining", "Остаток")}</ReportTh>
+                        </tr>
+                      </thead>
+                      {filteredReportAreaGroups.map((group) => (
+                        <tbody key={group.area} className="report-print-area-group">
+                          {group.rows.map((row, index) => {
+                          const monthFact = reportMonthFact(row);
+                          const yearFact = reportYearFact(row);
+                          const annualFact = reportAnnualFact(row);
+                          const dayDelta = delta(row.dayPlan, row.dayFact);
+                          const monthDelta = delta(row.monthPlan, monthFact);
+                          const yearDelta = delta(row.yearPlan, yearFact);
+                          const annualRemaining = delta(row.annualPlan, annualFact);
+                          const rowKey = reportRowDisplayKey(row);
+                          const dayReasonKey = reportReasonEntryKey(reportDate, rowKey);
+                          const dayReasonText = dayDelta < 0 ? (reportReasons[dayReasonKey] ?? row.dayReason) : "";
+                          const yearReasonText = yearDelta < 0 ? row.yearReason : "";
+                          const showAreaCell = index === 0;
+
+                          return (
+                            <tr
+                              key={rowKey}
+                              style={showAreaCell ? reportAreaGroupStartRowStyle : undefined}
+                            >
+                              {showAreaCell ? (
+                                <ReportTd rowSpan={group.rows.length} strong align="center" variant="area">{row.area}</ReportTd>
+                              ) : null}
+                              <ReportTd strong variant="work">
+                                {formatReportWorkName(row.name)}
+                              </ReportTd>
+                              <ReportTd>{row.unit}</ReportTd>
+                              <ReportTd align="center">{formatNumber(row.dayPlan)}</ReportTd>
+                              <ReportTd align="center">{formatNumber(row.dayFact)}</ReportTd>
+                              <ReportTd align="center" tone={dayDelta < 0 ? "bad" : "good"}>{formatNumber(dayDelta)}</ReportTd>
+                              <ReportTd align="center">
+                                <ReportMetric value={formatNumber(row.dayProductivity || row.dayFact)} note={formatPercent(row.dayFact, row.dayPlan)} />
+                              </ReportTd>
+                              <ReportTd align="center" tone={dayDelta < 0 ? "warn" : undefined}>
+                                {dayDelta < 0 ? (
+                                  <ReportReasonTextarea
+                                    value={dayReasonText}
+                                    placeholder="Введите причину"
+                                    onCommit={(value) => commitReportDayReason(rowKey, value)}
+                                    onDraftChange={(value) => updateReportDayReasonDraft(rowKey, value)}
+                                  />
+                                ) : null}
+                              </ReportTd>
+                              <ReportTd align="center">{formatNumber(row.monthTotalPlan)}</ReportTd>
+                              <ReportTd align="center">{formatNumber(row.monthPlan)}</ReportTd>
+                              <ReportTd align="center">
+                                <ReportMetric value={formatNumber(monthFact)} note={`марк ${formatNumber(row.monthSurveyFact)} + опер ${formatNumber(row.monthOperFact)}`} />
+                              </ReportTd>
+                              <ReportTd align="center" tone={monthDelta < 0 ? "bad" : "good"}>{formatNumber(monthDelta)}</ReportTd>
+                              <ReportTd align="center">
+                                <ReportMetric value={formatNumber(row.monthProductivity || monthFact)} note={formatPercent(monthFact, row.monthPlan)} />
+                              </ReportTd>
+                              <ReportTd align="center">{formatNumber(row.yearPlan)}</ReportTd>
+                              <ReportTd align="center">
+                                <ReportMetric value={formatNumber(yearFact)} note={`марк ${formatNumber(row.yearSurveyFact)} + опер ${formatNumber(row.yearOperFact)}`} />
+                              </ReportTd>
+                              <ReportTd align="center" tone={yearDelta < 0 ? "bad" : "good"}>{formatNumber(yearDelta)}</ReportTd>
+                              <ReportTd align="center" tone={yearDelta < 0 ? "warn" : undefined}>
+                                {yearDelta < 0 ? (
+                                  <ReportReasonTextarea
+                                    value={yearReasonText}
+                                    placeholder="Введите причину"
+                                    onCommit={(value) => commitReportYearReason(rowKey, value)}
+                                  />
+                                ) : null}
+                              </ReportTd>
+                              <ReportTd align="center">{formatNumber(row.annualPlan)}</ReportTd>
+                              <ReportTd align="center">{formatNumber(annualFact)}</ReportTd>
+                              <ReportTd align="center" tone={annualRemaining < 0 ? "bad" : "good"}>{formatNumber(annualRemaining)}</ReportTd>
+                            </tr>
+                          );
+                          })}
+                        </tbody>
+                      ))}
+                      <tbody>
+                        {filteredReports.length === 0 && (
+                          <tr>
+                            <ReportTd colSpan={20}>По выбранному заказчику пока нет настроенных строк.</ReportTd>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </SectionCard>
+            </div>
           </>
         )}
 
-        {topTab === "dispatch" && (
+        {renderedTopTab === "dispatch" && (
           <>
-            <SubTabs>
-              {subTabs.dispatch.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={dispatchTab === tab.value} onClick={() => setDispatchTab(tab.value)} label={compactSubTabLabel("dispatch", tab)} />
-              ))}
-            </SubTabs>
-
             <SectionCard title={activeDispatchSubtab?.label ?? "Диспетчерская сводка"}>
               {dispatchTab.startsWith("custom:") ? (
                 <div style={blockStyle}>{activeDispatchSubtab?.content || "В этой подвкладке пока нет информации."}</div>
               ) : (
                 <>
-                  <div style={{ color: "#64748b", marginBottom: 12 }}>Дата сводки: {formatReportDate(reportDate)}</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 12, marginBottom: 16 }}>
-                    <Field label="Поиск">
-                      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Техника, участок, местонахождение..." style={inputStyle} />
-                    </Field>
-                    <Field label="Участок">
-                      <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} style={inputStyle}>
-                        <option>Все участки</option>
-                        <option>Аксу</option>
-                        <option>Акбакай</option>
-                        <option>Жолымбет</option>
-                      </select>
-                    </Field>
+                  <div style={dispatchSummaryHeaderStyle}>
+                    <div>
+                      <div style={{ fontWeight: 800 }}>Заполнение сводки за {formatReportDate(reportDate)}</div>
+                      <div style={{ color: "#64748b", marginTop: 3 }}>
+                        {isDailyDispatchShift
+                          ? "Сутки формируются автоматически из ночной и дневной смены за выбранную дату."
+                          : `${dispatchShiftLabel(currentDispatchShift)}. Строки сохраняются локально и потом могут стать таблицей Supabase.`}
+                      </div>
+                    </div>
+                    <Pill bg={statusColor(dispatchSummaryTotals.percent)} color={statusTextColor(dispatchSummaryTotals.percent)}>
+                      {dispatchSummaryTotals.percent}%
+                    </Pill>
                   </div>
 
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1100, fontSize: 14 }}>
+                  <div style={dispatchSummaryStatsStyle}>
+                    <div style={dispatchSummaryStatCardStyle}>
+                      <span>План</span>
+                      <strong>{formatNumber(dispatchSummaryTotals.plan)}</strong>
+                    </div>
+                    <div style={dispatchSummaryStatCardStyle}>
+                      <span>Факт</span>
+                      <strong>{formatNumber(dispatchSummaryTotals.fact)}</strong>
+                    </div>
+                    <div style={dispatchSummaryStatCardStyle}>
+                      <span>Отклонение</span>
+                      <strong style={{ color: dispatchSummaryTotals.delta < 0 ? "#991b1b" : "#166534" }}>{formatNumber(dispatchSummaryTotals.delta)}</strong>
+                    </div>
+                    <div style={dispatchSummaryStatCardStyle}>
+                      <span>Работа / ремонт / простой</span>
+                      <strong>{formatPtoCellNumber(dispatchSummaryTotals.workHours)} / {formatPtoCellNumber(dispatchSummaryTotals.repairHours)} / {formatPtoCellNumber(dispatchSummaryTotals.downtimeHours)} ч.</strong>
+                    </div>
+                    <div style={dispatchSummaryStatCardStyle}>
+                      <span>Производительность</span>
+                      <strong>{formatPtoCellNumber(dispatchSummaryTotals.productivity)}</strong>
+                    </div>
+                  </div>
+
+                  <div style={isDailyDispatchShift ? dispatchSummaryToolbarDailyStyle : dispatchSummaryToolbarStyle}>
+                    <Field label="Поиск">
+                      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Техника, участок, вид работ, причина..." style={{ ...inputStyle, padding: "9px 10px" }} />
+                    </Field>
+                    <Field label="Участок">
+                      <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} style={{ ...inputStyle, padding: "9px 10px" }}>
+                        {dispatchAreaOptions.map((area) => (
+                          <option key={area}>{area}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    {isDailyDispatchShift ? (
+                      <div style={dispatchSummaryReadonlyNoteStyle}>
+                        Редактирование закрыто: заполняй вкладки Ночь и День, эта вкладка покажет их сумму.
+                      </div>
+                    ) : (
+                      <>
+                        <Field label="Техника">
+                          <select value={dispatchVehicleToAddId} onChange={(e) => setDispatchVehicleToAddId(e.target.value)} style={{ ...inputStyle, padding: "9px 10px" }}>
+                            <option value="">Пустая строка</option>
+                            {dispatchVehicleOptions.map((vehicle) => (
+                              <option key={vehicle.id} value={vehicle.id}>{buildVehicleDisplayName(vehicle)}</option>
+                            ))}
+                          </select>
+                        </Field>
+                        <button onClick={addSelectedDispatchVehicle} style={dispatchSummaryButtonStyle} type="button">
+                          <Plus size={14} aria-hidden />
+                          Добавить строку
+                        </button>
+                        <button onClick={addFilteredVehiclesToDispatchSummary} style={dispatchSummarySecondaryButtonStyle} type="button">
+                          Заполнить из техники
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div style={dispatchSuggestionStyle}>
+                    <strong>Черновик для ИИ:</strong> {dispatchAiSuggestion}
+                  </div>
+
+                  <div style={dispatchSummaryTableScrollStyle}>
+                    <table style={dispatchSummaryTableStyle}>
+                      <colgroup>
+                        <col style={{ width: 190 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 140 }} />
+                        <col style={{ width: 230 }} />
+                        <col style={{ width: 140 }} />
+                        <col style={{ width: 80 }} />
+                        <col style={{ width: 80 }} />
+                        <col style={{ width: 68 }} />
+                        <col style={{ width: 68 }} />
+                        <col style={{ width: 68 }} />
+                        <col style={{ width: 68 }} />
+                        <col style={{ width: 68 }} />
+                        <col style={{ width: 82 }} />
+                        <col style={{ width: 82 }} />
+                        <col style={{ width: 260 }} />
+                        <col style={{ width: 230 }} />
+                        <col style={{ width: 42 }} />
+                      </colgroup>
                       <thead>
-                        <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                          <Th>Техника</Th>
-                          <Th>Участок</Th>
-                          <Th>Местонахождение</Th>
-                          <Th>Вид работ</Th>
-                          <Th>Экскаватор</Th>
-                          <Th>Работа</Th>
-                          <Th>Аренда</Th>
-                          <Th>Ремонт</Th>
-                          <Th>Простой</Th>
-                          <Th>Рейсы</Th>
-                          <Th>Итого</Th>
-                          <Th>КТГ</Th>
+                        <tr>
+                          <th style={dispatchSummaryThStyle}>Техника</th>
+                          <th style={dispatchSummaryThStyle}>Участок</th>
+                          <th style={dispatchSummaryThStyle}>Местонахождение</th>
+                          <th style={dispatchSummaryThStyle}>Вид работ</th>
+                          <th style={dispatchSummaryThStyle}>Экскаватор</th>
+                          <th style={dispatchSummaryNumberThStyle}>План</th>
+                          <th style={dispatchSummaryNumberThStyle}>Факт</th>
+                          <th style={dispatchSummaryNumberThStyle}>Работа</th>
+                          <th style={dispatchSummaryNumberThStyle}>Аренда</th>
+                          <th style={dispatchSummaryNumberThStyle}>Ремонт</th>
+                          <th style={dispatchSummaryNumberThStyle}>Простой</th>
+                          <th style={dispatchSummaryNumberThStyle}>Рейсы</th>
+                          <th style={dispatchSummaryNumberThStyle}>Произв.</th>
+                          <th style={dispatchSummaryNumberThStyle}>Итого</th>
+                          <th style={dispatchSummaryThStyle}>Причина за сутки</th>
+                          <th style={dispatchSummaryThStyle}>Комментарий диспетчера</th>
+                          <th style={dispatchSummaryThStyle} />
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredDispatch.map((v) => (
-                          <tr key={v.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                            <Td strong>{buildVehicleDisplayName(v)}</Td>
-                            <Td>{v.area}</Td>
-                            <Td>{v.location}</Td>
-                            <Td>{v.workType}</Td>
-                            <Td>{v.excavator}</Td>
-                            <Td>{v.work}</Td>
-                            <Td>{v.rent}</Td>
-                            <Td>{v.repair}</Td>
-                            <Td>{v.downtime}</Td>
-                            <Td>{v.trips}</Td>
-                            <Td><Pill bg={totalHours(v) === 11 ? "#dcfce7" : "#fee2e2"} color={totalHours(v) === 11 ? "#166534" : "#991b1b"}>{totalHours(v)} / 11</Pill></Td>
-                            <Td><Pill bg={statusColor(ktg(v))} color={statusTextColor(ktg(v))}>{ktg(v)}%</Pill></Td>
+                        {filteredDispatchSummaryRows.map((row) => {
+                          const totalRowHours = row.workHours + row.rentHours + row.repairHours + row.downtimeHours;
+                          const rowProductivity = dispatchProductivity(row);
+                          const rowDelta = row.factVolume - row.planVolume;
+
+                          return (
+                            <tr key={row.id} style={rowDelta < 0 ? dispatchSummaryBadRowStyle : undefined}>
+                              <td style={dispatchSummaryTdStyle}>
+                                <select disabled={isDailyDispatchShift} value={row.vehicleId ?? ""} onChange={(e) => updateDispatchSummaryVehicle(row.id, e.target.value)} style={dispatchSummaryInputStyle}>
+                                  <option value="">Вручную</option>
+                                  {dispatchVehicleOptions.map((vehicle) => (
+                                    <option key={vehicle.id} value={vehicle.id}>{buildVehicleDisplayName(vehicle)}</option>
+                                  ))}
+                                </select>
+                                {!row.vehicleId ? (
+                                  <input readOnly={isDailyDispatchShift} value={row.vehicleName} onChange={(e) => updateDispatchSummaryText(row.id, "vehicleName", e.target.value)} placeholder="Название техники" style={{ ...dispatchSummaryInputStyle, marginTop: 4 }} />
+                                ) : null}
+                              </td>
+                              <td style={dispatchSummaryTdStyle}>
+                                <input readOnly={isDailyDispatchShift} list="dispatch-area-options" value={row.area} onChange={(e) => updateDispatchSummaryText(row.id, "area", e.target.value)} style={dispatchSummaryInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdStyle}>
+                                <input readOnly={isDailyDispatchShift} list="dispatch-location-options" value={row.location} onChange={(e) => updateDispatchSummaryText(row.id, "location", e.target.value)} style={dispatchSummaryInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdStyle}>
+                                <textarea readOnly={isDailyDispatchShift} value={row.workType} onChange={(e) => updateDispatchSummaryText(row.id, "workType", e.target.value)} placeholder="Вид работ" style={dispatchSummaryTextareaStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdStyle}>
+                                <input readOnly={isDailyDispatchShift} list="dispatch-excavator-options" value={row.excavator} onChange={(e) => updateDispatchSummaryText(row.id, "excavator", e.target.value)} style={dispatchSummaryInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdNumberStyle}>
+                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.planVolume)} onChange={(e) => updateDispatchSummaryNumber(row.id, "planVolume", e.target.value)} style={dispatchSummaryNumberInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdNumberStyle}>
+                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.factVolume)} onChange={(e) => updateDispatchSummaryNumber(row.id, "factVolume", e.target.value)} style={dispatchSummaryNumberInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdNumberStyle}>
+                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.workHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "workHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdNumberStyle}>
+                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.rentHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "rentHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdNumberStyle}>
+                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.repairHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "repairHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdNumberStyle}>
+                                <input readOnly={isDailyDispatchShift} inputMode="decimal" value={dispatchNumberInputValue(row.downtimeHours)} onChange={(e) => updateDispatchSummaryNumber(row.id, "downtimeHours", e.target.value)} style={dispatchSummaryNumberInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdNumberStyle}>
+                                <input readOnly={isDailyDispatchShift} inputMode="numeric" value={dispatchNumberInputValue(row.trips)} onChange={(e) => updateDispatchSummaryNumber(row.id, "trips", e.target.value)} style={dispatchSummaryNumberInputStyle} />
+                              </td>
+                              <td style={dispatchSummaryReadonlyNumberStyle}>{formatPtoCellNumber(rowProductivity)}</td>
+                              <td style={dispatchSummaryReadonlyNumberStyle}>
+                                <Pill bg={totalRowHours === 11 ? "#dcfce7" : "#fee2e2"} color={totalRowHours === 11 ? "#166534" : "#991b1b"}>
+                                  {formatPtoCellNumber(totalRowHours)}
+                                </Pill>
+                              </td>
+                              <td style={dispatchSummaryTdStyle}>
+                                <textarea readOnly={isDailyDispatchShift} value={row.reason} onChange={(e) => updateDispatchSummaryText(row.id, "reason", e.target.value)} placeholder="Например: Простой ДСК (5 ч.)" style={dispatchSummaryTextareaStyle} />
+                              </td>
+                              <td style={dispatchSummaryTdStyle}>
+                                <textarea readOnly={isDailyDispatchShift} value={row.comment} onChange={(e) => updateDispatchSummaryText(row.id, "comment", e.target.value)} placeholder="Комментарий смены" style={dispatchSummaryTextareaStyle} />
+                              </td>
+                              <td style={dispatchSummaryActionTdStyle}>
+                                {!isDailyDispatchShift ? (
+                                  <MiniIconButton label="Удалить строку сводки" onClick={() => deleteDispatchSummaryRow(row.id)}>
+                                    <Trash2 size={14} aria-hidden />
+                                  </MiniIconButton>
+                                ) : null}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredDispatchSummaryRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={17} style={dispatchSummaryEmptyStyle}>
+                              {isDailyDispatchShift
+                                ? "Сутки пока пустые: заполни ночную и дневную смену за выбранную дату."
+                                : "По выбранной дате, смене и фильтрам строк пока нет. Добавь строку вручную или заполни из списка техники."}
+                            </td>
                           </tr>
-                        ))}
+                        ) : null}
                       </tbody>
                     </table>
                   </div>
+                  <datalist id="dispatch-area-options">
+                    {dispatchAreaOptions.filter((area) => area !== "Все участки").map((area) => (
+                      <option key={area} value={area} />
+                    ))}
+                  </datalist>
+                  <datalist id="dispatch-location-options">
+                    {dispatchLocationOptions.map((location) => (
+                      <option key={location} value={location} />
+                    ))}
+                  </datalist>
+                  <datalist id="dispatch-worktype-options">
+                    {dispatchWorkTypeOptions.map((workType) => (
+                      <option key={workType} value={workType} />
+                    ))}
+                  </datalist>
+                  <datalist id="dispatch-excavator-options">
+                    {dispatchExcavatorOptions.map((excavator) => (
+                      <option key={excavator} value={excavator} />
+                    ))}
+                  </datalist>
                 </>
               )}
             </SectionCard>
           </>
         )}
 
-        {topTab === "fleet" && (
+        {renderedTopTab === "fleet" && (
           <>
             <SubTabs>
               {subTabs.fleet.filter((tab) => tab.visible).map((tab) => (
@@ -4322,7 +5762,7 @@ export default function App() {
           </>
         )}
 
-        {topTab === "contractors" && (
+        {renderedTopTab === "contractors" && (
           <>
             <SubTabs>
               {subTabs.contractors.filter((tab) => tab.visible).map((tab) => (
@@ -4335,7 +5775,7 @@ export default function App() {
                 <div style={blockStyle}>{activeContractorSubtab?.content || "В этой подвкладке пока нет информации."}</div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
-                  {(contractors[contractorTab] ?? []).map((unit) => (
+                  {(defaultContractors[contractorTab] ?? []).map((unit) => (
                     <div key={unit} style={blockStyle}>{unit}</div>
                   ))}
                 </div>
@@ -4344,7 +5784,7 @@ export default function App() {
           </>
         )}
 
-        {topTab === "fuel" && (
+        {renderedTopTab === "fuel" && (
           <>
             <SubTabs>
               {subTabs.fuel.filter((tab) => tab.visible).map((tab) => (
@@ -4357,7 +5797,7 @@ export default function App() {
                 <div style={blockStyle}>{activeFuelSubtab?.content || "В этой подвкладке пока нет информации."}</div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-                  {(fuelTab === "general" ? fuelGeneral : fuelContractors).map((row) => (
+                  {(fuelTab === "general" ? defaultFuelGeneral : defaultFuelContractors).map((row) => (
                     <div key={`${row.unit}-${row.mode}`} style={blockStyle}>
                       <div style={{ fontWeight: 700 }}>{row.unit}</div>
                       {row.contractor ? <div style={{ color: "#64748b", marginTop: 6 }}>Организация: {row.contractor}</div> : null}
@@ -4372,20 +5812,19 @@ export default function App() {
           </>
         )}
 
-        {topTab === "pto" && (
+        {renderedTopTab === "pto" && (
           <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
             <SectionCard title={isPtoDateTab ? "" : `ПТО: ${activePtoSubtab?.label ?? ptoTab}`} fill={isPtoDateTab}>
-              {isPtoDateTab && (
-                <div style={ptoDatabaseBarStyle}>
-                  <span>{ptoDatabaseMessage}</span>
-                  {ptoDatabaseSaving ? <span style={ptoDatabaseSavingBadgeStyle}>Автосохранение...</span> : null}
-                </div>
-              )}
               {ptoTab.startsWith("custom:") && <div style={blockStyle}>{activePtoSubtab?.content || "В этой подвкладке пока нет информации."}</div>}
               {ptoTab === "bodies" && <div style={blockStyle}>{activePtoSubtab?.content || "Справочник объемов кузовов: модель техники → материал → объем кузова."}</div>}
               {ptoTab === "performance" && <div style={blockStyle}>{activePtoSubtab?.content || "Расчет производительности: рейсы, кузова, материалы, удельный вес, перевод м³ ↔ тн."}</div>}
               {ptoTab === "cycle" && <div style={blockStyle}>{activePtoSubtab?.content || "Цикл погрузки: подъезд, погрузка, выезд, разгрузка, обратный путь."}</div>}
-              {ptoTab === "buckets" && <div style={blockStyle}>{activePtoSubtab?.content || "Объемы ковшей по моделям экскаваторов."}</div>}
+              {ptoTab === "buckets" && (
+                <div style={ptoBucketsPanelStyle}>
+                  {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
+                  {renderPtoBucketsTable()}
+                </div>
+              )}
               {ptoTab === "plan" && (
                 <div style={ptoDatePanelStyle}>
                   {activePtoSubtab?.content ? <div style={blockStyle}>{activePtoSubtab.content}</div> : null}
@@ -4426,7 +5865,7 @@ export default function App() {
           </div>
         )}
 
-        {topTab === "tb" && (
+        {renderedTopTab === "tb" && (
           <>
             <SubTabs>
               {subTabs.tb.filter((tab) => tab.visible).map((tab) => (
@@ -4457,27 +5896,19 @@ export default function App() {
           </>
         )}
 
-        {topTab === "user" && (
+        {renderedTopTab === "user" && (
           <SectionCard title="Пользователь">
             <div style={{ ...blockStyle, maxWidth: 520 }}>
-              <div style={{ fontWeight: 700, fontSize: 20 }}>{userCard.fullName}</div>
-              <div style={{ color: "#64748b", marginTop: 6 }}>{userCard.role}</div>
-              <div style={{ marginTop: 10 }}>Подразделение: {userCard.department}</div>
-              <div>Права доступа: {userCard.access}</div>
+              <div style={{ fontWeight: 700, fontSize: 20 }}>{defaultUserCard.fullName}</div>
+              <div style={{ color: "#64748b", marginTop: 6 }}>{defaultUserCard.role}</div>
+              <div style={{ marginTop: 10 }}>Подразделение: {defaultUserCard.department}</div>
+              <div>Права доступа: {defaultUserCard.access}</div>
             </div>
           </SectionCard>
         )}
 
-        {topTab === "admin" && (
+        {renderedTopTab === "admin" && (
           <SectionCard title="">
-            <SubTabs>
-              <TopButton active={adminSection === "menu"} onClick={() => setAdminSection("menu")} label="Вкладки" />
-              <TopButton active={adminSection === "structure"} onClick={() => setAdminSection("structure")} label="Структура" />
-              <TopButton active={adminSection === "vehicles"} onClick={() => setAdminSection("vehicles")} label="Техника" />
-              <TopButton active={adminSection === "reports"} onClick={() => setAdminSection("reports")} label="Отчетность" />
-              <TopButton active={adminSection === "content"} onClick={() => setAdminSection("content")} label="Содержимое" />
-            </SubTabs>
-
             {adminSection === "menu" && (
               <div style={{ ...blockStyle, marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
@@ -4602,7 +6033,20 @@ export default function App() {
                           <Fragment key={tab.id}>
                             <tr>
                               <CompactTd>
-                                <div style={vehicleNameStyle}>{tab.title}</div>
+                                <div style={adminTabNameWithDeleteStyle}>
+                                  <span style={{ ...vehicleNameStyle, marginBottom: 0 }}>{tab.title}</span>
+                                  {isExpanded ? (
+                                    <button
+                                      type="button"
+                                      aria-label={`Удалить вкладку ${tab.title}`}
+                                      onClick={() => deleteCustomTab(tab.id)}
+                                      style={adminInlineTrashButtonStyle}
+                                      title={`Удалить вкладку ${tab.title}`}
+                                    >
+                                      <Trash2 size={14} aria-hidden />
+                                    </button>
+                                  ) : null}
+                                </div>
                                 <VehicleMeta label="Описание" value={tab.description} />
                               </CompactTd>
                               <CompactTd>Пользовательская</CompactTd>
@@ -4618,9 +6062,6 @@ export default function App() {
                                   </IconButton>
                                   <IconButton label={tab.visible === false ? "Вернуть вкладку" : "Скрыть вкладку"} onClick={() => updateCustomTab(tab.id, { visible: tab.visible === false })}>
                                     {tab.visible === false ? <Eye size={16} aria-hidden /> : <EyeOff size={16} aria-hidden />}
-                                  </IconButton>
-                                  <IconButton label="Удалить вкладку" onClick={() => deleteCustomTab(tab.id)}>
-                                    <Trash2 size={16} aria-hidden />
                                   </IconButton>
                                 </div>
                               </CompactTd>
@@ -4673,10 +6114,14 @@ export default function App() {
                   </div>
                 </div>
                 <SubTabs>
-                  <TopButton active={structureSection === "scheme"} onClick={() => setStructureSection("scheme")} label="Схема" />
-                  <TopButton active={structureSection === "elements"} onClick={() => setStructureSection("elements")} label="Элементы" />
-                  <TopButton active={structureSection === "links"} onClick={() => setStructureSection("links")} label="Связи" />
-                  <TopButton active={structureSection === "roles"} onClick={() => setStructureSection("roles")} label="Роли" />
+                  {structureSectionTabs.map((section) => (
+                    <TopButton
+                      key={section.value}
+                      active={structureSection === section.value}
+                      onClick={() => setStructureSection(section.value)}
+                      label={section.label}
+                    />
+                  ))}
                 </SubTabs>
 
                 {structureSection === "scheme" && (
@@ -5108,340 +6553,813 @@ export default function App() {
                 </Field>
                 <TopButton active onClick={addSubTab} label="Добавить подвкладку" />
               </div>
-            </div>
+              </div>
+            )}
+
+            {adminSection === "ai" && (
+              <div style={{ ...blockStyle, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 14 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 18 }}>ИИ-сводка: как будет копиться база причин</div>
+                    <div style={{ color: "#64748b", marginTop: 4, maxWidth: 900 }}>
+                      Черновая схема: диспетчерская сводка сохраняет факты по технике, отчетность хранит подтвержденные причины по дате и виду работ, ИИ позже дает только предварительную версию причины.
+                    </div>
+                  </div>
+                  <span style={{ ...adminVehicleRenderedCountStyle, border: "1px solid #cbd5e1", borderRadius: 6, padding: "5px 8px", background: "#ffffff" }}>макет</span>
+                </div>
+
+                <div style={reportSourceGridStyle}>
+                  <SourceNote
+                    title="1. Диспетчерская сводка"
+                    source="Факты за смену"
+                    text="техника, участок, вид работ, рейсы, работа, ремонт, простой, производительность, комментарии"
+                  />
+                  <SourceNote
+                    title="2. Причины за сутки"
+                    source="Ручной ввод"
+                    text="дата + участок + вид работ + текст причины, например: Простой ДСК (5 ч.)"
+                  />
+                  <SourceNote
+                    title="3. Накопление"
+                    source="Расчет отчета"
+                    text="все суточные причины с начала года группируются отдельно по каждому виду работ"
+                  />
+                  <SourceNote
+                    title="4. ИИ-предложение"
+                    source="Будущий помощник"
+                    text="анализирует ремонты, простои, рейсы и производительность, затем предлагает причину для подтверждения"
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 1.1fr) minmax(320px, 0.9fr)", gap: 14, marginTop: 14, alignItems: "start" }}>
+                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Как диспетчер заполняет причину</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(120px, 1fr))", gap: 8, marginBottom: 10 }}>
+                      <Field label="Дата">
+                        <input value="2026-04-18" readOnly style={{ ...inputStyle, padding: "8px 10px" }} />
+                      </Field>
+                      <Field label="Участок">
+                        <input value="Аксу" readOnly style={{ ...inputStyle, padding: "8px 10px" }} />
+                      </Field>
+                      <Field label="Вид работ">
+                        <input value="Перевозка горной массы" readOnly style={{ ...inputStyle, padding: "8px 10px" }} />
+                      </Field>
+                    </div>
+                    <Field label="Причина за сутки">
+                      <textarea
+                        readOnly
+                        value="Ремонт транспортировочной техники: 1 ед. самосвала (3 ч.); Простой ДСК (5 ч.)"
+                        style={{ ...inputStyle, minHeight: 78, resize: "vertical" }}
+                      />
+                    </Field>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 8 }}>
+                      В реальной версии это поле будет редактироваться прямо в отчете по выбранной рабочей дате.
+                    </div>
+                  </div>
+
+                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Что покажет накопление с начала года</div>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <div style={compactRowStyle}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>Ремонт транспортировочной техники</div>
+                          <div style={{ color: "#64748b", marginTop: 3 }}>самосвалы, подтверждено диспетчером</div>
+                        </div>
+                        <div style={{ fontWeight: 800 }}>18 ч.</div>
+                      </div>
+                      <div style={compactRowStyle}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>Простой ДСК</div>
+                          <div style={{ color: "#64748b", marginTop: 3 }}>показывается только в этой строке вида работ</div>
+                        </div>
+                        <div style={{ fontWeight: 800 }}>11 ч.</div>
+                      </div>
+                      <div style={compactRowStyle}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>Ожидание экскаватора</div>
+                          <div style={{ color: "#64748b", marginTop: 3 }}>накопление по датам до выбранной даты</div>
+                        </div>
+                        <div style={{ fontWeight: 800 }}>6 ч.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8, marginTop: 14 }}>
+                  <div style={{ fontWeight: 800, marginBottom: 10 }}>Какие таблицы я бы заложил в базу</div>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", minWidth: 980, borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
+                          <CompactTh>Таблица</CompactTh>
+                          <CompactTh>Что хранит</CompactTh>
+                          <CompactTh>Зачем нужна</CompactTh>
+                          <CompactTh>Кто заполняет</CompactTh>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <CompactTd><strong>dispatch_shifts</strong></CompactTd>
+                          <CompactTd>дата, смена, участок, диспетчер</CompactTd>
+                          <CompactTd>шапка каждой диспетчерской сводки</CompactTd>
+                          <CompactTd>диспетчер</CompactTd>
+                        </tr>
+                        <tr>
+                          <CompactTd><strong>dispatch_equipment_rows</strong></CompactTd>
+                          <CompactTd>техника, работа, ремонт, простой, рейсы, производительность</CompactTd>
+                          <CompactTd>факты, по которым ИИ будет искать причину невыполнения</CompactTd>
+                          <CompactTd>диспетчерская сводка</CompactTd>
+                        </tr>
+                        <tr>
+                          <CompactTd><strong>daily_plan_reasons</strong></CompactTd>
+                          <CompactTd>дата, участок, вид работ, причина, часы, количество техники</CompactTd>
+                          <CompactTd>ручная причина за сутки и накопление с начала года</CompactTd>
+                          <CompactTd>диспетчер, позже ИИ после подтверждения</CompactTd>
+                        </tr>
+                        <tr>
+                          <CompactTd><strong>ai_reason_suggestions</strong></CompactTd>
+                          <CompactTd>предложенный текст, доказательства, статус принятия</CompactTd>
+                          <CompactTd>ИИ предлагает, человек подтверждает или отклоняет</CompactTd>
+                          <CompactTd>ИИ + диспетчер</CompactTd>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginTop: 14 }}>
+                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Правило для отчета</div>
+                    <div style={{ color: "#475569" }}>
+                      Если выбранная дата меняется, ячейка &quot;Причина за сутки&quot; берет причину только за эту дату. Ячейка &quot;Причины с накоплением&quot; собирает все причины с 01.01 выбранного года по выбранную дату.
+                    </div>
+                  </div>
+                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Правило для ИИ</div>
+                    <div style={{ color: "#475569" }}>
+                      ИИ не пишет в официальный отчет напрямую. Он предлагает текст с доказательствами: какая техника стояла, сколько часов ремонта, где просела производительность.
+                    </div>
+                  </div>
+                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Правило связки</div>
+                    <div style={{ color: "#475569" }}>
+                      Связь строится не по названию для заказчика, а по внутреннему ключу: дата + участок + вид работ. Название строки можно переименовывать без потери данных.
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {adminSection === "vehicles" && (
-              <div style={{ ...blockStyle, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-                  <div style={{ fontWeight: 700 }}>Техника</div>
+              <div style={adminVehiclePanelStyle}>
+                <div style={adminVehicleToolbarStyle}>
+                  <div style={adminVehicleCounterStyle}>
+                    Техника: {activeVehicleFilterCount ? `${filteredVehicleRows.length} из ${vehicleRows.length}` : vehicleRows.length}
+                    <span style={adminVehicleRenderedCountStyle}>{adminVehiclesEditing ? "редактирование" : "просмотр"}</span>
+                    {activeVehicleFilterCount ? (
+                      <button onClick={clearAllVehicleFilters} style={adminVehicleClearFiltersStyle} type="button">
+                        Сбросить фильтры
+                      </button>
+                    ) : null}
+                  </div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <IconButton label="Добавить технику" onClick={openNewVehicleCard}>
-                      <Plus size={16} aria-hidden />
+                    <IconButton label={adminVehiclesEditing ? "Сохранить редактирование" : "Редактировать список техники"} onClick={adminVehiclesEditing ? finishAdminVehiclesEditing : startAdminVehiclesEditing}>
+                      {adminVehiclesEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
                     </IconButton>
+                    {adminVehiclesEditing ? (
+                      <>
+                        <IconButton label="Добавить технику" onClick={addVehicleRow}>
+                          <Plus size={16} aria-hidden />
+                        </IconButton>
+                        <IconButton label="Загрузить список из Excel" onClick={openVehicleImportFilePicker}>
+                          <RotateCcw size={16} aria-hidden />
+                        </IconButton>
+                      </>
+                    ) : null}
                     <IconButton label="Выгрузить список техники в Excel" onClick={exportVehiclesToExcel}>
                       <Download size={16} aria-hidden />
                     </IconButton>
+                    <input
+                      ref={vehicleImportInputRef}
+                      accept=".xlsx,.csv"
+                      onChange={importVehiclesFromExcel}
+                      style={{ display: "none" }}
+                      type="file"
+                    />
                   </div>
                 </div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", minWidth: 1080, borderCollapse: "collapse", fontSize: 14 }}>
+                <datalist id="admin-vehicle-category-options">
+                  {(vehicleAutocompleteOptions.vehicleType ?? []).filter(Boolean).map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <datalist id="admin-vehicle-equipment-type-options">
+                  {(vehicleAutocompleteOptions.equipmentType ?? []).filter(Boolean).map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <datalist id="admin-vehicle-brand-options">
+                  {(vehicleAutocompleteOptions.brand ?? []).filter(Boolean).map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <datalist id="admin-vehicle-owner-options">
+                  {(vehicleAutocompleteOptions.owner ?? []).filter(Boolean).map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+                <div ref={adminVehicleTableScrollRef} style={adminVehicleTableScrollStyle}>
+                  <table style={adminVehicleTableStyle}>
+                    <colgroup>
+                      <col style={{ width: 46 }} />
+                      <col style={{ width: 165 }} />
+                      <col style={{ width: 190 }} />
+                      <col style={{ width: 100 }} />
+                      <col style={{ width: 120 }} />
+                      <col style={{ width: 112 }} />
+                      <col style={{ width: 96 }} />
+                      <col style={{ width: 96 }} />
+                      <col style={{ width: 170 }} />
+                      <col style={{ width: 180 }} />
+                      <col style={{ width: 34 }} />
+                    </colgroup>
                     <thead>
-                      <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                        <CompactTh>Показ</CompactTh>
-                        <CompactTh>Техника</CompactTh>
-                        <CompactTh>Номера</CompactTh>
-                        <CompactTh>Расход</CompactTh>
-                        <CompactTh>Собственник</CompactTh>
-                        <CompactTh>Действия</CompactTh>
+                      <tr>
+                        {vehicleFilterColumns.map((column) => (
+                          <th key={column.key} style={adminVehicleThStyle}>
+                            <VehicleFilterHeader
+                              column={column}
+                              options={openVehicleFilter === column.key ? activeVehicleFilterOptions : []}
+                              appliedSelectedValues={vehicleFilters[column.key]}
+                              draftSelectedValues={vehicleFilterDrafts[column.key]}
+                              search={vehicleFilterSearch[column.key] ?? ""}
+                              isOpen={openVehicleFilter === column.key}
+                              onToggleOpen={() => openVehicleFilterMenu(column.key)}
+                              onSearchChange={(value) => setVehicleFilterSearch((current) => ({ ...current, [column.key]: value }))}
+                              onToggleValue={(value) => toggleVehicleFilterDraftValue(column.key, value)}
+                              onSelectAll={() => selectAllVehicleFilterDraftValues(column.key)}
+                              onDeselectAll={() => deselectAllVehicleFilterDraftValues(column.key)}
+                              onApply={() => applyVehicleFilter(column.key)}
+                              onClose={() => setOpenVehicleFilter(null)}
+                            />
+                          </th>
+                        ))}
+                        <th style={adminVehicleThStyle} />
                       </tr>
                     </thead>
                     <tbody>
-                      {vehicleRows.map((vehicle) => (
+                      {visibleVehicleRows.map((vehicle) => (
                         <tr key={vehicle.id}>
-                          <CompactTd>
-                            <input
-                              aria-label={`Показывать ${buildVehicleDisplayName(vehicle)}`}
-                              checked={vehicle.visible !== false}
-                              onChange={() => toggleVehicleVisibility(vehicle.id)}
-                              type="checkbox"
-                            />
-                          </CompactTd>
-                          <CompactTd>
-                            <div style={vehicleNameStyle}>{buildVehicleDisplayName(vehicle)}</div>
-                            <VehicleMeta label="Марка" value={vehicle.brand} />
-                            <VehicleMeta label="Модель" value={vehicle.model} />
-                            <VehicleMeta label="Вид техники" value={vehicle.vehicleType} />
-                          </CompactTd>
-                          <CompactTd>
-                            <VehicleMeta label="Гаражный №" value={vehicle.garageNumber} />
-                            <VehicleMeta label="Госномер" value={vehicle.plateNumber} />
-                            <VehicleMeta label="VIN" value={vehicle.vin} />
-                          </CompactTd>
-                          <CompactTd>
-                            <VehicleMeta label="Зима" value={vehicle.fuelNormWinter ? `${vehicle.fuelNormWinter}` : ""} />
-                            <VehicleMeta label="Лето" value={vehicle.fuelNormSummer ? `${vehicle.fuelNormSummer}` : ""} />
-                            <VehicleMeta label="Расчет" value={vehicle.fuelCalcType} />
-                          </CompactTd>
-                          <CompactTd>
-                            <VehicleMeta label="Собственник" value={vehicle.owner} />
-                          </CompactTd>
-                          <CompactTd>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              <IconButton label={`Редактировать ${buildVehicleDisplayName(vehicle)}`} onClick={() => openVehicleCard(vehicle)}>
-                                <Pencil size={16} aria-hidden />
-                              </IconButton>
-                              <IconButton label={`Удалить ${buildVehicleDisplayName(vehicle)}`} onClick={() => deleteVehicle(vehicle.id)}>
-                                <Trash2 size={16} aria-hidden />
-                              </IconButton>
-                            </div>
-                          </CompactTd>
+                          <td style={{ ...adminVehicleTdStyle, textAlign: "center" }}>
+                            {adminVehiclesEditing ? (
+                              <input
+                                aria-label={`Показывать ${buildVehicleDisplayName(vehicle)}`}
+                                checked={vehicle.visible !== false}
+                                onChange={() => toggleVehicleVisibility(vehicle.id)}
+                                type="checkbox"
+                                style={adminVehicleCheckboxStyle}
+                              />
+                            ) : null}
+                          </td>
+                          <td style={adminVehicleTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "vehicleType")} list="admin-vehicle-category-options" value={vehicle.vehicleType} onChange={(value) => updateVehicleRow(vehicle.id, "vehicleType", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.vehicleType} />
+                            )}
+                          </td>
+                          <td style={adminVehicleNameTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "equipmentType")} list="admin-vehicle-equipment-type-options" value={vehicle.equipmentType} onChange={(value) => updateVehicleRow(vehicle.id, "equipmentType", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.equipmentType} />
+                            )}
+                          </td>
+                          <td style={adminVehicleTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "brand")} list="admin-vehicle-brand-options" value={vehicle.brand} onChange={(value) => updateVehicleRow(vehicle.id, "brand", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.brand} />
+                            )}
+                          </td>
+                          <td style={adminVehicleTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "model")} value={vehicle.model} onChange={(value) => updateVehicleRow(vehicle.id, "model", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.model} />
+                            )}
+                          </td>
+                          <td style={adminVehicleTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "plateNumber")} value={vehicle.plateNumber} onChange={(value) => updateVehicleRow(vehicle.id, "plateNumber", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.plateNumber} />
+                            )}
+                          </td>
+                          <td style={adminVehicleTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "garageNumber")} value={vehicle.garageNumber} onChange={(value) => updateVehicleRow(vehicle.id, "garageNumber", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.garageNumber} />
+                            )}
+                          </td>
+                          <td style={adminVehicleNumberTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "manufactureYear")} type="number" numeric value={vehicle.manufactureYear} onChange={(value) => updateVehicleRow(vehicle.id, "manufactureYear", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell numeric value={vehicle.manufactureYear} />
+                            )}
+                          </td>
+                          <td style={adminVehicleTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "vin")} value={vehicle.vin} onChange={(value) => updateVehicleRow(vehicle.id, "vin", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.vin} />
+                            )}
+                          </td>
+                          <td style={adminVehicleTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <AdminVehicleCellInput {...vehicleCellInputProps(vehicle.id, "owner")} list="admin-vehicle-owner-options" value={vehicle.owner} onChange={(value) => updateVehicleRow(vehicle.id, "owner", value)} />
+                            ) : (
+                              <AdminVehicleReadOnlyCell value={vehicle.owner} />
+                            )}
+                          </td>
+                          <td style={adminVehicleActionTdStyle}>
+                            {adminVehiclesEditing ? (
+                              <div style={adminVehicleActionsStyle}>
+                                <MiniIconButton label={`Удалить ${buildVehicleDisplayName(vehicle)}`} onClick={() => deleteVehicle(vehicle.id)}>
+                                  <Trash2 size={14} aria-hidden />
+                                </MiniIconButton>
+                              </div>
+                            ) : null}
+                          </td>
                         </tr>
                       ))}
+                      {filteredVehicleRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={11} style={adminVehicleEmptyRowStyle}>Нет техники по выбранным фильтрам</td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+                {hiddenVehicleRowsCount ? (
+                  <button
+                    onClick={() => setShowAllVehicleRows(true)}
+                    style={adminVehicleShowAllStyle}
+                    type="button"
+                  >
+                    Показать все
+                  </button>
+                ) : null}
+              </div>
+            )}
+
+            {adminSection === "logs" && (
+              <div style={{ ...blockStyle, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>Логи админки</div>
+                    <div style={{ color: "#64748b", marginTop: 4 }}>История редактирования, загрузки и выгрузки таблиц.</div>
+                  </div>
+                  <IconButton label="Очистить логи" onClick={clearAdminLogs} disabled={adminLogs.length === 0}>
+                    <Trash2 size={16} aria-hidden />
+                  </IconButton>
+                </div>
+
+                <div style={adminLogSummaryGridStyle}>
+                  <div style={adminLogSummaryCardStyle}>
+                    <div style={adminLogSummaryLabelStyle}>Последнее редактирование</div>
+                    {lastChangeLog ? (
+                      <>
+                        <div style={adminLogSummaryValueStyle}>{formatAdminLogDate(lastChangeLog.at)}</div>
+                        <div style={adminLogSummaryMetaStyle}>{lastChangeLog.section} · {lastChangeLog.user}</div>
+                        <div style={adminLogSummaryDetailsStyle}>{lastChangeLog.details}</div>
+                      </>
+                    ) : (
+                      <div style={adminLogSummaryEmptyStyle}>Редактирований пока нет.</div>
+                    )}
+                  </div>
+
+                  <div style={adminLogSummaryCardStyle}>
+                    <div style={adminLogSummaryLabelStyle}>Последняя загрузка таблицы</div>
+                    {lastUploadLog ? (
+                      <>
+                        <div style={adminLogSummaryValueStyle}>{formatAdminLogDate(lastUploadLog.at)}</div>
+                        <div style={adminLogSummaryMetaStyle}>{lastUploadLog.fileName || "Файл не указан"} · {lastUploadLog.user}</div>
+                        <div style={adminLogSummaryDetailsStyle}>{lastUploadLog.details}</div>
+                      </>
+                    ) : (
+                      <div style={adminLogSummaryEmptyStyle}>Загрузок пока нет.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={adminLogTableScrollStyle}>
+                  <table style={adminLogTableStyle}>
+                    <thead>
+                      <tr>
+                        <CompactTh>Дата и время</CompactTh>
+                        <CompactTh>Пользователь</CompactTh>
+                        <CompactTh>Раздел</CompactTh>
+                        <CompactTh>Действие</CompactTh>
+                        <CompactTh>Описание</CompactTh>
+                        <CompactTh>Файл / строки</CompactTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminLogs.map((log) => (
+                        <tr key={log.id}>
+                          <CompactTd>{formatAdminLogDate(log.at)}</CompactTd>
+                          <CompactTd>{log.user}</CompactTd>
+                          <CompactTd>{log.section}</CompactTd>
+                          <CompactTd>{log.action}</CompactTd>
+                          <CompactTd>{log.details}</CompactTd>
+                          <CompactTd>{[log.fileName, log.rowsCount !== undefined ? `${log.rowsCount} строк` : ""].filter(Boolean).join(" · ") || "—"}</CompactTd>
+                        </tr>
+                      ))}
+                      {adminLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={adminLogEmptyCellStyle}>Логов пока нет. Новые изменения и загрузки будут появляться здесь автоматически.</td>
+                        </tr>
+                      ) : null}
                     </tbody>
                   </table>
                 </div>
               </div>
             )}
 
-            <div style={{ display: adminSection === "reports" || adminSection === "content" ? "grid" : "none", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16 }}>
-              <div style={{ ...blockStyle, display: adminSection === "reports" ? "block" : "none" }}>
-                <div style={{ fontWeight: 700, marginBottom: 10 }}>Добавить строку отчетности</div>
-                <div style={{ display: "grid", gap: 10 }}>
-                  <Field label="Участок">
-                    <select value={reportForm.area} onChange={(e) => updateReportForm("area", e.target.value)} style={inputStyle}>
-                      {reportAreas.map((area) => (
-                        <option key={area}>{area}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Название показателя">
-                    <input value={reportForm.name} onChange={(e) => updateReportForm("name", e.target.value)} placeholder="Например: Подача руды на ЗИФ" style={inputStyle} />
-                  </Field>
-                  <Field label="Единица измерения">
-                    <input value={reportForm.unit} onChange={(e) => updateReportForm("unit", e.target.value)} placeholder="м3, тн, м2" style={inputStyle} />
-                  </Field>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 }}>
-                    <Field label="План за сутки">
-                      <input type="number" value={reportForm.dayPlan} onChange={(e) => updateReportForm("dayPlan", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Оперучет за сутки">
-                      <input type="number" value={reportForm.dayFact} onChange={(e) => updateReportForm("dayFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Производительность за сутки">
-                      <input type="number" value={reportForm.dayProductivity} onChange={(e) => updateReportForm("dayProductivity", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="План месяца всего">
-                      <input type="number" value={reportForm.monthTotalPlan} onChange={(e) => updateReportForm("monthTotalPlan", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="План с начала месяца">
-                      <input type="number" value={reportForm.monthPlan} onChange={(e) => updateReportForm("monthPlan", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Маркзамер месяца">
-                      <input type="number" value={reportForm.monthSurveyFact} onChange={(e) => updateReportForm("monthSurveyFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Оперучет после замера">
-                      <input type="number" value={reportForm.monthOperFact} onChange={(e) => updateReportForm("monthOperFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Факт за месяц">
-                      <input type="number" value={reportForm.monthFact} onChange={(e) => updateReportForm("monthFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Производительность накоплением">
-                      <input type="number" value={reportForm.monthProductivity} onChange={(e) => updateReportForm("monthProductivity", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="План с начала года">
-                      <input type="number" value={reportForm.yearPlan} onChange={(e) => updateReportForm("yearPlan", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Маркзамер с начала года">
-                      <input type="number" value={reportForm.yearSurveyFact} onChange={(e) => updateReportForm("yearSurveyFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Оперучет недостающих дней">
-                      <input type="number" value={reportForm.yearOperFact} onChange={(e) => updateReportForm("yearOperFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Факт с начала года">
-                      <input type="number" value={reportForm.yearFact} onChange={(e) => updateReportForm("yearFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Годовой план">
-                      <input type="number" value={reportForm.annualPlan} onChange={(e) => updateReportForm("annualPlan", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Факт годового плана">
-                      <input type="number" value={reportForm.annualFact} onChange={(e) => updateReportForm("annualFact", e.target.value)} style={inputStyle} />
-                    </Field>
-                  </div>
-                  <Field label="Причина отклонения за сутки">
-                    <textarea value={reportForm.dayReason} onChange={(e) => updateReportForm("dayReason", e.target.value)} placeholder="Например: простой ДСК, ремонт техники, погодные условия" style={{ ...inputStyle, minHeight: 74, resize: "vertical" }} />
-                  </Field>
-                  <Field label="Причины с начала года">
-                    <textarea value={reportForm.yearReason} onChange={(e) => updateReportForm("yearReason", e.target.value)} placeholder="Накопленные причины невыполнения" style={{ ...inputStyle, minHeight: 74, resize: "vertical" }} />
-                  </Field>
-                  <TopButton active onClick={addReportRow} label="Добавить в отчетность" />
-                </div>
+            {adminSection === "reports" && (
+            <div style={{ marginTop: 16, display: "grid", gap: 12, alignItems: "start" }}>
+              <div style={adminReportSectionHeaderStyle}>
+                <div style={{ fontWeight: 700 }}>Настройка отчетности</div>
               </div>
 
-              <div style={{ ...blockStyle, display: adminSection === "content" ? "block" : "none" }}>
-                <div style={{ fontWeight: 700, marginBottom: 10 }}>Добавить информацию во вкладку</div>
-                <div style={{ display: "grid", gap: 10 }}>
-                  <Field label="Вкладка">
-                    <select value={customInfoTabId} onChange={(e) => setCustomInfoTabId(e.target.value)} style={inputStyle}>
-                      <option value="">Выбери вкладку</option>
-                      {customTabs.map((tab) => (
-                        <option key={tab.id} value={tab.id}>{tab.title}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Текст для вкладки">
-                    <textarea value={customInfoForm} onChange={(e) => setCustomInfoForm(e.target.value)} placeholder="Текст, который нужно показать во вкладке" style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} />
-                  </Field>
-                  <TopButton active onClick={addCustomInfo} label="Добавить информацию" />
-                </div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 16, display: adminSection === "reports" ? "block" : "none" }}>
-              <div style={{ fontWeight: 700, marginBottom: 10 }}>Текущая отчетность</div>
-              <div style={{ display: "grid", gap: 10 }}>
-                {reportRows.map((row, index) => (
-                  <div key={`${row.area}-${row.name}-${index}`} style={{ ...blockStyle, display: "grid", gap: 10 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "180px 1fr 120px auto", gap: 10, alignItems: "center" }}>
-                      <Field label="Участок">
-                        <select value={row.area} onChange={(e) => updateReportRow(index, "area", e.target.value)} style={inputStyle}>
-                          {reportAreas.map((area) => (
-                            <option key={area}>{area}</option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label="Название показателя">
-                        <input value={row.name} onChange={(e) => updateReportRow(index, "name", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Ед. изм.">
-                        <input value={row.unit} onChange={(e) => updateReportRow(index, "unit", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <TopButton active={false} onClick={() => removeReportRow(index)} label="Удалить" />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-                      <Field label="План сутки">
-                        <input type="number" value={row.dayPlan} onChange={(e) => updateReportRow(index, "dayPlan", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Оперучет сутки">
-                        <input type="number" value={row.dayFact} onChange={(e) => updateReportRow(index, "dayFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Произв. сутки">
-                        <input type="number" value={row.dayProductivity} onChange={(e) => updateReportRow(index, "dayProductivity", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="План месяца">
-                        <input type="number" value={row.monthTotalPlan} onChange={(e) => updateReportRow(index, "monthTotalPlan", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="План с начала месяца">
-                        <input type="number" value={row.monthPlan} onChange={(e) => updateReportRow(index, "monthPlan", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Маркзамер месяца">
-                        <input type="number" value={row.monthSurveyFact} onChange={(e) => updateReportRow(index, "monthSurveyFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Оперучет после замера">
-                        <input type="number" value={row.monthOperFact} onChange={(e) => updateReportRow(index, "monthOperFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Факт месяц">
-                        <input type="number" value={row.monthFact} onChange={(e) => updateReportRow(index, "monthFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Произв. накоплением">
-                        <input type="number" value={row.monthProductivity} onChange={(e) => updateReportRow(index, "monthProductivity", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="План с начала года">
-                        <input type="number" value={row.yearPlan} onChange={(e) => updateReportRow(index, "yearPlan", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Маркзамер год">
-                        <input type="number" value={row.yearSurveyFact} onChange={(e) => updateReportRow(index, "yearSurveyFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Оперучет хвост">
-                        <input type="number" value={row.yearOperFact} onChange={(e) => updateReportRow(index, "yearOperFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Факт с начала года">
-                        <input type="number" value={row.yearFact} onChange={(e) => updateReportRow(index, "yearFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Годовой план">
-                        <input type="number" value={row.annualPlan} onChange={(e) => updateReportRow(index, "annualPlan", e.target.value)} style={inputStyle} />
-                      </Field>
-                      <Field label="Факт годового плана">
-                        <input type="number" value={row.annualFact} onChange={(e) => updateReportRow(index, "annualFact", e.target.value)} style={inputStyle} />
-                      </Field>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
-                      <Field label="Причина за сутки">
-                        <textarea value={row.dayReason} onChange={(e) => updateReportRow(index, "dayReason", e.target.value)} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} />
-                      </Field>
-                      <Field label="Причины с начала года">
-                        <textarea value={row.yearReason} onChange={(e) => updateReportRow(index, "yearReason", e.target.value)} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} />
-                      </Field>
-                    </div>
-                  </div>
+              <div style={adminReportCustomerTabsStyle}>
+                <TopButton active={adminReportTab === "order"} onClick={() => setAdminReportTab("order")} label="Порядок" />
+                {reportCustomers.map((customer) => (
+                  <TopButton
+                    key={customer.id}
+                    active={adminReportTab === "customer" && activeAdminReportCustomer.id === customer.id}
+                    onClick={() => {
+                      setAdminReportCustomerId(customer.id);
+                      setAdminReportTab("customer");
+                    }}
+                    label={customer.label}
+                    showDelete={adminReportTab === "customer" && activeAdminReportCustomer.id === customer.id && reportCustomers.length > 1}
+                    deleteLabel={`Удалить заказчика ${customer.label}`}
+                    onDelete={() => deleteReportCustomer(customer.id)}
+                  />
                 ))}
+                <IconButton label="Добавить заказчика" onClick={addReportCustomer}>
+                  <Plus size={16} aria-hidden />
+                </IconButton>
               </div>
-            </div>
 
-            <div style={{ marginTop: 16, display: adminSection === "content" ? "block" : "none" }}>
-              <div style={{ fontWeight: 700, marginBottom: 10 }}>Информация в пользовательских вкладках</div>
-              <div style={{ display: "grid", gap: 10 }}>
-                {customTabs.length === 0 && (
-                  <div style={blockStyle}>Пользовательских вкладок пока нет.</div>
-                )}
-                {customTabs.map((tab) => (
-                  <div key={tab.id} style={{ ...blockStyle, display: "grid", gap: 10 }}>
-                    <div style={{ fontWeight: 700 }}>{tab.title}</div>
-                    {tab.items.length === 0 && (
-                      <div style={{ color: "#64748b" }}>Информации пока нет.</div>
-                    )}
-                    {tab.items.map((item, index) => (
-                      <div key={`${tab.id}-${index}`} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "start" }}>
-                        <Field label="Текстовый блок">
-                          <textarea value={item} onChange={(e) => updateCustomInfo(tab.id, index, e.target.value)} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} />
-                        </Field>
-                        <TopButton active={false} onClick={() => deleteCustomInfo(tab.id, index)} label="Удалить" />
+              {adminReportTab === "order" ? (
+                <div style={adminReportOrderPanelStyle}>
+                  <div style={adminReportCompactPanelStyle}>
+                    <div style={adminReportPanelTitleStyle}>Порядок отображения участков в отчетах</div>
+                    <div style={adminReportAreaOrderListStyle}>
+                      {reportAreaOrderOptions.length === 0 ? (
+                        <div style={adminReportEmptyTextStyle}>Участков пока нет.</div>
+                      ) : (
+                        reportAreaOrderOptions.map((area, index) => (
+                          <div key={area} style={adminReportAreaOrderRowStyle}>
+                            <span style={adminReportAreaOrderNameStyle}>{index + 1}. {area}</span>
+                            <div style={adminReportAreaOrderActionsStyle}>
+                              <MiniIconButton label="Поднять участок" onClick={() => moveReportAreaOrder(area, -1)} disabled={index === 0}>
+                                <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
+                              </MiniIconButton>
+                              <MiniIconButton label="Опустить участок" onClick={() => moveReportAreaOrder(area, 1)} disabled={index === reportAreaOrderOptions.length - 1}>
+                                <ChevronDown size={13} aria-hidden />
+                              </MiniIconButton>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={adminReportOrderWorkPanelStyle}>
+                    <div style={adminReportPanelTitleStyle}>Порядок видов работ внутри участков</div>
+                    {adminReportWorkOrderGroups.length === 0 ? (
+                      <div style={adminReportEmptyTextStyle}>Видов работ пока нет.</div>
+                    ) : (
+                      <div style={adminReportWorkGroupGridStyle}>
+                        {adminReportWorkOrderGroups.map((group) => (
+                          <div key={group.area} style={adminReportWorkGroupStyle}>
+                            <div style={adminReportWorkGroupTitleStyle}>{group.area}</div>
+                            <div style={adminReportAreaOrderListStyle}>
+                              {group.rows.map((row, index) => {
+                                const rowKey = reportRowKey(row);
+                                return (
+                                  <div key={rowKey} style={adminReportWorkOrderRowStyle}>
+                                    <span style={adminReportWorkOrderNameStyle}>{index + 1}. {row.name}</span>
+                                    <span style={adminReportWorkOrderUnitStyle}>{row.unit}</span>
+                                    <div style={adminReportAreaOrderActionsStyle}>
+                                      <MiniIconButton label="Поднять вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, -1)} disabled={index === 0}>
+                                        <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
+                                      </MiniIconButton>
+                                      <MiniIconButton label="Опустить вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, 1)} disabled={index === group.rows.length - 1}>
+                                        <ChevronDown size={13} aria-hidden />
+                                      </MiniIconButton>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {vehicleCard && (
-              <div style={modalOverlayStyle}>
-                <div style={vehicleCardStyle}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}>
-                    <div style={{ fontSize: 22, fontWeight: 700 }}>Карточка техники</div>
-                    <TopButton active={false} onClick={() => setVehicleCard(null)} label="Закрыть" />
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
-                    <Field label="Отображаемое имя">
-                      <div style={displayNamePreviewStyle}>{buildVehicleDisplayName(vehicleCard)}</div>
-                    </Field>
-                    <Field label="Марка">
-                      <input value={vehicleCard.brand} onChange={(e) => updateVehicleCard("brand", e.target.value)} placeholder="Например: Shacman" style={inputStyle} />
-                    </Field>
-                    <Field label="Модель">
-                      <input value={vehicleCard.model} onChange={(e) => updateVehicleCard("model", e.target.value)} placeholder="Например: X3000" style={inputStyle} />
-                    </Field>
-                    <Field label="Госномер (при его наличии)">
-                      <input value={vehicleCard.plateNumber} onChange={(e) => updateVehicleCard("plateNumber", e.target.value)} placeholder="Госномер" style={inputStyle} />
-                    </Field>
-                    <Field label="Гаражный номер">
-                      <input value={vehicleCard.garageNumber} onChange={(e) => updateVehicleCard("garageNumber", e.target.value)} placeholder="Например: 22" style={inputStyle} />
-                    </Field>
-                    <Field label="Вид техники">
-                      <input value={vehicleCard.vehicleType} onChange={(e) => updateVehicleCard("vehicleType", e.target.value)} placeholder="Например: Самосвал" style={inputStyle} />
-                    </Field>
-                    <Field label="Норма расхода: Зима">
-                      <input type="number" value={vehicleCard.fuelNormWinter} onChange={(e) => updateVehicleCard("fuelNormWinter", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Норма расхода: Лето">
-                      <input type="number" value={vehicleCard.fuelNormSummer} onChange={(e) => updateVehicleCard("fuelNormSummer", e.target.value)} style={inputStyle} />
-                    </Field>
-                    <Field label="Расчет расхода">
-                      <select value={vehicleCard.fuelCalcType} onChange={(e) => updateVehicleCard("fuelCalcType", e.target.value)} style={inputStyle}>
-                        <option value="Моточасы">Моточасы</option>
-                        <option value="Пробег">Пробег</option>
-                      </select>
-                    </Field>
-                    <Field label="VIN">
-                      <input value={vehicleCard.vin} onChange={(e) => updateVehicleCard("vin", e.target.value)} placeholder="VIN" style={inputStyle} />
-                    </Field>
-                    <Field label="Собственник">
-                      <input value={vehicleCard.owner} onChange={(e) => updateVehicleCard("owner", e.target.value)} placeholder="Название собственника" style={inputStyle} />
-                    </Field>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-                    <TopButton active={false} onClick={() => setVehicleCard(null)} label="Отмена" />
-                    <TopButton active onClick={saveVehicleCard} label="Сохранить технику" />
+                    )}
                   </div>
                 </div>
+              ) : (
+                <div style={adminReportCustomerCardStyle}>
+                <div style={adminReportCustomerSummaryStyle}>
+                  <input
+                    aria-label="Заказчик"
+                    value={activeAdminReportCustomer.label}
+                    onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { label: e.target.value })}
+                    style={adminReportCustomerNameInputStyle}
+                  />
+                  <div style={adminReportCustomerMetaStyle}>
+                    {activeAdminReportSelectedCount} строк{activeAdminReportUsesSummaryRows ? ` · ${activeAdminReportCustomer.summaryRows.length} итоговых` : ""}
+                  </div>
+                  <label style={adminReportVisibleToggleStyle}>
+                    <input type="checkbox" checked={activeAdminReportCustomer.visible} onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { visible: e.target.checked })} />
+                    Показывать вкладку
+                  </label>
+                  <label style={adminReportVisibleToggleStyle}>
+                    <input type="checkbox" checked={activeAdminReportCustomer.autoShowRows} onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { autoShowRows: e.target.checked })} />
+                    Автоматический показ строк
+                  </label>
+                </div>
+
+                <div style={adminReportCustomerBodyStyle}>
+                  <div style={adminReportCustomerSettingsTabsStyle}>
+                    <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "display"} onClick={() => setAdminReportCustomerSettingsTab("display")} label="Отображение" />
+                    <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "rename"} onClick={() => setAdminReportCustomerSettingsTab("rename")} label="Переименование строк" />
+                    <AdminReportSettingsButton
+                      active={visibleAdminReportCustomerSettingsTab === "summary"}
+                      disabled={!activeAdminReportUsesSummaryRows}
+                      onClick={() => setAdminReportCustomerSettingsTab("summary")}
+                      label="Итоговые строки"
+                    />
+                  </div>
+
+                  {visibleAdminReportCustomerSettingsTab === "display" ? (
+                  <div style={adminReportRowsColumnStyle}>
+                    <div style={adminReportTableWrapStyle}>
+                      <table style={adminReportRowsTableStyle}>
+                        <colgroup>
+                          <col style={{ width: 54 }} />
+                          <col style={{ width: 130 }} />
+                          <col style={{ width: 360 }} />
+                          <col style={{ width: 56 }} />
+                          <col style={{ width: 116 }} />
+                          <col style={{ width: 116 }} />
+                          <col style={{ width: 116 }} />
+                        </colgroup>
+                        <thead>
+                          <tr style={{ background: "#f8fafc" }}>
+                            <th style={adminReportThStyle}>Показ</th>
+                            <th style={adminReportThStyle}>Участок</th>
+                            <th style={adminReportThStyle}>Строка из ПТО</th>
+                            <th style={adminReportThStyle}>Ед.</th>
+                            <th style={adminReportThStyle}>План</th>
+                            <th style={adminReportThStyle}>Оперучет</th>
+                            <th style={adminReportThStyle}>Замер</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adminReportBaseRows.map((row) => {
+                            const rowKey = reportRowKey(row);
+                            const rowStatus = reportPtoDateStatusByKey.get(rowKey);
+                            const visibleRowKeys = reportCustomerEffectiveRowKeys(activeAdminReportCustomer, autoReportRowKeys);
+                            return (
+                              <tr key={`${activeAdminReportCustomer.id}-${rowKey}`}>
+                                <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={visibleRowKeys.has(rowKey)}
+                                    disabled={activeAdminReportCustomer.autoShowRows}
+                                    onChange={() => toggleReportCustomerRow(activeAdminReportCustomer.id, rowKey)}
+                                    style={activeAdminReportCustomer.autoShowRows ? adminReportDisabledCheckboxStyle : undefined}
+                                    title={activeAdminReportCustomer.autoShowRows ? "Автоматический показ включен" : "Показать строку в отчете"}
+                                  />
+                              </td>
+                              <td style={adminReportTdStyle}>{row.area}</td>
+                              <td style={adminReportNameTdStyle}>{row.name}</td>
+                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>{row.unit}</td>
+                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
+                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus?.plan ?? "Новая") }}>{rowStatus?.plan ?? "Новая"}</span>
+                              </td>
+                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
+                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus?.oper ?? "Новая") }}>{rowStatus?.oper ?? "Новая"}</span>
+                              </td>
+                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
+                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus?.survey ?? "Новая") }}>{rowStatus?.survey ?? "Новая"}</span>
+                              </td>
+                            </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  ) : null}
+
+                  {visibleAdminReportCustomerSettingsTab === "rename" ? (
+                    <div style={adminReportRowsColumnStyle}>
+                      <div style={adminReportRenamePanelStyle}>
+                        <div style={adminReportSectionHeaderStyle}>
+                          <IconButton label="Добавить переименование строки" onClick={() => addReportCustomerRowLabel(activeAdminReportCustomer.id)}>
+                            <Plus size={16} aria-hidden />
+                          </IconButton>
+                        </div>
+
+                        {activeAdminReportRowLabelEntries.length === 0 ? (
+                          <div style={adminReportEmptyTextStyle}>Переименований пока нет.</div>
+                        ) : (
+                          <div style={adminReportRenameListStyle}>
+                            <div style={adminReportRenameHeaderStyle}>
+                              <span>Участок</span>
+                              <span>Вид работ</span>
+                              <span>Название для заказчика</span>
+                              <span />
+                              <span />
+                            </div>
+                            {activeAdminReportRowLabelEntries.map(({ rowKey, label, row }) => {
+                              const hasStoredArea = reportAreaOrderOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(row.area));
+                              const visibleArea = hasStoredArea ? row.area : reportAreaOrderOptions[0] ?? row.area;
+                              const areaRows = reportRowsForSummaryArea(visibleArea);
+                              const hasStoredRow = areaRows.some((areaRow) => reportRowKey(areaRow) === rowKey);
+                              const rowLabelEditing = editingReportRowLabelKeys.includes(rowKey);
+
+                              return (
+                                <div key={`${activeAdminReportCustomer.id}-rename-${rowKey}`} style={adminReportRenameRowStyle}>
+                                  {rowLabelEditing ? (
+                                    <>
+                                      <select
+                                        value={visibleArea}
+                                        onChange={(e) => {
+                                          const nextRow = reportRowsForSummaryArea(e.target.value)[0];
+                                          if (nextRow) changeReportCustomerRowLabelSource(activeAdminReportCustomer.id, rowKey, reportRowKey(nextRow));
+                                        }}
+                                        style={adminReportRenameInputStyle}
+                                        aria-label="Участок строки для заказчика"
+                                      >
+                                        {reportAreaOrderOptions.map((area) => (
+                                          <option key={area} value={area}>{area}</option>
+                                        ))}
+                                        {!hasStoredArea && row.area ? <option value={row.area}>{row.area}</option> : null}
+                                      </select>
+                                      <select
+                                        value={hasStoredRow ? rowKey : ""}
+                                        onChange={(e) => changeReportCustomerRowLabelSource(activeAdminReportCustomer.id, rowKey, e.target.value)}
+                                        style={adminReportRenameInputStyle}
+                                        aria-label="Вид работ для заказчика"
+                                      >
+                                        {!hasStoredRow ? <option value="">{row.name}</option> : null}
+                                        {areaRows.map((areaRow) => {
+                                          const areaRowKey = reportRowKey(areaRow);
+                                          return <option key={areaRowKey} value={areaRowKey}>{areaRow.name}</option>;
+                                        })}
+                                      </select>
+                                      <input
+                                        value={label}
+                                        onChange={(e) => updateReportCustomerRowLabel(activeAdminReportCustomer.id, rowKey, e.target.value, row.name)}
+                                        placeholder={row.name}
+                                        style={adminReportRenameInputStyle}
+                                        title={`Связка с ПТО: ${row.name}`}
+                                      />
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span style={adminReportSummaryValueStyle}>{visibleArea || "-"}</span>
+                                      <span style={adminReportSummaryValueStyle} title={row.name}>{row.name}</span>
+                                      <span style={adminReportSummaryValueStyle} title={label || row.name}>{label || row.name}</span>
+                                    </>
+                                  )}
+                                  <MiniIconButton label={rowLabelEditing ? "Сохранить переименование строки" : "Редактировать переименование строки"} onClick={() => (rowLabelEditing ? finishReportRowLabelEdit(rowKey) : startReportRowLabelEdit(rowKey))}>
+                                    {rowLabelEditing ? <Check size={13} aria-hidden /> : <Pencil size={13} aria-hidden />}
+                                  </MiniIconButton>
+                                  <MiniIconButton label="Удалить переименование строки" onClick={() => removeReportCustomerRowLabel(activeAdminReportCustomer.id, rowKey)}>
+                                    <Trash2 size={14} aria-hidden />
+                                  </MiniIconButton>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {visibleAdminReportCustomerSettingsTab === "summary" && activeAdminReportUsesSummaryRows ? (
+                    <div style={adminReportSummaryColumnStyle}>
+                      <div style={adminReportSectionHeaderStyle}>
+                        <IconButton label="Добавить итоговую строку" onClick={() => addReportSummaryRow(activeAdminReportCustomer.id)}>
+                          <Plus size={16} aria-hidden />
+                        </IconButton>
+                      </div>
+
+                      {activeAdminReportCustomer.summaryRows.length === 0 && (
+                        <div style={adminReportEmptyTextStyle}>Итоговых строк пока нет.</div>
+                      )}
+
+                      {activeAdminReportCustomer.summaryRows.length > 0 ? (
+                        <div style={adminReportSummaryListHeaderStyle}>
+                          <span>Участок</span>
+                          <span>Название итоговой строки</span>
+                          <span>Ед.</span>
+                          <span />
+                          <span />
+                        </div>
+                      ) : null}
+
+                      {activeAdminReportCustomer.summaryRows.map((summary) => {
+                        const hasStoredArea = reportAreaOrderOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
+                        const visibleSummaryArea = hasStoredArea ? summary.area : reportAreaOrderOptions[0] ?? summary.area;
+                        const summaryAreaRows = reportRowsForSummaryArea(visibleSummaryArea);
+                        const selectedSummaryRows = summaryAreaRows.filter((row) => summary.rowKeys.includes(reportRowKey(row)));
+                        const summaryExpanded = expandedReportSummaryIds.includes(summary.id);
+                        const selectedSummaryLabels = selectedSummaryRows.map((row) => {
+                          const rowKey = reportRowKey(row);
+                          return activeAdminReportCustomer.rowLabels[rowKey]?.trim() || row.name;
+                        });
+                        const selectedSummaryText = selectedSummaryLabels.length > 0 ? selectedSummaryLabels.join(" + ") : "Строки не выбраны.";
+
+                        return (
+                          <div key={summary.id} style={adminReportSummaryCardStyle}>
+                            <div style={adminReportSummaryFormStyle}>
+                              {summaryExpanded ? (
+                                <>
+                                  <select value={visibleSummaryArea} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "area", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Участок итоговой строки">
+                                    {reportAreaOrderOptions.map((area) => (
+                                      <option key={area} value={area}>{area}</option>
+                                    ))}
+                                    {!hasStoredArea && summary.area ? <option value={summary.area}>{summary.area}</option> : null}
+                                  </select>
+                                  <input value={summary.label} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "label", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Название итоговой строки" />
+                                  <select value={summary.unit} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "unit", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Единица измерения итоговой строки">
+                                    <option value="">Авто</option>
+                                    <option value="м2">м2</option>
+                                    <option value="м3">м3</option>
+                                    <option value="тн">тн</option>
+                                  </select>
+                                </>
+                              ) : (
+                                <>
+                                  <span style={adminReportSummaryValueStyle}>{visibleSummaryArea || "-"}</span>
+                                  <span style={adminReportSummaryValueStyle}>{summary.label || "Без названия"}</span>
+                                  <span style={{ ...adminReportSummaryValueStyle, textAlign: "right" }}>{summary.unit || "Авто"}</span>
+                                </>
+                              )}
+                              <MiniIconButton label={summaryExpanded ? "Сохранить суммирование" : "Редактировать суммирование"} onClick={() => (summaryExpanded ? finishReportSummaryEdit(summary.id) : startReportSummaryEdit(summary.id))}>
+                                {summaryExpanded ? <Check size={13} aria-hidden /> : <Pencil size={13} aria-hidden />}
+                              </MiniIconButton>
+                              <MiniIconButton label="Удалить итоговую строку" onClick={() => removeReportSummaryRow(activeAdminReportCustomer.id, summary.id)}>
+                                <Trash2 size={16} aria-hidden />
+                              </MiniIconButton>
+                            </div>
+                            <div style={adminReportSummaryNoteStyle} title={selectedSummaryText}>Строки в сумме: {selectedSummaryText}</div>
+
+                            {summaryExpanded ? (
+                              <div style={adminReportSummarySelectionPanelStyle}>
+                                <div style={adminReportSummaryRowsHeaderStyle}>Выберите виды работ для суммирования: {selectedSummaryRows.length} из {summaryAreaRows.length}</div>
+                                <div style={adminReportSummaryRowsGridStyle}>
+                                {summaryAreaRows.length === 0 ? (
+                                  <div style={adminReportEmptyTextStyle}>В выбранном участке строк пока нет.</div>
+                                ) : (
+                                  summaryAreaRows.map((row) => {
+                                    const rowKey = reportRowKey(row);
+                                    const customerRowLabel = activeAdminReportCustomer.rowLabels[rowKey]?.trim() || row.name;
+                                    return (
+                                      <label key={`${summary.id}-${rowKey}`} style={adminReportSummaryRowOptionStyle}>
+                                        <input type="checkbox" checked={summary.rowKeys.includes(rowKey)} onChange={() => toggleReportSummaryRowKey(activeAdminReportCustomer.id, summary.id, rowKey)} />
+                                        <span style={adminReportSummaryRowNameStyle}>{customerRowLabel}</span>
+                                        <span style={adminReportSummaryRowUnitStyle}>{row.unit}</span>
+                                      </label>
+                                    );
+                                  })
+                                )}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               </div>
+              )}
+            </div>
             )}
 
-            <div style={{ marginTop: 18, display: "flex", justifyContent: "flex-end", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ color: "#64748b" }}>{saveMessage}</div>
-              <TopButton active onClick={saveAdminChanges} label="Сохранить изменения" />
-            </div>
           </SectionCard>
         )}
 
@@ -5464,241 +7382,26 @@ export default function App() {
   );
 }
 
-function TopButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function AdminReportSettingsButton({ active, onClick, label, disabled = false }: { active: boolean; onClick: () => void; label: string; disabled?: boolean }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      style={{
-        border: active ? "1px solid #0f172a" : "1px solid #cbd5e1",
-        background: active ? "#0f172a" : "#ffffff",
-        color: active ? "#ffffff" : "#0f172a",
-        borderRadius: 8,
-        padding: "7px 10px",
-        fontFamily: "inherit",
-        fontSize: 13,
-        fontWeight: 700,
-        lineHeight: 1.2,
-        cursor: "pointer",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function HeaderSubButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
+      aria-pressed={active}
+      disabled={disabled}
       onMouseDown={(event) => event.preventDefault()}
       onClick={(event) => {
+        if (disabled) return;
         onClick();
         event.currentTarget.blur();
       }}
       style={{
-        ...headerSubtabButtonStyle,
-        ...(active ? headerSubtabButtonActiveStyle : null),
+        ...adminReportCustomerSettingsTabStyle,
+        ...(active ? adminReportCustomerSettingsTabActiveStyle : null),
+        ...(disabled ? adminReportCustomerSettingsTabDisabledStyle : null),
       }}
     >
       {label}
     </button>
-  );
-}
-
-function IconButton({ label, onClick, children, disabled = false }: { label: string; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
-  return (
-    <button aria-label={label} disabled={disabled} title={label} onClick={onClick} style={disabled ? { ...iconButtonStyle, cursor: "not-allowed", opacity: 0.45 } : iconButtonStyle} type="button">
-      {children}
-    </button>
-  );
-}
-
-function SectionCard({ title, children, fill = false }: { title: string; children: React.ReactNode; fill?: boolean }) {
-  return (
-    <div style={{ ...sectionCardStyle, ...(fill ? sectionCardFillStyle : null) }}>
-      {title ? <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>{title}</div> : null}
-      {children}
-    </div>
-  );
-}
-
-function SubTabs({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>{children}</div>;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={fieldStyle}>
-      <span style={fieldLabelStyle}>{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function SourceNote({ title, source, text }: { title: string; source: string; text: string }) {
-  return (
-    <div style={sourceNoteStyle}>
-      <div style={{ fontWeight: 800 }}>{title}</div>
-      <div style={{ color: "#0f172a", marginTop: 4 }}>{source}</div>
-      <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{text}</div>
-    </div>
-  );
-}
-
-function ReportCompletionGauge({
-  title,
-  percent,
-  fact,
-  plan,
-  monthPlan,
-  lag,
-  overPlanPerDay,
-  remainingDays,
-}: {
-  title: string;
-  percent: number;
-  fact: number;
-  plan: number;
-  monthPlan: number;
-  lag: number;
-  overPlanPerDay: number;
-  remainingDays: number;
-}) {
-  const visiblePercent = Math.max(0, Math.min(percent, 100));
-  const deltaValue = fact - plan;
-
-  return (
-    <div style={reportGaugeStyle} aria-label={`Выполнение плана: ${percent}%`}>
-      <div style={{ ...reportGaugeCircleStyle, background: `conic-gradient(#16a34a ${visiblePercent * 3.6}deg, #e2e8f0 0deg)` }}>
-        <div style={reportGaugeInnerStyle}>
-          <span style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{percent}%</span>
-          <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>план</span>
-        </div>
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: 16 }}>Участок {title}</div>
-        <div style={{ color: "#64748b", marginTop: 3 }}>Выполнение плана с начала месяца</div>
-        <div style={reportGaugeStatsStyle}>
-          <span>План месяца: <strong>{formatNumber(monthPlan)}</strong></span>
-          <span>План к дате: <strong>{formatNumber(plan)}</strong></span>
-          <span>Факт к дате: <strong>{formatNumber(fact)}</strong></span>
-          <span style={{ color: deltaValue < 0 ? "#991b1b" : "#166534" }}>Откл.: <strong>{formatNumber(deltaValue)}</strong></span>
-        </div>
-        <div style={reportCatchUpStyle}>
-          <span style={{ color: lag > 0 ? "#991b1b" : "#166534" }}>Отставание на дату: <strong>{formatNumber(lag)}</strong></span>
-          <span>Чтобы догнать: <strong>{formatNumber(lag)}</strong> сверх оставшегося плана</span>
-          <span>Сверх плана в день: <strong>{formatNumber(overPlanPerDay)}</strong>{remainingDays ? ` (${remainingDays} дн.)` : ""}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Pill({ bg, color, children }: { bg: string; color: string; children: React.ReactNode }) {
-  return <span style={{ padding: "6px 10px", borderRadius: 999, background: bg, color, fontWeight: 700, display: "inline-block" }}>{children}</span>;
-}
-
-function VehicleMeta({ label, value }: { label: string; value: React.ReactNode }) {
-  const renderedValue = value === "" || value === null || value === undefined ? "—" : value;
-
-  return (
-    <div style={{ display: "flex", gap: 5, alignItems: "baseline", minHeight: 20 }}>
-      <span style={{ color: "#64748b", fontSize: 12, whiteSpace: "nowrap" }}>{label}:</span>
-      <span style={{ color: "#0f172a", fontSize: 13, fontWeight: 700, wordBreak: "break-word" }}>{renderedValue}</span>
-    </div>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return <th style={{ padding: 12, borderBottom: "1px solid #cbd5e1", whiteSpace: "nowrap" }}>{children}</th>;
-}
-
-function Td({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) {
-  return <td style={{ padding: 12, whiteSpace: "nowrap", fontWeight: strong ? 700 : 400 }}>{children}</td>;
-}
-
-function CompactTh({ children }: { children: React.ReactNode }) {
-  return <th style={{ padding: "8px 10px", borderBottom: "1px solid #cbd5e1", whiteSpace: "nowrap" }}>{children}</th>;
-}
-
-function CompactTd({ children }: { children: React.ReactNode }) {
-  return <td style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", verticalAlign: "top" }}>{children}</td>;
-}
-
-function ReportTh({ children, colSpan = 1, rowSpan = 1 }: { children: React.ReactNode; colSpan?: number; rowSpan?: number }) {
-  return <th colSpan={colSpan} rowSpan={rowSpan} style={reportThStyle}>{children}</th>;
-}
-
-function ReportTd({ children, strong = false, align = "left", tone, colSpan = 1 }: { children: React.ReactNode; strong?: boolean; align?: "left" | "right" | "center"; tone?: "good" | "bad"; colSpan?: number }) {
-  const color = tone === "good" ? "#166534" : tone === "bad" ? "#991b1b" : "#0f172a";
-
-  return <td colSpan={colSpan} style={{ ...reportTdStyle, textAlign: align, fontWeight: strong ? 700 : 400, color }}>{children}</td>;
-}
-
-function PtoPlanTh({
-  children,
-  colSpan = 1,
-  rowSpan = 1,
-  align = "left",
-  columnKey,
-  width,
-  onResizeStart,
-}: {
-  children: React.ReactNode;
-  colSpan?: number;
-  rowSpan?: number;
-  align?: React.CSSProperties["textAlign"];
-  columnKey?: string;
-  width?: number;
-  onResizeStart?: (event: React.MouseEvent<HTMLElement>, key: string, width: number) => void;
-}) {
-  return (
-    <th
-      colSpan={colSpan}
-      rowSpan={rowSpan}
-      style={{
-        ...ptoPlanThStyle,
-        textAlign: align,
-        ...(width ? { width, minWidth: width, maxWidth: width } : null),
-      }}
-    >
-      <div style={ptoHeaderContentStyle}>{children}</div>
-      {columnKey && width && onResizeStart ? (
-        <span
-          onMouseDown={(event) => onResizeStart(event, columnKey, width)}
-          style={ptoColumnResizeHandleStyle}
-          title="Потяни, чтобы изменить ширину столбца"
-          aria-hidden
-        />
-      ) : null}
-    </th>
-  );
-}
-
-function PtoPlanTd({ children, colSpan = 1, active = false, selected = false, editing = false, align }: { children: React.ReactNode; colSpan?: number; active?: boolean; selected?: boolean; editing?: boolean; align?: React.CSSProperties["textAlign"] }) {
-  return (
-    <td
-      colSpan={colSpan}
-      style={{
-        ...ptoPlanTdStyle,
-        ...(align ? { textAlign: align } : null),
-        ...(selected ? ptoSelectedFormulaCellStyle : null),
-        ...(editing ? ptoEditingFormulaCellStyle : null),
-        ...(active ? ptoActiveFormulaCellStyle : null),
-      }}
-    >
-      {children}
-    </td>
-  );
-}
-
-function ReportMetric({ value, note }: { value: string; note: string }) {
-  return (
-    <div style={{ display: "grid", gap: 3 }}>
-      <span style={{ fontWeight: 700 }}>{value}</span>
-      <span style={{ color: "#64748b", fontSize: 11, lineHeight: 1.2 }}>{note}</span>
-    </div>
   );
 }
 
@@ -5709,28 +7412,557 @@ const blockStyle: React.CSSProperties = {
   background: "#f8fafc",
 };
 
-const sectionCardStyle: React.CSSProperties = {
-  background: "#ffffff",
-  borderRadius: 18,
-  padding: 20,
-  boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
-  marginBottom: 20,
+const adminReportSectionHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  gap: 8,
+  flexWrap: "wrap",
 };
 
-const sectionCardFillStyle: React.CSSProperties = {
-  minHeight: 0,
-  height: "100%",
+const adminReportCompactPanelStyle: React.CSSProperties = {
+  ...blockStyle,
+  width: "100%",
+  maxWidth: "100%",
+  boxSizing: "border-box",
+  borderRadius: 8,
+  padding: 12,
+};
+
+const adminReportPanelTitleStyle: React.CSSProperties = {
+  fontWeight: 700,
+  marginBottom: 8,
+};
+
+const adminReportAreaOrderListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 6,
+  justifyItems: "start",
+};
+
+const adminReportAreaOrderRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(170px, 260px) auto",
+  alignItems: "center",
+  gap: 8,
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+  padding: "5px 6px 5px 8px",
+};
+
+const adminReportAreaOrderNameStyle: React.CSSProperties = {
+  minWidth: 0,
+  fontSize: 13,
+  fontWeight: 700,
   overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const adminReportAreaOrderActionsStyle: React.CSSProperties = {
   display: "flex",
-  flexDirection: "column",
-  marginBottom: 0,
+  alignItems: "center",
+  gap: 4,
+};
+
+const adminReportCustomerTabsStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  gap: 6,
+  flexWrap: "wrap",
+  maxWidth: "100%",
+};
+
+const adminReportOrderPanelStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(280px, 360px) minmax(560px, 1fr)",
+  gap: 12,
+  alignItems: "start",
+  justifyItems: "stretch",
+  width: "100%",
+  maxWidth: "100%",
+  overflowX: "auto",
+};
+
+const adminReportOrderWorkPanelStyle: React.CSSProperties = {
+  ...blockStyle,
+  width: "100%",
+  maxWidth: "100%",
+  boxSizing: "border-box",
+  borderRadius: 8,
+  padding: 12,
+};
+
+const adminReportWorkGroupGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr)",
+  gap: 10,
+  maxWidth: "100%",
+};
+
+const adminReportWorkGroupStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+  padding: 10,
+};
+
+const adminReportWorkGroupTitleStyle: React.CSSProperties = {
+  fontWeight: 800,
+  marginBottom: 8,
+};
+
+const adminReportWorkOrderRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(220px, 1fr) 44px auto",
+  alignItems: "center",
+  gap: 8,
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#f8fafc",
+  padding: "5px 6px 5px 8px",
+};
+
+const adminReportWorkOrderNameStyle: React.CSSProperties = {
+  minWidth: 0,
+  fontSize: 13,
+  fontWeight: 700,
+  lineHeight: 1.25,
+  overflowWrap: "normal",
+  wordBreak: "normal",
+};
+
+const adminReportWorkOrderUnitStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 800,
+  textAlign: "center",
+};
+
+const adminReportDisabledCheckboxStyle: React.CSSProperties = {
+  cursor: "not-allowed",
+  opacity: 0.45,
+};
+
+const adminReportPtoStatusBadgeStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  minHeight: 24,
+  boxSizing: "border-box",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderRadius: 4,
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1.15,
+  opacity: 1,
+  padding: "3px 6px",
+  whiteSpace: "normal",
+};
+
+const adminReportCustomerCardStyle: React.CSSProperties = {
+  ...blockStyle,
+  display: "grid",
+  gap: 0,
+  width: "fit-content",
+  maxWidth: "100%",
+  borderRadius: 8,
+  padding: 0,
+  overflow: "hidden",
+};
+
+const adminReportCustomerSummaryStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(180px, 300px) auto auto auto",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 10px",
+  background: "#ffffff",
+};
+
+const adminReportCustomerNameInputStyle: React.CSSProperties = {
+  minWidth: 0,
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #cbd5e1",
+  borderRadius: 8,
+  background: "#ffffff",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 14,
+  fontWeight: 800,
+  lineHeight: 1.25,
+  outline: "none",
+  padding: "7px 9px",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const adminReportCustomerMetaStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  whiteSpace: "nowrap",
+};
+
+const adminReportVisibleToggleStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 6,
+  alignItems: "center",
+  fontSize: 12,
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+};
+
+const adminReportCustomerSettingsTabsStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  flexWrap: "wrap",
+  width: "100%",
+  maxWidth: "100%",
+};
+
+const adminReportCustomerSettingsTabStyle: React.CSSProperties = {
+  appearance: "none",
+  WebkitAppearance: "none",
+  WebkitTapHighlightColor: "transparent",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
+  borderRadius: 8,
+  background: "#ffffff",
+  color: "#0f172a",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  outline: "none",
+  padding: "6px 9px",
+  userSelect: "none",
+};
+
+const adminReportCustomerSettingsTabActiveStyle: React.CSSProperties = {
+  borderColor: "#0f172a",
+  background: "#0f172a",
+  color: "#ffffff",
+};
+
+const adminReportCustomerSettingsTabDisabledStyle: React.CSSProperties = {
+  cursor: "not-allowed",
+  opacity: 0.45,
+};
+
+const adminReportCustomerBodyStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  justifyItems: "start",
+  padding: 10,
+  borderTop: "1px solid #e2e8f0",
+  width: "100%",
+  boxSizing: "border-box",
+  overflowX: "auto",
+};
+
+const adminReportRowsColumnStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+  justifyItems: "start",
+};
+
+const adminReportRenamePanelStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  width: "100%",
+  maxWidth: 720,
+  boxSizing: "border-box",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+  padding: 8,
+};
+
+const adminReportRenameListStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 6,
+};
+
+const adminReportRenameHeaderStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "112px minmax(180px, 1fr) minmax(190px, 1fr) 22px 22px",
+  gap: 6,
+  alignItems: "center",
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 800,
+  lineHeight: 1.15,
+  padding: "0 2px",
+};
+
+const adminReportRenameRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "112px minmax(180px, 1fr) minmax(190px, 1fr) 22px 22px",
+  gap: 6,
+  alignItems: "center",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#f8fafc",
+  padding: 6,
+};
+
+const adminReportRenameInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  border: "1px solid #cbd5e1",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  lineHeight: 1.2,
+  outline: "none",
+  padding: "5px 6px",
+};
+
+const adminReportSummaryColumnStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  alignContent: "start",
+  minWidth: 420,
+  maxWidth: 720,
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+  padding: 8,
+};
+
+const adminReportTableWrapStyle: React.CSSProperties = {
+  maxWidth: "100%",
+  overflowX: "auto",
+};
+
+const adminReportRowsTableStyle: React.CSSProperties = {
+  width: "max-content",
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
+  fontSize: 13,
+  background: "#ffffff",
+};
+
+const adminReportThStyle: React.CSSProperties = {
+  padding: "7px 8px",
+  border: "1px solid #cbd5e1",
+  background: "#f1f5f9",
+  fontWeight: 800,
+  textAlign: "left",
+  whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+};
+
+const adminReportTdStyle: React.CSSProperties = {
+  padding: "6px 8px",
+  border: "1px solid #e2e8f0",
+  verticalAlign: "middle",
+  whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+};
+
+const adminReportNameTdStyle: React.CSSProperties = {
+  ...adminReportTdStyle,
+  lineHeight: 1.25,
+};
+
+const adminReportSummaryCardStyle: React.CSSProperties = {
+  background: "#f8fafc",
+  borderRadius: 8,
+  border: "1px solid #e2e8f0",
+  display: "grid",
+  gap: 6,
+  width: "100%",
+  boxSizing: "border-box",
+  maxWidth: "100%",
+  padding: 6,
+};
+
+const adminReportSummaryFormStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "118px minmax(170px, 1fr) fit-content(96px) 22px 22px",
+  gap: 6,
+  alignItems: "center",
+};
+
+const adminReportSummaryListHeaderStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "118px minmax(170px, 1fr) fit-content(96px) 22px 22px",
+  gap: 6,
+  alignItems: "center",
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 800,
+  lineHeight: 1.15,
+  padding: "0 7px",
+};
+
+const adminReportSummaryCompactInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  border: "1px solid #cbd5e1",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  lineHeight: 1.2,
+  outline: "none",
+  padding: "5px 6px",
+};
+
+const adminReportSummaryValueStyle: React.CSSProperties = {
+  minWidth: 0,
+  color: "#0f172a",
+  fontSize: 12,
+  fontWeight: 700,
+  lineHeight: 1.2,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const adminReportSummaryRowsGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr)",
+  gap: 6,
+  justifyContent: "start",
+  maxWidth: "100%",
+  maxHeight: 240,
+  overflowY: "auto",
+  paddingRight: 2,
+};
+
+const adminReportSummaryRowsHeaderStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const adminReportSummaryNoteStyle: React.CSSProperties = {
+  minWidth: 0,
+  color: "#64748b",
+  fontSize: 11,
+  fontStyle: "italic",
+  lineHeight: 1.25,
+  overflowWrap: "normal",
+  wordBreak: "normal",
+  whiteSpace: "normal",
+};
+
+const adminReportSummarySelectionPanelStyle: React.CSSProperties = {
+  borderTop: "1px solid #e2e8f0",
+  display: "grid",
+  gap: 6,
+  paddingTop: 6,
+};
+
+const adminReportSummaryRowOptionStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "auto minmax(0, 1fr) max-content",
+  gap: 8,
+  alignItems: "center",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  padding: 8,
+  background: "#f8fafc",
+  fontWeight: 400,
+};
+
+const adminReportSummaryRowNameStyle: React.CSSProperties = {
+  minWidth: 0,
+  fontWeight: 400,
+  lineHeight: 1.25,
+  overflowWrap: "normal",
+  wordBreak: "normal",
+};
+
+const adminReportSummaryRowUnitStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 400,
+  justifySelf: "end",
+  textAlign: "right",
+  whiteSpace: "nowrap",
+};
+
+const adminReportEmptyTextStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 13,
 };
 
 const reportTableStyle: React.CSSProperties = {
   width: "100%",
-  minWidth: 2300,
+  minWidth: 1768,
   borderCollapse: "collapse",
+  tableLayout: "fixed",
   fontSize: 12,
+  background: "#ffffff",
+};
+
+const reportTitleStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 700,
+  textAlign: "center",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  width: "100%",
+};
+
+const reportAreaTabsToolbarStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  marginBottom: 12,
+};
+
+const reportAreaTabsListStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: 6,
+  minWidth: 0,
+};
+
+const reportWorkspaceStyle: React.CSSProperties = {
+  height: "calc(100dvh - 232px)",
+  minHeight: 320,
+  display: "grid",
+  gridTemplateRows: "minmax(0, 1fr)",
+};
+
+const reportPanelStyle: React.CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  display: "grid",
+  gridTemplateRows: "auto auto minmax(0, 1fr)",
+  gap: 8,
+};
+
+const reportTableScrollStyle: React.CSSProperties = {
+  overflow: "auto",
+  minHeight: 0,
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
   background: "#ffffff",
 };
 
@@ -5741,82 +7973,256 @@ const reportSourceGridStyle: React.CSSProperties = {
   marginBottom: 14,
 };
 
-const sourceNoteStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
+const dispatchSummaryHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+  flexWrap: "wrap",
+  marginBottom: 12,
+};
+
+const dispatchSummaryStatsStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+  gap: 8,
+  marginBottom: 12,
+};
+
+const dispatchSummaryStatCardStyle: React.CSSProperties = {
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#e2e8f0",
   borderRadius: 8,
   background: "#f8fafc",
-  padding: 10,
-  minHeight: 92,
+  padding: "9px 10px",
+  display: "grid",
+  gap: 4,
+  fontSize: 12,
+};
+
+const dispatchSummaryToolbarStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(240px, 360px) auto auto",
+  gap: 8,
+  alignItems: "end",
+  marginBottom: 10,
+};
+
+const dispatchSummaryToolbarDailyStyle: React.CSSProperties = {
+  ...dispatchSummaryToolbarStyle,
+  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(260px, 1fr)",
+};
+
+const dispatchSummaryReadonlyNoteStyle: React.CSSProperties = {
+  alignSelf: "stretch",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#e2e8f0",
+  borderRadius: 8,
+  background: "#f8fafc",
+  color: "#475569",
+  display: "flex",
+  alignItems: "center",
+  fontSize: 12,
+  fontWeight: 700,
+  lineHeight: 1.25,
+  padding: "8px 10px",
+};
+
+const dispatchSummaryButtonStyle: React.CSSProperties = {
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#0f172a",
+  borderRadius: 8,
+  background: "#0f172a",
+  color: "#ffffff",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  padding: "9px 10px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  whiteSpace: "nowrap",
+};
+
+const dispatchSummarySecondaryButtonStyle: React.CSSProperties = {
+  ...dispatchSummaryButtonStyle,
+  borderColor: "#cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
+};
+
+const dispatchSuggestionStyle: React.CSSProperties = {
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+  color: "#475569",
+  fontSize: 13,
+  lineHeight: 1.35,
+  padding: "8px 10px",
+  marginBottom: 10,
+};
+
+const dispatchSummaryTableScrollStyle: React.CSSProperties = {
+  overflow: "auto",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+  maxHeight: "calc(100dvh - 430px)",
+  minHeight: 260,
+};
+
+const dispatchSummaryTableStyle: React.CSSProperties = {
+  width: "max-content",
+  minWidth: 1700,
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
+  fontSize: 12,
+};
+
+const dispatchSummaryThStyle: React.CSSProperties = {
+  padding: "7px 8px",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
+  background: "#f1f5f9",
+  color: "#0f172a",
+  fontWeight: 800,
+  textAlign: "left",
+  whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+};
+
+const dispatchSummaryNumberThStyle: React.CSSProperties = {
+  ...dispatchSummaryThStyle,
+  textAlign: "center",
+};
+
+const dispatchSummaryTdStyle: React.CSSProperties = {
+  padding: 4,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#e2e8f0",
+  verticalAlign: "top",
+  background: "inherit",
+};
+
+const dispatchSummaryTdNumberStyle: React.CSSProperties = {
+  ...dispatchSummaryTdStyle,
+  verticalAlign: "middle",
+};
+
+const dispatchSummaryReadonlyNumberStyle: React.CSSProperties = {
+  ...dispatchSummaryTdStyle,
+  verticalAlign: "middle",
+  textAlign: "center",
+  fontVariantNumeric: "tabular-nums",
+  fontWeight: 700,
+};
+
+const dispatchSummaryActionTdStyle: React.CSSProperties = {
+  ...dispatchSummaryTdStyle,
+  verticalAlign: "middle",
+  textAlign: "center",
+  overflow: "visible",
+};
+
+const dispatchSummaryInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
+  borderRadius: 4,
+  background: "#ffffff",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  lineHeight: 1.25,
+  outline: "none",
+  padding: "5px 6px",
+};
+
+const dispatchSummaryNumberInputStyle: React.CSSProperties = {
+  ...dispatchSummaryInputStyle,
+  textAlign: "center",
+  fontVariantNumeric: "tabular-nums",
+};
+
+const dispatchSummaryTextareaStyle: React.CSSProperties = {
+  ...dispatchSummaryInputStyle,
+  minHeight: 44,
+  resize: "vertical",
+};
+
+const dispatchSummaryBadRowStyle: React.CSSProperties = {
+  background: "#fff7ed",
+};
+
+const dispatchSummaryEmptyStyle: React.CSSProperties = {
+  padding: "16px 10px",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#e2e8f0",
+  color: "#64748b",
+  textAlign: "center",
 };
 
 const reportGaugeGridStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
   gap: 10,
-  marginBottom: 14,
+  marginBottom: 4,
 };
 
-const reportGaugeStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: 14,
-  display: "flex",
-  alignItems: "center",
-  gap: 14,
-};
-
-const reportGaugeCircleStyle: React.CSSProperties = {
-  width: 92,
-  height: 92,
-  borderRadius: "50%",
-  display: "grid",
-  placeItems: "center",
-  flex: "0 0 92px",
-};
-
-const reportGaugeInnerStyle: React.CSSProperties = {
-  width: 68,
-  height: 68,
-  borderRadius: "50%",
-  background: "#ffffff",
-  display: "grid",
-  placeItems: "center",
-  alignContent: "center",
-};
-
-const reportGaugeStatsStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 12,
-  flexWrap: "wrap",
-  marginTop: 10,
-  color: "#0f172a",
-};
-
-const reportCatchUpStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 4,
-  marginTop: 10,
-  color: "#0f172a",
-  fontSize: 13,
-};
-
-const reportThStyle: React.CSSProperties = {
-  padding: "8px 10px",
-  border: "1px solid #cbd5e1",
-  background: "#f1f5f9",
-  color: "#0f172a",
+const reportHeaderLabelButtonStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  cursor: "text",
+  fontFamily: "inherit",
+  fontSize: 12,
   fontWeight: 800,
+  lineHeight: 1.2,
+  padding: 0,
   textAlign: "center",
-  verticalAlign: "middle",
-  lineHeight: 1.25,
+  whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+  hyphens: "none",
 };
 
-const reportTdStyle: React.CSSProperties = {
-  padding: "8px 10px",
-  border: "1px solid #e2e8f0",
-  verticalAlign: "top",
-  lineHeight: 1.3,
+const reportHeaderInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  border: "1px solid #60a5fa",
+  borderRadius: 4,
+  background: "#ffffff",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  outline: "none",
+  padding: "2px 4px",
+  textAlign: "center",
+};
+
+const reportAreaGroupStartRowStyle: React.CSSProperties = {
+  borderTop: "2px solid #334155",
 };
 
 const ptoPlanTableStyle: React.CSSProperties = {
@@ -5824,27 +8230,6 @@ const ptoPlanTableStyle: React.CSSProperties = {
   tableLayout: "fixed",
   fontSize: 12,
   background: "#ffffff",
-};
-
-const ptoPlanThStyle: React.CSSProperties = {
-  padding: "8px 9px",
-  border: "1px solid #cbd5e1",
-  background: "#f1f5f9",
-  color: "#0f172a",
-  fontWeight: 800,
-  textAlign: "left",
-  verticalAlign: "middle",
-  whiteSpace: "normal",
-  position: "relative",
-  overflow: "visible",
-};
-
-const ptoHeaderContentStyle: React.CSSProperties = {
-  minWidth: 0,
-  overflow: "visible",
-  overflowWrap: "anywhere",
-  whiteSpace: "normal",
-  lineHeight: 1.15,
 };
 
 const monthToggleStyle: React.CSSProperties = {
@@ -5862,9 +8247,11 @@ const monthToggleStyle: React.CSSProperties = {
   cursor: "pointer",
   maxWidth: "100%",
   overflow: "visible",
-  overflowWrap: "anywhere",
   textAlign: "left",
   whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+  hyphens: "none",
   lineHeight: 1.15,
 };
 
@@ -5880,9 +8267,11 @@ const ptoHeaderLabelButtonStyle: React.CSSProperties = {
   fontWeight: 800,
   padding: 0,
   overflow: "visible",
-  overflowWrap: "anywhere",
   textOverflow: "clip",
   whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+  hyphens: "none",
   lineHeight: 1.15,
 };
 
@@ -5899,24 +8288,6 @@ const ptoHeaderInputStyle: React.CSSProperties = {
   fontWeight: 800,
   outline: "none",
   padding: "2px 4px",
-};
-
-const ptoColumnResizeHandleStyle: React.CSSProperties = {
-  position: "absolute",
-  top: 0,
-  right: -3,
-  width: 7,
-  height: "100%",
-  cursor: "col-resize",
-  zIndex: 12,
-};
-
-const ptoPlanTdStyle: React.CSSProperties = {
-  position: "relative",
-  padding: 3,
-  border: "1px solid #e2e8f0",
-  verticalAlign: "middle",
-  background: "inherit",
 };
 
 const ptoWorkspaceStyle: React.CSSProperties = {
@@ -5959,37 +8330,208 @@ const ptoDateTableScrollStyle: React.CSSProperties = {
   minHeight: 0,
 };
 
+const ptoBucketsPanelStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+};
+
+const ptoBucketsLayoutStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 10,
+};
+
+const ptoBucketsHintStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#f8fafc",
+  color: "#475569",
+  padding: "8px 10px",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const ptoBucketsScrollStyle: React.CSSProperties = {
+  overflow: "auto",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+};
+
+const ptoBucketsTableStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 760,
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
+  fontSize: 12,
+};
+
+const ptoBucketsThStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  color: "#0f172a",
+  padding: "6px 8px",
+  textAlign: "left",
+  verticalAlign: "middle",
+  whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+  hyphens: "none",
+  lineHeight: 1.2,
+};
+
+const ptoBucketsTdStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  padding: 4,
+  verticalAlign: "middle",
+  background: "#ffffff",
+};
+
+const ptoBucketStructureCellStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+};
+
+const ptoBucketManualToolsStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  flex: "0 0 auto",
+};
+
+const ptoBucketManualBadgeStyle: React.CSSProperties = {
+  border: "1px solid #cbd5e1",
+  borderRadius: 8,
+  color: "#475569",
+  background: "#f8fafc",
+  padding: "2px 5px",
+  fontSize: 10,
+  fontWeight: 700,
+  lineHeight: 1.1,
+};
+
+const ptoBucketDeleteButtonStyle: React.CSSProperties = {
+  appearance: "none",
+  WebkitAppearance: "none",
+  border: "none",
+  background: "transparent",
+  color: "#991b1b",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 2,
+  outline: "none",
+};
+
+const ptoBucketDraftRowStyle: React.CSSProperties = {
+  background: "#f8fafc",
+};
+
+const ptoBucketDraftCellStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) 24px",
+  gap: 4,
+  alignItems: "center",
+};
+
+const ptoBucketTextInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "transparent",
+  borderRadius: 0,
+  background: "transparent",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  lineHeight: 1.25,
+  outline: "none",
+  padding: "3px 4px",
+};
+
+const ptoBucketAddButtonStyle: React.CSSProperties = {
+  appearance: "none",
+  WebkitAppearance: "none",
+  width: 22,
+  height: 22,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#0f172a",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 14,
+  fontWeight: 800,
+  lineHeight: 1,
+  padding: 0,
+  outline: "none",
+};
+
+const ptoBucketInputStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "transparent",
+  borderRadius: 0,
+  background: "transparent",
+  color: "#0f172a",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: 1.25,
+  outline: "none",
+  padding: "3px 4px",
+  textAlign: "center",
+  whiteSpace: "nowrap",
+  overflow: "visible",
+  textOverflow: "clip",
+};
+
 const ptoToolbarStyle: React.CSSProperties = {
   border: "1px solid #e2e8f0",
   borderRadius: 8,
   background: "#f8fafc",
-  padding: 12,
+  padding: "8px 10px",
   display: "grid",
-  gridTemplateColumns: "minmax(280px, 1fr) minmax(260px, auto)",
-  gap: 12,
+  gridTemplateColumns: "minmax(220px, 1fr) auto auto",
+  gap: 8,
   alignItems: "end",
 };
 
 const ptoToolbarBlockStyle: React.CSSProperties = {
   display: "grid",
-  gap: 6,
+  gap: 4,
   alignContent: "start",
 };
 
 const ptoToolbarRowStyle: React.CSSProperties = {
   display: "flex",
-  gap: 6,
+  gap: 4,
   flexWrap: "wrap",
   alignItems: "center",
+};
+
+const ptoToolbarLabelStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 700,
 };
 
 const ptoYearDialogStyle: React.CSSProperties = {
   border: "1px solid #cbd5e1",
   borderRadius: 8,
   background: "#ffffff",
-  padding: 10,
+  padding: 7,
   display: "flex",
-  gap: 8,
+  gap: 6,
   alignItems: "end",
   flexWrap: "wrap",
 };
@@ -6014,31 +8556,6 @@ const ptoFormulaInputStyle: React.CSSProperties = {
   fontSize: 13,
   fontVariantNumeric: "tabular-nums",
   outline: "none",
-};
-
-const ptoDatabaseBarStyle: React.CSSProperties = {
-  border: "1px solid #dbeafe",
-  borderRadius: 8,
-  background: "#eff6ff",
-  color: "#1e3a8a",
-  padding: "8px 10px",
-  marginBottom: 12,
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 10,
-  flexWrap: "wrap",
-  fontSize: 13,
-};
-
-const ptoDatabaseSavingBadgeStyle: React.CSSProperties = {
-  border: "1px solid #bfdbfe",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#1d4ed8",
-  padding: "5px 8px",
-  fontWeight: 800,
-  whiteSpace: "nowrap",
 };
 
 const ptoAreaCellStyle: React.CSSProperties = {
@@ -6097,7 +8614,9 @@ const ptoInlineAddRowButtonStyle: React.CSSProperties = {
   bottom: -10,
   width: 18,
   height: 18,
-  border: "1px solid #bfdbfe",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#bfdbfe",
   borderRadius: 4,
   background: "#ffffff",
   color: "#2563eb",
@@ -6207,7 +8726,9 @@ const ptoPlanInputStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
   boxSizing: "border-box",
-  border: "1px solid transparent",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "transparent",
   borderRadius: 0,
   padding: "3px 4px",
   fontFamily: "inherit",
@@ -6222,6 +8743,9 @@ const ptoCompactNumberInputStyle: React.CSSProperties = {
   minWidth: 0,
   cursor: "cell",
   textAlign: "center",
+  whiteSpace: "nowrap",
+  overflow: "visible",
+  textOverflow: "clip",
 };
 
 const ptoStatusBadgeStyle: React.CSSProperties = {
@@ -6231,7 +8755,8 @@ const ptoStatusBadgeStyle: React.CSSProperties = {
   width: "100%",
   minHeight: 25,
   boxSizing: "border-box",
-  border: "1px solid",
+  borderWidth: 1,
+  borderStyle: "solid",
   borderRadius: 4,
   padding: "3px 6px",
   fontWeight: 800,
@@ -6259,7 +8784,7 @@ const ptoEditingFormulaCellStyle: React.CSSProperties = {
 
 const ptoReadonlyTotalStyle: React.CSSProperties = {
   width: "100%",
-  minWidth: 68,
+  minWidth: 92,
   border: "1px solid transparent",
   borderRadius: 0,
   background: "transparent",
@@ -6272,11 +8797,14 @@ const ptoReadonlyTotalStyle: React.CSSProperties = {
   lineHeight: 1.25,
   padding: "3px 4px",
   textAlign: "center",
+  whiteSpace: "nowrap",
+  overflow: "visible",
+  textOverflow: "clip",
 };
 
 const ptoPlanDayInputStyle: React.CSSProperties = {
   ...ptoPlanInputStyle,
-  minWidth: 68,
+  minWidth: 82,
   textAlign: "center",
 };
 
@@ -6297,14 +8825,242 @@ const vehicleNameStyle: React.CSSProperties = {
   fontWeight: 700,
   lineHeight: 1.4,
   marginBottom: 6,
-  overflowWrap: "anywhere",
   whiteSpace: "normal",
+  overflowWrap: "normal",
+  wordBreak: "normal",
+  hyphens: "none",
+};
+
+const adminVehiclePanelStyle: React.CSSProperties = {
+  ...blockStyle,
+  marginBottom: 16,
+  padding: 10,
+};
+
+const adminVehicleToolbarStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 10,
+  alignItems: "center",
+  flexWrap: "wrap",
+  marginBottom: 8,
+};
+
+const adminVehicleCounterStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  flexWrap: "wrap",
+  fontWeight: 700,
+};
+
+const adminVehicleRenderedCountStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 700,
+};
+
+const adminVehicleClearFiltersStyle: React.CSSProperties = {
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#0f172a",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 11,
+  fontWeight: 700,
+  padding: "4px 7px",
+};
+
+const adminVehicleTableScrollStyle: React.CSSProperties = {
+  overflow: "auto",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+};
+
+const adminVehicleShowAllStyle: React.CSSProperties = {
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
+  borderRadius: 8,
+  background: "#ffffff",
+  color: "#0f172a",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  marginTop: 8,
+  padding: "7px 10px",
+};
+
+const adminVehicleTableStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 1309,
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
+  fontSize: 12,
+};
+
+const adminVehicleThStyle: React.CSSProperties = {
+  padding: "5px 6px",
+  borderBottom: "1px solid #cbd5e1",
+  background: "#f1f5f9",
+  color: "#0f172a",
+  fontWeight: 800,
+  textAlign: "left",
+  whiteSpace: "normal",
+  lineHeight: 1.15,
+  position: "relative",
+  overflow: "visible",
+  verticalAlign: "middle",
+  zIndex: 1,
+};
+
+const adminVehicleTdStyle: React.CSSProperties = {
+  padding: "4px 6px",
+  borderBottom: "1px solid #e2e8f0",
+  color: "#0f172a",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  verticalAlign: "middle",
+};
+
+const adminVehicleActionTdStyle: React.CSSProperties = {
+  ...adminVehicleTdStyle,
+  padding: "4px 1px",
+  overflow: "visible",
+};
+
+const adminVehicleNameTdStyle: React.CSSProperties = {
+  ...adminVehicleTdStyle,
+};
+
+const adminVehicleEmptyRowStyle: React.CSSProperties = {
+  ...adminVehicleTdStyle,
+  color: "#64748b",
+  padding: "14px 10px",
+  textAlign: "center",
+};
+
+const adminVehicleNumberTdStyle: React.CSSProperties = {
+  ...adminVehicleTdStyle,
+  textAlign: "center",
+  fontVariantNumeric: "tabular-nums",
+};
+
+const adminVehicleCheckboxStyle: React.CSSProperties = {
+  width: 14,
+  height: 14,
+  margin: 0,
+  verticalAlign: "middle",
+};
+
+const adminLogSummaryGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: 10,
+  marginBottom: 12,
+};
+
+const adminLogSummaryCardStyle: React.CSSProperties = {
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#f8fafc",
+  padding: 12,
+};
+
+const adminLogSummaryLabelStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 800,
+  marginBottom: 6,
+};
+
+const adminLogSummaryValueStyle: React.CSSProperties = {
+  color: "#0f172a",
+  fontSize: 16,
+  fontWeight: 800,
+};
+
+const adminLogSummaryMetaStyle: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 12,
+  marginTop: 4,
+};
+
+const adminLogSummaryDetailsStyle: React.CSSProperties = {
+  color: "#0f172a",
+  fontSize: 13,
+  marginTop: 8,
+};
+
+const adminLogSummaryEmptyStyle: React.CSSProperties = {
+  color: "#64748b",
+  fontSize: 13,
+};
+
+const adminLogTableScrollStyle: React.CSSProperties = {
+  overflow: "auto",
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
+  background: "#ffffff",
+};
+
+const adminLogTableStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 980,
+  borderCollapse: "collapse",
+  fontSize: 13,
+};
+
+const adminLogEmptyCellStyle: React.CSSProperties = {
+  padding: "14px 10px",
+  color: "#64748b",
+  textAlign: "center",
+};
+
+const adminVehicleActionsStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 4,
+  justifyContent: "flex-end",
+  alignItems: "center",
 };
 
 const adminDetailCellStyle: React.CSSProperties = {
   padding: "10px 12px 14px",
   borderBottom: "1px solid #e2e8f0",
   background: "#f8fafc",
+};
+
+const adminTabNameWithDeleteStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  marginBottom: 6,
+  maxWidth: "100%",
+};
+
+const adminInlineTrashButtonStyle: React.CSSProperties = {
+  appearance: "none",
+  WebkitAppearance: "none",
+  WebkitTapHighlightColor: "transparent",
+  width: 22,
+  height: 22,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
+  borderRadius: 6,
+  background: "#ffffff",
+  color: "#991b1b",
+  cursor: "pointer",
+  display: "inline-grid",
+  flex: "0 0 auto",
+  placeItems: "center",
+  padding: 0,
 };
 
 const compactRowStyle: React.CSSProperties = {
@@ -6352,28 +9108,16 @@ const dependencyLinkCardStyle: React.CSSProperties = {
   padding: 12,
 };
 
-const displayNamePreviewStyle: React.CSSProperties = {
-  minHeight: 44,
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  background: "#f8fafc",
-  padding: "11px 14px",
-  color: "#0f172a",
-  fontSize: 14,
-  fontWeight: 700,
-  lineHeight: 1.4,
-  overflowWrap: "anywhere",
-};
-
 const headerNavStackStyle: React.CSSProperties = {
   flex: "1 1 720px",
   display: "grid",
-  gap: 5,
+  gap: 6,
   minWidth: 280,
+  position: "relative",
 };
 
 const headerNavStackPtoStyle: React.CSSProperties = {
-  paddingBottom: 48,
+  paddingBottom: 0,
 };
 
 const headerMainTabsStyle: React.CSSProperties = {
@@ -6384,7 +9128,6 @@ const headerMainTabsStyle: React.CSSProperties = {
 };
 
 const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
-  position: "relative",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -6392,45 +9135,15 @@ const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
 };
 
 const headerSubtabsStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "calc(100% + 14px)",
-  left: "50%",
-  transform: "translateX(-50%)",
   display: "flex",
   flexWrap: "wrap",
   gap: 4,
   alignItems: "center",
-  justifyContent: "center",
-  width: "max-content",
-  maxWidth: "min(720px, calc(100vw - 120px))",
+  justifyContent: "flex-start",
+  width: "fit-content",
+  maxWidth: "100%",
   borderTop: "1px solid #0f172a",
   paddingTop: 6,
-  zIndex: 10,
-};
-
-const headerSubtabButtonStyle: React.CSSProperties = {
-  appearance: "none",
-  WebkitAppearance: "none",
-  WebkitTapHighlightColor: "transparent",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
-  color: "#0f172a",
-  borderRadius: 8,
-  padding: "5px 8px",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 700,
-  lineHeight: 1.2,
-  cursor: "pointer",
-  outline: "none",
-  boxShadow: "none",
-  userSelect: "none",
-};
-
-const headerSubtabButtonActiveStyle: React.CSSProperties = {
-  background: "#0f172a",
-  borderColor: "#0f172a",
-  color: "#ffffff",
 };
 
 const logoImageStyle: React.CSSProperties = {
@@ -6443,50 +9156,4 @@ const logoImageStyle: React.CSSProperties = {
 const workDateStyle: React.CSSProperties = {
   width: 170,
   flex: "0 0 170px",
-};
-
-const iconButtonStyle: React.CSSProperties = {
-  width: 34,
-  height: 34,
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-};
-
-const fieldStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 6,
-};
-
-const fieldLabelStyle: React.CSSProperties = {
-  color: "#475569",
-  fontSize: 13,
-  fontWeight: 700,
-};
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 50,
-  background: "rgba(15, 23, 42, 0.35)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 24,
-};
-
-const vehicleCardStyle: React.CSSProperties = {
-  width: "min(900px, 100%)",
-  maxHeight: "calc(100vh - 48px)",
-  overflowY: "auto",
-  background: "#ffffff",
-  borderRadius: 8,
-  padding: 20,
-  boxShadow: "0 24px 70px rgba(15, 23, 42, 0.25)",
 };

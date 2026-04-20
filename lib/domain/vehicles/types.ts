@@ -1,0 +1,28 @@
+export type VehicleRow = {
+  id: number;
+  name: string;
+  brand: string;
+  model: string;
+  plateNumber: string;
+  garageNumber: string;
+  vehicleType: string;
+  equipmentType: string;
+  manufactureYear: string;
+  fuelNormWinter: number;
+  fuelNormSummer: number;
+  fuelCalcType: "Моточасы" | "Пробег";
+  vin: string;
+  owner: string;
+  area: string;
+  location: string;
+  workType: string;
+  excavator: string;
+  contractor?: string;
+  work: number;
+  rent: number;
+  repair: number;
+  downtime: number;
+  trips: number;
+  active: boolean;
+  visible?: boolean;
+};

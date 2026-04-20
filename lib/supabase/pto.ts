@@ -1,27 +1,22 @@
+import type { PtoDateTableKey, PtoPlanRow } from "../domain/pto/date-table";
 import { supabase, supabaseConfigured } from "./client";
 
-export type SupabasePtoTable = "plan" | "oper" | "survey";
+export type SupabasePtoTable = PtoDateTableKey;
 
-export type SupabasePtoRow = {
-  id: string;
-  area: string;
-  location: string;
-  structure: string;
-  unit: string;
-  coefficient: number;
-  status: string;
-  carryover: number;
-  carryovers?: Record<string, number>;
-  carryoverManualYears?: string[];
-  dailyPlans: Record<string, number>;
-  years?: string[];
-};
+export type SupabasePtoRow = PtoPlanRow;
 
 export type SupabasePtoState = {
+  updatedAt?: string;
   manualYears: string[];
   planRows: SupabasePtoRow[];
   operRows: SupabasePtoRow[];
   surveyRows: SupabasePtoRow[];
+  bucketValues?: Record<string, number>;
+  bucketRows?: Array<{
+    key: string;
+    area: string;
+    structure: string;
+  }>;
   uiState?: {
     reportDate?: string;
     topTab?: string;
@@ -29,6 +24,8 @@ export type SupabasePtoState = {
     ptoPlanYear?: string;
     ptoAreaFilter?: string;
     expandedPtoMonths?: Record<string, boolean>;
+    reportColumnWidths?: Record<string, number>;
+    reportReasons?: Record<string, string>;
     ptoColumnWidths?: Record<string, number>;
     ptoRowHeights?: Record<string, number>;
     ptoHeaderLabels?: Record<string, string>;
@@ -55,12 +52,16 @@ type PtoDateRowRecord = {
 type PtoSettingRecord = {
   key: string;
   value: unknown;
+  updated_at?: string | null;
 };
 
 const ptoRowsTable = "pto_date_rows";
 const ptoSettingsTable = "pto_settings";
 const ptoManualYearsKey = "pto_manual_years";
 const ptoUiStateKey = "pto_ui_state";
+const ptoBucketValuesKey = "pto_bucket_values";
+const ptoBucketRowsKey = "pto_bucket_rows";
+const ptoTables: SupabasePtoTable[] = ["plan", "oper", "survey"];
 
 function requireSupabase() {
   if (!supabaseConfigured || !supabase) {
@@ -113,6 +114,21 @@ function rowsByTable(records: PtoDateRowRecord[], table: SupabasePtoTable) {
     .map(recordToRow);
 }
 
+function currentRowIdsByTable(records: PtoDateRowRecord[]) {
+  return ptoTables.reduce<Record<SupabasePtoTable, Set<string>>>((idsByTable, table) => {
+    idsByTable[table] = new Set(
+      records
+        .filter((record) => record.table_type === table)
+        .map((record) => record.row_id),
+    );
+    return idsByTable;
+  }, {
+    plan: new Set<string>(),
+    oper: new Set<string>(),
+    survey: new Set<string>(),
+  });
+}
+
 export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | null> {
   const client = requireSupabase();
 
@@ -125,25 +141,35 @@ export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | nul
     client
       .from(ptoSettingsTable)
       .select("*")
-      .in("key", [ptoManualYearsKey, ptoUiStateKey]),
+      .in("key", [ptoManualYearsKey, ptoUiStateKey, ptoBucketValuesKey, ptoBucketRowsKey]),
   ]);
 
   if (rowsError) throw rowsError;
   if (settingsError) throw settingsError;
-  if (!rows?.length) return null;
+  if (!rows?.length && !settings?.length) return null;
 
   const settingsByKey = new Map((settings as PtoSettingRecord[] | null ?? []).map((setting) => [setting.key, setting.value]));
+  const updatedAt = (settings as PtoSettingRecord[] | null ?? [])
+    .map((setting) => setting.updated_at)
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .sort()
+    .at(-1);
   const manualYearsValue = settingsByKey.get(ptoManualYearsKey);
   const uiStateValue = settingsByKey.get(ptoUiStateKey);
+  const bucketValuesValue = settingsByKey.get(ptoBucketValuesKey);
+  const bucketRowsValue = settingsByKey.get(ptoBucketRowsKey);
   const manualYears = Array.isArray(manualYearsValue)
     ? manualYearsValue.filter((year): year is string => typeof year === "string")
     : [];
 
   return {
+    updatedAt,
     manualYears,
     planRows: rowsByTable(rows as PtoDateRowRecord[], "plan"),
     operRows: rowsByTable(rows as PtoDateRowRecord[], "oper"),
     surveyRows: rowsByTable(rows as PtoDateRowRecord[], "survey"),
+    bucketValues: typeof bucketValuesValue === "object" && bucketValuesValue !== null ? bucketValuesValue as Record<string, number> : {},
+    bucketRows: Array.isArray(bucketRowsValue) ? bucketRowsValue as SupabasePtoState["bucketRows"] : [],
     uiState: typeof uiStateValue === "object" && uiStateValue !== null ? uiStateValue as SupabasePtoState["uiState"] : undefined,
   };
 }
@@ -155,13 +181,30 @@ export async function savePtoStateToSupabase(state: SupabasePtoState) {
     ...tableRowsToRecords("oper", state.operRows),
     ...tableRowsToRecords("survey", state.surveyRows),
   ];
+  const rowIdsByTable = currentRowIdsByTable(records);
 
-  const { error: deleteError } = await client.from(ptoRowsTable).delete().neq("row_id", "__never__");
-  if (deleteError) throw deleteError;
+  const { data: existingRows, error: existingRowsError } = await client
+    .from(ptoRowsTable)
+    .select("table_type,row_id");
+  if (existingRowsError) throw existingRowsError;
 
   if (records.length) {
-    const { error: insertError } = await client.from(ptoRowsTable).insert(records);
-    if (insertError) throw insertError;
+    const { error: upsertError } = await client
+      .from(ptoRowsTable)
+      .upsert(records, { onConflict: "table_type,row_id" });
+    if (upsertError) throw upsertError;
+  }
+
+  const staleRows = (existingRows as Pick<PtoDateRowRecord, "table_type" | "row_id">[] | null ?? [])
+    .filter((row) => !rowIdsByTable[row.table_type]?.has(row.row_id));
+
+  for (const staleRow of staleRows) {
+    const { error: deleteError } = await client
+      .from(ptoRowsTable)
+      .delete()
+      .eq("table_type", staleRow.table_type)
+      .eq("row_id", staleRow.row_id);
+    if (deleteError) throw deleteError;
   }
 
   const updatedAt = new Date().toISOString();
@@ -176,6 +219,16 @@ export async function savePtoStateToSupabase(state: SupabasePtoState) {
       {
         key: ptoUiStateKey,
         value: state.uiState ?? {},
+        updated_at: updatedAt,
+      },
+      {
+        key: ptoBucketValuesKey,
+        value: state.bucketValues ?? {},
+        updated_at: updatedAt,
+      },
+      {
+        key: ptoBucketRowsKey,
+        value: state.bucketRows ?? [],
         updated_at: updatedAt,
       },
     ]);

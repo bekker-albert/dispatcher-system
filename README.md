@@ -28,7 +28,12 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
 
-The first database step stores PTO tabs: plan, operation accounting, survey, and PTO years.
+The database step stores PTO tabs: plan, operation accounting, survey, and PTO years.
+For the prototype stage, PTO data is available through the public anon key so the app can work without a login screen. Add proper users and roles before opening the public site for real operations.
+
+## Desktop shortcut
+
+The app has a web app manifest. In Microsoft Edge or Chrome, open the site and install it as an app from the address bar or browser menu. The installed shortcut opens the same web app.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
