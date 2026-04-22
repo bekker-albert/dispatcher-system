@@ -178,6 +178,9 @@ export default function App() {
   const vehicleRowsRef = useRef(vehicleRows);
   const vehicleSaveTimerRef = useRef<number | null>(null);
   const appStateSaveTimerRef = useRef<number | null>(null);
+  const appDatabaseSaveTimerRef = useRef<number | null>(null);
+  const appDatabaseAvailableRef = useRef(false);
+  const appDatabaseSaveSnapshotRef = useRef("");
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
@@ -355,6 +358,7 @@ export default function App() {
         : [nextEntry, ...current].slice(0, adminLogLimit);
 
       window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(nextLogs));
+      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
       return nextLogs;
     });
   }, []);
@@ -588,6 +592,50 @@ export default function App() {
       };
 
       try {
+        const appStorageKeys = Object.values(adminStorageKeys);
+        const hasLocalAppState = appStorageKeys.some((key) => (
+          key !== adminStorageKeys.appLocalUpdatedAt
+          && window.localStorage.getItem(key) !== null
+        ));
+
+        if (supabaseConfigured) {
+          try {
+            const { loadAppStateFromSupabase } = await import("@/lib/supabase/app-state");
+            const databaseAppState = await loadAppStateFromSupabase();
+            appDatabaseAvailableRef.current = true;
+
+            if (cancelled) return;
+
+            const databaseStorage = databaseAppState?.storage ?? {};
+            const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
+            const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
+            const databaseUpdatedTime = databaseAppState?.updatedAt ? Date.parse(databaseAppState.updatedAt) : 0;
+            const shouldUseDatabaseAppState = Object.keys(databaseStorage).length > 0
+              && (
+                !hasLocalAppState
+                || (localUpdatedTime > 0 && databaseUpdatedTime > localUpdatedTime)
+              );
+
+            if (shouldUseDatabaseAppState) {
+              appStorageKeys.forEach((key) => {
+                const value = databaseStorage[key];
+                if (typeof value === "string") {
+                  window.localStorage.setItem(key, value);
+                }
+              });
+              if (databaseAppState?.updatedAt) {
+                window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseAppState.updatedAt);
+              }
+              appDatabaseSaveSnapshotRef.current = JSON.stringify(databaseStorage);
+            } else if (hasLocalAppState && !localUpdatedAt) {
+              window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+            }
+          } catch (error) {
+            appDatabaseAvailableRef.current = false;
+            console.warn("Supabase app_state is not ready:", error);
+          }
+        }
+
         const savedReportCustomers = readStoredValue(adminStorageKeys.reportCustomers);
         const savedReportAreaOrder = readStoredValue(adminStorageKeys.reportAreaOrder);
         const savedReportWorkOrder = readStoredValue(adminStorageKeys.reportWorkOrder);
@@ -863,6 +911,15 @@ export default function App() {
     };
   }, [adminDataLoaded]);
 
+  const collectAppStorageState = useCallback(() => (
+    Object.fromEntries(
+      Object.values(adminStorageKeys).flatMap((key) => {
+        const value = window.localStorage.getItem(key);
+        return value === null ? [] : [[key, value] as const];
+      }),
+    )
+  ), []);
+
   const saveAppLocalState = useCallback(() => {
     window.localStorage.setItem(adminStorageKeys.reportCustomers, JSON.stringify(reportCustomers));
     window.localStorage.setItem(adminStorageKeys.reportAreaOrder, JSON.stringify(reportAreaOrder));
@@ -878,6 +935,7 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.dependencyNodes, JSON.stringify(dependencyNodes));
     window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
     window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(adminLogs));
+    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
   }, [
     adminLogs,
     customTabs,
@@ -915,6 +973,41 @@ export default function App() {
     };
   }, [adminDataLoaded, saveAppLocalState]);
 
+  const saveAppDatabaseState = useCallback(async () => {
+    if (!supabaseConfigured || !appDatabaseAvailableRef.current) return;
+
+    const storage = collectAppStorageState();
+    const snapshot = JSON.stringify(storage);
+    if (snapshot === appDatabaseSaveSnapshotRef.current) return;
+
+    const { saveAppStateToSupabase } = await import("@/lib/supabase/app-state");
+    await saveAppStateToSupabase(storage);
+    appDatabaseSaveSnapshotRef.current = snapshot;
+  }, [collectAppStorageState]);
+
+  useEffect(() => {
+    if (!adminDataLoaded || !supabaseConfigured || !appDatabaseAvailableRef.current) return undefined;
+
+    if (appDatabaseSaveTimerRef.current !== null) {
+      window.clearTimeout(appDatabaseSaveTimerRef.current);
+    }
+
+    appDatabaseSaveTimerRef.current = window.setTimeout(() => {
+      void saveAppDatabaseState().catch((error) => {
+        appDatabaseAvailableRef.current = false;
+        console.warn("Supabase app_state save failed:", error);
+      });
+      appDatabaseSaveTimerRef.current = null;
+    }, 1500);
+
+    return () => {
+      if (appDatabaseSaveTimerRef.current !== null) {
+        window.clearTimeout(appDatabaseSaveTimerRef.current);
+        appDatabaseSaveTimerRef.current = null;
+      }
+    };
+  }, [adminDataLoaded, saveAppDatabaseState, vehicleRows, dispatchSummaryRows, reportCustomers, reportAreaOrder, reportWorkOrder, reportHeaderLabels, reportColumnWidths, reportReasons, customTabs, topTabs, subTabs, orgMembers, dependencyNodes, dependencyLinks, adminLogs, ptoManualYears, ptoPlanRows, ptoSurveyRows, ptoOperRows, ptoColumnWidths, ptoRowHeights, ptoHeaderLabels, ptoBucketValues, ptoBucketManualRows, reportDate, ptoTab, ptoPlanYear, ptoAreaFilter, expandedPtoMonths]);
+
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
 
@@ -924,6 +1017,7 @@ export default function App() {
 
     vehicleSaveTimerRef.current = window.setTimeout(() => {
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
+      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
       vehicleSaveTimerRef.current = null;
     }, 700);
 
@@ -944,6 +1038,7 @@ export default function App() {
         vehicleSaveTimerRef.current = null;
       }
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
+      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
     };
 
     window.addEventListener("pagehide", flushVehicleRows);
@@ -983,6 +1078,7 @@ export default function App() {
       window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
       hasStoredPtoStateRef.current = true;
     }
+    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
   }, []);
 
   useEffect(() => {
