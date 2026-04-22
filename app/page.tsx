@@ -103,6 +103,22 @@ type UndoSnapshot = {
 };
 
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
+const sharedAppSettingKeys = [
+  adminStorageKeys.reportCustomers,
+  adminStorageKeys.reportAreaOrder,
+  adminStorageKeys.reportWorkOrder,
+  adminStorageKeys.reportHeaderLabels,
+  adminStorageKeys.reportColumnWidths,
+  adminStorageKeys.reportReasons,
+  adminStorageKeys.customTabs,
+  adminStorageKeys.topTabs,
+  adminStorageKeys.subTabs,
+  adminStorageKeys.dispatchSummaryRows,
+  adminStorageKeys.orgMembers,
+  adminStorageKeys.dependencyNodes,
+  adminStorageKeys.dependencyLinks,
+  adminStorageKeys.adminLogs,
+] as const;
 
 async function loadDefaultVehicleSeed() {
   const seedModule = await import("@/data/default-vehicles.json");
@@ -177,10 +193,12 @@ export default function App() {
   const adminVehicleTableScrollRef = useRef<HTMLDivElement | null>(null);
   const vehicleRowsRef = useRef(vehicleRows);
   const vehicleSaveTimerRef = useRef<number | null>(null);
+  const vehiclesDatabaseLoadedRef = useRef(false);
+  const vehiclesDatabaseSaveSnapshotRef = useRef("");
   const appStateSaveTimerRef = useRef<number | null>(null);
-  const appDatabaseSaveTimerRef = useRef<number | null>(null);
-  const appDatabaseAvailableRef = useRef(false);
   const appDatabaseSaveSnapshotRef = useRef("");
+  const appSettingsDatabaseLoadedRef = useRef(false);
+  const appSettingsDatabaseSaveSnapshotRef = useRef("");
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
@@ -602,7 +620,6 @@ export default function App() {
           try {
             const { loadAppStateFromSupabase } = await import("@/lib/supabase/app-state");
             const databaseAppState = await loadAppStateFromSupabase();
-            appDatabaseAvailableRef.current = true;
 
             if (cancelled) return;
 
@@ -631,8 +648,25 @@ export default function App() {
               window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
             }
           } catch (error) {
-            appDatabaseAvailableRef.current = false;
-            console.warn("Supabase app_state is not ready:", error);
+            console.warn("Legacy Supabase app_state is not ready:", error);
+          }
+
+          try {
+            const { loadAppSettingsFromSupabase } = await import("@/lib/supabase/settings");
+            const databaseSettings = await loadAppSettingsFromSupabase([...sharedAppSettingKeys]);
+            appSettingsDatabaseLoadedRef.current = true;
+
+            if (cancelled) return;
+
+            databaseSettings.forEach((setting) => {
+              window.localStorage.setItem(setting.key, JSON.stringify(setting.value));
+            });
+            appSettingsDatabaseSaveSnapshotRef.current = JSON.stringify(Object.fromEntries(
+              databaseSettings.map((setting) => [setting.key, setting.value]),
+            ));
+          } catch (error) {
+            appSettingsDatabaseLoadedRef.current = false;
+            console.warn("Supabase app_settings table is not ready:", error);
           }
         }
 
@@ -645,7 +679,8 @@ export default function App() {
         const savedCustomTabs = readStoredValue(adminStorageKeys.customTabs);
         const savedTopTabs = readStoredValue(adminStorageKeys.topTabs);
         const savedSubTabs = readStoredValue(adminStorageKeys.subTabs);
-        const savedVehicles = readStoredValue(adminStorageKeys.vehicles);
+        let savedVehicles = readStoredValue(adminStorageKeys.vehicles);
+        let loadedVehiclesFromDatabase = false;
         const savedDispatchSummaryRows = readStoredValue(adminStorageKeys.dispatchSummaryRows);
         const savedPtoYears = readStoredValue(adminStorageKeys.ptoYears);
         const savedPtoPlanRows = readStoredValue(adminStorageKeys.ptoPlanRows);
@@ -660,6 +695,29 @@ export default function App() {
         const savedDependencyNodes = readStoredValue(adminStorageKeys.dependencyNodes);
         const savedDependencyLinks = readStoredValue(adminStorageKeys.dependencyLinks);
         const savedAdminLogs = readStoredValue(adminStorageKeys.adminLogs);
+
+        if (supabaseConfigured) {
+          try {
+            const { loadVehiclesFromSupabase } = await import("@/lib/supabase/vehicles");
+            const databaseVehicles = await loadVehiclesFromSupabase();
+            vehiclesDatabaseLoadedRef.current = true;
+
+            if (cancelled) return;
+
+            if (databaseVehicles?.rows.length) {
+              savedVehicles = databaseVehicles.rows;
+              loadedVehiclesFromDatabase = true;
+              vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(databaseVehicles.rows);
+              window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(databaseVehicles.rows));
+              if (databaseVehicles.updatedAt) {
+                window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseVehicles.updatedAt);
+              }
+            }
+          } catch (error) {
+            vehiclesDatabaseLoadedRef.current = false;
+            console.warn("Supabase vehicles table is not ready:", error);
+          }
+        }
         const hasSavedPtoState = Boolean(
           savedPtoYears
           || Array.isArray(savedPtoPlanRows)
@@ -694,7 +752,7 @@ export default function App() {
         }
 
         const savedVehicleSeedVersion = window.localStorage.getItem(adminStorageKeys.vehiclesSeedVersion);
-        const needsVehicleSeed = !Array.isArray(savedVehicles) || savedVehicles.length <= defaultVehicleSeedReplaceLimit;
+        const needsVehicleSeed = !loadedVehiclesFromDatabase && (!Array.isArray(savedVehicles) || savedVehicles.length <= defaultVehicleSeedReplaceLimit);
         const defaultVehicleSeed = needsVehicleSeed ? await loadDefaultVehicleSeed() : null;
         if (cancelled) return;
         const shouldUseVehicleSeed = defaultVehicleSeed !== null && defaultVehicleSeed.rows.length > 0 && (
@@ -911,15 +969,6 @@ export default function App() {
     };
   }, [adminDataLoaded]);
 
-  const collectAppStorageState = useCallback(() => (
-    Object.fromEntries(
-      Object.values(adminStorageKeys).flatMap((key) => {
-        const value = window.localStorage.getItem(key);
-        return value === null ? [] : [[key, value] as const];
-      }),
-    )
-  ), []);
-
   const saveAppLocalState = useCallback(() => {
     window.localStorage.setItem(adminStorageKeys.reportCustomers, JSON.stringify(reportCustomers));
     window.localStorage.setItem(adminStorageKeys.reportAreaOrder, JSON.stringify(reportAreaOrder));
@@ -953,6 +1002,33 @@ export default function App() {
     topTabs,
   ]);
 
+  const collectSharedAppSettings = useCallback(() => (
+    Object.fromEntries(
+      sharedAppSettingKeys.flatMap((key) => {
+        const value = window.localStorage.getItem(key);
+        if (value === null) return [];
+
+        try {
+          return [[key, JSON.parse(value)] as const];
+        } catch {
+          return [];
+        }
+      }),
+    )
+  ), []);
+
+  const saveSharedAppSettingsToDatabase = useCallback(async () => {
+    if (!supabaseConfigured || !appSettingsDatabaseLoadedRef.current) return;
+
+    const settings = collectSharedAppSettings();
+    const snapshot = JSON.stringify(settings);
+    if (snapshot === appSettingsDatabaseSaveSnapshotRef.current) return;
+
+    const { saveAppSettingsToSupabase } = await import("@/lib/supabase/settings");
+    await saveAppSettingsToSupabase(settings);
+    appSettingsDatabaseSaveSnapshotRef.current = snapshot;
+  }, [collectSharedAppSettings]);
+
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
 
@@ -962,6 +1038,9 @@ export default function App() {
 
     appStateSaveTimerRef.current = window.setTimeout(() => {
       saveAppLocalState();
+      void saveSharedAppSettingsToDatabase().catch((error) => {
+        console.warn("Supabase app_settings save failed:", error);
+      });
       appStateSaveTimerRef.current = null;
     }, 300);
 
@@ -971,42 +1050,10 @@ export default function App() {
         appStateSaveTimerRef.current = null;
       }
     };
-  }, [adminDataLoaded, saveAppLocalState]);
+  }, [adminDataLoaded, saveAppLocalState, saveSharedAppSettingsToDatabase]);
 
-  const saveAppDatabaseState = useCallback(async () => {
-    if (!supabaseConfigured || !appDatabaseAvailableRef.current) return;
-
-    const storage = collectAppStorageState();
-    const snapshot = JSON.stringify(storage);
-    if (snapshot === appDatabaseSaveSnapshotRef.current) return;
-
-    const { saveAppStateToSupabase } = await import("@/lib/supabase/app-state");
-    await saveAppStateToSupabase(storage);
-    appDatabaseSaveSnapshotRef.current = snapshot;
-  }, [collectAppStorageState]);
-
-  useEffect(() => {
-    if (!adminDataLoaded || !supabaseConfigured || !appDatabaseAvailableRef.current) return undefined;
-
-    if (appDatabaseSaveTimerRef.current !== null) {
-      window.clearTimeout(appDatabaseSaveTimerRef.current);
-    }
-
-    appDatabaseSaveTimerRef.current = window.setTimeout(() => {
-      void saveAppDatabaseState().catch((error) => {
-        appDatabaseAvailableRef.current = false;
-        console.warn("Supabase app_state save failed:", error);
-      });
-      appDatabaseSaveTimerRef.current = null;
-    }, 1500);
-
-    return () => {
-      if (appDatabaseSaveTimerRef.current !== null) {
-        window.clearTimeout(appDatabaseSaveTimerRef.current);
-        appDatabaseSaveTimerRef.current = null;
-      }
-    };
-  }, [adminDataLoaded, saveAppDatabaseState, vehicleRows, dispatchSummaryRows, reportCustomers, reportAreaOrder, reportWorkOrder, reportHeaderLabels, reportColumnWidths, reportReasons, customTabs, topTabs, subTabs, orgMembers, dependencyNodes, dependencyLinks, adminLogs, ptoManualYears, ptoPlanRows, ptoSurveyRows, ptoOperRows, ptoColumnWidths, ptoRowHeights, ptoHeaderLabels, ptoBucketValues, ptoBucketManualRows, reportDate, ptoTab, ptoPlanYear, ptoAreaFilter, expandedPtoMonths]);
+  // Legacy app_state is load-only now. Writing the whole localStorage snapshot
+  // from every browser is unsafe for several simultaneous users.
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -1018,6 +1065,17 @@ export default function App() {
     vehicleSaveTimerRef.current = window.setTimeout(() => {
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
       window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+      if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+        const snapshot = JSON.stringify(vehicleRowsRef.current);
+        if (snapshot !== vehiclesDatabaseSaveSnapshotRef.current) {
+          void import("@/lib/supabase/vehicles")
+            .then(({ saveVehiclesToSupabase }) => saveVehiclesToSupabase(vehicleRowsRef.current))
+            .then(() => {
+              vehiclesDatabaseSaveSnapshotRef.current = snapshot;
+            })
+            .catch((error) => console.warn("Supabase vehicles save failed:", error));
+        }
+      }
       vehicleSaveTimerRef.current = null;
     }, 700);
 
@@ -2769,6 +2827,28 @@ export default function App() {
     return subTabs.pto.find((tab) => tab.value === ptoTab)?.label ?? ptoTab;
   }
 
+  function currentPtoDateTableKey(): PtoDateTableKey | null {
+    return ptoTab === "plan" || ptoTab === "oper" || ptoTab === "survey" ? ptoTab : null;
+  }
+
+  function savePtoDayPatchToDatabase(rowId: string, day: string, value: number | null) {
+    const table = currentPtoDateTableKey();
+    if (!table || !supabaseConfigured || !ptoDatabaseLoadedRef.current) return;
+
+    void import("@/lib/supabase/pto")
+      .then(({ savePtoDayValueToSupabase }) => savePtoDayValueToSupabase(table, rowId, day, value))
+      .catch((error) => console.warn("Supabase PTO day save failed:", error));
+  }
+
+  function savePtoDayPatchesToDatabase(values: Array<{ rowId: string; day: string; value: number | null }>) {
+    const table = currentPtoDateTableKey();
+    if (!table || !supabaseConfigured || !ptoDatabaseLoadedRef.current || values.length === 0) return;
+
+    void import("@/lib/supabase/pto")
+      .then(({ savePtoDayValuesToSupabase }) => savePtoDayValuesToSupabase(table, values))
+      .catch((error) => console.warn("Supabase PTO day batch save failed:", error));
+  }
+
   function addLinkedPtoDateRow(overrides: Partial<PtoPlanRow> = {}, insertAfterRow?: PtoPlanRow) {
     const id = createId();
     const sharedOverrides = {
@@ -2829,6 +2909,11 @@ export default function App() {
     setPtoPlanYear(fallbackYear);
     setPtoYearInput("");
     setPtoYearDialogOpen(false);
+    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/supabase/pto")
+        .then(({ deletePtoYearFromSupabase }) => deletePtoYearFromSupabase(year))
+        .catch((error) => console.warn("Supabase PTO year delete failed:", error));
+    }
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Удаление",
@@ -2922,16 +3007,19 @@ export default function App() {
   }
 
   function updatePtoDateDay(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, day: string, value: string) {
+    const trimmedValue = value.trim();
+    const parsedValue = trimmedValue === "" ? null : parseDecimalValue(value);
+
     setRows((current) =>
       current.map((row) => {
         if (row.id !== id) return row;
 
         const dailyPlans = { ...row.dailyPlans };
         const year = day.slice(0, 4);
-        if (value.trim() === "") {
+        if (parsedValue === null) {
           delete dailyPlans[day];
         } else {
-          dailyPlans[day] = parseDecimalValue(value);
+          dailyPlans[day] = parsedValue;
         }
 
         return {
@@ -2941,6 +3029,7 @@ export default function App() {
         };
       }),
     );
+    savePtoDayPatchToDatabase(id, day, parsedValue);
     addAdminLog({
       action: "Редактирование",
       section: "ПТО",
@@ -2949,6 +3038,8 @@ export default function App() {
   }
 
   function updatePtoMonthTotal(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, days: string[], value: string) {
+    const distributedValues = value.trim() ? distributeMonthlyTotal(parseDecimalValue(value), days) : {};
+
     setRows((current) =>
       current.map((row) => {
         if (row.id !== id) return row;
@@ -2959,7 +3050,7 @@ export default function App() {
         });
 
         if (value.trim()) {
-          Object.assign(nextDailyPlans, distributeMonthlyTotal(parseDecimalValue(value), days));
+          Object.assign(nextDailyPlans, distributedValues);
         }
 
         return {
@@ -2969,6 +3060,11 @@ export default function App() {
         };
       }),
     );
+    savePtoDayPatchesToDatabase(days.map((day) => ({
+      rowId: id,
+      day,
+      value: distributedValues[day] ?? null,
+    })));
     addAdminLog({
       action: "Редактирование",
       section: "ПТО",
@@ -2987,6 +3083,11 @@ export default function App() {
     setPtoPlanRows(removeRow);
     setPtoOperRows(removeRow);
     setPtoSurveyRows(removeRow);
+    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/supabase/pto")
+        .then(({ deletePtoRowsFromSupabase }) => deletePtoRowsFromSupabase([row.id]))
+        .catch((error) => console.warn("Supabase PTO row delete failed:", error));
+    }
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Удаление",
@@ -3632,6 +3733,11 @@ export default function App() {
     const vehicle = vehicleRows.find((item) => item.id === id);
     pushVehicleUndoSnapshot();
     setVehicleRows((current) => current.filter((vehicle) => vehicle.id !== id));
+    if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+      void import("@/lib/supabase/vehicles")
+        .then(({ deleteVehicleFromSupabase }) => deleteVehicleFromSupabase(id))
+        .catch((error) => console.warn("Supabase vehicle delete failed:", error));
+    }
     addAdminLog({
       action: "Удаление",
       section: "Техника",
@@ -3664,6 +3770,14 @@ export default function App() {
       setOpenVehicleFilter(null);
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
       window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
+      if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+        void import("@/lib/supabase/vehicles")
+          .then(({ replaceVehiclesInSupabase }) => replaceVehiclesInSupabase(importedVehicles))
+          .then(() => {
+            vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(importedVehicles);
+          })
+          .catch((error) => console.warn("Supabase vehicles import save failed:", error));
+      }
       addAdminLog({
         action: "Загрузка",
         section: "Техника",
@@ -3811,6 +3925,14 @@ export default function App() {
 
       return next;
     });
+    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/supabase/pto")
+        .then(({ savePtoBucketValueToSupabase }) => savePtoBucketValueToSupabase(
+          cellKey,
+          parsed === null ? null : Math.round(parsed * 100) / 100,
+        ))
+        .catch((error) => console.warn("Supabase PTO bucket value save failed:", error));
+    }
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Редактирование",
@@ -3829,6 +3951,11 @@ export default function App() {
       });
       return next;
     });
+    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/supabase/pto")
+        .then(({ deletePtoBucketValuesFromSupabase }) => deletePtoBucketValuesFromSupabase(cellKeys))
+        .catch((error) => console.warn("Supabase PTO bucket values delete failed:", error));
+    }
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Редактирование",
@@ -3850,6 +3977,11 @@ export default function App() {
     }
 
     setPtoBucketManualRows((current) => [...current, { key, area, structure, source: "manual" }]);
+    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/supabase/pto")
+        .then(({ savePtoBucketRowToSupabase }) => savePtoBucketRowToSupabase({ key, area, structure, source: "manual" }, ptoBucketManualRows.length))
+        .catch((error) => console.warn("Supabase PTO bucket row save failed:", error));
+    }
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Добавление",
@@ -3870,6 +4002,11 @@ export default function App() {
       });
       return next;
     });
+    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/supabase/pto")
+        .then(({ deletePtoBucketRowFromSupabase }) => deletePtoBucketRowFromSupabase(row.key))
+        .catch((error) => console.warn("Supabase PTO bucket row delete failed:", error));
+    }
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Удаление",
