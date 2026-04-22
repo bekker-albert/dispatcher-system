@@ -1,7 +1,7 @@
 import { normalizeLookupValue, uniqueSorted } from "../../utils/text";
 import { ptoAutomatedStatus, type PtoPlanRow, type PtoStatus } from "../pto/date-table";
 import { ptoRowsForReport, normalizeReportRow, reportPtoIndexKey, type ReportPtoIndex } from "./calculation";
-import { reportColumnAutoMaxWidths, reportColumnTextCaps, reportReasonColumnKeys, type ReportColumnKey } from "./columns";
+import { reportColumnAutoMaxWidths, reportColumnAutoMinWidths, reportColumnTextCaps, reportCompactColumnKeys, reportReasonColumnKeys, type ReportColumnKey } from "./columns";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "./facts";
 import { aggregateReportReasons } from "./reasons";
 import type { ReportCustomerConfig, ReportPtoDateStatus, ReportRow, ReportSummaryRowConfig } from "./types";
@@ -105,21 +105,43 @@ function reportAutoWidthFromChars(chars: number) {
   return Math.round(chars * 5.8 + 22);
 }
 
+function reportCompactAutoWidthFromChars(chars: number) {
+  return Math.round(chars * 5.2 + 16);
+}
+
+function reportCompactValueLength(value: string) {
+  const compactedNumbers = value.replace(/(\d)[\s\u00a0]+(?=\d)/g, "$1");
+  return Math.max(
+    reportLongestWordLength(compactedNumbers),
+    Math.min(reportTextLength(compactedNumbers), 4),
+  );
+}
+
 export function reportAutoColumnWidth(key: ReportColumnKey, header: string, values: string[]) {
+  const minWidth = reportColumnAutoMinWidths[key] ?? 42;
+  const maxWidth = reportColumnAutoMaxWidths[key];
+
+  if (reportCompactColumnKeys.has(key)) {
+    const headerChars = Math.max(2, Math.min(reportLongestWordLength(header), key === "area" ? 8 : key === "unit" ? 3 : 5));
+    const valueChars = values.reduce((max, value) => (
+      Math.max(max, Math.min(reportCompactValueLength(value), key === "area" ? 14 : 8))
+    ), 0);
+    return Math.min(maxWidth, Math.max(minWidth, reportCompactAutoWidthFromChars(Math.max(headerChars, valueChars))));
+  }
+
   const headerChars = Math.max(3, Math.min(reportLongestWordLength(header), 8));
   const valueCap = reportColumnTextCaps[key];
   const valueChars = values.reduce((max, value) => (
     Math.max(max, Math.min(reportTextLength(value), valueCap))
   ), 0);
   const maxChars = Math.max(headerChars, valueChars);
-  const maxWidth = reportColumnAutoMaxWidths[key];
 
   if (reportReasonColumnKeys.has(key)) {
     const reasonWidth = Math.round(Math.max(reportAutoWidthFromChars(headerChars), 150 + valueChars * 3));
-    return Math.min(maxWidth, Math.max(110, reasonWidth));
+    return Math.min(maxWidth, Math.max(minWidth, reasonWidth));
   }
 
-  return Math.min(maxWidth, Math.max(42, reportAutoWidthFromChars(maxChars)));
+  return Math.min(maxWidth, Math.max(minWidth, reportAutoWidthFromChars(maxChars)));
 }
 
 function reportReasonSummary(rows: ReportRow[], field: "dayReason" | "yearReason") {

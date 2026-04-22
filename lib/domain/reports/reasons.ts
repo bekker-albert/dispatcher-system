@@ -2,6 +2,7 @@ export const reportReasonEmptyOverride = "__empty__";
 
 const reportReasonHoursPattern = /\([^()\n]*?([-+]?\d+(?:[.,]\d+)?)\s*ч\.?[^()\n]*\)?/i;
 const reportReasonEquipmentCountPattern = /^\s*\d+(?:[.,]\d+)?\s*(?:ед\.?|шт\.?)\s*/i;
+const reportReasonLeadingLowercasePattern = /^[а-яёa-z]/;
 const reportReasonAliases: Array<[RegExp, string]> = [
   [/^неблагоприятные погодные условия:?$/i, "Погодные условия"],
   [/^неблагоприятные погодные условия\b.*$/i, "Погодные условия"],
@@ -51,6 +52,39 @@ function formatReportReasonHoursText(value: number) {
   return `(${formatReportReasonHours(value)}\u00a0ч.)`;
 }
 
+function reportReasonTextWithoutHours(value: string, hoursMatch: RegExpMatchArray | null) {
+  return hoursMatch
+    ? normalizeReportReasonPart(value.replace(reportReasonHoursPattern, "").replace(reportReasonEquipmentCountPattern, "")).replace(/[;,.]$/, "")
+    : value;
+}
+
+function reportReasonLineLooksLikeHeadingDetail(rawText: string, textWithoutHours: string) {
+  return !textWithoutHours
+    || reportReasonEquipmentCountPattern.test(rawText)
+    || reportReasonLeadingLowercasePattern.test(textWithoutHours);
+}
+
+function reportReasonLabelSet(value: string) {
+  return new Set(
+    value
+      .split(/\r?\n/)
+      .map((line) => {
+        const hoursMatch = line.match(reportReasonHoursPattern);
+        return normalizeReportReasonKey(reportReasonTextWithoutHours(normalizeReportReasonPart(line), hoursMatch));
+      })
+      .filter(Boolean),
+  );
+}
+
+function reportReasonOverrideIsCoveredByAutomatic(manualValue: string, automaticValue: string) {
+  const manualLabels = reportReasonLabelSet(manualValue);
+  const automaticLabels = reportReasonLabelSet(automaticValue);
+
+  return manualLabels.size > 0
+    && automaticLabels.size >= manualLabels.size
+    && Array.from(manualLabels).every((label) => automaticLabels.has(label));
+}
+
 export function aggregateReportReasons(values: string[]) {
   const entries = new Map<string, { heading: string; text: string; hours?: number; order: number }>();
   let order = 0;
@@ -64,7 +98,7 @@ export function aggregateReportReasons(values: string[]) {
       const nextText = lines[index + 1] ?? "";
       const nextHoursMatch = nextText.match(reportReasonHoursPattern);
       const nextTextWithoutHours = nextHoursMatch
-        ? normalizeReportReasonPart(nextText.replace(reportReasonHoursPattern, "").replace(reportReasonEquipmentCountPattern, "")).replace(/[;,.]$/, "")
+        ? reportReasonTextWithoutHours(nextText, nextHoursMatch)
         : nextText;
       const nextLineIsHoursOnly = Boolean(nextHoursMatch && !nextTextWithoutHours);
 
@@ -74,13 +108,11 @@ export function aggregateReportReasons(values: string[]) {
       }
 
       const hours = hoursMatch ? Number(hoursMatch[1].replace(",", ".")) : null;
-      const textWithoutHours = hoursMatch
-        ? normalizeReportReasonPart(rawText.replace(reportReasonHoursPattern, "").replace(reportReasonEquipmentCountPattern, "")).replace(/[;,.]$/, "")
-        : rawText;
+      const textWithoutHours = reportReasonTextWithoutHours(rawText, hoursMatch);
       const text = normalizeReportReasonLabel(textWithoutHours);
       if (!text && !heading) return;
 
-      const groupedByHeadingOnly = Boolean(heading && hoursMatch);
+      const groupedByHeadingOnly = Boolean(heading && hoursMatch && reportReasonLineLooksLikeHeadingDetail(rawText, textWithoutHours));
       const key = groupedByHeadingOnly
         ? `hours-heading||${normalizeReportReasonKey(heading)}`
         : `${hoursMatch ? "hours" : "text"}||${normalizeReportReasonKey(heading)}||${normalizeReportReasonKey(text)}`;
@@ -96,6 +128,8 @@ export function aggregateReportReasons(values: string[]) {
         hours: hours !== null && Number.isFinite(hours) ? hours : undefined,
         order: order++,
       });
+
+      if (!groupedByHeadingOnly) heading = "";
     });
   });
 
@@ -167,8 +201,11 @@ export function reportYearReasonValue(
   startDate: string,
 ) {
   const manualValue = reasons[reportYearReasonOverrideKey(reportDateValue, rowKey)];
+  const automaticValue = reportYearReasonFromMap(reasons, rowKey, reportDateValue, startDate) || fallback;
 
-  if (manualValue !== undefined && manualValue !== reportReasonEmptyOverride) return manualValue;
+  if (manualValue !== undefined && manualValue !== reportReasonEmptyOverride) {
+    return reportReasonOverrideIsCoveredByAutomatic(manualValue, automaticValue) ? automaticValue : manualValue;
+  }
 
-  return reportYearReasonFromMap(reasons, rowKey, reportDateValue, startDate) || fallback;
+  return automaticValue;
 }

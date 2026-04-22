@@ -36,15 +36,65 @@ type ReportsSectionProps = {
   reportTableColumnWidths: number[];
   reportColumnKeys: readonly ReportColumnKey[];
   reportColumnWidthByKey: Map<ReportColumnKey, number>;
+  reportHeaderLabel: (key: string, fallback: string) => string;
   renderReportHeaderText: (key: string, fallback: string) => ReactNode;
   onStartReportColumnResize: (event: MouseEvent<HTMLElement>, key: string, width: number) => void;
   filteredReportAreaGroups: Array<{ area: string; rows: ReportRow[] }>;
   filteredReportsCount: number;
   reportReasons: Record<string, string>;
   onCommitReportDayReason: (rowKey: string, value: string) => void;
+  onCancelReportDayReasonDraft: (rowKey: string, value: string) => void;
   onUpdateReportDayReasonDraft: (rowKey: string, value: string) => void;
   onCommitReportYearReason: (rowKey: string, value: string) => void;
 };
+
+const reportPrintRowsPerPage = 42;
+const reportPrintTextColumnBudget = 582;
+const reportPrintTextColumnBounds = {
+  "work-name": { min: 150, max: 225, base: 118, char: 4.2 },
+  "day-reason": { min: 145, max: 230, base: 118, char: 3.8 },
+  "year-reason": { min: 165, max: 260, base: 126, char: 3.8 },
+} as const;
+
+function reportClampWidth(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function reportPrintTextScore(value: string) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  const longestWord = normalized
+    .split(/\s+/)
+    .map((word) => word.replace(/[^\p{L}\p{N}%+-]/gu, "").length)
+    .reduce((max, length) => Math.max(max, length), 0);
+
+  return Math.max(longestWord, Math.min(normalized.length, 34));
+}
+
+function reportPrintTextColumnWidth(key: keyof typeof reportPrintTextColumnBounds, header: string, values: string[]) {
+  const bounds = reportPrintTextColumnBounds[key];
+  const score = values.reduce((max, value) => Math.max(max, reportPrintTextScore(value)), reportPrintTextScore(header));
+  return reportClampWidth(Math.round(bounds.base + score * bounds.char), bounds.min, bounds.max);
+}
+
+function reportFitPrintTextColumnWidths(widths: Record<keyof typeof reportPrintTextColumnBounds, number>) {
+  const totalWidth = widths["work-name"] + widths["day-reason"] + widths["year-reason"];
+  if (totalWidth <= reportPrintTextColumnBudget) return widths;
+
+  const extraWidth = totalWidth - reportPrintTextColumnBudget;
+  const shrinkable = (Object.keys(widths) as Array<keyof typeof reportPrintTextColumnBounds>).reduce(
+    (sum, key) => sum + Math.max(0, widths[key] - reportPrintTextColumnBounds[key].min),
+    0,
+  );
+
+  if (shrinkable <= 0) return widths;
+
+  return (Object.keys(widths) as Array<keyof typeof reportPrintTextColumnBounds>).reduce((next, key) => {
+    const bounds = reportPrintTextColumnBounds[key];
+    const keyShrinkable = Math.max(0, widths[key] - bounds.min);
+    next[key] = reportClampWidth(Math.round(widths[key] - extraWidth * (keyShrinkable / shrinkable)), bounds.min, bounds.max);
+    return next;
+  }, { ...widths });
+}
 
 export default function ReportsSection({
   reportAreaTabs,
@@ -58,18 +108,65 @@ export default function ReportsSection({
   reportTableColumnWidths,
   reportColumnKeys,
   reportColumnWidthByKey,
+  reportHeaderLabel,
   renderReportHeaderText,
   onStartReportColumnResize,
   filteredReportAreaGroups,
   filteredReportsCount,
   reportReasons,
   onCommitReportDayReason,
+  onCancelReportDayReasonDraft,
   onUpdateReportDayReasonDraft,
   onCommitReportYearReason,
 }: ReportsSectionProps) {
+  const reportPrintRows = filteredReportAreaGroups.flatMap((group) => group.rows);
+  const reportPrintTextColumnWidths = reportFitPrintTextColumnWidths({
+    "work-name": reportPrintTextColumnWidth(
+      "work-name",
+      reportHeaderLabel("work-name", "Вид работ"),
+      reportPrintRows.map((row) => formatReportWorkName(row.name)),
+    ),
+    "day-reason": reportPrintTextColumnWidth(
+      "day-reason",
+      reportHeaderLabel("day-reason", "Причина за сутки"),
+      reportPrintRows.map((row) => {
+        if (delta(row.dayPlan, row.dayFact) >= 0) return "";
+        const rowKey = reportRowDisplayKey(row);
+        return reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? row.dayReason;
+      }),
+    ),
+    "year-reason": reportPrintTextColumnWidth(
+      "year-reason",
+      reportHeaderLabel("year-reason", "Причины с накоплением"),
+      reportPrintRows.map((row) => (delta(row.yearPlan, reportYearFact(row)) < 0 ? row.yearReason : "")),
+    ),
+  });
+  const reportBodyRowCount = filteredReportAreaGroups.reduce((sum, group) => sum + group.rows.length, 0);
+  const reportLastPrintPageRows = reportBodyRowCount > 0 ? (reportBodyRowCount % reportPrintRowsPerPage || reportPrintRowsPerPage) : 0;
+  const reportMissingPrintRows = reportBodyRowCount > 0 ? reportPrintRowsPerPage - reportLastPrintPageRows : 0;
+  const reportShouldFillPrintRows = reportMissingPrintRows >= 1 && reportMissingPrintRows <= 5;
+  const reportPrintFillPaddingMm = reportShouldFillPrintRows
+    ? Math.min(0.5, Math.max(0.08, (reportMissingPrintRows * 2.2) / Math.max(reportLastPrintPageRows, 1)))
+    : 0;
+  const reportTableInlineStyle = {
+    ...reportTableStyle,
+    minWidth: reportTableMinWidth,
+    "--report-print-fill-padding-y": `${reportPrintFillPaddingMm}mm`,
+    "--report-print-work-name-width": `${reportPrintTextColumnWidths["work-name"]}px`,
+    "--report-print-day-reason-width": `${reportPrintTextColumnWidths["day-reason"]}px`,
+    "--report-print-year-reason-width": `${reportPrintTextColumnWidths["year-reason"]}px`,
+  } as CSSProperties;
+  const reportGroupStartIndexes = filteredReportAreaGroups.reduce<{ indexes: number[]; nextIndex: number }>(
+    (acc, group) => ({
+      indexes: [...acc.indexes, acc.nextIndex],
+      nextIndex: acc.nextIndex + group.rows.length,
+    }),
+    { indexes: [], nextIndex: 0 },
+  ).indexes;
+
   return (
     <>
-      <div style={reportAreaTabsToolbarStyle}>
+      <div className="report-screen-toolbar" style={reportAreaTabsToolbarStyle}>
         <div style={reportAreaTabsListStyle}>
           {reportAreaTabs.map((area) => (
             <TopButton
@@ -88,10 +185,13 @@ export default function ReportsSection({
       <div className="report-print-area" style={reportWorkspaceStyle}>
         <SectionCard title="" fill>
           <div className="report-print-panel" style={reportPanelStyle}>
-            <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <div className="report-screen-title" style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ width: "100%" }}>
                 <div className="report-print-title" style={reportTitleStyle}>Отчёт {activeReportCustomerLabel} по планово-фактическим показателям за {formatReportTitleDate(reportDate)}</div>
               </div>
+            </div>
+            <div className="report-print-first-title" style={reportPrintFirstTitleStyle}>
+              Отчёт {activeReportCustomerLabel} по планово-фактическим показателям за {formatReportTitleDate(reportDate)}
             </div>
 
             <div style={reportGaugeGridStyle}>
@@ -111,43 +211,43 @@ export default function ReportsSection({
             </div>
 
             <div className="report-print-table-scroll" style={reportTableScrollStyle}>
-              <table className="report-print-table" style={{ ...reportTableStyle, minWidth: reportTableMinWidth }}>
+              <table className="report-print-table" style={reportTableInlineStyle}>
                 <colgroup>
                   {reportColumnKeys.map((key, index) => (
-                    <col key={key} style={{ width: reportTableColumnWidths[index] }} />
+                    <col key={key} className={`report-print-col report-print-col-${key}`} style={{ width: reportTableColumnWidths[index] }} />
                   ))}
                 </colgroup>
                 <thead>
-                  <tr>
-                    <ReportTh rowSpan={2} columnKey="area" width={reportColumnWidthByKey.get("area")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("area", "Участок")}</ReportTh>
-                    <ReportTh rowSpan={2} columnKey="work-name" width={reportColumnWidthByKey.get("work-name")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("work-name", "Вид работ")}</ReportTh>
-                    <ReportTh rowSpan={2} columnKey="unit" width={reportColumnWidthByKey.get("unit")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("unit", "Ед.")}</ReportTh>
-                    <ReportTh colSpan={5}>{renderReportHeaderText("day-group", "Текущая дата")}</ReportTh>
-                    <ReportTh colSpan={5}>{renderReportHeaderText("month-group", "С начала месяца")}</ReportTh>
-                    <ReportTh colSpan={4}>{renderReportHeaderText("year-group", "С начала года")}</ReportTh>
-                    <ReportTh colSpan={3}>{renderReportHeaderText("annual-group", "Годовой план")}</ReportTh>
+                  <tr className="report-screen-header-row">
+                    <ReportTh rowSpan={2} columnKey="area" printLabel={reportHeaderLabel("area", "Участок")} width={reportColumnWidthByKey.get("area")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("area", "Участок")}</ReportTh>
+                    <ReportTh rowSpan={2} columnKey="work-name" printLabel={reportHeaderLabel("work-name", "Вид работ")} width={reportColumnWidthByKey.get("work-name")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("work-name", "Вид работ")}</ReportTh>
+                    <ReportTh rowSpan={2} columnKey="unit" printLabel={reportHeaderLabel("unit", "Ед.")} width={reportColumnWidthByKey.get("unit")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("unit", "Ед.")}</ReportTh>
+                    <ReportTh colSpan={5} printLabel={reportHeaderLabel("day-group", "Текущая дата")}>{renderReportHeaderText("day-group", "Текущая дата")}</ReportTh>
+                    <ReportTh colSpan={5} printLabel={reportHeaderLabel("month-group", "С начала месяца")}>{renderReportHeaderText("month-group", "С начала месяца")}</ReportTh>
+                    <ReportTh colSpan={4} printLabel={reportHeaderLabel("year-group", "С начала года")}>{renderReportHeaderText("year-group", "С начала года")}</ReportTh>
+                    <ReportTh colSpan={3} printLabel={reportHeaderLabel("annual-group", "Годовой план")}>{renderReportHeaderText("annual-group", "Годовой план")}</ReportTh>
                   </tr>
-                  <tr>
-                    <ReportTh columnKey="day-plan" width={reportColumnWidthByKey.get("day-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-plan", "План суточный")}</ReportTh>
-                    <ReportTh columnKey="day-fact" width={reportColumnWidthByKey.get("day-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-fact", "Оперучет")}</ReportTh>
-                    <ReportTh columnKey="day-delta" width={reportColumnWidthByKey.get("day-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-delta", "Откл.")}</ReportTh>
-                    <ReportTh columnKey="day-productivity" width={reportColumnWidthByKey.get("day-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-productivity", "Произв. техники")}</ReportTh>
-                    <ReportTh columnKey="day-reason" width={reportColumnWidthByKey.get("day-reason")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-reason", "Причина за сутки")}</ReportTh>
-                    <ReportTh columnKey="month-total-plan" width={reportColumnWidthByKey.get("month-total-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-total-plan", "План на месяц")}</ReportTh>
-                    <ReportTh columnKey="month-plan" width={reportColumnWidthByKey.get("month-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-plan", "План с начала месяца")}</ReportTh>
-                    <ReportTh columnKey="month-fact" width={reportColumnWidthByKey.get("month-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-fact", "Маркзамер + оперучет")}</ReportTh>
-                    <ReportTh columnKey="month-delta" width={reportColumnWidthByKey.get("month-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-delta", "Откл.")}</ReportTh>
-                    <ReportTh columnKey="month-productivity" width={reportColumnWidthByKey.get("month-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-productivity", "Произв. накоп.")}</ReportTh>
-                    <ReportTh columnKey="year-plan" width={reportColumnWidthByKey.get("year-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-plan", "План с начала года")}</ReportTh>
-                    <ReportTh columnKey="year-fact" width={reportColumnWidthByKey.get("year-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-fact", "Маркзамер + недостающий оперучет")}</ReportTh>
-                    <ReportTh columnKey="year-delta" width={reportColumnWidthByKey.get("year-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-delta", "Откл.")}</ReportTh>
-                    <ReportTh columnKey="year-reason" width={reportColumnWidthByKey.get("year-reason")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-reason", "Причины с накоплением")}</ReportTh>
-                    <ReportTh columnKey="annual-plan" width={reportColumnWidthByKey.get("annual-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("annual-plan", "Годовой план")}</ReportTh>
-                    <ReportTh columnKey="annual-fact" width={reportColumnWidthByKey.get("annual-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("annual-fact", "Факт годового плана")}</ReportTh>
-                    <ReportTh columnKey="annual-remaining" width={reportColumnWidthByKey.get("annual-remaining")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("annual-remaining", "Остаток")}</ReportTh>
+                  <tr className="report-screen-subheader-row">
+                    <ReportTh columnKey="day-plan" printLabel={reportHeaderLabel("day-plan", "План суточный")} width={reportColumnWidthByKey.get("day-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-plan", "План суточный")}</ReportTh>
+                    <ReportTh columnKey="day-fact" printLabel={reportHeaderLabel("day-fact", "Оперучет")} width={reportColumnWidthByKey.get("day-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-fact", "Оперучет")}</ReportTh>
+                    <ReportTh columnKey="day-delta" printLabel={reportHeaderLabel("day-delta", "Откл.")} width={reportColumnWidthByKey.get("day-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-delta", "Откл.")}</ReportTh>
+                    <ReportTh columnKey="day-productivity" printLabel={reportHeaderLabel("day-productivity", "Произв. техники")} width={reportColumnWidthByKey.get("day-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-productivity", "Произв. техники")}</ReportTh>
+                    <ReportTh columnKey="day-reason" printLabel={reportHeaderLabel("day-reason", "Причина за сутки")} width={reportColumnWidthByKey.get("day-reason")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-reason", "Причина за сутки")}</ReportTh>
+                    <ReportTh columnKey="month-total-plan" printLabel={reportHeaderLabel("month-total-plan", "План на месяц")} width={reportColumnWidthByKey.get("month-total-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-total-plan", "План на месяц")}</ReportTh>
+                    <ReportTh columnKey="month-plan" printLabel={reportHeaderLabel("month-plan", "План с начала месяца")} width={reportColumnWidthByKey.get("month-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-plan", "План с начала месяца")}</ReportTh>
+                    <ReportTh columnKey="month-fact" printLabel={reportHeaderLabel("month-fact", "Маркзамер + оперучет")} width={reportColumnWidthByKey.get("month-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-fact", "Маркзамер + оперучет")}</ReportTh>
+                    <ReportTh columnKey="month-delta" printLabel={reportHeaderLabel("month-delta", "Откл.")} width={reportColumnWidthByKey.get("month-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-delta", "Откл.")}</ReportTh>
+                    <ReportTh columnKey="month-productivity" printLabel={reportHeaderLabel("month-productivity", "Произв. накоп.")} width={reportColumnWidthByKey.get("month-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-productivity", "Произв. накоп.")}</ReportTh>
+                    <ReportTh columnKey="year-plan" printLabel={reportHeaderLabel("year-plan", "План с начала года")} width={reportColumnWidthByKey.get("year-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-plan", "План с начала года")}</ReportTh>
+                    <ReportTh columnKey="year-fact" printLabel={reportHeaderLabel("year-fact", "Маркзамер + недостающий оперучет")} width={reportColumnWidthByKey.get("year-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-fact", "Маркзамер + недостающий оперучет")}</ReportTh>
+                    <ReportTh columnKey="year-delta" printLabel={reportHeaderLabel("year-delta", "Откл.")} width={reportColumnWidthByKey.get("year-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-delta", "Откл.")}</ReportTh>
+                    <ReportTh columnKey="year-reason" printLabel={reportHeaderLabel("year-reason", "Причины с накоплением")} width={reportColumnWidthByKey.get("year-reason")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-reason", "Причины с накоплением")}</ReportTh>
+                    <ReportTh columnKey="annual-plan" printLabel={reportHeaderLabel("annual-plan", "Годовой план")} width={reportColumnWidthByKey.get("annual-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("annual-plan", "Годовой план")}</ReportTh>
+                    <ReportTh columnKey="annual-fact" printLabel={reportHeaderLabel("annual-fact", "Факт годового плана")} width={reportColumnWidthByKey.get("annual-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("annual-fact", "Факт годового плана")}</ReportTh>
+                    <ReportTh columnKey="annual-remaining" printLabel={reportHeaderLabel("annual-remaining", "Остаток")} width={reportColumnWidthByKey.get("annual-remaining")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("annual-remaining", "Остаток")}</ReportTh>
                   </tr>
                 </thead>
-                {filteredReportAreaGroups.map((group) => (
+                {filteredReportAreaGroups.map((group, groupIndex) => (
                   <tbody key={group.area} className="report-print-area-group">
                     {group.rows.map((row, index) => {
                       const monthFact = reportMonthFact(row);
@@ -161,37 +261,46 @@ export default function ReportsSection({
                       const dayReasonKey = reportReasonEntryKey(reportDate, rowKey);
                       const dayReasonText = dayDelta < 0 ? (reportReasons[dayReasonKey] ?? row.dayReason) : "";
                       const yearReasonText = yearDelta < 0 ? row.yearReason : "";
+                      const dayReasonMissing = dayDelta < 0 && dayReasonText.trim() === "";
+                      const yearReasonMissing = yearDelta < 0 && yearReasonText.trim() === "";
                       const showAreaCell = index === 0;
+                      const rowPrintIndex = (reportGroupStartIndexes[groupIndex] ?? 0) + index;
+                      const rowClassName = reportShouldFillPrintRows && rowPrintIndex >= reportBodyRowCount - reportLastPrintPageRows
+                        ? "report-print-fill-row"
+                        : undefined;
 
                       return (
-                        <tr key={rowKey} style={showAreaCell ? reportAreaGroupStartRowStyle : undefined}>
+                        <tr key={rowKey} className={rowClassName} style={showAreaCell ? reportAreaGroupStartRowStyle : undefined}>
                           {showAreaCell ? (
                             <ReportTd rowSpan={group.rows.length} strong align="center" variant="area">{row.area}</ReportTd>
                           ) : null}
-                          <ReportTd strong variant="work">
+                          <ReportTd strong align="center" variant="work">
                             {formatReportWorkName(row.name)}
                           </ReportTd>
-                          <ReportTd>{row.unit}</ReportTd>
+                          <ReportTd align="center">{row.unit}</ReportTd>
                           <ReportTd align="center">{formatNumber(row.dayPlan)}</ReportTd>
                           <ReportTd align="center">{formatNumber(row.dayFact)}</ReportTd>
                           <ReportTd align="center" tone={dayDelta < 0 ? "bad" : "good"}>{formatNumber(dayDelta)}</ReportTd>
                           <ReportTd align="center">
                             <ReportMetric value={formatNumber(row.dayProductivity || row.dayFact)} note={formatPercent(row.dayFact, row.dayPlan)} />
                           </ReportTd>
-                          <ReportTd align="center" tone={dayDelta < 0 ? "warn" : undefined}>
+                          <ReportTd align="center" tone={dayReasonMissing ? "warn" : undefined} variant="reason">
                             {dayDelta < 0 ? (
-                              <ReportReasonTextarea
-                                value={dayReasonText}
-                                placeholder="Введите причину"
-                                onCommit={(value) => onCommitReportDayReason(rowKey, value)}
-                                onDraftChange={(value) => onUpdateReportDayReasonDraft(rowKey, value)}
-                              />
+                              <div className="report-reason-cell-content">
+                                <ReportReasonTextarea
+                                  value={dayReasonText}
+                                  placeholder="Введите причину"
+                                  onCommit={(value) => onCommitReportDayReason(rowKey, value)}
+                                  onCancel={(value) => onCancelReportDayReasonDraft(rowKey, value)}
+                                  onDraftChange={(value) => onUpdateReportDayReasonDraft(rowKey, value)}
+                                />
+                              </div>
                             ) : null}
                           </ReportTd>
                           <ReportTd align="center">{formatNumber(row.monthTotalPlan)}</ReportTd>
                           <ReportTd align="center">{formatNumber(row.monthPlan)}</ReportTd>
                           <ReportTd align="center">
-                            <ReportMetric value={formatNumber(monthFact)} note={`марк ${formatNumber(row.monthSurveyFact)} + опер ${formatNumber(row.monthOperFact)}`} />
+                            <ReportMetric value={formatNumber(monthFact)} note={`марк ${formatNumber(row.monthSurveyFact)}`} />
                           </ReportTd>
                           <ReportTd align="center" tone={monthDelta < 0 ? "bad" : "good"}>{formatNumber(monthDelta)}</ReportTd>
                           <ReportTd align="center">
@@ -199,16 +308,18 @@ export default function ReportsSection({
                           </ReportTd>
                           <ReportTd align="center">{formatNumber(row.yearPlan)}</ReportTd>
                           <ReportTd align="center">
-                            <ReportMetric value={formatNumber(yearFact)} note={`марк ${formatNumber(row.yearSurveyFact)} + опер ${formatNumber(row.yearOperFact)}`} />
+                            <ReportMetric value={formatNumber(yearFact)} note={`марк ${formatNumber(row.yearSurveyFact)}`} />
                           </ReportTd>
                           <ReportTd align="center" tone={yearDelta < 0 ? "bad" : "good"}>{formatNumber(yearDelta)}</ReportTd>
-                          <ReportTd align="center" tone={yearDelta < 0 ? "warn" : undefined}>
+                          <ReportTd align="center" tone={yearReasonMissing ? "warn" : undefined} variant="reason">
                             {yearDelta < 0 ? (
-                              <ReportReasonTextarea
-                                value={yearReasonText}
-                                placeholder="Введите причину"
-                                onCommit={(value) => onCommitReportYearReason(rowKey, value)}
-                              />
+                              <div className="report-reason-cell-content">
+                                <ReportReasonTextarea
+                                  value={yearReasonText}
+                                  placeholder="Введите причину"
+                                  onCommit={(value) => onCommitReportYearReason(rowKey, value)}
+                                />
+                              </div>
                             ) : null}
                           </ReportTd>
                           <ReportTd align="center">{formatNumber(row.annualPlan)}</ReportTd>
@@ -254,6 +365,10 @@ const reportTitleStyle: CSSProperties = {
   width: "100%",
 };
 
+const reportPrintFirstTitleStyle: CSSProperties = {
+  display: "none",
+};
+
 const reportAreaTabsToolbarStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -288,7 +403,7 @@ const reportPanelStyle: CSSProperties = {
 const reportTableScrollStyle: CSSProperties = {
   overflow: "auto",
   minHeight: 0,
-  border: "1px solid #e2e8f0",
+  border: "2px solid #64748b",
   borderRadius: 8,
   background: "#ffffff",
 };
@@ -301,5 +416,5 @@ const reportGaugeGridStyle: CSSProperties = {
 };
 
 const reportAreaGroupStartRowStyle: CSSProperties = {
-  borderTop: "2px solid #334155",
+  borderTop: "2px solid #64748b",
 };

@@ -55,6 +55,7 @@ export function ReportTh({
   colSpan = 1,
   rowSpan = 1,
   columnKey,
+  printLabel,
   width,
   onResizeStart,
 }: {
@@ -62,11 +63,13 @@ export function ReportTh({
   colSpan?: number;
   rowSpan?: number;
   columnKey?: string;
+  printLabel?: string;
   width?: number;
   onResizeStart?: (event: MouseEvent<HTMLElement>, key: string, width: number) => void;
 }) {
   return (
     <th
+      className={columnKey ? `report-print-th report-print-th-${columnKey}` : "report-print-th"}
       colSpan={colSpan}
       rowSpan={rowSpan}
       style={{
@@ -74,7 +77,8 @@ export function ReportTh({
         ...(width ? { width, minWidth: width, maxWidth: width } : null),
       }}
     >
-      <div style={reportHeaderContentStyle}>{children}</div>
+      <div className="report-screen-header-content" style={reportHeaderContentStyle}>{children}</div>
+      {printLabel ? <span className="report-print-header-label">{printLabel}</span> : null}
       {columnKey && width && onResizeStart ? (
         <span
           onMouseDown={(event) => onResizeStart(event, columnKey, width)}
@@ -102,7 +106,7 @@ export function ReportTd({
   tone?: "good" | "bad" | "warn";
   colSpan?: number;
   rowSpan?: number;
-  variant?: "area" | "work";
+  variant?: "area" | "work" | "reason";
 }) {
   const toneStyle: CSSProperties = tone === "bad"
     ? { background: "#fee2e2", color: "#991b1b" }
@@ -113,16 +117,18 @@ export function ReportTd({
     ? reportAreaTdStyle
     : variant === "work"
       ? reportWorkTdStyle
+      : variant === "reason"
+        ? reportReasonTdStyle
       : null;
 
-  return <td colSpan={colSpan} rowSpan={rowSpan} style={{ ...reportTdStyle, ...variantStyle, textAlign: align, fontWeight: strong ? 700 : 400, ...toneStyle }}>{children}</td>;
+  return <td className={variant ? `report-${variant}-cell` : undefined} colSpan={colSpan} rowSpan={rowSpan} style={{ ...reportTdStyle, ...variantStyle, textAlign: align, fontWeight: strong ? 700 : 400, ...toneStyle }}>{children}</td>;
 }
 
 export function ReportMetric({ value, note }: { value: string; note: string }) {
   return (
-    <div style={{ display: "grid", gap: 3 }}>
-      <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{value}</span>
-      <span style={{ color: "#64748b", fontSize: 11, lineHeight: 1.2 }}>{note}</span>
+    <div style={{ display: "grid", gap: 1 }}>
+      <span style={{ fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>{value}</span>
+      <span style={{ color: "#64748b", fontSize: 9, lineHeight: 1.05 }}>{note}</span>
     </div>
   );
 }
@@ -172,7 +178,7 @@ const reportCatchUpStyle: CSSProperties = {
 };
 
 const reportThStyle: CSSProperties = {
-  padding: "7px 8px",
+  padding: "6px 3px",
   border: "1.5px solid #cbd5e1",
   background: "#f1f5f9",
   color: "#0f172a",
@@ -205,10 +211,10 @@ const reportColumnResizeHandleStyle: CSSProperties = {
 };
 
 const reportTdStyle: CSSProperties = {
-  padding: "6px 8px",
+  padding: "2px 3px",
   border: "1.5px solid #e2e8f0",
   verticalAlign: "middle",
-  lineHeight: 1.25,
+  lineHeight: 1.08,
   whiteSpace: "pre-wrap",
   overflowWrap: "normal",
   wordBreak: "normal",
@@ -228,4 +234,10 @@ const reportWorkTdStyle: CSSProperties = {
   overflowWrap: "normal",
   wordBreak: "normal",
   hyphens: "none",
+};
+
+const reportReasonTdStyle: CSSProperties = {
+  height: "100%",
+  textAlign: "center",
+  verticalAlign: "middle",
 };

@@ -13,7 +13,7 @@ import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSetting
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
-import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
+import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import { createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportPtoDateStatusFromIndexes, reportPtoDateStatusHasAny, reportRowKey, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
@@ -159,7 +159,7 @@ function cloneUndoSnapshot(snapshot: UndoSnapshot): UndoSnapshot {
 }
 
 export default function App() {
-  const [topTab, setTopTab] = useState<TopTab>("dispatch");
+  const [topTab, setTopTab] = useState<TopTab>("reports");
   const headerNavRef = useRef<HTMLDivElement | null>(null);
   const activeHeaderTabRef = useRef<HTMLDivElement | null>(null);
   const headerSubtabsRef = useRef<HTMLDivElement | null>(null);
@@ -1626,12 +1626,12 @@ export default function App() {
   ), [filteredReports, needsDerivedReportRows, reportColumnTextValue, reportHeaderLabels]);
 
   const reportTableColumnWidths = useMemo(() => (
-    reportColumnKeys.map((key, index) => (
-      Math.min(520, Math.max(
-        autoReportColumnWidths[key] ?? defaultReportColumnWidths[index] ?? 80,
-        Math.round(reportColumnWidths[key] ?? 0),
-      ))
-    ))
+    reportColumnKeys.map((key, index) => {
+      const autoWidth = autoReportColumnWidths[key] ?? defaultReportColumnWidths[index] ?? 80;
+      if (reportCompactColumnKeys.has(key)) return autoWidth;
+
+      return Math.min(520, Math.max(autoWidth, Math.round(reportColumnWidths[key] ?? 0)));
+    })
   ), [autoReportColumnWidths, reportColumnWidths]);
   const reportColumnWidthByKey = useMemo(() => (
     new Map(reportColumnKeys.map((key, index) => [key, reportTableColumnWidths[index]]))
@@ -2379,6 +2379,26 @@ export default function App() {
       });
       reportReasonDraftTimerRef.current = null;
     }, 180);
+  }
+
+  function cancelReportDayReasonDraft(rowKey: string, value: string) {
+    const key = reportReasonEntryKey(reportDate, rowKey);
+
+    if (reportReasonDraftTimerRef.current !== null) {
+      window.clearTimeout(reportReasonDraftTimerRef.current);
+      reportReasonDraftTimerRef.current = null;
+    }
+
+    setReportReasons((current) => {
+      const next = { ...current };
+      if (value !== "") {
+        next[key] = value;
+      } else {
+        delete next[key];
+      }
+
+      return next;
+    });
   }
 
   function startPtoRowResize(event: React.MouseEvent<HTMLElement>, key: string) {
@@ -5503,10 +5523,10 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
+    <div className="app-print-root" style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
       <style>{reportPrintCss}</style>
-      <div style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
-        <div style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
+      <div className="app-print-shell" style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
+        <div className="app-print-header" style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
           <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ width: 130, flex: "0 0 130px" }}>
               <Image src="/mining-logo.png" alt="Логотип" width={112} height={72} style={logoImageStyle} priority />
@@ -5620,12 +5640,14 @@ export default function App() {
             reportTableColumnWidths={reportTableColumnWidths}
             reportColumnKeys={reportColumnKeys}
             reportColumnWidthByKey={reportColumnWidthByKey}
+            reportHeaderLabel={reportHeaderLabel}
             renderReportHeaderText={renderReportHeaderText}
             onStartReportColumnResize={startReportColumnResize}
             filteredReportAreaGroups={filteredReportAreaGroups}
             filteredReportsCount={filteredReports.length}
             reportReasons={reportReasons}
             onCommitReportDayReason={commitReportDayReason}
+            onCancelReportDayReasonDraft={cancelReportDayReasonDraft}
             onUpdateReportDayReasonDraft={updateReportDayReasonDraft}
             onCommitReportYearReason={commitReportYearReason}
           />

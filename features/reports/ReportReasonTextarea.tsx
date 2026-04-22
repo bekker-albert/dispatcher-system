@@ -6,6 +6,7 @@ type ReportReasonTextareaProps = {
   value: string;
   placeholder: string;
   onCommit: (value: string) => void;
+  onCancel?: (value: string) => void;
   onDraftChange?: (value: string) => void;
 };
 
@@ -13,17 +14,20 @@ function syncReportReasonTextareaHeight(element: HTMLTextAreaElement | null) {
   if (!element) return;
 
   element.style.height = "auto";
-  element.style.height = `${Math.max(34, element.scrollHeight)}px`;
+  element.style.height = `${Math.max(20, element.scrollHeight)}px`;
 }
 
 export function ReportReasonTextarea({
   value,
   placeholder,
   onCommit,
+  onCancel,
   onDraftChange,
 }: ReportReasonTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedRef = useRef(false);
+  const cancelNextBlurRef = useRef(false);
+  const editInitialValueRef = useRef(value);
   const [draft, setDraft] = useState(value);
 
   useEffect(() => {
@@ -44,7 +48,18 @@ export function ReportReasonTextarea({
   function commitTextarea(nextValue: string) {
     focusedRef.current = false;
     setDraft(nextValue);
-    onCommit(nextValue);
+    if (nextValue !== value) {
+      onCommit(nextValue);
+    }
+    window.requestAnimationFrame(() => syncReportReasonTextareaHeight(textareaRef.current));
+  }
+
+  function cancelTextarea() {
+    const previousValue = editInitialValueRef.current;
+    cancelNextBlurRef.current = true;
+    focusedRef.current = false;
+    setDraft(previousValue);
+    onCancel?.(previousValue);
     window.requestAnimationFrame(() => syncReportReasonTextareaHeight(textareaRef.current));
   }
 
@@ -56,8 +71,18 @@ export function ReportReasonTextarea({
       rows={1}
       onFocus={() => {
         focusedRef.current = true;
+        editInitialValueRef.current = value;
       }}
-      onBlur={(event) => commitTextarea(event.currentTarget.value)}
+      onBlur={(event) => {
+        if (cancelNextBlurRef.current) {
+          cancelNextBlurRef.current = false;
+          event.currentTarget.value = editInitialValueRef.current;
+          syncReportReasonTextareaHeight(event.currentTarget);
+          return;
+        }
+
+        commitTextarea(event.currentTarget.value);
+      }}
       onInput={(event) => {
         syncReportReasonTextareaHeight(event.currentTarget);
         onDraftChange?.(event.currentTarget.value);
@@ -76,9 +101,8 @@ export function ReportReasonTextarea({
 
         if (event.key === "Escape") {
           event.preventDefault();
-          focusedRef.current = false;
-          event.currentTarget.value = value;
-          setDraft(value);
+          event.currentTarget.value = editInitialValueRef.current;
+          cancelTextarea();
           syncReportReasonTextareaHeight(event.currentTarget);
           event.currentTarget.blur();
         }
@@ -100,7 +124,7 @@ export function ReportReasonTextarea({
 const reportReasonTextareaStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
-  minHeight: 34,
+  minHeight: 20,
   height: "auto",
   boxSizing: "border-box",
   border: "none",
@@ -110,7 +134,7 @@ const reportReasonTextareaStyle: CSSProperties = {
   display: "block",
   fontFamily: "inherit",
   fontSize: "inherit",
-  lineHeight: 1.25,
+  lineHeight: 1.08,
   outline: "none",
   overflow: "hidden",
   padding: 0,

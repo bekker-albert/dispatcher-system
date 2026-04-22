@@ -13,9 +13,9 @@ import { calculatePtoVirtualRows } from "../lib/domain/pto/virtualization";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto, deriveReportRowFromPtoIndex } from "../lib/domain/reports/calculation";
 import { normalizeStoredReportCustomers } from "../lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers, defaultReportRows } from "../lib/domain/reports/defaults";
-import { createReportSummaryRow, delta, formatReportTitleDate, reportRowKey } from "../lib/domain/reports/display";
+import { createReportSummaryRow, delta, formatReportTitleDate, reportAutoColumnWidth, reportRowKey } from "../lib/domain/reports/display";
 import { reportYearFact } from "../lib/domain/reports/facts";
-import { aggregateReportReasons } from "../lib/domain/reports/reasons";
+import { aggregateReportReasons, reportReasonEntryKey, reportYearReasonValue } from "../lib/domain/reports/reasons";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "../lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleFallbackRows, defaultVehicleForm, normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, createVehiclesFromImportTable } from "../lib/domain/vehicles/import-export";
@@ -109,6 +109,26 @@ assert.equal(
   `Ремонт транспортировочной техники${nbsp}(6${nbsp}ч.)`,
 );
 
+assert.equal(
+  aggregateReportReasons([
+    "Ремонт транспортировочной техники:\n1 ед. самосвала (6 ч.)\nНеблагоприятные погодные условия\n(дождь, снег - 10 ч.)",
+    "Ремонт транспортировочной техники:\n1 ед. самосвала (3 ч.)",
+  ]),
+  `Ремонт транспортировочной техники${nbsp}(9${nbsp}ч.)\nПогодные условия${nbsp}(10${nbsp}ч.)`,
+);
+
+const reasonRowKey = "аксу::отсыпка";
+const reasonMap = {
+  [reportReasonEntryKey("2026-04-17", reasonRowKey)]: "Ремонт транспортировочной техники:\n1 ед. самосвала (6 ч.)",
+  [reportReasonEntryKey("2026-04-18", reasonRowKey)]: "Неблагоприятные погодные условия\n(дождь - 10 ч.)",
+  [`year:2026-04-18||${reasonRowKey}`]: `Ремонт транспортировочной техники${nbsp}(6${nbsp}ч.)`,
+};
+
+assert.equal(
+  reportYearReasonValue(reasonMap, reasonRowKey, "2026-04-18", "", "2026-01-01"),
+  `Ремонт транспортировочной техники${nbsp}(6${nbsp}ч.)\nПогодные условия${nbsp}(10${nbsp}ч.)`,
+);
+
 const previousYearRow = normalizePtoPlanRow({
   id: "previous",
   area: "Уч_Аксу",
@@ -178,6 +198,8 @@ assert.equal(derivedReportRow.yearPlan, 100);
 assert.deepEqual(indexedDerivedReportRow, derivedReportRow);
 assert.equal(reportYearFact(derivedReportRow), 80);
 assert.equal(delta(derivedReportRow.dayPlan, derivedReportRow.dayFact), -20);
+assert.ok(reportAutoColumnWidth("day-plan", "План суточный", ["123 456"]) <= 56);
+assert.ok(reportAutoColumnWidth("unit", "Ед.", ["м3"]) <= 34);
 assert.equal(defaultReportRows.length, 5);
 assert.equal(defaultReportCustomerId, "aa-mining");
 assert.equal(defaultReportCustomers[0].rowKeys.length, defaultReportRows.length);
