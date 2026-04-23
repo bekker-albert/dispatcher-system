@@ -1,6 +1,7 @@
 export const adminStorageKeys = {
   reports: "dispatcher:reports",
   dispatchSummaryRows: "dispatcher:dispatch-summary-rows",
+  areaShiftCutoffs: "dispatcher:area-shift-cutoffs",
   reportCustomers: "dispatcher:report-customers",
   reportAreaOrder: "dispatcher:report-area-order",
   reportWorkOrder: "dispatcher:report-work-order",

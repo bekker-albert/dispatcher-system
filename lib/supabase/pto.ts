@@ -15,7 +15,6 @@ export type SupabasePtoState = {
   bucketValues?: Record<string, number>;
   bucketRows?: PtoBucketRow[];
   uiState?: {
-    reportDate?: string;
     topTab?: string;
     ptoTab?: string;
     ptoPlanYear?: string;

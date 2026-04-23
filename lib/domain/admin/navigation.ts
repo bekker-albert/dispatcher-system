@@ -1,4 +1,4 @@
-export type StructureSection = "scheme" | "elements" | "links" | "roles";
+export type StructureSection = "scheme" | "elements" | "links" | "roles" | "schedule";
 
 export type AdminSection = "menu" | "subtabs" | "structure" | "ai" | "vehicles" | "reports" | "logs";
 
@@ -18,4 +18,5 @@ export const structureSectionTabs: Array<{ value: StructureSection; label: strin
   { value: "elements", label: "Элементы" },
   { value: "links", label: "Связи" },
   { value: "roles", label: "Роли" },
+  { value: "schedule", label: "Распорядок" },
 ];

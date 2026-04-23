@@ -8,6 +8,7 @@ import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoD
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
+import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, resolveAutomaticWorkingDate, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, formatAdminLogDate, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
@@ -83,6 +84,7 @@ type UndoSnapshot = {
   reportHeaderLabels: Record<string, string>;
   reportColumnWidths: Record<string, number>;
   reportReasons: Record<string, string>;
+  areaShiftCutoffs: AreaShiftCutoffMap;
   customTabs: CustomTab[];
   topTabs: TopTabDefinition[];
   subTabs: Record<EditableSubtabGroup, SubTabConfig[]>;
@@ -114,6 +116,7 @@ const sharedAppSettingKeys = [
   adminStorageKeys.topTabs,
   adminStorageKeys.subTabs,
   adminStorageKeys.dispatchSummaryRows,
+  adminStorageKeys.areaShiftCutoffs,
   adminStorageKeys.orgMembers,
   adminStorageKeys.dependencyNodes,
   adminStorageKeys.dependencyLinks,
@@ -136,6 +139,7 @@ const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
 ));
 
 const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
+const reportDateOverrideStorageKey = "dispatcher:report-date-override";
 
 const AdminVehiclesSection = dynamic(() => import("@/features/admin/vehicles/AdminVehiclesSection"), {
   ssr: false,
@@ -156,6 +160,54 @@ function cloneUndoSnapshot(snapshot: UndoSnapshot): UndoSnapshot {
   }
 
   return JSON.parse(JSON.stringify(snapshot)) as UndoSnapshot;
+}
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function isStoredReportDateValue(value: string | null): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function normalizeReportDateArea(area: string) {
+  const normalizedArea = cleanAreaName(area);
+  return normalizedArea || defaultAreaShiftScheduleArea;
+}
+
+function resolveReportDateAreaContext(topTab: TopTab, adminSection: AdminSection, reportArea: string, ptoAreaFilter: string) {
+  if (topTab === "reports" || (topTab === "admin" && adminSection === "reports")) {
+    return normalizeReportDateArea(reportArea);
+  }
+
+  if (topTab === "pto") {
+    return normalizeReportDateArea(ptoAreaFilter);
+  }
+
+  return defaultAreaShiftScheduleArea;
+}
+
+function automaticReportDate(areaShiftCutoffs: AreaShiftCutoffMap, area: string, now = new Date()) {
+  return formatDateInputValue(resolveAutomaticWorkingDate(areaShiftCutoffs, area, now));
+}
+
+function readClientReportDateSelection(areaShiftCutoffs: AreaShiftCutoffMap, area: string) {
+  if (typeof window === "undefined") return defaultReportDate;
+
+  const storedOverride = window.localStorage.getItem(reportDateOverrideStorageKey);
+  return isStoredReportDateValue(storedOverride)
+    ? storedOverride
+    : automaticReportDate(areaShiftCutoffs, area);
+}
+
+function hasClientReportDateOverride() {
+  if (typeof window === "undefined") return false;
+
+  return isStoredReportDateValue(window.localStorage.getItem(reportDateOverrideStorageKey));
 }
 
 export default function App() {
@@ -240,7 +292,9 @@ export default function App() {
   const [reportReasons, setReportReasons] = useState<Record<string, string>>({});
   const [editingReportHeaderKey, setEditingReportHeaderKey] = useState<string | null>(null);
   const [reportHeaderDraft, setReportHeaderDraft] = useState("");
-  const [reportDate, setReportDate] = useState(defaultReportDate);
+  const [reportDate, setReportDate] = useState(() => readClientReportDateSelection(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea));
+  const [hasManualReportDateOverride, setHasManualReportDateOverride] = useState(() => hasClientReportDateOverride());
+  const [areaShiftCutoffs, setAreaShiftCutoffs] = useState<AreaShiftCutoffMap>(defaultAreaShiftCutoffs);
   const [ptoPlanYear, setPtoPlanYear] = useState(defaultPtoPlanMonth.slice(0, 4));
   const [ptoYearInput, setPtoYearInput] = useState("");
   const [ptoYearDialogOpen, setPtoYearDialogOpen] = useState(false);
@@ -289,7 +343,6 @@ export default function App() {
     bucketValues: ptoBucketValues,
     bucketRows: ptoBucketManualRows,
     uiState: {
-      reportDate,
       ptoTab,
       ptoPlanYear,
       ptoAreaFilter,
@@ -300,7 +353,7 @@ export default function App() {
       ptoRowHeights,
       ptoHeaderLabels,
     },
-  }), [expandedPtoMonths, ptoAreaFilter, ptoBucketManualRows, ptoBucketValues, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportColumnWidths, reportDate, reportReasons]);
+  }), [expandedPtoMonths, ptoAreaFilter, ptoBucketManualRows, ptoBucketValues, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportColumnWidths, reportReasons]);
   const ptoDatabaseStateRef = useRef(ptoDatabaseState);
   const undoHistoryRef = useRef<UndoSnapshot[]>([]);
   const undoCurrentSnapshotRef = useRef<UndoSnapshot | null>(null);
@@ -313,6 +366,7 @@ export default function App() {
     reportHeaderLabels,
     reportColumnWidths,
     reportReasons,
+    areaShiftCutoffs,
     customTabs,
     topTabs,
     subTabs,
@@ -335,6 +389,7 @@ export default function App() {
     dependencyLinks,
     dependencyNodes,
     expandedPtoMonths,
+    areaShiftCutoffs,
     orgMembers,
     ptoBucketManualRows,
     ptoBucketValues,
@@ -395,6 +450,7 @@ export default function App() {
     setReportHeaderLabels(snapshot.reportHeaderLabels);
     setReportColumnWidths(snapshot.reportColumnWidths);
     setReportReasons(snapshot.reportReasons);
+    setAreaShiftCutoffs(snapshot.areaShiftCutoffs);
     setCustomTabs(snapshot.customTabs);
     setTopTabs(snapshot.topTabs);
     setSubTabs(snapshot.subTabs);
@@ -546,6 +602,28 @@ export default function App() {
   }, [ptoDatabaseState]);
 
   useEffect(() => {
+    const nextReportDateAreaContext = resolveReportDateAreaContext(topTab, adminSection, reportArea, ptoAreaFilter);
+    const nextReportDate = readClientReportDateSelection(areaShiftCutoffs, nextReportDateAreaContext);
+    setHasManualReportDateOverride(hasClientReportDateOverride());
+    setReportDate((current) => (current === nextReportDate ? current : nextReportDate));
+  }, [adminSection, areaShiftCutoffs, ptoAreaFilter, reportArea, topTab]);
+
+  useEffect(() => {
+    if (hasManualReportDateOverride) return undefined;
+
+    const syncAutomaticReportDate = () => {
+      const nextReportDateAreaContext = resolveReportDateAreaContext(topTab, adminSection, reportArea, ptoAreaFilter);
+      const nextReportDate = automaticReportDate(areaShiftCutoffs, nextReportDateAreaContext);
+      setReportDate((current) => (current === nextReportDate ? current : nextReportDate));
+    };
+
+    syncAutomaticReportDate();
+    const intervalId = window.setInterval(syncAutomaticReportDate, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, [adminSection, areaShiftCutoffs, hasManualReportDateOverride, ptoAreaFilter, reportArea, topTab]);
+
+  useEffect(() => {
     if (!openVehicleFilter) return undefined;
 
     const closeVehicleFilter = () => setOpenVehicleFilter(null);
@@ -676,6 +754,7 @@ export default function App() {
         const savedReportHeaderLabels = readStoredValue(adminStorageKeys.reportHeaderLabels);
         const savedReportColumnWidths = readStoredValue(adminStorageKeys.reportColumnWidths);
         const savedReportReasons = readStoredValue(adminStorageKeys.reportReasons);
+        const savedAreaShiftCutoffs = readStoredValue(adminStorageKeys.areaShiftCutoffs);
         const savedCustomTabs = readStoredValue(adminStorageKeys.customTabs);
         const savedTopTabs = readStoredValue(adminStorageKeys.topTabs);
         const savedSubTabs = readStoredValue(adminStorageKeys.subTabs);
@@ -734,12 +813,16 @@ export default function App() {
           window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
         }
 
+        const nextAreaShiftCutoffs = normalizeAreaShiftCutoffs(savedAreaShiftCutoffs);
+        const preferredReportDate = readClientReportDateSelection(nextAreaShiftCutoffs, defaultAreaShiftScheduleArea);
+
         setReportCustomers(normalizeStoredReportCustomers(savedReportCustomers, defaultReportCustomers));
         setReportAreaOrder(normalizeStringList(savedReportAreaOrder));
         setReportWorkOrder(normalizeStringListRecord(savedReportWorkOrder));
         setReportHeaderLabels(normalizeStringRecord(savedReportHeaderLabels));
         setReportColumnWidths(normalizeNumberRecord(savedReportColumnWidths, 42, 520));
         setReportReasons(normalizeStringRecord(savedReportReasons));
+        setAreaShiftCutoffs(nextAreaShiftCutoffs);
 
         setCustomTabs(normalizeStoredCustomTabs(savedCustomTabs));
 
@@ -768,14 +851,14 @@ export default function App() {
           setVehicleRows(savedVehicles.map((vehicle) => normalizeVehicleRow(vehicle)));
         }
 
-        const parsedDispatchSummaryRows = normalizeDispatchSummaryRows(savedDispatchSummaryRows, defaultReportDate);
+        const parsedDispatchSummaryRows = normalizeDispatchSummaryRows(savedDispatchSummaryRows, preferredReportDate);
         if (parsedDispatchSummaryRows) {
           const hasEditableDispatchRows = parsedDispatchSummaryRows.some((row) => row.shift === "night" || row.shift === "day");
           setDispatchSummaryRows(hasEditableDispatchRows
             ? parsedDispatchSummaryRows
             : parsedDispatchSummaryRows.map((row) => (row.shift === "daily" ? { ...row, shift: "night" } : row)));
         } else if (shouldUseVehicleSeed) {
-          setDispatchSummaryRows(createDefaultDispatchSummaryRows(defaultVehicleSeed.vehicles, defaultReportDate));
+          setDispatchSummaryRows(createDefaultDispatchSummaryRows(defaultVehicleSeed.vehicles, preferredReportDate));
         }
 
         if (savedPtoYears) {
@@ -924,7 +1007,6 @@ export default function App() {
           bucketValues: nextBucketValues,
           bucketRows: nextBucketRows,
           uiState: {
-            reportDate: nextUiState.reportDate ?? fallbackUiState.reportDate,
             ptoTab: nextUiState.ptoTab ?? fallbackUiState.ptoTab,
             ptoPlanYear: nextUiState.ptoPlanYear ?? fallbackUiState.ptoPlanYear,
             ptoAreaFilter: nextUiState.ptoAreaFilter ?? fallbackUiState.ptoAreaFilter,
@@ -942,7 +1024,6 @@ export default function App() {
         setPtoSurveyRows(nextSurveyRows);
         setPtoBucketValues(nextBucketValues);
         setPtoBucketManualRows(nextBucketRows);
-        if (typeof nextUiState.reportDate === "string") setReportDate(nextUiState.reportDate);
         if (typeof nextUiState.ptoTab === "string") setPtoTab(nextUiState.ptoTab);
         if (typeof nextUiState.ptoPlanYear === "string") setPtoPlanYear(nextUiState.ptoPlanYear);
         if (typeof nextUiState.ptoAreaFilter === "string") setPtoAreaFilter(nextUiState.ptoAreaFilter);
@@ -976,6 +1057,7 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.reportHeaderLabels, JSON.stringify(reportHeaderLabels));
     window.localStorage.setItem(adminStorageKeys.reportColumnWidths, JSON.stringify(reportColumnWidths));
     window.localStorage.setItem(adminStorageKeys.reportReasons, JSON.stringify(reportReasons));
+    window.localStorage.setItem(adminStorageKeys.areaShiftCutoffs, JSON.stringify(areaShiftCutoffs));
     window.localStorage.setItem(adminStorageKeys.customTabs, JSON.stringify(customTabs));
     window.localStorage.setItem(adminStorageKeys.topTabs, JSON.stringify(topTabs));
     window.localStorage.setItem(adminStorageKeys.subTabs, JSON.stringify(subTabs));
@@ -986,8 +1068,9 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(adminLogs));
     window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
   }, [
-    adminLogs,
-    customTabs,
+      adminLogs,
+      areaShiftCutoffs,
+      customTabs,
     dependencyLinks,
     dependencyNodes,
     dispatchSummaryRows,
@@ -1531,6 +1614,24 @@ export default function App() {
         : []
     ),
   ], [customerReportRows, needsDerivedReportRows, reportAreaOrder]);
+
+  const areaShiftScheduleAreas = useMemo(() => {
+    const allAreas = uniqueSorted([
+      defaultAreaShiftScheduleArea,
+      ...Object.keys(areaShiftCutoffs),
+      ...reportBaseRows.map((row) => cleanAreaName(row.area)),
+      ...deferredPtoPlanRows.map((row) => cleanAreaName(row.area)),
+      ...deferredPtoOperRows.map((row) => cleanAreaName(row.area)),
+      ...deferredPtoSurveyRows.map((row) => cleanAreaName(row.area)),
+      ...deferredVehicleRows.map((row) => cleanAreaName(row.area)),
+    ].filter((area) => area && normalizeLookupValue(area) !== normalizeLookupValue("РС‚РѕРіРѕ")));
+    const customAreas = allAreas.filter((area) => normalizeLookupValue(area) !== normalizeLookupValue(defaultAreaShiftScheduleArea));
+
+    return [
+      defaultAreaShiftScheduleArea,
+      ...sortAreaNamesByOrder(customAreas, reportAreaOrder),
+    ];
+  }, [areaShiftCutoffs, deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, deferredVehicleRows, reportAreaOrder, reportBaseRows]);
 
   const filteredReports = useMemo(() => {
     if (!needsDerivedReportRows) return [];
@@ -2089,7 +2190,20 @@ export default function App() {
   }
 
   function selectReportDate(value: string) {
+    if (!isStoredReportDateValue(value)) return;
+
     setReportDate(value);
+    setHasManualReportDateOverride(true);
+    window.localStorage.setItem(reportDateOverrideStorageKey, value);
+  }
+
+  function updateAreaShiftCutoff(area: string, value: string) {
+    if (!isValidAreaShiftCutoffTime(value)) return;
+
+    setAreaShiftCutoffs((current) => ({
+      ...current,
+      [area]: value,
+    }));
   }
 
   function addDispatchSummaryRow(vehicle?: VehicleRow) {
@@ -6424,6 +6538,62 @@ export default function App() {
                   </IconButton>
                 </div>
                 </>
+                )}
+
+                {structureSection === "schedule" && (
+                  <div style={{ ...blockStyle, background: "#ffffff", marginBottom: 16 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>Распорядок участков</div>
+                    <div style={{ color: "#64748b", marginBottom: 12 }}>
+                      Здесь задается время закрытия рабочих суток. Если текущее время меньше границы участка, Рабочая дата автоматически считается предыдущим календарным днем.
+                    </div>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", fontSize: 14 }}>
+                        <thead>
+                          <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
+                            <CompactTh>Участок</CompactTh>
+                            <CompactTh>Граница суток</CompactTh>
+                            <CompactTh>Правило расчета</CompactTh>
+                            <CompactTh>Источник</CompactTh>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {areaShiftScheduleAreas.map((area) => {
+                            const cutoffTime = resolveAreaShiftCutoffTime(areaShiftCutoffs, area);
+                            const hasOwnCutoff = Object.prototype.hasOwnProperty.call(areaShiftCutoffs, area);
+                            const isDefaultArea = normalizeLookupValue(area) === normalizeLookupValue(defaultAreaShiftScheduleArea);
+
+                            return (
+                              <tr key={area}>
+                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top" }}>
+                                  <div style={vehicleNameStyle}>{area}</div>
+                                  {!isDefaultArea ? (
+                                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                                      Если время не задано отдельно, используется общее правило.
+                                    </div>
+                                  ) : null}
+                                </td>
+                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top", width: 180 }}>
+                                  <input
+                                    type="time"
+                                    step={60}
+                                    value={cutoffTime}
+                                    onChange={(e) => updateAreaShiftCutoff(area, e.target.value)}
+                                    style={{ ...inputStyle, minWidth: 120, padding: "8px 10px" }}
+                                  />
+                                </td>
+                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top" }}>
+                                  С {cutoffTime} предыдущего календарного дня до {cutoffTime} текущего календарного дня.
+                                </td>
+                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top", color: "#475569" }}>
+                                  {isDefaultArea ? "Общее правило" : hasOwnCutoff ? "Индивидуально" : "Общее правило"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
