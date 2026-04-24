@@ -10,7 +10,6 @@ export const adminSectionTabs: Array<{ value: AdminSection; label: string }> = [
   { value: "ai", label: "ИИ-сводка" },
   { value: "vehicles", label: "Техника" },
   { value: "reports", label: "Отчетность" },
-  { value: "database", label: "База" },
   { value: "logs", label: "Логи" },
 ];
 
