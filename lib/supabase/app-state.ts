@@ -11,10 +11,22 @@ export type SupabaseClientSnapshotMeta = {
   url?: string;
 };
 
+export type SupabaseClientSnapshot = {
+  key: string;
+  clientId: string;
+  savedAt?: string;
+  updatedAt?: string;
+  storage: Record<string, string>;
+  meta: SupabaseClientSnapshotMeta;
+};
+
 type AppStateRecord = {
   key: string;
   value: {
+    clientId?: unknown;
+    savedAt?: unknown;
     storage?: unknown;
+    meta?: unknown;
   } | null;
   updated_at?: string | null;
 };
@@ -37,6 +49,17 @@ function normalizeStorage(value: unknown): Record<string, string> {
   return Object.fromEntries(
     Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
   );
+}
+
+function normalizeSnapshotMeta(value: unknown): SupabaseClientSnapshotMeta {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { reason: "" };
+
+  const record = value as Record<string, unknown>;
+  return {
+    reason: typeof record.reason === "string" ? record.reason : "",
+    userAgent: typeof record.userAgent === "string" ? record.userAgent : undefined,
+    url: typeof record.url === "string" ? record.url : undefined,
+  };
 }
 
 export async function loadAppStateFromSupabase(): Promise<SupabaseAppState | null> {
@@ -92,4 +115,27 @@ export async function saveClientAppSnapshotToSupabase(
     }, { onConflict: "key" });
 
   if (error) throw error;
+}
+
+export async function loadClientAppSnapshotsFromSupabase(): Promise<SupabaseClientSnapshot[]> {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from(appStateTable)
+    .select("key,value,updated_at")
+    .like("key", `${clientSnapshotKeyPrefix}%`)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+
+  return ((data ?? []) as AppStateRecord[]).map((record) => {
+    const value = record.value ?? {};
+    return {
+      key: record.key,
+      clientId: typeof value.clientId === "string" ? value.clientId : record.key.replace(clientSnapshotKeyPrefix, ""),
+      savedAt: typeof value.savedAt === "string" ? value.savedAt : undefined,
+      updatedAt: typeof record.updated_at === "string" ? record.updated_at : undefined,
+      storage: normalizeStorage(value.storage),
+      meta: normalizeSnapshotMeta(value.meta),
+    };
+  });
 }

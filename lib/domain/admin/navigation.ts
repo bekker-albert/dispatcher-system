@@ -1,6 +1,6 @@
 export type StructureSection = "scheme" | "elements" | "links" | "roles" | "schedule";
 
-export type AdminSection = "menu" | "subtabs" | "structure" | "ai" | "vehicles" | "reports" | "logs";
+export type AdminSection = "menu" | "subtabs" | "structure" | "ai" | "vehicles" | "reports" | "logs" | "database";
 
 export type AdminReportCustomerSettingsTab = "display" | "rename" | "summary";
 
@@ -10,6 +10,7 @@ export const adminSectionTabs: Array<{ value: AdminSection; label: string }> = [
   { value: "ai", label: "ИИ-сводка" },
   { value: "vehicles", label: "Техника" },
   { value: "reports", label: "Отчетность" },
+  { value: "database", label: "База" },
   { value: "logs", label: "Логи" },
 ];
 

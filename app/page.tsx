@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2, Upload } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Database, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -35,6 +35,7 @@ import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel,
 import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { supabaseConfigured } from "@/lib/supabase/config";
+import type { SupabaseClientSnapshot } from "@/lib/supabase/app-state";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
@@ -107,6 +108,7 @@ type UndoSnapshot = {
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
 const clientIdStorageKey = "dispatcher:client-id";
 const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
+const clientSnapshotRestoreFlagKey = "dispatcher:restore-client-snapshot";
 const clientSnapshotSaveDelayMs = 1500;
 const ptoLocalStateKeys = [
   adminStorageKeys.ptoYears,
@@ -218,6 +220,33 @@ function collectLocalStorageBackup() {
       return value === null ? [] : [[key, value] as const];
     }),
   );
+}
+
+function readSnapshotJson<T>(storage: Record<string, string>, key: string, fallback: T): T {
+  const rawValue = storage[key];
+  if (!rawValue) return fallback;
+
+  try {
+    return JSON.parse(rawValue) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function clientSnapshotStats(snapshot: SupabaseClientSnapshot) {
+  const planRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoPlanRows, []);
+  const operRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoOperRows, []);
+  const surveyRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoSurveyRows, []);
+  const vehicles = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.vehicles, []);
+  const bucketValues = readSnapshotJson<Record<string, unknown>>(snapshot.storage, adminStorageKeys.ptoBucketValues, {});
+  const appKeys = Object.keys(snapshot.storage).length;
+
+  return {
+    appKeys,
+    ptoRows: planRows.length + operRows.length + surveyRows.length,
+    vehicles: vehicles.length,
+    bucketValues: Object.keys(bucketValues).length,
+  };
 }
 
 const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
@@ -414,6 +443,9 @@ export default function App() {
   const [editingDependencyLinkId, setEditingDependencyLinkId] = useState<string | null>(null);
   const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
   const [adminSection, setAdminSection] = useState<AdminSection>("menu");
+  const [clientSnapshots, setClientSnapshots] = useState<SupabaseClientSnapshot[]>([]);
+  const [databasePanelMessage, setDatabasePanelMessage] = useState("");
+  const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
   const [adminLogs, setAdminLogs] = useState<AdminLogEntry[]>([]);
   const [expandedAdminTab, setExpandedAdminTab] = useState<string | null>("reports");
   const [editingTopTabId, setEditingTopTabId] = useState<string | null>(null);
@@ -557,6 +589,43 @@ export default function App() {
       clientSnapshotSaveTimerRef.current = null;
     }, clientSnapshotSaveDelayMs);
   }, [saveClientSnapshotToDatabase]);
+
+  const refreshClientSnapshots = useCallback(async () => {
+    if (!supabaseConfigured) {
+      setDatabasePanelMessage("Supabase не настроен.");
+      return;
+    }
+
+    setDatabasePanelLoading(true);
+    try {
+      const { loadClientAppSnapshotsFromSupabase } = await import("@/lib/supabase/app-state");
+      const snapshots = await loadClientAppSnapshotsFromSupabase();
+      setClientSnapshots(snapshots);
+      setDatabasePanelMessage(`Снимков браузеров: ${snapshots.length}.`);
+    } catch (error) {
+      setDatabasePanelMessage(`Не удалось прочитать снимки: ${errorToMessage(error)}`);
+    } finally {
+      setDatabasePanelLoading(false);
+    }
+  }, []);
+
+  const createClientSnapshotNow = useCallback(() => {
+    void saveClientSnapshotToDatabase("manual-admin-database-panel")
+      .then(refreshClientSnapshots)
+      .catch((error) => {
+        setDatabasePanelMessage(`Не удалось создать снимок: ${errorToMessage(error)}`);
+      });
+  }, [refreshClientSnapshots, saveClientSnapshotToDatabase]);
+
+  const restoreClientSnapshot = useCallback((snapshot: SupabaseClientSnapshot) => {
+    Object.entries(snapshot.storage).forEach(([key, value]) => {
+      window.localStorage.setItem(key, value);
+    });
+    window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
+    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+    window.sessionStorage.setItem(clientSnapshotRestoreFlagKey, "1");
+    window.location.reload();
+  }, []);
 
   function pushVehicleUndoSnapshot() {
     vehicleUndoHistoryRef.current = [
@@ -753,6 +822,12 @@ export default function App() {
 
     return () => window.removeEventListener("click", closeVehicleFilter);
   }, [openVehicleFilter]);
+
+  useEffect(() => {
+    if (topTab === "admin" && adminSection === "database") {
+      void refreshClientSnapshots();
+    }
+  }, [adminSection, refreshClientSnapshots, topTab]);
 
   useEffect(() => {
     if (!pendingVehicleFocus) return undefined;
@@ -1105,29 +1180,18 @@ export default function App() {
         const databaseUpdatedTime = databaseState.updatedAt ? Date.parse(databaseState.updatedAt) : 0;
         const localPtoStats = countPtoStateData(ptoDatabaseStateRef.current);
         const databasePtoStats = countPtoStateData(databaseState);
-        const localPtoMayBeNewer = hasStoredPtoStateRef.current
+        const shouldRestoreLocalPto = window.sessionStorage.getItem(clientSnapshotRestoreFlagKey) === "1"
+          && hasStoredPtoStateRef.current
           && localPtoStats.total > 0
-          && localUpdatedTime > 0
-          && (!databaseUpdatedTime || localUpdatedTime > databaseUpdatedTime);
-        const localPtoHasMoreData = hasStoredPtoStateRef.current
-          && localPtoStats.total > databasePtoStats.total;
-        const shouldKeepLocalPto = (localPtoMayBeNewer || localPtoHasMoreData)
-          && window.confirm([
-            "В этом браузере найдены локальные данные ПТО, которые могут отличаться от общей базы.",
-            "",
-            `Локально: строк ${localPtoStats.rows}, значений ${localPtoStats.dayValues}, ковшей ${localPtoStats.bucketValues}.`,
-            `В базе: строк ${databasePtoStats.rows}, значений ${databasePtoStats.dayValues}, ковшей ${databasePtoStats.bucketValues}.`,
-            "",
-            "Загрузить локальные данные этого браузера в общую базу Supabase?",
-            "Нажимай OK только на компьютере, где находятся последние правильные данные.",
-          ].join("\n"));
+          && (localPtoStats.total >= databasePtoStats.total || localUpdatedTime >= databaseUpdatedTime);
 
-        if (shouldKeepLocalPto) {
-          savePtoLocalRecoveryBackup("local-pto-uploaded-to-supabase", databaseState.updatedAt);
+        if (shouldRestoreLocalPto) {
+          window.sessionStorage.removeItem(clientSnapshotRestoreFlagKey);
+          savePtoLocalRecoveryBackup("restored-client-snapshot-to-supabase", databaseState.updatedAt);
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
           setPtoSaveRevision((revision) => revision + 1);
-          setPtoDatabaseMessage("Локальные данные ПТО новее Supabase — оставил локальные данные и поставил сохранение в базу.");
+          setPtoDatabaseMessage("Локальные данные ПТО восстановлены из снимка и поставлены на сохранение в Supabase.");
           return;
         }
 
@@ -6999,6 +7063,93 @@ export default function App() {
                 onDeleteVehicle={deleteVehicle}
                 onShowAllVehicleRows={() => setShowAllVehicleRows(true)}
               />
+            )}
+
+            {adminSection === "database" && (
+              <div style={{ ...blockStyle, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>База и восстановление</div>
+                    <div style={{ color: "#64748b", marginTop: 4 }}>
+                      Здесь видны аварийные снимки браузеров. Они нужны, чтобы восстановить данные, если часть информации осталась только на старом компьютере.
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <IconButton label="Создать снимок этого браузера" onClick={createClientSnapshotNow}>
+                      <Database size={16} aria-hidden />
+                    </IconButton>
+                    <IconButton label="Обновить список" onClick={refreshClientSnapshots} disabled={databasePanelLoading}>
+                      <RotateCcw size={16} aria-hidden />
+                    </IconButton>
+                  </div>
+                </div>
+
+                <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8, marginBottom: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                    <div>
+                      <div style={adminLogSummaryLabelStyle}>Supabase</div>
+                      <div style={adminLogSummaryValueStyle}>{supabaseConfigured ? "Подключен" : "Не настроен"}</div>
+                    </div>
+                    <div>
+                      <div style={adminLogSummaryLabelStyle}>ПТО в памяти</div>
+                      <div style={adminLogSummaryValueStyle}>
+                        {countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={adminLogSummaryLabelStyle}>Техника в памяти</div>
+                      <div style={adminLogSummaryValueStyle}>{vehicleRows.length}</div>
+                    </div>
+                    <div>
+                      <div style={adminLogSummaryLabelStyle}>Снимки браузеров</div>
+                      <div style={adminLogSummaryValueStyle}>{clientSnapshots.length}</div>
+                    </div>
+                  </div>
+                  {databasePanelMessage ? (
+                    <div style={{ color: "#475569", marginTop: 10, fontSize: 13 }}>{databasePanelMessage}</div>
+                  ) : null}
+                </div>
+
+                <div style={adminLogTableScrollStyle}>
+                  <table style={adminLogTableStyle}>
+                    <thead>
+                      <tr>
+                        <CompactTh>Дата снимка</CompactTh>
+                        <CompactTh>Браузер</CompactTh>
+                        <CompactTh>Данные</CompactTh>
+                        <CompactTh>Источник</CompactTh>
+                        <CompactTh>{" "}</CompactTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientSnapshots.map((snapshot) => {
+                        const stats = clientSnapshotStats(snapshot);
+
+                        return (
+                          <tr key={snapshot.key}>
+                            <CompactTd>{formatAdminLogDate(snapshot.updatedAt ?? snapshot.savedAt ?? "")}</CompactTd>
+                            <CompactTd>{snapshot.clientId}</CompactTd>
+                            <CompactTd>
+                              ПТО строк: {stats.ptoRows} · техника: {stats.vehicles} · ковши: {stats.bucketValues} · ключей: {stats.appKeys}
+                            </CompactTd>
+                            <CompactTd>{snapshot.meta.reason || "Снимок браузера"}</CompactTd>
+                            <CompactTd>
+                              <IconButton label="Восстановить этот снимок" onClick={() => restoreClientSnapshot(snapshot)}>
+                                <RotateCcw size={16} aria-hidden />
+                              </IconButton>
+                            </CompactTd>
+                          </tr>
+                        );
+                      })}
+                      {clientSnapshots.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={adminLogEmptyCellStyle}>Снимков пока нет. Открой сайт на компьютере, где остались нужные данные, затем обнови список.</td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
 
             {adminSection === "logs" && (
