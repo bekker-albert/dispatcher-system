@@ -143,7 +143,7 @@ export const reportPrintCss = `
 
   .report-print-table {
     border: 2px solid #64748b !important;
-    height: 280mm !important;
+    height: auto !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
