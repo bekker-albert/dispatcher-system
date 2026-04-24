@@ -105,6 +105,19 @@ type UndoSnapshot = {
 };
 
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
+const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
+const ptoLocalStateKeys = [
+  adminStorageKeys.ptoYears,
+  adminStorageKeys.ptoPlanRows,
+  adminStorageKeys.ptoSurveyRows,
+  adminStorageKeys.ptoOperRows,
+  adminStorageKeys.ptoColumnWidths,
+  adminStorageKeys.ptoRowHeights,
+  adminStorageKeys.ptoHeaderLabels,
+  adminStorageKeys.ptoBucketValues,
+  adminStorageKeys.ptoBucketRows,
+  adminStorageKeys.ptoLocalUpdatedAt,
+] as const;
 const sharedAppSettingKeys = [
   adminStorageKeys.reportCustomers,
   adminStorageKeys.reportAreaOrder,
@@ -132,6 +145,53 @@ async function loadDefaultVehicleSeed() {
     version: createVehicleSeedVersion(seedRows),
     vehicles: createDefaultVehicles(seedRows),
   };
+}
+
+function countFilledPtoDayValues(rows: PtoPlanRow[] = []) {
+  return rows.reduce((sum, row) => (
+    sum + Object.values(row.dailyPlans ?? {}).filter((value) => Number.isFinite(Number(value))).length
+  ), 0);
+}
+
+function countPtoStateData(state: {
+  planRows?: PtoPlanRow[];
+  operRows?: PtoPlanRow[];
+  surveyRows?: PtoPlanRow[];
+  bucketRows?: unknown[];
+  bucketValues?: Record<string, unknown>;
+}) {
+  const rows = (state.planRows?.length ?? 0) + (state.operRows?.length ?? 0) + (state.surveyRows?.length ?? 0);
+  const dayValues = countFilledPtoDayValues(state.planRows)
+    + countFilledPtoDayValues(state.operRows)
+    + countFilledPtoDayValues(state.surveyRows);
+  const bucketRows = state.bucketRows?.length ?? 0;
+  const bucketValues = Object.values(state.bucketValues ?? {}).filter((value) => Number.isFinite(Number(value))).length;
+
+  return {
+    rows,
+    dayValues,
+    bucketRows,
+    bucketValues,
+    total: rows + dayValues + bucketRows + bucketValues,
+  };
+}
+
+function savePtoLocalRecoveryBackup(reason: string, databaseUpdatedAt?: string | null) {
+  const entries = Object.fromEntries(
+    ptoLocalStateKeys.flatMap((key) => {
+      const value = window.localStorage.getItem(key);
+      return value === null ? [] : [[key, value] as const];
+    }),
+  );
+
+  if (Object.keys(entries).length === 0) return;
+
+  window.localStorage.setItem(ptoLocalRecoveryBackupKey, JSON.stringify({
+    savedAt: new Date().toISOString(),
+    reason,
+    databaseUpdatedAt: databaseUpdatedAt ?? null,
+    entries,
+  }));
 }
 
 const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
@@ -975,16 +1035,36 @@ export default function App() {
         const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt);
         const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
         const databaseUpdatedTime = databaseState.updatedAt ? Date.parse(databaseState.updatedAt) : 0;
-        const shouldKeepLocalPto = hasStoredPtoStateRef.current
+        const localPtoStats = countPtoStateData(ptoDatabaseStateRef.current);
+        const databasePtoStats = countPtoStateData(databaseState);
+        const localPtoMayBeNewer = hasStoredPtoStateRef.current
+          && localPtoStats.total > 0
           && localUpdatedTime > 0
           && (!databaseUpdatedTime || localUpdatedTime > databaseUpdatedTime);
+        const localPtoHasMoreData = hasStoredPtoStateRef.current
+          && localPtoStats.total > databasePtoStats.total;
+        const shouldKeepLocalPto = (localPtoMayBeNewer || localPtoHasMoreData)
+          && window.confirm([
+            "В этом браузере найдены локальные данные ПТО, которые могут отличаться от общей базы.",
+            "",
+            `Локально: строк ${localPtoStats.rows}, значений ${localPtoStats.dayValues}, ковшей ${localPtoStats.bucketValues}.`,
+            `В базе: строк ${databasePtoStats.rows}, значений ${databasePtoStats.dayValues}, ковшей ${databasePtoStats.bucketValues}.`,
+            "",
+            "Загрузить локальные данные этого браузера в общую базу Supabase?",
+            "Нажимай OK только на компьютере, где находятся последние правильные данные.",
+          ].join("\n"));
 
         if (shouldKeepLocalPto) {
+          savePtoLocalRecoveryBackup("local-pto-uploaded-to-supabase", databaseState.updatedAt);
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
           setPtoSaveRevision((revision) => revision + 1);
           setPtoDatabaseMessage("Локальные данные ПТО новее Supabase — оставил локальные данные и поставил сохранение в базу.");
           return;
+        }
+
+        if (hasStoredPtoStateRef.current && localPtoStats.total > 0) {
+          savePtoLocalRecoveryBackup("before-supabase-pto-load", databaseState.updatedAt);
         }
 
         const nextManualYears = normalizeStoredPtoYears(databaseState.manualYears);
