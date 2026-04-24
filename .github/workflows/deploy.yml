@@ -33,12 +33,12 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" <<'EOF'
             set -euo pipefail
-            export PATH="/var/www/dispatcher/data/.nvm/versions/node/v20.20.2/bin:/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
             export PM2_HOME="/var/www/dispatcher/data/.pm2"
             cd /var/www/dispatcher/data/www/aam-dispatch.kz
             git fetch --prune origin main
             git reset --hard origin/main
-            /var/www/dispatcher/data/.nvm/versions/node/v20.20.2/bin/npm ci
-            /var/www/dispatcher/data/.nvm/versions/node/v20.20.2/bin/npm run build
+            npm ci
+            npm run build
             /usr/lib/ispnodejs/bin/pm2 reload aam-dispatch --update-env
           EOF
