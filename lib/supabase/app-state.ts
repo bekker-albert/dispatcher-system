@@ -5,6 +5,12 @@ export type SupabaseAppState = {
   storage: Record<string, string>;
 };
 
+export type SupabaseClientSnapshotMeta = {
+  reason: string;
+  userAgent?: string;
+  url?: string;
+};
+
 type AppStateRecord = {
   key: string;
   value: {
@@ -15,6 +21,7 @@ type AppStateRecord = {
 
 const appStateTable = "app_state";
 const mainAppStateKey = "main";
+const clientSnapshotKeyPrefix = "client-snapshot:";
 
 function requireSupabase() {
   if (!supabaseConfigured || !supabase) {
@@ -59,6 +66,29 @@ export async function saveAppStateToSupabase(storage: Record<string, string>) {
       key: mainAppStateKey,
       value: { storage },
       updated_at: new Date().toISOString(),
+    }, { onConflict: "key" });
+
+  if (error) throw error;
+}
+
+export async function saveClientAppSnapshotToSupabase(
+  clientId: string,
+  storage: Record<string, string>,
+  meta: SupabaseClientSnapshotMeta,
+) {
+  const client = requireSupabase();
+  const savedAt = new Date().toISOString();
+  const { error } = await client
+    .from(appStateTable)
+    .upsert({
+      key: `${clientSnapshotKeyPrefix}${clientId}`,
+      value: {
+        clientId,
+        savedAt,
+        storage,
+        meta,
+      },
+      updated_at: savedAt,
     }, { onConflict: "key" });
 
   if (error) throw error;

@@ -105,7 +105,9 @@ type UndoSnapshot = {
 };
 
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
+const clientIdStorageKey = "dispatcher:client-id";
 const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
+const clientSnapshotSaveDelayMs = 1500;
 const ptoLocalStateKeys = [
   adminStorageKeys.ptoYears,
   adminStorageKeys.ptoPlanRows,
@@ -192,6 +194,30 @@ function savePtoLocalRecoveryBackup(reason: string, databaseUpdatedAt?: string |
     databaseUpdatedAt: databaseUpdatedAt ?? null,
     entries,
   }));
+}
+
+function getOrCreateClientId() {
+  const currentId = window.localStorage.getItem(clientIdStorageKey);
+  if (currentId) return currentId;
+
+  const nextId = `client-${createId()}`;
+  window.localStorage.setItem(clientIdStorageKey, nextId);
+  return nextId;
+}
+
+function collectLocalStorageBackup() {
+  const backupKeys = [
+    ...Object.values(adminStorageKeys),
+    clientIdStorageKey,
+    ptoLocalRecoveryBackupKey,
+  ];
+
+  return Object.fromEntries(
+    backupKeys.flatMap((key) => {
+      const value = window.localStorage.getItem(key);
+      return value === null ? [] : [[key, value] as const];
+    }),
+  );
 }
 
 const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
@@ -311,6 +337,8 @@ export default function App() {
   const appDatabaseSaveSnapshotRef = useRef("");
   const appSettingsDatabaseLoadedRef = useRef(false);
   const appSettingsDatabaseSaveSnapshotRef = useRef("");
+  const clientSnapshotSaveTimerRef = useRef<number | null>(null);
+  const clientSnapshotSaveSnapshotRef = useRef("");
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
@@ -495,6 +523,40 @@ export default function App() {
       return nextLogs;
     });
   }, []);
+
+  const saveClientSnapshotToDatabase = useCallback(async (reason: string) => {
+    if (!supabaseConfigured) return;
+
+    const clientId = getOrCreateClientId();
+    const storage = collectLocalStorageBackup();
+    if (Object.keys(storage).length === 0) return;
+
+    const snapshot = JSON.stringify({ clientId, storage });
+    if (snapshot === clientSnapshotSaveSnapshotRef.current) return;
+
+    const { saveClientAppSnapshotToSupabase } = await import("@/lib/supabase/app-state");
+    await saveClientAppSnapshotToSupabase(clientId, storage, {
+      reason,
+      userAgent: window.navigator.userAgent,
+      url: window.location.href,
+    });
+    clientSnapshotSaveSnapshotRef.current = snapshot;
+  }, []);
+
+  const requestClientSnapshotSave = useCallback((reason = "auto") => {
+    if (!supabaseConfigured) return;
+
+    if (clientSnapshotSaveTimerRef.current !== null) {
+      window.clearTimeout(clientSnapshotSaveTimerRef.current);
+    }
+
+    clientSnapshotSaveTimerRef.current = window.setTimeout(() => {
+      void saveClientSnapshotToDatabase(reason).catch((error) => {
+        console.warn("Supabase client snapshot save failed:", error);
+      });
+      clientSnapshotSaveTimerRef.current = null;
+    }, clientSnapshotSaveDelayMs);
+  }, [saveClientSnapshotToDatabase]);
 
   function pushVehicleUndoSnapshot() {
     vehicleUndoHistoryRef.current = [
@@ -754,6 +816,12 @@ export default function App() {
           && window.localStorage.getItem(key) !== null
         ));
 
+        if (hasLocalAppState && supabaseConfigured) {
+          void saveClientSnapshotToDatabase("before-initial-database-load").catch((error) => {
+            console.warn("Supabase client snapshot save failed:", error);
+          });
+        }
+
         if (supabaseConfigured) {
           try {
             const { loadAppStateFromSupabase } = await import("@/lib/supabase/app-state");
@@ -1000,7 +1068,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [saveClientSnapshotToDatabase]);
 
   useEffect(() => {
     if (!adminDataLoaded) return;
@@ -1204,6 +1272,7 @@ export default function App() {
       void saveSharedAppSettingsToDatabase().catch((error) => {
         console.warn("Supabase app_settings save failed:", error);
       });
+      requestClientSnapshotSave("app-state-save");
       appStateSaveTimerRef.current = null;
     }, 300);
 
@@ -1213,10 +1282,10 @@ export default function App() {
         appStateSaveTimerRef.current = null;
       }
     };
-  }, [adminDataLoaded, saveAppLocalState, saveSharedAppSettingsToDatabase]);
+  }, [adminDataLoaded, requestClientSnapshotSave, saveAppLocalState, saveSharedAppSettingsToDatabase]);
 
-  // Legacy app_state is load-only now. Writing the whole localStorage snapshot
-  // from every browser is unsafe for several simultaneous users.
+  // The shared main app_state remains load-only. Per-browser snapshots are
+  // written separately so one stale browser cannot overwrite another one.
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -1239,6 +1308,7 @@ export default function App() {
             .catch((error) => console.warn("Supabase vehicles save failed:", error));
         }
       }
+      requestClientSnapshotSave("vehicles-save");
       vehicleSaveTimerRef.current = null;
     }, 700);
 
@@ -1248,7 +1318,7 @@ export default function App() {
         vehicleSaveTimerRef.current = null;
       }
     };
-  }, [adminDataLoaded, vehicleRows]);
+  }, [adminDataLoaded, requestClientSnapshotSave, vehicleRows]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -1300,7 +1370,8 @@ export default function App() {
       hasStoredPtoStateRef.current = true;
     }
     window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-  }, []);
+    requestClientSnapshotSave("pto-local-save");
+  }, [requestClientSnapshotSave]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
