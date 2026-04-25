@@ -225,6 +225,7 @@ const surveyCutoffSurveyRow = normalizePtoPlanRow({
     "2026-04-11": 20,
     "2026-04-15": 30,
     "2026-04-20": 40,
+    "2026-04-24": 0,
   },
   years: ["2026"],
 });

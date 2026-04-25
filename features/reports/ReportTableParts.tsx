@@ -74,7 +74,6 @@ export function ReportTh({
       rowSpan={rowSpan}
       style={{
         ...reportThStyle,
-        ...(width ? { width, minWidth: width, maxWidth: width } : null),
       }}
     >
       <div className="report-screen-header-content" style={reportHeaderContentStyle}>{children}</div>

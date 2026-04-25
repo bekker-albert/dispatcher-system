@@ -264,6 +264,7 @@ function latestFactDateInRange(entry: ReportPtoIndexEntry | undefined, startDate
   for (let index = endIndex; index >= 0; index -= 1) {
     const date = entry.prefixTotals[index].date;
     if (date < startDate) return null;
+    if (Math.abs(entry.dailyTotals.get(date) ?? 0) < 0.000001) continue;
     return date;
   }
 

@@ -150,7 +150,8 @@ export default function ReportsSection({
     : 0;
   const reportTableInlineStyle = {
     ...reportTableStyle,
-    minWidth: reportTableMinWidth,
+    minWidth: 0,
+    maxWidth: "100%",
     "--report-print-fill-padding-y": `${reportPrintFillPaddingMm}mm`,
     "--report-print-work-name-width": `${reportPrintTextColumnWidths["work-name"]}px`,
     "--report-print-day-reason-width": `${reportPrintTextColumnWidths["day-reason"]}px`,
@@ -214,7 +215,11 @@ export default function ReportsSection({
               <table className="report-print-table" style={reportTableInlineStyle}>
                 <colgroup>
                   {reportColumnKeys.map((key, index) => (
-                    <col key={key} className={`report-print-col report-print-col-${key}`} style={{ width: reportTableColumnWidths[index] }} />
+                    <col
+                      key={key}
+                      className={`report-print-col report-print-col-${key}`}
+                      style={{ width: `${(reportTableColumnWidths[index] / Math.max(reportTableMinWidth, 1)) * 100}%` }}
+                    />
                   ))}
                 </colgroup>
                 <thead>
@@ -348,7 +353,6 @@ export default function ReportsSection({
 
 const reportTableStyle: CSSProperties = {
   width: "100%",
-  minWidth: 1768,
   borderCollapse: "collapse",
   tableLayout: "fixed",
   fontSize: 12,
@@ -401,7 +405,8 @@ const reportPanelStyle: CSSProperties = {
 };
 
 const reportTableScrollStyle: CSSProperties = {
-  overflow: "auto",
+  overflowX: "hidden",
+  overflowY: "auto",
   minHeight: 0,
   border: "2px solid #64748b",
   borderRadius: 8,
