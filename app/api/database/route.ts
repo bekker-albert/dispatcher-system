@@ -5,6 +5,7 @@ import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoDateTableKey } from "@/lib/domain/pto/date-table";
 import type { MysqlPtoState } from "@/lib/server/mysql/pto";
 import type { MysqlClientSnapshotMeta } from "@/lib/server/mysql/app-state";
+import { errorToMessage } from "@/lib/utils/normalizers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ function json(data: unknown, status = 200, request?: Request) {
 }
 
 function errorResponse(error: unknown, request?: Request) {
-  const message = error instanceof Error ? error.message : "Database request failed";
+  const message = errorToMessage(error);
   return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders(request) });
 }
 

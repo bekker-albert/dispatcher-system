@@ -1,3 +1,5 @@
+import { errorToMessage } from "@/lib/utils/normalizers";
+
 export type DatabaseResource = "status" | "vehicles" | "settings" | "app-state" | "pto";
 
 export type DatabaseAction =
@@ -18,7 +20,7 @@ export type DatabaseAction =
 
 type DatabaseResponse<T> = {
   data?: T;
-  error?: string;
+  error?: unknown;
 };
 
 function databaseApiUrl() {
@@ -47,7 +49,7 @@ export async function databaseRequest<T>(
   const body = await response.json().catch(() => ({})) as DatabaseResponse<T>;
 
   if (!response.ok) {
-    throw new Error(body.error || `Database request failed: ${response.status}`);
+    throw new Error(body.error ? errorToMessage(body.error) : `Database request failed: ${response.status}`);
   }
 
   return body.data as T;

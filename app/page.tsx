@@ -17,7 +17,7 @@ import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowAutoStatus, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
+import { createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowAutoStatus, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
@@ -73,6 +73,11 @@ type ReportResizeState = {
   startWidth: number;
 };
 
+type SaveStatusState = {
+  kind: "idle" | "saving" | "saved" | "error";
+  message: string;
+};
+
 type PtoTableColumn = {
   key: string;
   width: number;
@@ -118,6 +123,8 @@ const clientIdStorageKey = "dispatcher:client-id";
 const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
 const clientSnapshotRestoreFlagKey = "dispatcher:restore-client-snapshot";
 const clientSnapshotSaveDelayMs = 1500;
+const saveStatusSavedHideMs = 2600;
+const saveStatusAttentionHideMs = 30000;
 const ptoLocalStateKeys = [
   adminStorageKeys.ptoYears,
   adminStorageKeys.ptoPlanRows,
@@ -376,6 +383,8 @@ export default function App() {
   const appSettingsDatabaseSaveSnapshotRef = useRef("");
   const clientSnapshotSaveTimerRef = useRef<number | null>(null);
   const clientSnapshotSaveSnapshotRef = useRef("");
+  const clientSnapshotSaveDisabledRef = useRef(false);
+  const saveStatusTimerRef = useRef<number | null>(null);
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
@@ -461,6 +470,7 @@ export default function App() {
   const [editingTopTabId, setEditingTopTabId] = useState<string | null>(null);
   const [editingSubTabId, setEditingSubTabId] = useState<string | null>(null);
   const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База данных подключается..." : "База данных не настроена.");
+  const [saveStatus, setSaveStatus] = useState<SaveStatusState>({ kind: "idle", message: "" });
   const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!supabaseConfigured);
   const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
@@ -567,8 +577,39 @@ export default function App() {
     });
   }, []);
 
+  const showSaveStatus = useCallback((kind: SaveStatusState["kind"], message: string) => {
+    if (saveStatusTimerRef.current !== null) {
+      window.clearTimeout(saveStatusTimerRef.current);
+      saveStatusTimerRef.current = null;
+    }
+
+    setSaveStatus({ kind, message });
+
+    if (kind === "saved" || kind === "error") {
+      saveStatusTimerRef.current = window.setTimeout(() => {
+        setSaveStatus({ kind: "idle", message: "" });
+        saveStatusTimerRef.current = null;
+      }, kind === "saved" ? saveStatusSavedHideMs : saveStatusAttentionHideMs);
+    }
+  }, []);
+
+  const hideSaveStatus = useCallback(() => {
+    if (saveStatusTimerRef.current !== null) {
+      window.clearTimeout(saveStatusTimerRef.current);
+      saveStatusTimerRef.current = null;
+    }
+    setSaveStatus({ kind: "idle", message: "" });
+  }, []);
+
+  useEffect(() => () => {
+    if (saveStatusTimerRef.current !== null) {
+      window.clearTimeout(saveStatusTimerRef.current);
+      saveStatusTimerRef.current = null;
+    }
+  }, []);
+
   const saveClientSnapshotToDatabase = useCallback(async (reason: string) => {
-    if (!supabaseConfigured) return;
+    if (!supabaseConfigured || clientSnapshotSaveDisabledRef.current) return;
 
     const clientId = getOrCreateClientId();
     const storage = collectLocalStorageBackup();
@@ -587,7 +628,7 @@ export default function App() {
   }, []);
 
   const requestClientSnapshotSave = useCallback((reason = "auto") => {
-    if (!supabaseConfigured) return;
+    if (!supabaseConfigured || clientSnapshotSaveDisabledRef.current) return;
 
     if (clientSnapshotSaveTimerRef.current !== null) {
       window.clearTimeout(clientSnapshotSaveTimerRef.current);
@@ -596,10 +637,17 @@ export default function App() {
     clientSnapshotSaveTimerRef.current = window.setTimeout(() => {
       void saveClientSnapshotToDatabase(reason).catch((error) => {
         console.warn("Supabase client snapshot save failed:", error);
+        const message = errorToMessage(error);
+        if (message.includes("public.app_state") || message.includes("PGRST205")) {
+          clientSnapshotSaveDisabledRef.current = true;
+          showSaveStatus("error", "Резервная копия браузера отключена: старая таблица Supabase не создана. Основные данные сохраняются отдельно.");
+          return;
+        }
+        showSaveStatus("error", `Резервная копия не сохранена: ${message}`);
       });
       clientSnapshotSaveTimerRef.current = null;
     }, clientSnapshotSaveDelayMs);
-  }, [saveClientSnapshotToDatabase]);
+  }, [saveClientSnapshotToDatabase, showSaveStatus]);
 
   const refreshClientSnapshots = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -950,12 +998,33 @@ export default function App() {
 
             if (cancelled) return;
 
-            databaseSettings.forEach((setting) => {
-              window.localStorage.setItem(setting.key, JSON.stringify(setting.value));
-            });
-            appSettingsDatabaseSaveSnapshotRef.current = JSON.stringify(Object.fromEntries(
+            const databaseSettingsObject = Object.fromEntries(
               databaseSettings.map((setting) => [setting.key, setting.value]),
-            ));
+            );
+            const databaseSettingsUpdatedTime = Math.max(
+              0,
+              ...databaseSettings.map((setting) => (
+                setting.updated_at ? Date.parse(setting.updated_at) || 0 : 0
+              )),
+            );
+            const currentLocalUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
+            const currentLocalUpdatedTime = currentLocalUpdatedAt ? Date.parse(currentLocalUpdatedAt) : 0;
+            const shouldUseDatabaseSettings = databaseSettings.length > 0
+              && (
+                !hasLocalAppState
+                || (currentLocalUpdatedTime > 0 && databaseSettingsUpdatedTime > currentLocalUpdatedTime)
+              );
+
+            if (shouldUseDatabaseSettings) {
+              databaseSettings.forEach((setting) => {
+                window.localStorage.setItem(setting.key, JSON.stringify(setting.value));
+              });
+              if (databaseSettingsUpdatedTime > 0) {
+                window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date(databaseSettingsUpdatedTime).toISOString());
+              }
+            }
+
+            appSettingsDatabaseSaveSnapshotRef.current = JSON.stringify(databaseSettingsObject);
           } catch (error) {
             appSettingsDatabaseLoadedRef.current = false;
             console.warn("Supabase app_settings table is not ready:", error);
@@ -1225,6 +1294,21 @@ export default function App() {
           return;
         }
 
+        const shouldKeepLocalPtoState = hasStoredPtoStateRef.current
+          && localPtoStats.total > 0
+          && localUpdatedTime > 0
+          && localUpdatedTime > databaseUpdatedTime;
+
+        if (shouldKeepLocalPtoState) {
+          savePtoLocalRecoveryBackup("local-pto-newer-than-database", databaseState.updatedAt);
+          ptoDatabaseLoadedRef.current = true;
+          ptoDatabaseSaveSnapshotRef.current = "";
+          setPtoDatabaseReady(true);
+          setPtoSaveRevision((revision) => revision + 1);
+          setPtoDatabaseMessage("Локальные данные ПТО новее базы — оставил их и поставил сохранение на сервер.");
+          return;
+        }
+
         if (hasStoredPtoStateRef.current && localPtoStats.total > 0) {
           savePtoLocalRecoveryBackup("before-supabase-pto-load", databaseState.updatedAt);
         }
@@ -1354,10 +1438,18 @@ export default function App() {
     const snapshot = JSON.stringify(settings);
     if (snapshot === appSettingsDatabaseSaveSnapshotRef.current) return;
 
-    const { saveAppSettingsToSupabase } = await import("@/lib/supabase/settings");
-    await saveAppSettingsToSupabase(settings);
-    appSettingsDatabaseSaveSnapshotRef.current = snapshot;
-  }, [collectSharedAppSettings]);
+    showSaveStatus("saving", "Сохраняю настройки...");
+
+    try {
+      const { saveAppSettingsToSupabase } = await import("@/lib/supabase/settings");
+      await saveAppSettingsToSupabase(settings);
+      appSettingsDatabaseSaveSnapshotRef.current = snapshot;
+      showSaveStatus("saved", "Настройки сохранены.");
+    } catch (error) {
+      showSaveStatus("error", `Настройки не сохранены: ${errorToMessage(error)}`);
+      throw error;
+    }
+  }, [collectSharedAppSettings, showSaveStatus]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -1399,12 +1491,17 @@ export default function App() {
       if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
         const snapshot = JSON.stringify(vehicleRowsRef.current);
         if (snapshot !== vehiclesDatabaseSaveSnapshotRef.current) {
+          showSaveStatus("saving", "Сохраняю технику...");
           void import("@/lib/supabase/vehicles")
             .then(({ saveVehiclesToSupabase }) => saveVehiclesToSupabase(vehicleRowsRef.current))
             .then(() => {
               vehiclesDatabaseSaveSnapshotRef.current = snapshot;
+              showSaveStatus("saved", "Техника сохранена.");
             })
-            .catch((error) => console.warn("Supabase vehicles save failed:", error));
+            .catch((error) => {
+              console.warn("Supabase vehicles save failed:", error);
+              showSaveStatus("error", `Техника не сохранена: ${errorToMessage(error)}`);
+            });
         }
       }
       requestClientSnapshotSave("vehicles-save");
@@ -1417,7 +1514,7 @@ export default function App() {
         vehicleSaveTimerRef.current = null;
       }
     };
-  }, [adminDataLoaded, requestClientSnapshotSave, vehicleRows]);
+  }, [adminDataLoaded, requestClientSnapshotSave, showSaveStatus, vehicleRows]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -1522,11 +1619,13 @@ export default function App() {
   const savePtoDatabaseChanges = useCallback(async (mode: "auto" | "manual" = "manual") => {
     if (!supabaseConfigured) {
       setPtoDatabaseMessage("База данных не настроена.");
+      showSaveStatus("error", "База данных не настроена.");
       return;
     }
 
     if (!ptoDatabaseLoadedRef.current) {
       setPtoDatabaseMessage("База данных еще загружается. Сохранение ПТО отложено.");
+      showSaveStatus("saving", "База еще загружается, сохранение ПТО отложено.");
       return;
     }
 
@@ -1543,14 +1642,17 @@ export default function App() {
 
     ptoDatabaseSavingRef.current = true;
     setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в базе данных..." : "Сохраняю ПТО в базе данных...");
+    showSaveStatus("saving", mode === "auto" ? "Сохраняю ПТО..." : "Сохраняю ПТО...");
 
     try {
       const { savePtoStateToSupabase } = await import("@/lib/supabase/pto");
       await savePtoStateToSupabase(ptoDatabaseStateRef.current);
       ptoDatabaseSaveSnapshotRef.current = snapshotToSave;
       setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в базе данных." : "ПТО сохранено в базе данных.");
+      showSaveStatus("saved", "ПТО сохранено.");
     } catch (error) {
       setPtoDatabaseMessage(`Не удалось сохранить в базе данных: ${errorToMessage(error)}`);
+      showSaveStatus("error", `ПТО не сохранено: ${errorToMessage(error)}`);
     } finally {
       ptoDatabaseSavingRef.current = false;
       if (ptoDatabaseSaveQueuedRef.current) {
@@ -1560,7 +1662,7 @@ export default function App() {
         }
       }
     }
-  }, []);
+  }, [showSaveStatus]);
 
   const requestPtoDatabaseSave = useCallback(() => {
     if (!supabaseConfigured || !ptoDatabaseLoadedRef.current) return;
@@ -1815,14 +1917,34 @@ export default function App() {
   const activeAdminReportVisibleRows = useMemo(() => (
     activeAdminReportBaseRows.filter((row) => activeAdminReportVisibleRowKeys.has(reportRowKey(row)))
   ), [activeAdminReportBaseRows, activeAdminReportVisibleRowKeys]);
+  const activeAdminReportOrderRows = useMemo(() => {
+    if (!needsAdminReportRows) return [];
+
+    const rowsByKey = new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]));
+    const summaryRows = reportCustomerUsesSummaryRows(activeAdminReportCustomer)
+      ? activeAdminReportCustomer.summaryRows.flatMap((summary) => {
+        const sourceRows = summary.rowKeys
+          .map((key) => rowsByKey.get(key))
+          .filter((row): row is ReportRow => Boolean(row));
+        const summaryRow = createReportSummaryRow(summary, sourceRows);
+        return summaryRow ? [summaryRow] : [];
+      })
+      : [];
+
+    return sortReportRowsByAreaOrder(
+      [...activeAdminReportVisibleRows, ...summaryRows],
+      activeAdminReportCustomer.areaOrder,
+      activeAdminReportCustomer.workOrder,
+    );
+  }, [activeAdminReportBaseRows, activeAdminReportCustomer, activeAdminReportVisibleRows, needsAdminReportRows]);
   const activeAdminReportAreaOptions = useMemo(() => (
     needsAdminReportRows
       ? sortAreaNamesByOrder(
-        uniqueSorted(activeAdminReportVisibleRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+        uniqueSorted(activeAdminReportOrderRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
         activeAdminReportCustomer.areaOrder,
       )
       : []
-  ), [activeAdminReportCustomer.areaOrder, activeAdminReportVisibleRows, needsAdminReportRows]);
+  ), [activeAdminReportCustomer.areaOrder, activeAdminReportOrderRows, needsAdminReportRows]);
   const activeAdminReportSummaryAreaOptions = useMemo(() => (
     needsAdminReportRows
       ? sortAreaNamesByOrder(
@@ -1840,13 +1962,13 @@ export default function App() {
       ? activeAdminReportAreaOptions.map((area) => ({
         area,
         rows: sortReportRowsByAreaOrder(
-          activeAdminReportVisibleRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(area)),
+          activeAdminReportOrderRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(area)),
           [area],
           activeAdminReportCustomer.workOrder,
         ),
       }))
       : []
-  ), [activeAdminReportAreaOptions, activeAdminReportCustomer.workOrder, activeAdminReportVisibleRows, needsAdminReportRows]);
+  ), [activeAdminReportAreaOptions, activeAdminReportCustomer.workOrder, activeAdminReportOrderRows, needsAdminReportRows]);
 
   const activeAdminReportSelectedCount = useMemo(() => (
     needsAdminReportRows ? activeAdminReportVisibleRows.length : 0
@@ -2997,11 +3119,11 @@ export default function App() {
   function moveReportWorkOrder(area: string, rowKey: string, direction: -1 | 1) {
     const areaKey = normalizeLookupValue(area);
     const areaRows = sortReportRowsByAreaOrder(
-      activeAdminReportVisibleRows.filter((row) => normalizeLookupValue(row.area) === areaKey),
+      activeAdminReportOrderRows.filter((row) => normalizeLookupValue(row.area) === areaKey),
       [area],
       activeAdminReportCustomer.workOrder,
     );
-    const rowKeys = areaRows.map(reportRowKey);
+    const rowKeys = areaRows.map(reportRowDisplayKey);
     const sourceIndex = rowKeys.indexOf(rowKey);
     const targetIndex = sourceIndex + direction;
     if (sourceIndex === -1 || targetIndex < 0 || targetIndex >= rowKeys.length) return;
@@ -4242,9 +4364,17 @@ export default function App() {
     pushVehicleUndoSnapshot();
     setVehicleRows((current) => current.filter((vehicle) => vehicle.id !== id));
     if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+      showSaveStatus("saving", "Удаляю технику из базы...");
       void import("@/lib/supabase/vehicles")
         .then(({ deleteVehicleFromSupabase }) => deleteVehicleFromSupabase(id))
-        .catch((error) => console.warn("Supabase vehicle delete failed:", error));
+        .then(() => {
+          vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(vehicleRowsRef.current.filter((vehicle) => vehicle.id !== id));
+          showSaveStatus("saved", "Техника удалена из базы.");
+        })
+        .catch((error) => {
+          console.warn("Supabase vehicle delete failed:", error);
+          showSaveStatus("error", `Техника не удалена из базы: ${errorToMessage(error)}`);
+        });
     }
     addAdminLog({
       action: "Удаление",
@@ -4279,12 +4409,17 @@ export default function App() {
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
       window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
       if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+        showSaveStatus("saving", "Сохраняю загруженную технику...");
         void import("@/lib/supabase/vehicles")
           .then(({ replaceVehiclesInSupabase }) => replaceVehiclesInSupabase(importedVehicles))
           .then(() => {
             vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(importedVehicles);
+            showSaveStatus("saved", "Загруженная техника сохранена.");
           })
-          .catch((error) => console.warn("Supabase vehicles import save failed:", error));
+          .catch((error) => {
+            console.warn("Supabase vehicles import save failed:", error);
+            showSaveStatus("error", `Загруженная техника не сохранена: ${errorToMessage(error)}`);
+          });
       }
       addAdminLog({
         action: "Загрузка",
@@ -4611,6 +4746,13 @@ export default function App() {
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(null);
       setPtoSelectedCellKeys([]);
+      if (!nextEditing) {
+        savePtoLocalState();
+        requestPtoDatabaseSave();
+        window.setTimeout(() => {
+          void savePtoDatabaseChanges("manual");
+        }, 0);
+      }
     };
     const renderReadonlyTextCell = (value: string, align: React.CSSProperties["textAlign"] = "left") => (
       <div style={{ ...ptoReadonlyCellTextStyle, textAlign: align }} title={value || undefined}>
@@ -6143,7 +6285,8 @@ export default function App() {
 
   return (
     <div className="app-print-root" style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
-      <style>{reportPrintCss}</style>
+      <style>{`${reportPrintCss}\n@media print { .app-save-status { display: none !important; } }`}</style>
+      <SaveStatusIndicator status={saveStatus} onClose={hideSaveStatus} />
       <div className="app-print-shell" style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
         <div className="app-print-header" style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
           <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
@@ -7622,10 +7765,13 @@ export default function App() {
                                 <div style={adminReportWorkGroupTitleStyle}>{group.area}</div>
                                 <div style={adminReportAreaOrderListStyle}>
                                   {group.rows.map((row, index) => {
-                                    const rowKey = reportRowKey(row);
+                                    const rowKey = reportRowDisplayKey(row);
+                                    const isSummaryRow = rowKey.startsWith("summary:");
                                     return (
                                       <div key={rowKey} style={adminReportWorkOrderRowStyle}>
-                                        <span style={adminReportWorkOrderNameStyle}>{index + 1}. {row.name}</span>
+                                        <span style={adminReportWorkOrderNameStyle}>
+                                          {index + 1}. {isSummaryRow ? "Итог: " : ""}{row.name}
+                                        </span>
                                         <span style={adminReportWorkOrderUnitStyle}>{row.unit}</span>
                                         <div style={adminReportAreaOrderActionsStyle}>
                                           <MiniIconButton label="Поднять вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, -1)} disabled={index === 0}>
@@ -7931,11 +8077,79 @@ function AdminReportSettingsButton({ active, onClick, label, disabled = false }:
   );
 }
 
+function SaveStatusIndicator({ status, onClose }: { status: SaveStatusState; onClose: () => void }) {
+  if (status.kind === "idle") return null;
+
+  const kindStyle = status.kind === "error"
+    ? saveStatusErrorStyle
+    : status.kind === "saving"
+      ? saveStatusSavingStyle
+      : saveStatusSavedStyle;
+
+  return (
+    <div className="app-save-status" aria-live="polite" style={{ ...saveStatusIndicatorStyle, ...kindStyle }}>
+      <span>{status.message}</span>
+      <button type="button" aria-label="Закрыть уведомление" onClick={onClose} style={saveStatusCloseButtonStyle}>
+        ×
+      </button>
+    </div>
+  );
+}
+
 const blockStyle: React.CSSProperties = {
   border: "1px solid #e2e8f0",
   borderRadius: 16,
   padding: 16,
   background: "#f8fafc",
+};
+
+const saveStatusIndicatorStyle: React.CSSProperties = {
+  position: "fixed",
+  right: 18,
+  bottom: 18,
+  zIndex: 10000,
+  maxWidth: 420,
+  padding: "10px 12px",
+  borderRadius: 8,
+  borderStyle: "solid",
+  borderWidth: 1,
+  boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)",
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  fontSize: 13,
+  fontWeight: 700,
+  lineHeight: 1.25,
+};
+
+const saveStatusCloseButtonStyle: React.CSSProperties = {
+  appearance: "none",
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+  fontSize: 18,
+  fontWeight: 700,
+  lineHeight: 1,
+  padding: 0,
+};
+
+const saveStatusSavingStyle: React.CSSProperties = {
+  background: "#111827",
+  borderColor: "#111827",
+  color: "#ffffff",
+};
+
+const saveStatusSavedStyle: React.CSSProperties = {
+  background: "#f8fafc",
+  borderColor: "#0f172a",
+  color: "#0f172a",
+};
+
+const saveStatusErrorStyle: React.CSSProperties = {
+  background: "#fef2f2",
+  borderColor: "#b91c1c",
+  color: "#991b1b",
 };
 
 const adminReportSectionHeaderStyle: React.CSSProperties = {

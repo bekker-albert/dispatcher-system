@@ -106,8 +106,8 @@ const blockStyle: CSSProperties = {
 };
 
 const ptoWorkspaceStyle: CSSProperties = {
-  height: "calc(100dvh - 232px)",
-  minHeight: 320,
+  height: "calc(100dvh - 184px)",
+  minHeight: 420,
   display: "grid",
   gridTemplateRows: "minmax(0, 1fr)",
 };
