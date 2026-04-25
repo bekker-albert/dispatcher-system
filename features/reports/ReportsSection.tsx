@@ -3,7 +3,7 @@
 import { Printer } from "lucide-react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { reportFlexibleColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
-import { reportReasonEntryKey } from "@/lib/domain/reports/reasons";
+import { reportReasonEntryKey, reportYearReasonOverrideKey } from "@/lib/domain/reports/reasons";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import { delta, formatNumber, formatPercent, formatReportTitleDate, formatReportWorkName } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
@@ -45,6 +45,8 @@ type ReportsSectionProps = {
   onCancelReportDayReasonDraft: (rowKey: string, value: string) => void;
   onUpdateReportDayReasonDraft: (rowKey: string, value: string) => void;
   onCommitReportYearReason: (rowKey: string, value: string) => void;
+  onCancelReportYearReasonDraft: (rowKey: string, value: string) => void;
+  onUpdateReportYearReasonDraft: (rowKey: string, value: string) => void;
 };
 
 const reportPrintRowsPerPage = 42;
@@ -116,6 +118,8 @@ export default function ReportsSection({
   onCancelReportDayReasonDraft,
   onUpdateReportDayReasonDraft,
   onCommitReportYearReason,
+  onCancelReportYearReasonDraft,
+  onUpdateReportYearReasonDraft,
 }: ReportsSectionProps) {
   const reportPrintRows = filteredReportAreaGroups.flatMap((group) => group.rows);
   const reportPrintTextColumnWidths = reportFitPrintTextColumnWidths({
@@ -136,7 +140,11 @@ export default function ReportsSection({
     "year-reason": reportPrintTextColumnWidth(
       "year-reason",
       reportHeaderLabel("year-reason", "Причины с накоплением"),
-      reportPrintRows.map((row) => (delta(row.yearPlan, reportYearFact(row)) < 0 ? row.yearReason : "")),
+      reportPrintRows.map((row) => {
+        if (delta(row.yearPlan, reportYearFact(row)) >= 0) return "";
+        const rowKey = reportRowDisplayKey(row);
+        return reportReasons[reportYearReasonOverrideKey(reportDate, rowKey)] ?? row.yearReason;
+      }),
     ),
   });
   const reportBodyRowCount = filteredReportAreaGroups.reduce((sum, group) => sum + group.rows.length, 0);
@@ -273,8 +281,9 @@ export default function ReportsSection({
                       const annualRemaining = delta(row.annualPlan, annualFact);
                       const rowKey = reportRowDisplayKey(row);
                       const dayReasonKey = reportReasonEntryKey(reportDate, rowKey);
+                      const yearReasonKey = reportYearReasonOverrideKey(reportDate, rowKey);
                       const dayReasonText = dayDelta < 0 ? (reportReasons[dayReasonKey] ?? row.dayReason) : "";
-                      const yearReasonText = yearDelta < 0 ? row.yearReason : "";
+                      const yearReasonText = yearDelta < 0 ? (reportReasons[yearReasonKey] ?? row.yearReason) : "";
                       const dayReasonMissing = dayDelta < 0 && dayReasonText.trim() === "";
                       const yearReasonMissing = yearDelta < 0 && yearReasonText.trim() === "";
                       const showAreaCell = index === 0;
@@ -336,6 +345,8 @@ export default function ReportsSection({
                                   value={yearReasonText}
                                   placeholder="Введите причину"
                                   onCommit={(value) => onCommitReportYearReason(rowKey, value)}
+                                  onCancel={(value) => onCancelReportYearReasonDraft(rowKey, value)}
+                                  onDraftChange={(value) => onUpdateReportYearReasonDraft(rowKey, value)}
                                 />
                               </div>
                             ) : null}

@@ -1934,9 +1934,17 @@ export default function App() {
   const activeAdminReportVisibleRowKeys = useMemo(() => (
     reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys)
   ), [activeAdminAutoReportRowKeys, activeAdminReportCustomer]);
+  const activeAdminReportSummaryPlanRowKeys = useMemo(() => new Set(
+    activeAdminReportCustomer.summaryRows
+      .map((summary) => summary.planRowKey)
+      .filter((key): key is string => Boolean(key?.trim())),
+  ), [activeAdminReportCustomer.summaryRows]);
   const activeAdminReportVisibleRows = useMemo(() => (
-    activeAdminReportBaseRows.filter((row) => activeAdminReportVisibleRowKeys.has(reportRowKey(row)))
-  ), [activeAdminReportBaseRows, activeAdminReportVisibleRowKeys]);
+    activeAdminReportBaseRows.filter((row) => {
+      const rowKey = reportRowKey(row);
+      return activeAdminReportVisibleRowKeys.has(rowKey) && !activeAdminReportSummaryPlanRowKeys.has(rowKey);
+    })
+  ), [activeAdminReportBaseRows, activeAdminReportSummaryPlanRowKeys, activeAdminReportVisibleRowKeys]);
   const activeAdminReportOrderRows = useMemo(() => {
     if (!needsAdminReportRows) return [];
 
@@ -1946,7 +1954,8 @@ export default function App() {
         const sourceRows = summary.rowKeys
           .map((key) => rowsByKey.get(key))
           .filter((row): row is ReportRow => Boolean(row));
-        const summaryRow = createReportSummaryRow(summary, sourceRows);
+        const planSourceRow = summary.planRowKey ? rowsByKey.get(summary.planRowKey) : undefined;
+        const summaryRow = createReportSummaryRow(summary, sourceRows, planSourceRow);
         return summaryRow ? [summaryRow] : [];
       })
       : [];
@@ -2012,8 +2021,16 @@ export default function App() {
     const customerRows = reportRowsForCustomer(derivedReportRows, activeReportCustomer);
     const customerAutoRowKeys = new Set(customerRows.filter(reportRowHasAutoShowData).map(reportRowKey));
     const visibleRowKeys = reportCustomerEffectiveRowKeys(activeReportCustomer, customerAutoRowKeys);
+    const summaryPlanRowKeys = new Set(
+      activeReportCustomer.summaryRows
+        .map((summary) => summary.planRowKey)
+        .filter((key): key is string => Boolean(key?.trim())),
+    );
     const selectedRows = customerRows
-      .filter((row) => visibleRowKeys.has(reportRowKey(row)))
+      .filter((row) => {
+        const rowKey = reportRowKey(row);
+        return visibleRowKeys.has(rowKey) && !summaryPlanRowKeys.has(rowKey);
+      })
       .map((row) => {
         const rowKey = reportRowKey(row);
         const customerLabel = activeReportCustomer.rowLabels[rowKey]?.trim();
@@ -2026,7 +2043,8 @@ export default function App() {
         const sourceRows = summary.rowKeys
           .map((key) => rowsByKey.get(key))
           .filter((row): row is ReportRow => Boolean(row));
-        const summaryRow = createReportSummaryRow(summary, sourceRows);
+        const planSourceRow = summary.planRowKey ? rowsByKey.get(summary.planRowKey) : undefined;
+        const summaryRow = createReportSummaryRow(summary, sourceRows, planSourceRow);
         return summaryRow ? [summaryRow] : [];
       })
       : [];
@@ -2932,6 +2950,29 @@ export default function App() {
     }, 180);
   }
 
+  function updateReportYearReasonDraft(rowKey: string, value: string) {
+    const key = reportYearReasonOverrideKey(reportDate, rowKey);
+
+    if (reportReasonDraftTimerRef.current !== null) {
+      window.clearTimeout(reportReasonDraftTimerRef.current);
+    }
+
+    reportReasonDraftTimerRef.current = window.setTimeout(() => {
+      setReportReasons((current) => {
+        const next = { ...current };
+        const normalizedValue = value.trim();
+        if (normalizedValue === "") {
+          delete next[key];
+        } else {
+          next[key] = normalizedValue;
+        }
+
+        return next;
+      });
+      reportReasonDraftTimerRef.current = null;
+    }, 180);
+  }
+
   function cancelReportDayReasonDraft(rowKey: string, value: string) {
     const key = reportReasonEntryKey(reportDate, rowKey);
 
@@ -2946,6 +2987,27 @@ export default function App() {
         next[key] = value;
       } else {
         delete next[key];
+      }
+
+      return next;
+    });
+  }
+
+  function cancelReportYearReasonDraft(rowKey: string, value: string) {
+    const key = reportYearReasonOverrideKey(reportDate, rowKey);
+
+    if (reportReasonDraftTimerRef.current !== null) {
+      window.clearTimeout(reportReasonDraftTimerRef.current);
+      reportReasonDraftTimerRef.current = null;
+    }
+
+    setReportReasons((current) => {
+      const next = { ...current };
+      const normalizedValue = value.trim();
+      if (normalizedValue === "") {
+        delete next[key];
+      } else {
+        next[key] = normalizedValue;
       }
 
       return next;
@@ -3326,7 +3388,7 @@ export default function App() {
           ...customer,
           summaryRows: [
             ...customer.summaryRows,
-            { id: summaryId, label: "Итоговая строка", unit: "", area, rowKeys: reportRowKeysForSummaryArea(area) },
+            { id: summaryId, label: "Итоговая строка", unit: "", area, planRowKey: "", rowKeys: reportRowKeysForSummaryArea(area) },
           ],
         }
         : customer
@@ -3368,7 +3430,7 @@ export default function App() {
             if (summary.id !== summaryId) return summary;
 
             if (field === "area") {
-              return { ...summary, area: value, rowKeys: reportRowKeysForSummaryArea(value) };
+              return { ...summary, area: value, planRowKey: "", rowKeys: reportRowKeysForSummaryArea(value) };
             }
 
             return { ...summary, [field]: value };
@@ -6434,6 +6496,8 @@ export default function App() {
             onCancelReportDayReasonDraft={cancelReportDayReasonDraft}
             onUpdateReportDayReasonDraft={updateReportDayReasonDraft}
             onCommitReportYearReason={commitReportYearReason}
+            onCancelReportYearReasonDraft={cancelReportYearReasonDraft}
+            onUpdateReportYearReasonDraft={updateReportYearReasonDraft}
           />
           )
         )}
@@ -7822,7 +7886,7 @@ export default function App() {
                         <colgroup>
                           <col style={{ width: 54 }} />
                           <col style={{ width: 130 }} />
-                          <col style={{ width: 360 }} />
+                          <col style={{ width: 720 }} />
                           <col style={{ width: 56 }} />
                           <col style={{ width: 116 }} />
                         </colgroup>
@@ -7986,6 +8050,12 @@ export default function App() {
                           return activeAdminReportCustomer.rowLabels[rowKey]?.trim() || row.name;
                         });
                         const selectedSummaryText = selectedSummaryLabels.length > 0 ? selectedSummaryLabels.join(" + ") : "Строки не выбраны.";
+                        const selectedPlanRow = summary.planRowKey
+                          ? summaryAreaRows.find((row) => reportRowKey(row) === summary.planRowKey)
+                          : undefined;
+                        const selectedPlanText = selectedPlanRow
+                          ? activeAdminReportCustomer.rowLabels[reportRowKey(selectedPlanRow)]?.trim() || selectedPlanRow.name
+                          : "Авто: сумма выбранных строк";
 
                         return (
                           <div key={summary.id} style={adminReportSummaryCardStyle}>
@@ -8020,10 +8090,27 @@ export default function App() {
                                 <Trash2 size={16} aria-hidden />
                               </MiniIconButton>
                             </div>
+                            <div style={adminReportSummaryNoteStyle} title={selectedPlanText}>План из ПТО: {selectedPlanText}</div>
                             <div style={adminReportSummaryNoteStyle} title={selectedSummaryText}>Строки в сумме: {selectedSummaryText}</div>
 
                             {summaryExpanded ? (
                               <div style={adminReportSummarySelectionPanelStyle}>
+                                <div style={adminReportSummaryPlanPickerStyle}>
+                                  <span style={adminReportSummaryRowsHeaderStyle}>План из ПТО</span>
+                                  <select
+                                    value={selectedPlanRow ? summary.planRowKey ?? "" : ""}
+                                    onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "planRowKey", e.target.value)}
+                                    style={adminReportSummaryCompactInputStyle}
+                                    aria-label="План из ПТО для итоговой строки"
+                                  >
+                                    <option value="">Авто: сумма выбранных строк</option>
+                                    {summaryAreaRows.map((row) => {
+                                      const rowKey = reportRowKey(row);
+                                      const customerRowLabel = activeAdminReportCustomer.rowLabels[rowKey]?.trim() || row.name;
+                                      return <option key={`${summary.id}-plan-${rowKey}`} value={rowKey}>{customerRowLabel}</option>;
+                                    })}
+                                  </select>
+                                </div>
                                 <div style={adminReportSummaryRowsHeaderStyle}>Выберите виды работ для суммирования: {selectedSummaryRows.length} из {summaryAreaRows.length}</div>
                                 <div style={adminReportSummaryRowsGridStyle}>
                                 {summaryAreaRows.length === 0 ? (
@@ -8634,6 +8721,13 @@ const adminReportSummarySelectionPanelStyle: React.CSSProperties = {
   display: "grid",
   gap: 6,
   paddingTop: 6,
+};
+
+const adminReportSummaryPlanPickerStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "110px minmax(220px, 1fr)",
+  gap: 6,
+  alignItems: "center",
 };
 
 const adminReportSummaryRowOptionStyle: React.CSSProperties = {

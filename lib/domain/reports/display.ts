@@ -223,36 +223,39 @@ function reportReasonSummary(rows: ReportRow[], field: "dayReason" | "yearReason
   return aggregateReportReasons(rows.map((row) => row[field]).filter(Boolean));
 }
 
-export function createReportSummaryRow(config: ReportSummaryRowConfig, rows: ReportRow[]): (ReportRow & { displayKey: string }) | null {
+export function createReportSummaryRow(config: ReportSummaryRowConfig, rows: ReportRow[], planSourceRow?: ReportRow): (ReportRow & { displayKey: string }) | null {
   if (rows.length === 0) return null;
 
   const rowUnits = uniqueSorted(rows.map((row) => row.unit));
   const rowAreas = uniqueSorted(rows.map((row) => row.area));
-  const unit = config.unit.trim() || rowUnits[0] || "";
+  const unit = config.unit.trim() || planSourceRow?.unit || rowUnits[0] || "";
   const area = config.area.trim() || (rowAreas.length === 1 ? rowAreas[0] : "Итого");
   const sum = (selector: (row: ReportRow) => number) => rows.reduce((total, row) => total + selector(row), 0);
+  const planValue = (field: "dayPlan" | "monthTotalPlan" | "monthPlan" | "yearPlan" | "annualPlan") => (
+    planSourceRow ? planSourceRow[field] : sum((row) => row[field])
+  );
 
   return {
     ...normalizeReportRow({
       area,
       name: config.label.trim() || "Итоговая строка",
       unit,
-      dayPlan: sum((row) => row.dayPlan),
+      dayPlan: planValue("dayPlan"),
       dayFact: sum((row) => row.dayFact),
       dayProductivity: sum((row) => row.dayProductivity || row.dayFact),
       dayReason: reportReasonSummary(rows, "dayReason"),
-      monthTotalPlan: sum((row) => row.monthTotalPlan),
-      monthPlan: sum((row) => row.monthPlan),
+      monthTotalPlan: planValue("monthTotalPlan"),
+      monthPlan: planValue("monthPlan"),
       monthFact: sum(reportMonthFact),
       monthSurveyFact: sum((row) => row.monthSurveyFact),
       monthOperFact: sum((row) => row.monthOperFact),
       monthProductivity: sum((row) => row.monthProductivity || reportMonthFact(row)),
-      yearPlan: sum((row) => row.yearPlan),
+      yearPlan: planValue("yearPlan"),
       yearFact: sum(reportYearFact),
       yearSurveyFact: sum((row) => row.yearSurveyFact),
       yearOperFact: sum((row) => row.yearOperFact),
       yearReason: reportReasonSummary(rows, "yearReason"),
-      annualPlan: sum((row) => row.annualPlan),
+      annualPlan: planValue("annualPlan"),
       annualFact: sum(reportAnnualFact),
     }),
     displayKey: `summary:${config.id}`,

@@ -46,6 +46,7 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
           label: typeof summary.label === "string" && summary.label.trim() ? summary.label : "Итоговая строка",
           unit: typeof summary.unit === "string" ? summary.unit : "",
           area: typeof summary.area === "string" ? summary.area : "Итого",
+          planRowKey: typeof summary.planRowKey === "string" && summary.planRowKey.trim() ? summary.planRowKey : "",
           rowKeys: summaryRowKeys,
         }];
       })
@@ -100,6 +101,7 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
       summaryRows: customer.summaryRows.map((summary) => ({
         ...summary,
         label: summary.label.trim() || "Итоговая строка",
+        planRowKey: summary.planRowKey?.trim() || "",
         rowKeys: Array.from(new Set(summary.rowKeys)),
       })),
     };

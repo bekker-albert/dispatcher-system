@@ -30,6 +30,7 @@ export type ReportSummaryRowConfig = {
   label: string;
   unit: string;
   area: string;
+  planRowKey?: string;
   rowKeys: string[];
 };
 
