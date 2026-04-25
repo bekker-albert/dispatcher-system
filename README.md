@@ -1,24 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dispatcher System
 
-## Getting Started
+Рабочая диспетчерская система на Next.js.
 
-First, run the development server:
+## Локальный запуск
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Открыть локально:
 
-## Database setup
+```text
+http://localhost:3000
+```
 
-Production uses the server MySQL database through Next.js API routes. The password must stay only in `.env.local` on the server.
+## Проверка перед сохранением
+
+```bash
+npm run verify
+```
+
+Команда выполняет:
+
+- `npm run lint`
+- `npm run build`
+- `npm run check:domain`
+
+## База данных
+
+Production использует серверную MySQL-базу через Next.js API route `/api/database`.
+Пароль хранится только в `.env.local` на сервере и не должен попадать в Git.
 
 ```bash
 NEXT_PUBLIC_DATA_PROVIDER=mysql
@@ -29,34 +41,34 @@ DB_USER=dispatcher_ad
 DB_PASSWORD=
 ```
 
-The app creates required MySQL tables automatically on the first database request if the database user has rights inside its own database.
+Таблицы создаются автоматически при первом обращении к базе, если пользователь MySQL имеет права внутри своей базы.
 
-Supabase remains as a fallback for old local setups. To use it instead of MySQL, remove `NEXT_PUBLIC_DATA_PROVIDER=mysql` and set:
+## Деплой
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+Деплой идет через GitHub Actions после push в `main`.
+
+На сервере workflow:
+
+1. подключается по SSH;
+2. обновляет код до `origin/main`;
+3. устанавливает зависимости;
+4. собирает проект;
+5. перезапускает `pm2`-процесс `aam-dispatch`.
+
+Рабочий сайт:
+
+```text
+https://aam-dispatch.kz
 ```
 
-## Desktop shortcut
+## Архитектурное правило
 
-The app has a web app manifest. In Microsoft Edge or Chrome, open the site and install it as an app from the address bar or browser menu. The installed shortcut opens the same web app.
+Новые тяжелые вкладки не добавлять напрямую в `app/page.tsx`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Правильный порядок:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. отдельный модуль в `features/<section>`;
+2. доменная логика в `lib/domain`;
+3. сохранение через нейтральный слой `lib/data`;
+4. серверная работа с MySQL через `lib/server/mysql`;
+5. тяжелые таблицы открывать в режиме просмотра, редактирование включать отдельно.

@@ -3,7 +3,7 @@
 import { Database, RotateCcw } from "lucide-react";
 import type { CSSProperties } from "react";
 import { formatAdminLogDate } from "@/lib/domain/admin/logs";
-import type { SupabaseClientSnapshot } from "@/lib/supabase/app-state";
+import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { IconButton } from "@/shared/ui/buttons";
 import { CompactTd, CompactTh } from "@/shared/ui/layout";
 
@@ -15,20 +15,20 @@ type ClientSnapshotStats = {
 };
 
 type AdminDatabaseSectionProps = {
-  supabaseConfigured: boolean;
+  databaseConfigured: boolean;
   ptoMemoryTotal: number;
   vehicleCount: number;
-  snapshots: SupabaseClientSnapshot[];
+  snapshots: DataClientSnapshot[];
   message: string;
   loading: boolean;
-  getSnapshotStats: (snapshot: SupabaseClientSnapshot) => ClientSnapshotStats;
+  getSnapshotStats: (snapshot: DataClientSnapshot) => ClientSnapshotStats;
   onCreateSnapshot: () => void;
   onRefreshSnapshots: () => void;
-  onRestoreSnapshot: (snapshot: SupabaseClientSnapshot) => void;
+  onRestoreSnapshot: (snapshot: DataClientSnapshot) => void;
 };
 
 export default function AdminDatabaseSection({
-  supabaseConfigured,
+  databaseConfigured,
   ptoMemoryTotal,
   vehicleCount,
   snapshots,
@@ -61,8 +61,8 @@ export default function AdminDatabaseSection({
       <div style={statusCardStyle}>
         <div style={statusGridStyle}>
           <div>
-            <div style={summaryLabelStyle}>Supabase</div>
-            <div style={summaryValueStyle}>{supabaseConfigured ? "Подключен" : "Не настроен"}</div>
+            <div style={summaryLabelStyle}>База данных</div>
+            <div style={summaryValueStyle}>{databaseConfigured ? "Подключен" : "Не настроен"}</div>
           </div>
           <div>
             <div style={summaryLabelStyle}>ПТО в памяти</div>

@@ -4,6 +4,11 @@
 
 Heavy sections must not live directly inside `app/page.tsx`.
 
+Database calls from UI code must go through `lib/data/*`. UI components should
+not import storage-provider modules directly. The current provider can be MySQL
+on the server or a legacy fallback, but feature code should use neutral
+database names.
+
 Each new heavy tab or subtab should follow this pattern:
 
 1. Separate module under `features/<section>/...`
@@ -27,6 +32,8 @@ Each new heavy tab or subtab should follow this pattern:
 - Inline editing logic should be reusable across tables.
 - Import/export logic belongs in `lib/domain/...` or `lib/utils/...`, not in JSX blocks.
 - Table-specific styles should live near the table component, not in the root page.
+- Provider-specific names such as Supabase/MySQL should stay below `lib/data`
+  and `lib/server`; user-facing UI should say "База данных".
 
 ## Delivery rules
 

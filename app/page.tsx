@@ -34,8 +34,8 @@ import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFil
 import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
-import { supabaseConfigured } from "@/lib/supabase/config";
-import type { SupabaseClientSnapshot } from "@/lib/supabase/app-state";
+import { databaseConfigured } from "@/lib/data/config";
+import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
@@ -249,7 +249,7 @@ function readSnapshotJson<T>(storage: Record<string, string>, key: string, fallb
   }
 }
 
-function clientSnapshotStats(snapshot: SupabaseClientSnapshot) {
+function clientSnapshotStats(snapshot: DataClientSnapshot) {
   const planRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoPlanRows, []);
   const operRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoOperRows, []);
   const surveyRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoSurveyRows, []);
@@ -474,13 +474,13 @@ export default function App() {
   const [editingDependencyLinkId, setEditingDependencyLinkId] = useState<string | null>(null);
   const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
   const [adminSection, setAdminSection] = useState<AdminSection>("vehicles");
-  const [clientSnapshots, setClientSnapshots] = useState<SupabaseClientSnapshot[]>([]);
+  const [clientSnapshots, setClientSnapshots] = useState<DataClientSnapshot[]>([]);
   const [databasePanelMessage, setDatabasePanelMessage] = useState("");
   const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
   const [adminLogs, setAdminLogs] = useState<AdminLogEntry[]>([]);
-  const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База данных подключается..." : "База данных не настроена.");
+  const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(databaseConfigured ? "База данных подключается..." : "База данных не настроена.");
   const [saveStatus, setSaveStatus] = useState<SaveStatusState>({ kind: "idle", message: "" });
-  const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!supabaseConfigured);
+  const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!databaseConfigured);
   const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
@@ -618,7 +618,7 @@ export default function App() {
   }, []);
 
   const saveClientSnapshotToDatabase = useCallback(async (reason: string) => {
-    if (!supabaseConfigured || clientSnapshotSaveDisabledRef.current) return;
+    if (!databaseConfigured || clientSnapshotSaveDisabledRef.current) return;
 
     const clientId = getOrCreateClientId();
     const storage = collectLocalStorageBackup();
@@ -627,8 +627,8 @@ export default function App() {
     const snapshot = JSON.stringify({ clientId, storage });
     if (snapshot === clientSnapshotSaveSnapshotRef.current) return;
 
-    const { saveClientAppSnapshotToSupabase } = await import("@/lib/supabase/app-state");
-    await saveClientAppSnapshotToSupabase(clientId, storage, {
+    const { saveClientAppSnapshotToDatabase } = await import("@/lib/data/app-state");
+    await saveClientAppSnapshotToDatabase(clientId, storage, {
       reason,
       userAgent: window.navigator.userAgent,
       url: window.location.href,
@@ -637,7 +637,7 @@ export default function App() {
   }, []);
 
   const requestClientSnapshotSave = useCallback((reason = "auto") => {
-    if (!supabaseConfigured || clientSnapshotSaveDisabledRef.current) return;
+    if (!databaseConfigured || clientSnapshotSaveDisabledRef.current) return;
 
     const manualSnapshot = reason.startsWith("manual");
     const now = Date.now();
@@ -650,11 +650,11 @@ export default function App() {
 
     clientSnapshotSaveTimerRef.current = window.setTimeout(() => {
       void saveClientSnapshotToDatabase(reason).catch((error) => {
-        console.warn("Supabase client snapshot save failed:", error);
+        console.warn("Database client snapshot save failed:", error);
         const message = errorToMessage(error);
         if (message.includes("public.app_state") || message.includes("PGRST205")) {
           clientSnapshotSaveDisabledRef.current = true;
-          showSaveStatus("error", "Резервная копия браузера отключена: старая таблица Supabase не создана. Основные данные сохраняются отдельно.");
+          showSaveStatus("error", "Резервная копия браузера отключена: таблица снимков не создана. Основные данные сохраняются отдельно.");
           return;
         }
         showSaveStatus("error", `Резервная копия не сохранена: ${message}`);
@@ -664,15 +664,15 @@ export default function App() {
   }, [saveClientSnapshotToDatabase, showSaveStatus]);
 
   const refreshClientSnapshots = useCallback(async () => {
-    if (!supabaseConfigured) {
-      setDatabasePanelMessage("Supabase не настроен.");
+    if (!databaseConfigured) {
+      setDatabasePanelMessage("База данных не настроена.");
       return;
     }
 
     setDatabasePanelLoading(true);
     try {
-      const { loadClientAppSnapshotsFromSupabase } = await import("@/lib/supabase/app-state");
-      const snapshots = await loadClientAppSnapshotsFromSupabase();
+      const { loadClientAppSnapshotsFromDatabase } = await import("@/lib/data/app-state");
+      const snapshots = await loadClientAppSnapshotsFromDatabase();
       setClientSnapshots(snapshots);
       setDatabasePanelMessage(`Снимков браузеров: ${snapshots.length}.`);
     } catch (error) {
@@ -690,7 +690,7 @@ export default function App() {
       });
   }, [refreshClientSnapshots, saveClientSnapshotToDatabase]);
 
-  const restoreClientSnapshot = useCallback((snapshot: SupabaseClientSnapshot) => {
+  const restoreClientSnapshot = useCallback((snapshot: DataClientSnapshot) => {
     Object.entries(snapshot.storage).forEach(([key, value]) => {
       window.localStorage.setItem(key, value);
     });
@@ -745,7 +745,7 @@ export default function App() {
     setReportHeaderDraft("");
     setOpenVehicleFilter(null);
 
-    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
+    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
       setPtoSaveRevision((revision) => revision + 1);
     }
 
@@ -964,16 +964,16 @@ export default function App() {
           && window.localStorage.getItem(key) !== null
         ));
 
-        if (hasLocalAppState && supabaseConfigured) {
+        if (hasLocalAppState && databaseConfigured) {
           void saveClientSnapshotToDatabase("before-initial-database-load").catch((error) => {
-            console.warn("Supabase client snapshot save failed:", error);
+            console.warn("Database client snapshot save failed:", error);
           });
         }
 
-        if (supabaseConfigured) {
+        if (databaseConfigured) {
           try {
-            const { loadAppStateFromSupabase } = await import("@/lib/supabase/app-state");
-            const databaseAppState = await loadAppStateFromSupabase();
+            const { loadAppStateFromDatabase } = await import("@/lib/data/app-state");
+            const databaseAppState = await loadAppStateFromDatabase();
 
             if (cancelled) return;
 
@@ -1002,12 +1002,12 @@ export default function App() {
               window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
             }
           } catch (error) {
-            console.warn("Legacy Supabase app_state is not ready:", error);
+            console.warn("Legacy app_state is not ready:", error);
           }
 
           try {
-            const { loadAppSettingsFromSupabase } = await import("@/lib/supabase/settings");
-            const databaseSettings = await loadAppSettingsFromSupabase([...sharedAppSettingKeys]);
+            const { loadAppSettingsFromDatabase } = await import("@/lib/data/settings");
+            const databaseSettings = await loadAppSettingsFromDatabase([...sharedAppSettingKeys]);
             appSettingsDatabaseLoadedRef.current = true;
 
             if (cancelled) return;
@@ -1041,7 +1041,7 @@ export default function App() {
             appSettingsDatabaseSaveSnapshotRef.current = JSON.stringify(databaseSettingsObject);
           } catch (error) {
             appSettingsDatabaseLoadedRef.current = false;
-            console.warn("Supabase app_settings table is not ready:", error);
+            console.warn("App settings table is not ready:", error);
           }
         }
 
@@ -1072,10 +1072,10 @@ export default function App() {
         const savedDependencyLinks = readStoredValue(adminStorageKeys.dependencyLinks);
         const savedAdminLogs = readStoredValue(adminStorageKeys.adminLogs);
 
-        if (supabaseConfigured) {
+        if (databaseConfigured) {
           try {
-            const { loadVehiclesFromSupabase } = await import("@/lib/supabase/vehicles");
-            const databaseVehicles = await loadVehiclesFromSupabase();
+            const { loadVehiclesFromDatabase } = await import("@/lib/data/vehicles");
+            const databaseVehicles = await loadVehiclesFromDatabase();
             vehiclesDatabaseLoadedRef.current = true;
 
             if (cancelled) return;
@@ -1091,7 +1091,7 @@ export default function App() {
             }
           } catch (error) {
             vehiclesDatabaseLoadedRef.current = false;
-            console.warn("Supabase vehicles table is not ready:", error);
+            console.warn("Vehicles table is not ready:", error);
           }
         }
         const hasSavedPtoState = Boolean(
@@ -1259,7 +1259,7 @@ export default function App() {
     let cancelled = false;
 
     async function loadPtoDatabase() {
-      if (!supabaseConfigured) {
+      if (!databaseConfigured) {
         setPtoDatabaseReady(true);
         setPtoDatabaseMessage("База данных не настроена.");
         return;
@@ -1270,8 +1270,8 @@ export default function App() {
       setPtoDatabaseMessage("Загружаю ПТО из базы данных...");
 
       try {
-        const { loadPtoStateFromSupabase } = await import("@/lib/supabase/pto");
-        const databaseState = await loadPtoStateFromSupabase();
+        const { loadPtoStateFromDatabase } = await import("@/lib/data/pto");
+        const databaseState = await loadPtoStateFromDatabase();
         if (cancelled) return;
 
         if (
@@ -1311,7 +1311,7 @@ export default function App() {
 
         if (shouldRestoreLocalPto) {
           window.sessionStorage.removeItem(clientSnapshotRestoreFlagKey);
-          savePtoLocalRecoveryBackup("restored-client-snapshot-to-supabase", databaseState.updatedAt);
+          savePtoLocalRecoveryBackup("restored-client-snapshot-to-database", databaseState.updatedAt);
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
           setPtoDatabaseReady(true);
@@ -1336,7 +1336,7 @@ export default function App() {
         }
 
         if (hasStoredPtoStateRef.current && localPtoStats.total > 0) {
-          savePtoLocalRecoveryBackup("before-supabase-pto-load", databaseState.updatedAt);
+          savePtoLocalRecoveryBackup("before-database-pto-load", databaseState.updatedAt);
         }
 
         const nextManualYears = normalizeStoredPtoYears(databaseState.manualYears);
@@ -1459,7 +1459,7 @@ export default function App() {
   ), []);
 
   const saveSharedAppSettingsToDatabase = useCallback(async () => {
-    if (!supabaseConfigured || !appSettingsDatabaseLoadedRef.current) return;
+    if (!databaseConfigured || !appSettingsDatabaseLoadedRef.current) return;
 
     const settings = collectSharedAppSettings();
     const snapshot = JSON.stringify(settings);
@@ -1468,8 +1468,8 @@ export default function App() {
     showSaveStatus("saving", "Сохраняю настройки...");
 
     try {
-      const { saveAppSettingsToSupabase } = await import("@/lib/supabase/settings");
-      await saveAppSettingsToSupabase(settings);
+      const { saveAppSettingsToDatabase } = await import("@/lib/data/settings");
+      await saveAppSettingsToDatabase(settings);
       appSettingsDatabaseSaveSnapshotRef.current = snapshot;
       showSaveStatus("saved", "Настройки сохранены.");
     } catch (error) {
@@ -1488,7 +1488,7 @@ export default function App() {
     appStateSaveTimerRef.current = window.setTimeout(() => {
       saveAppLocalState();
       void saveSharedAppSettingsToDatabase().catch((error) => {
-        console.warn("Supabase app_settings save failed:", error);
+        console.warn("Database app_settings save failed:", error);
       });
       requestClientSnapshotSave("app-state-save");
       appStateSaveTimerRef.current = null;
@@ -1515,18 +1515,18 @@ export default function App() {
     vehicleSaveTimerRef.current = window.setTimeout(() => {
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
       window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-      if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+      if (databaseConfigured && vehiclesDatabaseLoadedRef.current) {
         const snapshot = JSON.stringify(vehicleRowsRef.current);
         if (snapshot !== vehiclesDatabaseSaveSnapshotRef.current) {
           showSaveStatus("saving", "Сохраняю технику...");
-          void import("@/lib/supabase/vehicles")
-            .then(({ saveVehiclesToSupabase }) => saveVehiclesToSupabase(vehicleRowsRef.current))
+          void import("@/lib/data/vehicles")
+            .then(({ saveVehiclesToDatabase }) => saveVehiclesToDatabase(vehicleRowsRef.current))
             .then(() => {
               vehiclesDatabaseSaveSnapshotRef.current = snapshot;
               showSaveStatus("saved", "Техника сохранена.");
             })
             .catch((error) => {
-              console.warn("Supabase vehicles save failed:", error);
+              console.warn("Database vehicles save failed:", error);
               showSaveStatus("error", `Техника не сохранена: ${errorToMessage(error)}`);
             });
         }
@@ -1644,7 +1644,7 @@ export default function App() {
   }, [adminDataLoaded, savePtoLocalState]);
 
   const savePtoDatabaseChanges = useCallback(async (mode: "auto" | "manual" = "manual") => {
-    if (!supabaseConfigured) {
+    if (!databaseConfigured) {
       setPtoDatabaseMessage("База данных не настроена.");
       showSaveStatus("error", "База данных не настроена.");
       return;
@@ -1672,8 +1672,8 @@ export default function App() {
     showSaveStatus("saving", mode === "auto" ? "Сохраняю ПТО..." : "Сохраняю ПТО...");
 
     try {
-      const { savePtoStateToSupabase } = await import("@/lib/supabase/pto");
-      await savePtoStateToSupabase(ptoDatabaseStateRef.current);
+      const { savePtoStateToDatabase } = await import("@/lib/data/pto");
+      await savePtoStateToDatabase(ptoDatabaseStateRef.current);
       ptoDatabaseSaveSnapshotRef.current = snapshotToSave;
       setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в базе данных." : "ПТО сохранено в базе данных.");
       showSaveStatus("saved", "ПТО сохранено.");
@@ -1692,13 +1692,13 @@ export default function App() {
   }, [showSaveStatus]);
 
   const requestPtoDatabaseSave = useCallback(() => {
-    if (!supabaseConfigured || !ptoDatabaseLoadedRef.current) return;
+    if (!databaseConfigured || !ptoDatabaseLoadedRef.current) return;
     setPtoDatabaseMessage("Есть изменения. Автосохраняю после завершенного действия...");
     setPtoSaveRevision((current) => current + 1);
   }, []);
 
   useEffect(() => {
-    if (!adminDataLoaded || !supabaseConfigured || !ptoDatabaseLoadedRef.current || ptoSaveRevision === 0) return;
+    if (!adminDataLoaded || !databaseConfigured || !ptoDatabaseLoadedRef.current || ptoSaveRevision === 0) return;
     void savePtoDatabaseChanges("auto");
   }, [adminDataLoaded, ptoSaveRevision, savePtoDatabaseChanges]);
 
@@ -3560,20 +3560,20 @@ export default function App() {
 
   function savePtoDayPatchToDatabase(rowId: string, day: string, value: number | null) {
     const table = currentPtoDateTableKey();
-    if (!table || !supabaseConfigured || !ptoDatabaseLoadedRef.current) return;
+    if (!table || !databaseConfigured || !ptoDatabaseLoadedRef.current) return;
 
-    void import("@/lib/supabase/pto")
-      .then(({ savePtoDayValueToSupabase }) => savePtoDayValueToSupabase(table, rowId, day, value))
-      .catch((error) => console.warn("Supabase PTO day save failed:", error));
+    void import("@/lib/data/pto")
+      .then(({ savePtoDayValueToDatabase }) => savePtoDayValueToDatabase(table, rowId, day, value))
+      .catch((error) => console.warn("Database PTO day save failed:", error));
   }
 
   function savePtoDayPatchesToDatabase(values: Array<{ rowId: string; day: string; value: number | null }>) {
     const table = currentPtoDateTableKey();
-    if (!table || !supabaseConfigured || !ptoDatabaseLoadedRef.current || values.length === 0) return;
+    if (!table || !databaseConfigured || !ptoDatabaseLoadedRef.current || values.length === 0) return;
 
-    void import("@/lib/supabase/pto")
-      .then(({ savePtoDayValuesToSupabase }) => savePtoDayValuesToSupabase(table, values))
-      .catch((error) => console.warn("Supabase PTO day batch save failed:", error));
+    void import("@/lib/data/pto")
+      .then(({ savePtoDayValuesToDatabase }) => savePtoDayValuesToDatabase(table, values))
+      .catch((error) => console.warn("Database PTO day batch save failed:", error));
   }
 
   function addLinkedPtoDateRow(overrides: Partial<PtoPlanRow> = {}, insertAfterRow?: PtoPlanRow) {
@@ -3635,10 +3635,10 @@ export default function App() {
     setPtoPlanYear(fallbackYear);
     setPtoYearInput("");
     setPtoYearDialogOpen(false);
-    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/supabase/pto")
-        .then(({ deletePtoYearFromSupabase }) => deletePtoYearFromSupabase(year))
-        .catch((error) => console.warn("Supabase PTO year delete failed:", error));
+    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/data/pto")
+        .then(({ deletePtoYearFromDatabase }) => deletePtoYearFromDatabase(year))
+        .catch((error) => console.warn("Database PTO year delete failed:", error));
     }
     requestPtoDatabaseSave();
     addAdminLog({
@@ -3864,10 +3864,10 @@ export default function App() {
     } else {
       setPtoSurveyRows(removeRow);
     }
-    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/supabase/pto")
-        .then(({ deletePtoRowsFromSupabase }) => deletePtoRowsFromSupabase(table, [row.id]))
-        .catch((error) => console.warn("Supabase PTO row delete failed:", error));
+    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/data/pto")
+        .then(({ deletePtoRowsFromDatabase }) => deletePtoRowsFromDatabase(table, [row.id]))
+        .catch((error) => console.warn("Database PTO row delete failed:", error));
     }
     requestPtoDatabaseSave();
     addAdminLog({
@@ -4427,16 +4427,16 @@ export default function App() {
     const vehicle = vehicleRows.find((item) => item.id === id);
     pushVehicleUndoSnapshot();
     setVehicleRows((current) => current.filter((vehicle) => vehicle.id !== id));
-    if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+    if (databaseConfigured && vehiclesDatabaseLoadedRef.current) {
       showSaveStatus("saving", "Удаляю технику из базы...");
-      void import("@/lib/supabase/vehicles")
-        .then(({ deleteVehicleFromSupabase }) => deleteVehicleFromSupabase(id))
+      void import("@/lib/data/vehicles")
+        .then(({ deleteVehicleFromDatabase }) => deleteVehicleFromDatabase(id))
         .then(() => {
           vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(vehicleRowsRef.current.filter((vehicle) => vehicle.id !== id));
           showSaveStatus("saved", "Техника удалена из базы.");
         })
         .catch((error) => {
-          console.warn("Supabase vehicle delete failed:", error);
+          console.warn("Database vehicle delete failed:", error);
           showSaveStatus("error", `Техника не удалена из базы: ${errorToMessage(error)}`);
         });
     }
@@ -4472,16 +4472,16 @@ export default function App() {
       setOpenVehicleFilter(null);
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
       window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
-      if (supabaseConfigured && vehiclesDatabaseLoadedRef.current) {
+      if (databaseConfigured && vehiclesDatabaseLoadedRef.current) {
         showSaveStatus("saving", "Сохраняю загруженную технику...");
-        void import("@/lib/supabase/vehicles")
-          .then(({ replaceVehiclesInSupabase }) => replaceVehiclesInSupabase(importedVehicles))
+        void import("@/lib/data/vehicles")
+          .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles))
           .then(() => {
             vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(importedVehicles);
             showSaveStatus("saved", "Загруженная техника сохранена.");
           })
           .catch((error) => {
-            console.warn("Supabase vehicles import save failed:", error);
+            console.warn("Database vehicles import save failed:", error);
             showSaveStatus("error", `Загруженная техника не сохранена: ${errorToMessage(error)}`);
           });
       }
@@ -4632,13 +4632,13 @@ export default function App() {
 
       return next;
     });
-    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/supabase/pto")
-        .then(({ savePtoBucketValueToSupabase }) => savePtoBucketValueToSupabase(
+    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/data/pto")
+        .then(({ savePtoBucketValueToDatabase }) => savePtoBucketValueToDatabase(
           cellKey,
           parsed === null ? null : Math.round(parsed * 100) / 100,
         ))
-        .catch((error) => console.warn("Supabase PTO bucket value save failed:", error));
+        .catch((error) => console.warn("Database PTO bucket value save failed:", error));
     }
     requestPtoDatabaseSave();
     addAdminLog({
@@ -4658,10 +4658,10 @@ export default function App() {
       });
       return next;
     });
-    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/supabase/pto")
-        .then(({ deletePtoBucketValuesFromSupabase }) => deletePtoBucketValuesFromSupabase(cellKeys))
-        .catch((error) => console.warn("Supabase PTO bucket values delete failed:", error));
+    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/data/pto")
+        .then(({ deletePtoBucketValuesFromDatabase }) => deletePtoBucketValuesFromDatabase(cellKeys))
+        .catch((error) => console.warn("Database PTO bucket values delete failed:", error));
     }
     requestPtoDatabaseSave();
     addAdminLog({
@@ -4684,10 +4684,10 @@ export default function App() {
     }
 
     setPtoBucketManualRows((current) => [...current, { key, area, structure, source: "manual" }]);
-    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/supabase/pto")
-        .then(({ savePtoBucketRowToSupabase }) => savePtoBucketRowToSupabase({ key, area, structure, source: "manual" }, ptoBucketManualRows.length))
-        .catch((error) => console.warn("Supabase PTO bucket row save failed:", error));
+    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/data/pto")
+        .then(({ savePtoBucketRowToDatabase }) => savePtoBucketRowToDatabase({ key, area, structure, source: "manual" }, ptoBucketManualRows.length))
+        .catch((error) => console.warn("Database PTO bucket row save failed:", error));
     }
     requestPtoDatabaseSave();
     addAdminLog({
@@ -4709,10 +4709,10 @@ export default function App() {
       });
       return next;
     });
-    if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/supabase/pto")
-        .then(({ deletePtoBucketRowFromSupabase }) => deletePtoBucketRowFromSupabase(row.key))
-        .catch((error) => console.warn("Supabase PTO bucket row delete failed:", error));
+    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
+      void import("@/lib/data/pto")
+        .then(({ deletePtoBucketRowFromDatabase }) => deletePtoBucketRowFromDatabase(row.key))
+        .catch((error) => console.warn("Database PTO bucket row delete failed:", error));
     }
     requestPtoDatabaseSave();
     addAdminLog({
@@ -6345,7 +6345,7 @@ export default function App() {
       <div style={blockStyle}>{ptoDatabaseMessage}</div>
     </SectionCard>
   );
-  const shouldGatePtoDatabase = supabaseConfigured && !ptoDatabaseReady;
+  const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
     <div className="app-print-root" style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
@@ -7328,7 +7328,7 @@ export default function App() {
 
             {adminSection === "database" && (
               <AdminDatabaseSection
-                supabaseConfigured={supabaseConfigured}
+                databaseConfigured={databaseConfigured}
                 ptoMemoryTotal={countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total}
                 vehicleCount={vehicleRows.length}
                 snapshots={clientSnapshots}
