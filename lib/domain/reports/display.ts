@@ -292,8 +292,9 @@ export function sortReportRowsByAreaOrder(rows: ReportRow[], order: string[], wo
   });
 }
 
-export function reportCustomerUsesSummaryRows(customer: Pick<ReportCustomerConfig, "id">) {
-  return customer.id !== "aa-mining";
+export function reportCustomerUsesSummaryRows(_customer?: Pick<ReportCustomerConfig, "id">) {
+  void _customer;
+  return true;
 }
 
 function ptoRowsHaveValueOnDate(rows: PtoPlanRow[], report: ReportRow, date: string) {

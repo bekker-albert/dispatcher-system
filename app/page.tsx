@@ -1823,6 +1823,14 @@ export default function App() {
       )
       : []
   ), [activeAdminReportCustomer.areaOrder, activeAdminReportVisibleRows, needsAdminReportRows]);
+  const activeAdminReportSummaryAreaOptions = useMemo(() => (
+    needsAdminReportRows
+      ? sortAreaNamesByOrder(
+        uniqueSorted(activeAdminReportBaseRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+        activeAdminReportCustomer.areaOrder,
+      )
+      : []
+  ), [activeAdminReportBaseRows, activeAdminReportCustomer.areaOrder, needsAdminReportRows]);
   const activeAdminReportRowsByKey = useMemo(() => (
     new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]))
   ), [activeAdminReportBaseRows]);
@@ -3165,7 +3173,7 @@ export default function App() {
   function addReportSummaryRow(customerId: string) {
     const customer = reportCustomers.find((item) => item.id === customerId);
     if (!customer || !reportCustomerUsesSummaryRows(customer)) return;
-    const area = activeAdminReportAreaOptions[0] ?? activeAdminReportBaseRows[0]?.area ?? "";
+    const area = activeAdminReportSummaryAreaOptions[0] ?? activeAdminReportBaseRows[0]?.area ?? "";
     const summaryId = createId();
 
     setReportCustomers((current) => current.map((customer) => (
@@ -7800,8 +7808,8 @@ export default function App() {
                       ) : null}
 
                       {activeAdminReportCustomer.summaryRows.map((summary) => {
-                        const hasStoredArea = activeAdminReportAreaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
-                        const visibleSummaryArea = hasStoredArea ? summary.area : activeAdminReportAreaOptions[0] ?? summary.area;
+                        const hasStoredArea = activeAdminReportSummaryAreaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
+                        const visibleSummaryArea = hasStoredArea ? summary.area : activeAdminReportSummaryAreaOptions[0] ?? summary.area;
                         const summaryAreaRows = reportRowsForSummaryArea(visibleSummaryArea);
                         const selectedSummaryRows = summaryAreaRows.filter((row) => summary.rowKeys.includes(reportRowKey(row)));
                         const summaryExpanded = expandedReportSummaryIds.includes(summary.id);
@@ -7817,7 +7825,7 @@ export default function App() {
                               {summaryExpanded ? (
                                 <>
                                   <select value={visibleSummaryArea} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "area", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Участок итоговой строки">
-                                    {activeAdminReportAreaOptions.map((area) => (
+                                    {activeAdminReportSummaryAreaOptions.map((area) => (
                                       <option key={area} value={area}>{area}</option>
                                     ))}
                                     {!hasStoredArea && summary.area ? <option value={summary.area}>{summary.area}</option> : null}
