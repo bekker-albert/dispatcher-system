@@ -43,6 +43,7 @@ export type ReportCustomerConfig = {
   rowKeys: string[];
   hiddenRowKeys: string[];
   rowLabels: Record<string, string>;
+  factSourceRowKeys: Record<string, string[]>;
   summaryRows: ReportSummaryRowConfig[];
   areaOrder: string[];
   workOrder: Record<string, string[]>;

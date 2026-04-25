@@ -13,7 +13,7 @@ import { calculatePtoVirtualRows } from "../lib/domain/pto/virtualization";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto, deriveReportRowFromPtoIndex } from "../lib/domain/reports/calculation";
 import { normalizeStoredReportCustomers } from "../lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers, defaultReportRows } from "../lib/domain/reports/defaults";
-import { createReportSummaryRow, delta, formatReportTitleDate, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportRowAutoStatus, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer } from "../lib/domain/reports/display";
+import { applyReportFactSourceRows, createReportSummaryRow, delta, formatReportTitleDate, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportRowAutoStatus, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer } from "../lib/domain/reports/display";
 import { reportYearFact } from "../lib/domain/reports/facts";
 import { aggregateReportReasons, reportReasonEntryKey, reportYearReasonValue } from "../lib/domain/reports/reasons";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "../lib/domain/reference/defaults";
@@ -303,6 +303,16 @@ assert.equal(
   80,
 );
 
+const factSourceTargetRow = { ...derivedReportRow, area: "Aksu", name: "Target fact row", dayFact: 5, monthFact: 5, monthSurveyFact: 0, monthOperFact: 5, yearFact: 5, yearSurveyFact: 0, yearOperFact: 5, annualFact: 5 };
+const factSourceSourceRow = { ...derivedReportRow, area: "Aksu", name: "Source fact row", dayFact: 12, monthFact: 12, monthSurveyFact: 0, monthOperFact: 12, yearFact: 12, yearSurveyFact: 0, yearOperFact: 12, annualFact: 12 };
+const factSourceRows = applyReportFactSourceRows(
+  [factSourceTargetRow, factSourceSourceRow],
+  { [reportRowKey(factSourceTargetRow)]: [reportRowKey(factSourceSourceRow)] },
+);
+assert.equal(factSourceRows[0].dayFact, 12);
+assert.equal(reportYearFact(factSourceRows[0]), 12);
+assert.equal(factSourceRows[1].dayFact, 12);
+
 const normalizedReportCustomers = normalizeStoredReportCustomers([
   {
     id: "customer",
@@ -312,6 +322,7 @@ const normalizedReportCustomers = normalizeStoredReportCustomers([
     rowKeys: ["a", "a"],
     hiddenRowKeys: ["b", "b"],
     rowLabels: { a: " Вид работ " },
+    factSourceRowKeys: { a: ["b", "b"] },
     summaryRows: [{ id: "s", label: " ", unit: "м3", area: "Аксу", rowKeys: ["a", "a"] }],
     areaOrder: ["Аксу", "Аксу"],
     workOrder: { Аксу: ["a", "a"] },
@@ -325,12 +336,14 @@ const normalizedReportCustomers = normalizeStoredReportCustomers([
   rowKeys: [],
   hiddenRowKeys: [],
   rowLabels: {},
+  factSourceRowKeys: {},
   summaryRows: [],
   areaOrder: [],
   workOrder: {},
 }]);
 assert.equal(normalizedReportCustomers[0].label, "Заказчик");
 assert.deepEqual(normalizedReportCustomers[0].rowKeys, ["a"]);
+assert.deepEqual(normalizedReportCustomers[0].factSourceRowKeys, { a: ["b"] });
 assert.deepEqual(normalizedReportCustomers[0].summaryRows[0].rowKeys, ["a"]);
 assert.deepEqual(normalizedReportCustomers[0].areaOrder, ["Аксу"]);
 assert.deepEqual(normalizedReportCustomers[0].workOrder, { Аксу: ["a"] });
@@ -344,6 +357,7 @@ assert.deepEqual(
     rowKeys: ["manual"],
     hiddenRowKeys: ["b"],
     rowLabels: {},
+    factSourceRowKeys: {},
     summaryRows: [],
     areaOrder: [],
     workOrder: {},

@@ -9,6 +9,7 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
     rowKeys: [...customer.rowKeys],
     hiddenRowKeys: [...customer.hiddenRowKeys],
     rowLabels: { ...customer.rowLabels },
+    factSourceRowKeys: Object.fromEntries(Object.entries(customer.factSourceRowKeys ?? {}).map(([rowKey, sourceRowKeys]) => [rowKey, [...sourceRowKeys]])),
     summaryRows: customer.summaryRows.map((row) => ({ ...row, rowKeys: [...row.rowKeys] })),
     areaOrder: [...customer.areaOrder],
     workOrder: Object.fromEntries(Object.entries(customer.workOrder).map(([area, rowKeys]) => [area, [...rowKeys]])),
@@ -51,6 +52,17 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
         }];
       })
       : [];
+    const factSourceRowKeys = isRecord(item.factSourceRowKeys)
+      ? Object.fromEntries(
+        Object.entries(item.factSourceRowKeys)
+          .filter((entry): entry is [string, unknown[]] => entry[0].trim() !== "" && Array.isArray(entry[1]))
+          .map(([rowKey, sourceRowKeys]) => [
+            rowKey,
+            Array.from(new Set(sourceRowKeys.filter((key): key is string => typeof key === "string" && key.trim().length > 0))),
+          ])
+          .filter(([, sourceRowKeys]) => sourceRowKeys.length > 0),
+      )
+      : {};
     const areaOrder = Array.isArray(item.areaOrder)
       ? Array.from(new Set(item.areaOrder.filter((area): area is string => typeof area === "string" && area.trim().length > 0)))
       : [];
@@ -75,6 +87,7 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
       rowKeys,
       hiddenRowKeys,
       rowLabels,
+      factSourceRowKeys,
       summaryRows,
       areaOrder,
       workOrder,
@@ -96,6 +109,12 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
       rowKeys: Array.from(new Set(customer.rowKeys)),
       hiddenRowKeys: Array.from(new Set(customer.hiddenRowKeys)),
       rowLabels: { ...customer.rowLabels },
+      factSourceRowKeys: Object.fromEntries(
+        Object.entries(customer.factSourceRowKeys)
+          .filter(([rowKey]) => rowKey.trim() !== "")
+          .map(([rowKey, sourceRowKeys]) => [rowKey, Array.from(new Set(sourceRowKeys))])
+          .filter(([, sourceRowKeys]) => sourceRowKeys.length > 0),
+      ),
       areaOrder: Array.from(new Set(customer.areaOrder)),
       workOrder: Object.fromEntries(Object.entries(customer.workOrder).map(([area, rowKeys]) => [area, Array.from(new Set(rowKeys))])),
       summaryRows: customer.summaryRows.map((summary) => ({

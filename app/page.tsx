@@ -7,6 +7,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
+import { ReportFactSourceCell, ReportFactSourceModal } from "@/features/reports/admin/ReportFactSourcePicker";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, resolveAutomaticWorkingDate, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, formatAdminLogDate, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
@@ -17,7 +18,7 @@ import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowAutoStatus, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
+import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowAutoStatus, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
@@ -422,6 +423,7 @@ export default function App() {
   const [adminReportCustomerSettingsTab, setAdminReportCustomerSettingsTab] = useState<AdminReportCustomerSettingsTab>("display");
   const [editingReportRowLabelKeys, setEditingReportRowLabelKeys] = useState<string[]>([]);
   const [expandedReportSummaryIds, setExpandedReportSummaryIds] = useState<string[]>([]);
+  const [editingReportFactSourceRowKey, setEditingReportFactSourceRowKey] = useState<string | null>(null);
   const [reportCustomers, setReportCustomers] = useState<ReportCustomerConfig[]>(defaultReportCustomers);
   const [reportAreaOrder, setReportAreaOrder] = useState<string[]>([]);
   const [reportWorkOrder, setReportWorkOrder] = useState<Record<string, string[]>>({});
@@ -1986,6 +1988,17 @@ export default function App() {
   const activeAdminReportRowsByKey = useMemo(() => (
     new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]))
   ), [activeAdminReportBaseRows]);
+  const editingReportFactSourceRow = useMemo(() => (
+    editingReportFactSourceRowKey
+      ? activeAdminReportRowsByKey.get(editingReportFactSourceRowKey) ?? null
+      : null
+  ), [activeAdminReportRowsByKey, editingReportFactSourceRowKey]);
+  const editingReportFactSourceOptions = useMemo(() => {
+    if (!editingReportFactSourceRow) return [];
+
+    const areaKey = normalizeLookupValue(editingReportFactSourceRow.area);
+    return activeAdminReportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey);
+  }, [activeAdminReportBaseRows, editingReportFactSourceRow]);
 
   const adminReportWorkOrderGroups = useMemo(() => (
     needsAdminReportRows
@@ -2019,7 +2032,8 @@ export default function App() {
   const customerReportRows = useMemo(() => {
     if (!needsDerivedReportRows) return [];
 
-    const customerRows = reportRowsForCustomer(derivedReportRows, activeReportCustomer);
+    const rawCustomerRows = reportRowsForCustomer(derivedReportRows, activeReportCustomer);
+    const customerRows = applyReportFactSourceRows(rawCustomerRows, activeReportCustomer.factSourceRowKeys);
     const customerAutoRowKeys = new Set(customerRows.filter(reportRowHasAutoShowData).map(reportRowKey));
     const visibleRowKeys = reportCustomerEffectiveRowKeys(activeReportCustomer, customerAutoRowKeys);
     const summarySourceRowKeys = new Set(
@@ -3140,6 +3154,7 @@ export default function App() {
       rowKeys: [],
       hiddenRowKeys: [],
       rowLabels: {},
+      factSourceRowKeys: {},
       summaryRows: [],
       areaOrder: [],
       workOrder: {},
@@ -3366,6 +3381,53 @@ export default function App() {
       action: "Сохранение",
       section: "Отчетность",
       details: "Завершено редактирование переименования строки.",
+    });
+  }
+
+  function setReportCustomerFactSourceMode(customerId: string, targetRowKey: string, enabled: boolean) {
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      const nextFactSourceRowKeys = { ...customer.factSourceRowKeys };
+      if (enabled) {
+        nextFactSourceRowKeys[targetRowKey] = nextFactSourceRowKeys[targetRowKey]?.length
+          ? nextFactSourceRowKeys[targetRowKey]
+          : [targetRowKey];
+      } else {
+        delete nextFactSourceRowKeys[targetRowKey];
+      }
+
+      return { ...customer, factSourceRowKeys: nextFactSourceRowKeys };
+    }));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменен источник факта для строки отчета.",
+    });
+  }
+
+  function toggleReportCustomerFactSourceRowKey(customerId: string, targetRowKey: string, sourceRowKey: string) {
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      const currentSourceRowKeys = customer.factSourceRowKeys[targetRowKey] ?? [];
+      const nextSourceRowKeys = currentSourceRowKeys.includes(sourceRowKey)
+        ? currentSourceRowKeys.filter((key) => key !== sourceRowKey)
+        : [...currentSourceRowKeys, sourceRowKey];
+      const nextFactSourceRowKeys = { ...customer.factSourceRowKeys };
+
+      if (nextSourceRowKeys.length > 0) {
+        nextFactSourceRowKeys[targetRowKey] = Array.from(new Set(nextSourceRowKeys));
+      } else {
+        delete nextFactSourceRowKeys[targetRowKey];
+      }
+
+      return { ...customer, factSourceRowKeys: nextFactSourceRowKeys };
+    }));
+    addAdminLog({
+      action: "Редактирование",
+      section: "Отчетность",
+      details: "Изменен состав строк для суммы факта.",
     });
   }
 
@@ -7891,6 +7953,7 @@ export default function App() {
                           <col style={{ width: 720 }} />
                           <col style={{ width: 56 }} />
                           <col style={{ width: 116 }} />
+                          <col style={{ width: 142 }} />
                         </colgroup>
                         <thead>
                           <tr style={{ background: "#f8fafc" }}>
@@ -7899,12 +7962,14 @@ export default function App() {
                             <th style={adminReportThStyle}>Строка из ПТО</th>
                             <th style={adminReportThStyle}>Ед.</th>
                             <th style={adminReportThStyle}>Статус</th>
+                            <th style={adminReportThStyle}>Факт/замер</th>
                           </tr>
                         </thead>
                         <tbody>
                           {activeAdminReportBaseRows.map((row) => {
                             const rowKey = reportRowKey(row);
                             const rowStatus = reportRowAutoStatus(derivedReportRowsByKey.get(rowKey) ?? row);
+                            const factSourceRowKeys = activeAdminReportCustomer.factSourceRowKeys[rowKey] ?? [];
                             return (
                               <tr key={`${activeAdminReportCustomer.id}-${rowKey}`}>
                                 <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
@@ -7916,19 +7981,35 @@ export default function App() {
                                     style={activeAdminReportCustomer.autoShowRows ? adminReportDisabledCheckboxStyle : undefined}
                                     title={activeAdminReportCustomer.autoShowRows ? "Автоматический показ включен" : "Показать строку в отчете"}
                                   />
-                              </td>
-                              <td style={adminReportTdStyle}>{row.area}</td>
-                              <td style={adminReportNameTdStyle}>{row.name}</td>
-                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>{row.unit}</td>
-                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
-                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}>{rowStatus}</span>
-                              </td>
-                            </tr>
+                                </td>
+                                <td style={adminReportTdStyle}>{row.area}</td>
+                                <td style={adminReportNameTdStyle}>{row.name}</td>
+                                <td style={{ ...adminReportTdStyle, textAlign: "center" }}>{row.unit}</td>
+                                <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
+                                  <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}>{rowStatus}</span>
+                                </td>
+                                <td style={adminReportTdStyle}>
+                                  <ReportFactSourceCell
+                                    sourceRowKeys={factSourceRowKeys}
+                                    rowsByKey={activeAdminReportRowsByKey}
+                                    rowLabels={activeAdminReportCustomer.rowLabels}
+                                    onEdit={() => setEditingReportFactSourceRowKey(rowKey)}
+                                  />
+                                </td>
+                              </tr>
                             );
                           })}
                         </tbody>
                       </table>
                     </div>
+                    <ReportFactSourceModal
+                      customer={activeAdminReportCustomer}
+                      targetRow={editingReportFactSourceRow}
+                      sourceOptions={editingReportFactSourceOptions}
+                      onClose={() => setEditingReportFactSourceRowKey(null)}
+                      onSetMode={setReportCustomerFactSourceMode}
+                      onToggleSource={toggleReportCustomerFactSourceRowKey}
+                    />
                   </div>
                   ) : null}
 

@@ -223,6 +223,41 @@ function reportReasonSummary(rows: ReportRow[], field: "dayReason" | "yearReason
   return aggregateReportReasons(rows.map((row) => row[field]).filter(Boolean));
 }
 
+export function createReportFactSourceRow(row: ReportRow, sourceRows: ReportRow[]): ReportRow {
+  if (sourceRows.length === 0) return row;
+
+  const sum = (selector: (sourceRow: ReportRow) => number) => sourceRows.reduce((total, sourceRow) => total + selector(sourceRow), 0);
+
+  return normalizeReportRow({
+    ...row,
+    dayFact: sum((sourceRow) => sourceRow.dayFact),
+    dayProductivity: sum((sourceRow) => sourceRow.dayProductivity || sourceRow.dayFact),
+    dayReason: reportReasonSummary(sourceRows, "dayReason"),
+    monthFact: sum(reportMonthFact),
+    monthSurveyFact: sum((sourceRow) => sourceRow.monthSurveyFact),
+    monthOperFact: sum((sourceRow) => sourceRow.monthOperFact),
+    monthProductivity: sum((sourceRow) => sourceRow.monthProductivity || reportMonthFact(sourceRow)),
+    yearFact: sum(reportYearFact),
+    yearSurveyFact: sum((sourceRow) => sourceRow.yearSurveyFact),
+    yearOperFact: sum((sourceRow) => sourceRow.yearOperFact),
+    yearReason: reportReasonSummary(sourceRows, "yearReason"),
+    annualFact: sum(reportAnnualFact),
+  });
+}
+
+export function applyReportFactSourceRows(rows: ReportRow[], factSourceRowKeys: Record<string, string[]>) {
+  const rowsByKey = new Map(rows.map((row) => [reportRowKey(row), row]));
+
+  return rows.map((row) => {
+    const rowKey = reportRowKey(row);
+    const sourceRows = (factSourceRowKeys[rowKey] ?? [])
+      .map((sourceRowKey) => rowsByKey.get(sourceRowKey))
+      .filter((sourceRow): sourceRow is ReportRow => Boolean(sourceRow));
+
+    return createReportFactSourceRow(row, sourceRows);
+  });
+}
+
 export function createReportSummaryRow(config: ReportSummaryRowConfig, rows: ReportRow[], planSourceRow?: ReportRow): (ReportRow & { displayKey: string }) | null {
   if (rows.length === 0) return null;
 
