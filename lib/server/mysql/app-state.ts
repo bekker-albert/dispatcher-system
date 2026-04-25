@@ -28,6 +28,11 @@ type AppStateRecord = RowDataPacket & {
   updated_at?: string | null;
 };
 
+type AppStateKeyRecord = RowDataPacket & {
+  state_key: string;
+  updated_at?: string | null;
+};
+
 type AppStateValue = {
   clientId?: unknown;
   savedAt?: unknown;
@@ -103,24 +108,37 @@ export async function saveClientAppSnapshotToMysql(
 }
 
 export async function loadClientAppSnapshotsFromMysql(): Promise<MysqlClientSnapshot[]> {
+  const keyRecords = await dbRows<AppStateKeyRecord>(
+    `SELECT state_key, updated_at
+    FROM app_state
+    WHERE state_key LIKE ?
+    ORDER BY updated_at DESC
+    LIMIT 20`,
+    [`${clientSnapshotKeyPrefix}%`],
+  );
+  if (keyRecords.length === 0) return [];
+
+  const orderByKey = new Map(keyRecords.map((record, index) => [record.state_key, index]));
+  const placeholders = keyRecords.map(() => "?").join(", ");
   const records = await dbRows<AppStateRecord>(
     `SELECT state_key, value, updated_at
     FROM app_state
-    WHERE state_key LIKE ?
-    ORDER BY updated_at DESC`,
-    [`${clientSnapshotKeyPrefix}%`],
+    WHERE state_key IN (${placeholders})`,
+    keyRecords.map((record) => record.state_key),
   );
 
-  return records.map((record) => {
-    const value = parseJson<AppStateValue>(record.value, {});
+  return records
+    .sort((left, right) => (orderByKey.get(left.state_key) ?? 0) - (orderByKey.get(right.state_key) ?? 0))
+    .map((record) => {
+      const value = parseJson<AppStateValue>(record.value, {});
 
-    return {
-      key: record.state_key,
-      clientId: typeof value.clientId === "string" ? value.clientId : record.state_key.replace(clientSnapshotKeyPrefix, ""),
-      savedAt: typeof value.savedAt === "string" ? value.savedAt : undefined,
-      updatedAt: record.updated_at ?? undefined,
-      storage: normalizeStorage(value.storage),
-      meta: normalizeSnapshotMeta(value.meta),
-    };
-  });
+      return {
+        key: record.state_key,
+        clientId: typeof value.clientId === "string" ? value.clientId : record.state_key.replace(clientSnapshotKeyPrefix, ""),
+        savedAt: typeof value.savedAt === "string" ? value.savedAt : undefined,
+        updatedAt: record.updated_at ?? undefined,
+        storage: normalizeStorage(value.storage),
+        meta: normalizeSnapshotMeta(value.meta),
+      };
+    });
 }

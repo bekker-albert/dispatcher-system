@@ -270,6 +270,33 @@ async function upsertPtoDayValues(records: ReturnType<typeof ptoRowsToDayRecords
   }
 }
 
+async function deletePtoDayValuesMissingFromState(table: MysqlPtoTable, rows: MysqlPtoRow[]) {
+  for (const row of rows) {
+    if (!row.id) continue;
+
+    const dates = Object.keys(row.dailyPlans ?? {})
+      .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+      .sort();
+
+    if (dates.length === 0) {
+      await dbExecute(
+        "DELETE FROM pto_day_values WHERE table_type = ? AND row_id = ?",
+        [table, row.id],
+      );
+      continue;
+    }
+
+    const placeholders = dates.map(() => "?").join(", ");
+    await dbExecute(
+      `DELETE FROM pto_day_values
+      WHERE table_type = ?
+        AND row_id = ?
+        AND work_date NOT IN (${placeholders})`,
+      [table, row.id, ...dates],
+    );
+  }
+}
+
 async function upsertPtoBucketRows(records: PtoBucketRowRecord[]) {
   if (!records.length) return;
 
@@ -359,15 +386,18 @@ export async function loadPtoStateFromMysql(): Promise<MysqlPtoState | null> {
 }
 
 export async function savePtoStateToMysql(state: MysqlPtoState) {
+  const planRows = Array.isArray(state.planRows) ? state.planRows : [];
+  const operRows = Array.isArray(state.operRows) ? state.operRows : [];
+  const surveyRows = Array.isArray(state.surveyRows) ? state.surveyRows : [];
   const rowRecords = [
-    ...ptoRowsToRecords("plan", state.planRows),
-    ...ptoRowsToRecords("oper", state.operRows),
-    ...ptoRowsToRecords("survey", state.surveyRows),
+    ...ptoRowsToRecords("plan", planRows),
+    ...ptoRowsToRecords("oper", operRows),
+    ...ptoRowsToRecords("survey", surveyRows),
   ];
   const dayRecords = [
-    ...ptoRowsToDayRecords("plan", state.planRows),
-    ...ptoRowsToDayRecords("oper", state.operRows),
-    ...ptoRowsToDayRecords("survey", state.surveyRows),
+    ...ptoRowsToDayRecords("plan", planRows),
+    ...ptoRowsToDayRecords("oper", operRows),
+    ...ptoRowsToDayRecords("survey", surveyRows),
   ];
   const bucketRowRecords = (state.bucketRows ?? []).map((row, index) => ({
     row_key: row.key,
@@ -389,6 +419,9 @@ export async function savePtoStateToMysql(state: MysqlPtoState) {
 
   await upsertPtoRows(rowRecords);
   await upsertPtoDayValues(dayRecords);
+  await deletePtoDayValuesMissingFromState("plan", planRows);
+  await deletePtoDayValuesMissingFromState("oper", operRows);
+  await deletePtoDayValuesMissingFromState("survey", surveyRows);
   await upsertPtoBucketRows(bucketRowRecords);
   await upsertPtoBucketValues(bucketValueRecords);
   await dbExecute(
