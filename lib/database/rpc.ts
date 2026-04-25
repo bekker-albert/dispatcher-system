@@ -21,12 +21,22 @@ type DatabaseResponse<T> = {
   error?: string;
 };
 
+function databaseApiUrl() {
+  if (typeof window === "undefined") return "/api/database";
+
+  if (window.location.hostname === "aam-dispatch.kz") {
+    return "https://www.aam-dispatch.kz/api/database";
+  }
+
+  return "/api/database";
+}
+
 export async function databaseRequest<T>(
   resource: DatabaseResource,
   action: DatabaseAction,
   payload?: unknown,
 ): Promise<T> {
-  const response = await fetch("/api/database", {
+  const response = await fetch(databaseApiUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
