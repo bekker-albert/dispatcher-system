@@ -10,6 +10,8 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
     hiddenRowKeys: [...customer.hiddenRowKeys],
     rowLabels: { ...customer.rowLabels },
     summaryRows: customer.summaryRows.map((row) => ({ ...row, rowKeys: [...row.rowKeys] })),
+    areaOrder: [...customer.areaOrder],
+    workOrder: Object.fromEntries(Object.entries(customer.workOrder).map(([area, rowKeys]) => [area, [...rowKeys]])),
   }));
 
   if (!Array.isArray(value)) return cloneDefaults();
@@ -48,6 +50,19 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
         }];
       })
       : [];
+    const areaOrder = Array.isArray(item.areaOrder)
+      ? Array.from(new Set(item.areaOrder.filter((area): area is string => typeof area === "string" && area.trim().length > 0)))
+      : [];
+    const workOrder = isRecord(item.workOrder)
+      ? Object.fromEntries(
+        Object.entries(item.workOrder)
+          .filter((entry): entry is [string, unknown[]] => entry[0].trim() !== "" && Array.isArray(entry[1]))
+          .map(([area, rowKeys]) => [
+            area,
+            Array.from(new Set(rowKeys.filter((key): key is string => typeof key === "string" && key.trim().length > 0))),
+          ]),
+      )
+      : {};
     const fallback = defaultReportCustomers.find((customer) => customer.id === item.id);
 
     return [{
@@ -60,6 +75,8 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
       hiddenRowKeys,
       rowLabels,
       summaryRows,
+      areaOrder,
+      workOrder,
     }];
   });
 
@@ -78,6 +95,8 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
       rowKeys: Array.from(new Set(customer.rowKeys)),
       hiddenRowKeys: Array.from(new Set(customer.hiddenRowKeys)),
       rowLabels: { ...customer.rowLabels },
+      areaOrder: Array.from(new Set(customer.areaOrder)),
+      workOrder: Object.fromEntries(Object.entries(customer.workOrder).map(([area, rowKeys]) => [area, Array.from(new Set(rowKeys))])),
       summaryRows: customer.summaryRows.map((summary) => ({
         ...summary,
         label: summary.label.trim() || "Итоговая строка",

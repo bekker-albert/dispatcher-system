@@ -43,6 +43,8 @@ export type ReportCustomerConfig = {
   hiddenRowKeys: string[];
   rowLabels: Record<string, string>;
   summaryRows: ReportSummaryRowConfig[];
+  areaOrder: string[];
+  workOrder: Record<string, string[]>;
 };
 
 export type ReportPtoDateStatus = {

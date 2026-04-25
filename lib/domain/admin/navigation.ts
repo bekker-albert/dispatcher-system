@@ -2,7 +2,7 @@ export type StructureSection = "scheme" | "elements" | "links" | "roles" | "sche
 
 export type AdminSection = "menu" | "subtabs" | "structure" | "ai" | "vehicles" | "reports" | "logs" | "database";
 
-export type AdminReportCustomerSettingsTab = "display" | "rename" | "summary";
+export type AdminReportCustomerSettingsTab = "order" | "display" | "rename" | "summary";
 
 export const adminSectionTabs: Array<{ value: AdminSection; label: string }> = [
   { value: "menu", label: "Вкладки" },

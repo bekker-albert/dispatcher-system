@@ -105,6 +105,14 @@ type UndoSnapshot = {
   dependencyLinks: DependencyLink[];
 };
 
+const emptyPtoDraftRowFields = {
+  customerCode: "",
+  area: "",
+  location: "",
+  structure: "",
+  unit: "",
+};
+
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
 const clientIdStorageKey = "dispatcher:client-id";
 const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
@@ -380,6 +388,8 @@ export default function App() {
   const [ptoDateEditing, setPtoDateEditing] = useState(false);
   const [hoveredPtoAddRowId, setHoveredPtoAddRowId] = useState<string | null>(null);
   const [ptoPendingFieldFocus, setPtoPendingFieldFocus] = useState<{ rowId: string; field: string } | null>(null);
+  const [ptoRowFieldDrafts, setPtoRowFieldDrafts] = useState<Record<string, string>>({});
+  const [ptoDraftRowFields, setPtoDraftRowFields] = useState(() => ({ ...emptyPtoDraftRowFields }));
   const ptoSelectionDraggingRef = useRef(false);
   const ptoResizeStateRef = useRef<PtoResizeState | null>(null);
   const reportResizeStateRef = useRef<ReportResizeState | null>(null);
@@ -397,7 +407,7 @@ export default function App() {
   const [reportArea, setReportArea] = useState("Все участки");
   const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
   const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
-  const [adminReportTab, setAdminReportTab] = useState<"order" | "customer">("order");
+  const [adminReportTab, setAdminReportTab] = useState<"customer">("customer");
   const [adminReportCustomerSettingsTab, setAdminReportCustomerSettingsTab] = useState<AdminReportCustomerSettingsTab>("display");
   const [editingReportRowLabelKeys, setEditingReportRowLabelKeys] = useState<string[]>([]);
   const [expandedReportSummaryIds, setExpandedReportSummaryIds] = useState<string[]>([]);
@@ -1020,9 +1030,23 @@ export default function App() {
         const nextAreaShiftCutoffs = normalizeAreaShiftCutoffs(savedAreaShiftCutoffs);
         const preferredReportDate = readClientReportDateSelection(nextAreaShiftCutoffs, defaultAreaShiftScheduleArea);
 
-        setReportCustomers(normalizeStoredReportCustomers(savedReportCustomers, defaultReportCustomers));
-        setReportAreaOrder(normalizeStringList(savedReportAreaOrder));
-        setReportWorkOrder(normalizeStringListRecord(savedReportWorkOrder));
+        const nextReportAreaOrder = normalizeStringList(savedReportAreaOrder);
+        const nextReportWorkOrder = normalizeStringListRecord(savedReportWorkOrder);
+        const nextReportCustomers = normalizeStoredReportCustomers(savedReportCustomers, defaultReportCustomers).map((customer) => {
+          const hasCustomerWorkOrder = Object.values(customer.workOrder).some((rowKeys) => rowKeys.length > 0);
+
+          return {
+            ...customer,
+            areaOrder: customer.areaOrder.length > 0 ? customer.areaOrder : [...nextReportAreaOrder],
+            workOrder: hasCustomerWorkOrder
+              ? customer.workOrder
+              : Object.fromEntries(Object.entries(nextReportWorkOrder).map(([area, rowKeys]) => [area, [...rowKeys]])),
+          };
+        });
+
+        setReportCustomers(nextReportCustomers);
+        setReportAreaOrder(nextReportAreaOrder);
+        setReportWorkOrder(nextReportWorkOrder);
         setReportHeaderLabels(normalizeStringRecord(savedReportHeaderLabels));
         setReportColumnWidths(normalizeNumberRecord(savedReportColumnWidths, 42, 520));
         setReportReasons(normalizeStringRecord(savedReportReasons));
@@ -1724,15 +1748,6 @@ export default function App() {
       : null
   ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, needsReportIndexes]);
 
-  const reportAreaOrderOptions = useMemo(() => (
-    needsAdminReportRows
-      ? sortAreaNamesByOrder(
-      uniqueSorted(reportBaseRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
-        reportAreaOrder,
-      )
-      : []
-  ), [needsAdminReportRows, reportAreaOrder, reportBaseRows]);
-
   const derivedReportRows = useMemo(() => (
     needsAutoReportRows && reportPtoIndexes ? reportBaseRows.map((row) => {
       const derivedRow = deriveReportRowFromPtoIndex(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper);
@@ -1784,42 +1799,50 @@ export default function App() {
   ), [derivedReportRows]);
   const activeAdminReportBaseRows = useMemo(() => (
     needsAdminReportRows
-      ? reportRowsForCustomer(adminReportBaseRows, activeAdminReportCustomer)
-      : []
-  ), [activeAdminReportCustomer, adminReportBaseRows, needsAdminReportRows]);
-  const activeAdminReportAreaOptions = useMemo(() => (
-    needsAdminReportRows
-      ? sortAreaNamesByOrder(
-        uniqueSorted(activeAdminReportBaseRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
-        reportAreaOrder,
+      ? sortReportRowsByAreaOrder(
+        reportRowsForCustomer(adminReportBaseRows, activeAdminReportCustomer),
+        activeAdminReportCustomer.areaOrder,
+        activeAdminReportCustomer.workOrder,
       )
       : []
-  ), [activeAdminReportBaseRows, needsAdminReportRows, reportAreaOrder]);
-  const activeAdminReportRowsByKey = useMemo(() => (
-    new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]))
-  ), [activeAdminReportBaseRows]);
+  ), [activeAdminReportCustomer, adminReportBaseRows, needsAdminReportRows]);
   const activeAdminAutoReportRowKeys = useMemo(() => (
     needsAdminReportRows ? reportAutoRowKeysForCustomer(activeAdminReportCustomer) : new Set<string>()
   ), [activeAdminReportCustomer, needsAdminReportRows, reportAutoRowKeysForCustomer]);
+  const activeAdminReportVisibleRowKeys = useMemo(() => (
+    reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys)
+  ), [activeAdminAutoReportRowKeys, activeAdminReportCustomer]);
+  const activeAdminReportVisibleRows = useMemo(() => (
+    activeAdminReportBaseRows.filter((row) => activeAdminReportVisibleRowKeys.has(reportRowKey(row)))
+  ), [activeAdminReportBaseRows, activeAdminReportVisibleRowKeys]);
+  const activeAdminReportAreaOptions = useMemo(() => (
+    needsAdminReportRows
+      ? sortAreaNamesByOrder(
+        uniqueSorted(activeAdminReportVisibleRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+        activeAdminReportCustomer.areaOrder,
+      )
+      : []
+  ), [activeAdminReportCustomer.areaOrder, activeAdminReportVisibleRows, needsAdminReportRows]);
+  const activeAdminReportRowsByKey = useMemo(() => (
+    new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]))
+  ), [activeAdminReportBaseRows]);
 
   const adminReportWorkOrderGroups = useMemo(() => (
     needsAdminReportRows
-      ? reportAreaOrderOptions.map((area) => ({
+      ? activeAdminReportAreaOptions.map((area) => ({
         area,
         rows: sortReportRowsByAreaOrder(
-          reportBaseRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(area)),
+          activeAdminReportVisibleRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(area)),
           [area],
-          reportWorkOrder,
+          activeAdminReportCustomer.workOrder,
         ),
       }))
       : []
-  ), [needsAdminReportRows, reportAreaOrderOptions, reportBaseRows, reportWorkOrder]);
+  ), [activeAdminReportAreaOptions, activeAdminReportCustomer.workOrder, activeAdminReportVisibleRows, needsAdminReportRows]);
 
   const activeAdminReportSelectedCount = useMemo(() => (
-    needsAdminReportRows
-      ? activeAdminReportBaseRows.filter((row) => reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys).has(reportRowKey(row))).length
-      : 0
-  ), [activeAdminAutoReportRowKeys, activeAdminReportBaseRows, activeAdminReportCustomer, needsAdminReportRows]);
+    needsAdminReportRows ? activeAdminReportVisibleRows.length : 0
+  ), [activeAdminReportVisibleRows, needsAdminReportRows]);
   const activeAdminReportRowLabelEntries = useMemo(() => (
     needsAdminReportRows
       ? Object.entries(activeAdminReportCustomer.rowLabels).flatMap(([rowKey, label]) => {
@@ -1858,8 +1881,8 @@ export default function App() {
       })
       : [];
 
-    return sortReportRowsByAreaOrder([...selectedRows, ...summaryRows], reportAreaOrder, reportWorkOrder);
-  }, [activeReportCustomer, derivedReportRows, needsDerivedReportRows, reportAreaOrder, reportWorkOrder]);
+    return sortReportRowsByAreaOrder([...selectedRows, ...summaryRows], activeReportCustomer.areaOrder, activeReportCustomer.workOrder);
+  }, [activeReportCustomer, derivedReportRows, needsDerivedReportRows]);
 
   const reportAreaTabs = useMemo(() => [
     "Все участки",
@@ -1867,11 +1890,11 @@ export default function App() {
       needsDerivedReportRows
         ? sortAreaNamesByOrder(
             uniqueSorted(customerReportRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
-            reportAreaOrder,
+            activeReportCustomer.areaOrder,
           )
         : []
     ),
-  ], [customerReportRows, needsDerivedReportRows, reportAreaOrder]);
+  ], [activeReportCustomer.areaOrder, customerReportRows, needsDerivedReportRows]);
 
   const areaShiftScheduleAreas = useMemo(() => {
     const allAreas = uniqueSorted([
@@ -2902,6 +2925,8 @@ export default function App() {
       hiddenRowKeys: [],
       rowLabels: {},
       summaryRows: [],
+      areaOrder: [],
+      workOrder: {},
     };
 
     setReportCustomers((current) => [...current, customer]);
@@ -2943,26 +2968,30 @@ export default function App() {
   }
 
   function moveReportAreaOrder(area: string, direction: -1 | 1) {
-    const sourceIndex = reportAreaOrderOptions.findIndex((item) => normalizeLookupValue(item) === normalizeLookupValue(area));
+    const sourceIndex = activeAdminReportAreaOptions.findIndex((item) => normalizeLookupValue(item) === normalizeLookupValue(area));
     const targetIndex = sourceIndex + direction;
-    if (sourceIndex === -1 || targetIndex < 0 || targetIndex >= reportAreaOrderOptions.length) return;
+    if (sourceIndex === -1 || targetIndex < 0 || targetIndex >= activeAdminReportAreaOptions.length) return;
 
-    const nextOrder = [...reportAreaOrderOptions];
+    const nextOrder = [...activeAdminReportAreaOptions];
     [nextOrder[sourceIndex], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[sourceIndex]];
-    setReportAreaOrder(nextOrder);
+    setReportCustomers((current) => current.map((customer) => (
+      customer.id === activeAdminReportCustomer.id
+        ? { ...customer, areaOrder: nextOrder }
+        : customer
+    )));
     addAdminLog({
       action: "Редактирование",
       section: "Отчетность",
-      details: "Изменен порядок отображения участков.",
+      details: `Изменен порядок отображения участков для ${activeAdminReportCustomer.label}.`,
     });
   }
 
   function moveReportWorkOrder(area: string, rowKey: string, direction: -1 | 1) {
     const areaKey = normalizeLookupValue(area);
     const areaRows = sortReportRowsByAreaOrder(
-      reportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey),
+      activeAdminReportVisibleRows.filter((row) => normalizeLookupValue(row.area) === areaKey),
       [area],
-      reportWorkOrder,
+      activeAdminReportCustomer.workOrder,
     );
     const rowKeys = areaRows.map(reportRowKey);
     const sourceIndex = rowKeys.indexOf(rowKey);
@@ -2971,11 +3000,15 @@ export default function App() {
 
     const nextRowKeys = [...rowKeys];
     [nextRowKeys[sourceIndex], nextRowKeys[targetIndex]] = [nextRowKeys[targetIndex], nextRowKeys[sourceIndex]];
-    setReportWorkOrder((current) => ({ ...current, [areaKey]: nextRowKeys }));
+    setReportCustomers((current) => current.map((customer) => (
+      customer.id === activeAdminReportCustomer.id
+        ? { ...customer, workOrder: { ...customer.workOrder, [areaKey]: nextRowKeys } }
+        : customer
+    )));
     addAdminLog({
       action: "Редактирование",
       section: "Отчетность",
-      details: "Изменен порядок видов работ внутри участка.",
+      details: `Изменен порядок видов работ внутри участка для ${activeAdminReportCustomer.label}.`,
     });
   }
 
@@ -3393,6 +3426,56 @@ export default function App() {
       section: "ПТО",
       details: `Изменено поле "${ptoFieldLogLabel(field)}" в ${currentPtoTableLabel()}.`,
     });
+  }
+
+  function ptoRowTextDraftKey(rowId: string, field: "area" | "location" | "structure") {
+    return `${rowId}:${field}`;
+  }
+
+  function getPtoRowTextDraft(row: PtoPlanRow, field: "area" | "location" | "structure") {
+    const key = ptoRowTextDraftKey(row.id, field);
+    return ptoRowFieldDrafts[key] ?? String(row[field] ?? "");
+  }
+
+  function beginPtoRowTextDraft(row: PtoPlanRow, field: "area" | "location" | "structure") {
+    const key = ptoRowTextDraftKey(row.id, field);
+    setPtoRowFieldDrafts((current) => (
+      current[key] === undefined
+        ? { ...current, [key]: String(row[field] ?? "") }
+        : current
+    ));
+  }
+
+  function updatePtoRowTextDraft(rowId: string, field: "area" | "location" | "structure", value: string) {
+    const key = ptoRowTextDraftKey(rowId, field);
+    setPtoRowFieldDrafts((current) => ({ ...current, [key]: value }));
+  }
+
+  function clearPtoRowTextDraft(rowId: string, field: "area" | "location" | "structure") {
+    const key = ptoRowTextDraftKey(rowId, field);
+    setPtoRowFieldDrafts((current) => {
+      if (!(key in current)) return current;
+
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function commitPtoRowTextDraft(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, row: PtoPlanRow, field: "area" | "location" | "structure") {
+    const key = ptoRowTextDraftKey(row.id, field);
+    const nextValue = ptoRowFieldDrafts[key];
+    if (nextValue === undefined) return;
+
+    clearPtoRowTextDraft(row.id, field);
+    if (nextValue === String(row[field] ?? "")) return;
+
+    updatePtoDateRow(setRows, row.id, field, nextValue);
+    requestPtoDatabaseSave();
+  }
+
+  function cancelPtoRowTextDraft(rowId: string, field: "area" | "location" | "structure") {
+    clearPtoRowTextDraft(rowId, field);
   }
 
   function clearPtoCarryoverOverride(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, year: string) {
@@ -5188,24 +5271,41 @@ export default function App() {
       setPtoPendingFieldFocus({ rowId: nextRowId, field: "structure" });
     };
 
-    const commitPtoDraftField = (field: "area" | "location" | "customerCode" | "structure" | "unit", value: string) => {
-      if (!ptoDateEditing) return;
-      if (!value.trim()) return;
+    const ptoDraftHasValue = Object.values(ptoDraftRowFields).some((value) => value.trim());
+    const updatePtoDraftField = (field: "area" | "location" | "customerCode" | "structure" | "unit", value: string) => {
+      setPtoDraftRowFields((current) => ({ ...current, [field]: value }));
+    };
+    const clearPtoDraftRow = () => setPtoDraftRowFields({ ...emptyPtoDraftRowFields });
+    const commitPtoDraftRow = (focusField: "area" | "location" | "structure" = "structure") => {
+      if (!ptoDateEditing || !ptoDraftHasValue) return null;
 
-      const normalizedValue = field === "unit"
-        ? normalizePtoUnit(value)
-        : field === "customerCode"
-          ? normalizePtoCustomerCode(value)
-          : value;
       const nextRowId = addLinkedPtoDateRow({
-        [field]: normalizedValue,
+        area: ptoDraftRowFields.area.trim(),
+        location: ptoDraftRowFields.location.trim(),
+        customerCode: showCustomerCode ? normalizePtoCustomerCode(ptoDraftRowFields.customerCode) : "",
+        structure: ptoDraftRowFields.structure.trim(),
+        unit: normalizePtoUnit(ptoDraftRowFields.unit),
       });
-      setPtoPendingFieldFocus({ rowId: nextRowId, field });
-      requestPtoDatabaseSave();
+      clearPtoDraftRow();
+      setPtoPendingFieldFocus({ rowId: nextRowId, field: focusField });
+
+      return nextRowId;
+    };
+    const handlePtoDraftKeyDown = (event: React.KeyboardEvent<HTMLElement>, focusField: "area" | "location" | "structure" = "structure") => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commitPtoDraftRow(focusField);
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        clearPtoDraftRow();
+      }
     };
 
     const addPtoRowFromDraft = () => {
       if (!ptoDateEditing) return;
+      if (commitPtoDraftRow(ptoAreaFilter === "Все участки" ? "area" : "structure")) return;
 
       const nextRowId = addLinkedPtoDateRow();
       setPtoPendingFieldFocus({ rowId: nextRowId, field: ptoAreaFilter === "Все участки" ? "area" : "structure" });
@@ -5585,7 +5685,36 @@ export default function App() {
                           </div>
                         ) : null}
                         {ptoDateEditing ? (
-                          <input data-pto-row-field={ptoRowFieldDomKey(row.id, "area")} list="pto-area-options" value={row.area} onChange={(e) => updatePtoDateRow(setRows, row.id, "area", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Уч_Аксу" style={ptoPlanInputStyle} />
+                          <input
+                            data-pto-row-field={ptoRowFieldDomKey(row.id, "area")}
+                            list="pto-area-options"
+                            value={getPtoRowTextDraft(row, "area")}
+                            onFocus={() => beginPtoRowTextDraft(row, "area")}
+                            onChange={(event) => updatePtoRowTextDraft(row.id, "area", event.target.value)}
+                            onBlur={(event) => {
+                              if (event.currentTarget.dataset.skipPtoTextCommit === "true") {
+                                delete event.currentTarget.dataset.skipPtoTextCommit;
+                                return;
+                              }
+                              commitPtoRowTextDraft(setRows, row, "area");
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                commitPtoRowTextDraft(setRows, row, "area");
+                                event.currentTarget.dataset.skipPtoTextCommit = "true";
+                                event.currentTarget.blur();
+                              }
+                              if (event.key === "Escape") {
+                                event.preventDefault();
+                                cancelPtoRowTextDraft(row.id, "area");
+                                event.currentTarget.dataset.skipPtoTextCommit = "true";
+                                event.currentTarget.blur();
+                              }
+                            }}
+                            placeholder="Уч_Аксу"
+                            style={ptoPlanInputStyle}
+                          />
                         ) : renderReadonlyTextCell(row.area)}
                       </div>
                     </PtoPlanTd>
@@ -5593,7 +5722,36 @@ export default function App() {
                       <PtoPlanTd>
                         {ptoDateEditing ? (
                           <>
-                            <input data-pto-row-field={ptoRowFieldDomKey(row.id, "location")} list={locationListId} value={row.location} onChange={(e) => updatePtoDateRow(setRows, row.id, "location", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Карьер" style={ptoPlanInputStyle} />
+                            <input
+                              data-pto-row-field={ptoRowFieldDomKey(row.id, "location")}
+                              list={locationListId}
+                              value={getPtoRowTextDraft(row, "location")}
+                              onFocus={() => beginPtoRowTextDraft(row, "location")}
+                              onChange={(event) => updatePtoRowTextDraft(row.id, "location", event.target.value)}
+                              onBlur={(event) => {
+                                if (event.currentTarget.dataset.skipPtoTextCommit === "true") {
+                                  delete event.currentTarget.dataset.skipPtoTextCommit;
+                                  return;
+                                }
+                                commitPtoRowTextDraft(setRows, row, "location");
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  commitPtoRowTextDraft(setRows, row, "location");
+                                  event.currentTarget.dataset.skipPtoTextCommit = "true";
+                                  event.currentTarget.blur();
+                                }
+                                if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  cancelPtoRowTextDraft(row.id, "location");
+                                  event.currentTarget.dataset.skipPtoTextCommit = "true";
+                                  event.currentTarget.blur();
+                                }
+                              }}
+                              placeholder="Карьер"
+                              style={ptoPlanInputStyle}
+                            />
                             <datalist id={locationListId}>
                               {locationOptions.map((location) => (
                                 <option key={location} value={location} />
@@ -5606,7 +5764,36 @@ export default function App() {
                     <PtoPlanTd>
                       {ptoDateEditing ? (
                         <>
-                          <input data-pto-row-field={ptoRowFieldDomKey(row.id, "structure")} list={structureListId} value={row.structure} onChange={(e) => updatePtoDateRow(setRows, row.id, "structure", e.target.value)} onBlur={requestPtoDatabaseSave} placeholder="Вид работ" style={ptoPlanInputStyle} />
+                          <input
+                            data-pto-row-field={ptoRowFieldDomKey(row.id, "structure")}
+                            list={structureListId}
+                            value={getPtoRowTextDraft(row, "structure")}
+                            onFocus={() => beginPtoRowTextDraft(row, "structure")}
+                            onChange={(event) => updatePtoRowTextDraft(row.id, "structure", event.target.value)}
+                            onBlur={(event) => {
+                              if (event.currentTarget.dataset.skipPtoTextCommit === "true") {
+                                delete event.currentTarget.dataset.skipPtoTextCommit;
+                                return;
+                              }
+                              commitPtoRowTextDraft(setRows, row, "structure");
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                commitPtoRowTextDraft(setRows, row, "structure");
+                                event.currentTarget.dataset.skipPtoTextCommit = "true";
+                                event.currentTarget.blur();
+                              }
+                              if (event.key === "Escape") {
+                                event.preventDefault();
+                                cancelPtoRowTextDraft(row.id, "structure");
+                                event.currentTarget.dataset.skipPtoTextCommit = "true";
+                                event.currentTarget.blur();
+                              }
+                            }}
+                            placeholder="Вид работ"
+                            style={ptoPlanInputStyle}
+                          />
                           <datalist id={structureListId}>
                             {structureOptions.map((structure) => (
                               <option key={structure} value={structure} />
@@ -5797,7 +5984,12 @@ export default function App() {
               {ptoDateEditing ? <tr style={ptoDraftRowStyle}>
                 {showCustomerCode ? (
                   <PtoPlanTd align="center">
-                    <select value="" onChange={(event) => commitPtoDraftField("customerCode", event.target.value)} style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}>
+                    <select
+                      value={ptoDraftRowFields.customerCode}
+                      onChange={(event) => updatePtoDraftField("customerCode", event.target.value)}
+                      onKeyDown={(event) => handlePtoDraftKeyDown(event, "area")}
+                      style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}
+                    >
                       <option value="">Заказчик</option>
                       {ptoCustomerCodeOptions.map((option) => (
                         <option key={option.code} value={option.code}>{option.code}</option>
@@ -5816,19 +6008,42 @@ export default function App() {
                     >
                       +
                     </button>
-                    <input value="" onChange={(event) => commitPtoDraftField("area", event.target.value)} placeholder="Новая строка" style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }} />
+                    <input
+                      value={ptoDraftRowFields.area}
+                      onChange={(event) => updatePtoDraftField("area", event.target.value)}
+                      onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
+                      placeholder="Новая строка"
+                      style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }}
+                    />
                   </div>
                 </PtoPlanTd>
                 {showLocation ? (
                   <PtoPlanTd>
-                    <input value="" onChange={(event) => commitPtoDraftField("location", event.target.value)} placeholder="Местонахождение" style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }} />
+                    <input
+                      value={ptoDraftRowFields.location}
+                      onChange={(event) => updatePtoDraftField("location", event.target.value)}
+                      onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
+                      placeholder="Местонахождение"
+                      style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }}
+                    />
                   </PtoPlanTd>
                 ) : null}
                 <PtoPlanTd>
-                  <input value="" onChange={(event) => commitPtoDraftField("structure", event.target.value)} placeholder="Структура" style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }} />
+                  <input
+                    value={ptoDraftRowFields.structure}
+                    onChange={(event) => updatePtoDraftField("structure", event.target.value)}
+                    onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
+                    placeholder="Структура"
+                    style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }}
+                  />
                 </PtoPlanTd>
                 <PtoPlanTd align="center">
-                  <select value="" onChange={(event) => commitPtoDraftField("unit", event.target.value)} style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}>
+                  <select
+                    value={ptoDraftRowFields.unit}
+                    onChange={(event) => updatePtoDraftField("unit", event.target.value)}
+                    onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
+                    style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}
+                  >
                     <option value="">Ед.</option>
                     {ptoUnitOptions.map((unit) => (
                       <option key={unit} value={unit}>{unit}</option>
@@ -7303,7 +7518,6 @@ export default function App() {
               </div>
 
               <div style={adminReportCustomerTabsStyle}>
-                <TopButton active={adminReportTab === "order"} onClick={() => setAdminReportTab("order")} label="Порядок" />
                 {reportCustomers.map((customer) => (
                   <TopButton
                     key={customer.id}
@@ -7323,66 +7537,6 @@ export default function App() {
                 </IconButton>
               </div>
 
-              {adminReportTab === "order" ? (
-                <div style={adminReportOrderPanelStyle}>
-                  <div style={adminReportCompactPanelStyle}>
-                    <div style={adminReportPanelTitleStyle}>Порядок отображения участков в отчетах</div>
-                    <div style={adminReportAreaOrderListStyle}>
-                      {reportAreaOrderOptions.length === 0 ? (
-                        <div style={adminReportEmptyTextStyle}>Участков пока нет.</div>
-                      ) : (
-                        reportAreaOrderOptions.map((area, index) => (
-                          <div key={area} style={adminReportAreaOrderRowStyle}>
-                            <span style={adminReportAreaOrderNameStyle}>{index + 1}. {area}</span>
-                            <div style={adminReportAreaOrderActionsStyle}>
-                              <MiniIconButton label="Поднять участок" onClick={() => moveReportAreaOrder(area, -1)} disabled={index === 0}>
-                                <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
-                              </MiniIconButton>
-                              <MiniIconButton label="Опустить участок" onClick={() => moveReportAreaOrder(area, 1)} disabled={index === reportAreaOrderOptions.length - 1}>
-                                <ChevronDown size={13} aria-hidden />
-                              </MiniIconButton>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={adminReportOrderWorkPanelStyle}>
-                    <div style={adminReportPanelTitleStyle}>Порядок видов работ внутри участков</div>
-                    {adminReportWorkOrderGroups.length === 0 ? (
-                      <div style={adminReportEmptyTextStyle}>Видов работ пока нет.</div>
-                    ) : (
-                      <div style={adminReportWorkGroupGridStyle}>
-                        {adminReportWorkOrderGroups.map((group) => (
-                          <div key={group.area} style={adminReportWorkGroupStyle}>
-                            <div style={adminReportWorkGroupTitleStyle}>{group.area}</div>
-                            <div style={adminReportAreaOrderListStyle}>
-                              {group.rows.map((row, index) => {
-                                const rowKey = reportRowKey(row);
-                                return (
-                                  <div key={rowKey} style={adminReportWorkOrderRowStyle}>
-                                    <span style={adminReportWorkOrderNameStyle}>{index + 1}. {row.name}</span>
-                                    <span style={adminReportWorkOrderUnitStyle}>{row.unit}</span>
-                                    <div style={adminReportAreaOrderActionsStyle}>
-                                      <MiniIconButton label="Поднять вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, -1)} disabled={index === 0}>
-                                        <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
-                                      </MiniIconButton>
-                                      <MiniIconButton label="Опустить вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, 1)} disabled={index === group.rows.length - 1}>
-                                        <ChevronDown size={13} aria-hidden />
-                                      </MiniIconButton>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
                 <div style={adminReportCustomerCardStyle}>
                 <div style={adminReportCustomerSummaryStyle}>
                   <input
@@ -7413,6 +7567,7 @@ export default function App() {
 
                 <div style={adminReportCustomerBodyStyle}>
                   <div style={adminReportCustomerSettingsTabsStyle}>
+                    <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "order"} onClick={() => setAdminReportCustomerSettingsTab("order")} label="Порядок" />
                     <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "display"} onClick={() => setAdminReportCustomerSettingsTab("display")} label="Отображение" />
                     <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "rename"} onClick={() => setAdminReportCustomerSettingsTab("rename")} label="Переименование строк" />
                     <AdminReportSettingsButton
@@ -7422,6 +7577,67 @@ export default function App() {
                       label="Итоговые строки"
                     />
                   </div>
+
+                  {visibleAdminReportCustomerSettingsTab === "order" ? (
+                    <div style={adminReportOrderPanelStyle}>
+                      <div style={adminReportCompactPanelStyle}>
+                        <div style={adminReportPanelTitleStyle}>Порядок отображения участков в отчете заказчика</div>
+                        <div style={adminReportAreaOrderListStyle}>
+                          {activeAdminReportAreaOptions.length === 0 ? (
+                            <div style={adminReportEmptyTextStyle}>Участков пока нет.</div>
+                          ) : (
+                            activeAdminReportAreaOptions.map((area, index) => (
+                              <div key={area} style={adminReportAreaOrderRowStyle}>
+                                <span style={adminReportAreaOrderNameStyle}>{index + 1}. {area}</span>
+                                <div style={adminReportAreaOrderActionsStyle}>
+                                  <MiniIconButton label="Поднять участок" onClick={() => moveReportAreaOrder(area, -1)} disabled={index === 0}>
+                                    <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
+                                  </MiniIconButton>
+                                  <MiniIconButton label="Опустить участок" onClick={() => moveReportAreaOrder(area, 1)} disabled={index === activeAdminReportAreaOptions.length - 1}>
+                                    <ChevronDown size={13} aria-hidden />
+                                  </MiniIconButton>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={adminReportOrderWorkPanelStyle}>
+                        <div style={adminReportPanelTitleStyle}>Порядок видов работ внутри участков</div>
+                        {adminReportWorkOrderGroups.length === 0 ? (
+                          <div style={adminReportEmptyTextStyle}>Видов работ пока нет.</div>
+                        ) : (
+                          <div style={adminReportWorkGroupGridStyle}>
+                            {adminReportWorkOrderGroups.map((group) => (
+                              <div key={group.area} style={adminReportWorkGroupStyle}>
+                                <div style={adminReportWorkGroupTitleStyle}>{group.area}</div>
+                                <div style={adminReportAreaOrderListStyle}>
+                                  {group.rows.map((row, index) => {
+                                    const rowKey = reportRowKey(row);
+                                    return (
+                                      <div key={rowKey} style={adminReportWorkOrderRowStyle}>
+                                        <span style={adminReportWorkOrderNameStyle}>{index + 1}. {row.name}</span>
+                                        <span style={adminReportWorkOrderUnitStyle}>{row.unit}</span>
+                                        <div style={adminReportAreaOrderActionsStyle}>
+                                          <MiniIconButton label="Поднять вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, -1)} disabled={index === 0}>
+                                            <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
+                                          </MiniIconButton>
+                                          <MiniIconButton label="Опустить вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, 1)} disabled={index === group.rows.length - 1}>
+                                            <ChevronDown size={13} aria-hidden />
+                                          </MiniIconButton>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
 
                   {visibleAdminReportCustomerSettingsTab === "display" ? (
                   <div style={adminReportRowsColumnStyle}>
@@ -7447,13 +7663,12 @@ export default function App() {
                           {activeAdminReportBaseRows.map((row) => {
                             const rowKey = reportRowKey(row);
                             const rowStatus = reportRowAutoStatus(derivedReportRowsByKey.get(rowKey) ?? row);
-                            const visibleRowKeys = reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys);
                             return (
                               <tr key={`${activeAdminReportCustomer.id}-${rowKey}`}>
                                 <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
                                   <input
                                     type="checkbox"
-                                    checked={visibleRowKeys.has(rowKey)}
+                                    checked={activeAdminReportVisibleRowKeys.has(rowKey)}
                                     disabled={activeAdminReportCustomer.autoShowRows}
                                     onChange={() => toggleReportCustomerRow(activeAdminReportCustomer.id, rowKey)}
                                     style={activeAdminReportCustomer.autoShowRows ? adminReportDisabledCheckboxStyle : undefined}
@@ -7660,7 +7875,6 @@ export default function App() {
                   ) : null}
                 </div>
               </div>
-              )}
             </div>
             )}
 

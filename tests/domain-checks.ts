@@ -313,6 +313,8 @@ const normalizedReportCustomers = normalizeStoredReportCustomers([
     hiddenRowKeys: ["b", "b"],
     rowLabels: { a: " Вид работ " },
     summaryRows: [{ id: "s", label: " ", unit: "м3", area: "Аксу", rowKeys: ["a", "a"] }],
+    areaOrder: ["Аксу", "Аксу"],
+    workOrder: { Аксу: ["a", "a"] },
   },
 ], [{
   id: "fallback",
@@ -324,10 +326,14 @@ const normalizedReportCustomers = normalizeStoredReportCustomers([
   hiddenRowKeys: [],
   rowLabels: {},
   summaryRows: [],
+  areaOrder: [],
+  workOrder: {},
 }]);
 assert.equal(normalizedReportCustomers[0].label, "Заказчик");
 assert.deepEqual(normalizedReportCustomers[0].rowKeys, ["a"]);
 assert.deepEqual(normalizedReportCustomers[0].summaryRows[0].rowKeys, ["a"]);
+assert.deepEqual(normalizedReportCustomers[0].areaOrder, ["Аксу"]);
+assert.deepEqual(normalizedReportCustomers[0].workOrder, { Аксу: ["a"] });
 assert.deepEqual(
   Array.from(reportCustomerEffectiveRowKeys({
     id: "auto",
@@ -339,6 +345,8 @@ assert.deepEqual(
     hiddenRowKeys: ["b"],
     rowLabels: {},
     summaryRows: [],
+    areaOrder: [],
+    workOrder: {},
   }, new Set(["a", "b", "c"]))),
   ["a", "c"],
 );

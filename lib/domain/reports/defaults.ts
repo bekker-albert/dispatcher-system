@@ -125,6 +125,8 @@ export const defaultReportCustomers: ReportCustomerConfig[] = [
     hiddenRowKeys: [],
     rowLabels: {},
     summaryRows: [],
+    areaOrder: [],
+    workOrder: {},
   },
   {
     id: "ak-altynalmas",
@@ -136,6 +138,8 @@ export const defaultReportCustomers: ReportCustomerConfig[] = [
     hiddenRowKeys: [],
     rowLabels: {},
     summaryRows: [],
+    areaOrder: [],
+    workOrder: {},
   },
   {
     id: "aa-engineering",
@@ -147,6 +151,8 @@ export const defaultReportCustomers: ReportCustomerConfig[] = [
     hiddenRowKeys: [],
     rowLabels: {},
     summaryRows: [],
+    areaOrder: [],
+    workOrder: {},
   },
 ];
 
