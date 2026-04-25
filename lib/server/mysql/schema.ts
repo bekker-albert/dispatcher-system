@@ -31,7 +31,8 @@ const statements = [
     state_key VARCHAR(191) NOT NULL,
     value JSON NOT NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (state_key)
+    PRIMARY KEY (state_key),
+    KEY app_state_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS pto_rows (
@@ -106,6 +107,19 @@ export async function ensureMysqlSchema() {
     schemaPromise = (async () => {
       for (const statement of statements) {
         await getMysqlPool().execute(statement);
+      }
+
+      try {
+        await getMysqlPool().execute("ALTER TABLE app_state ADD INDEX app_state_updated_idx (updated_at)");
+      } catch (error) {
+        if (!(
+          error
+          && typeof error === "object"
+          && "code" in error
+          && (error as { code?: string }).code === "ER_DUP_KEYNAME"
+        )) {
+          throw error;
+        }
       }
     })();
   }
