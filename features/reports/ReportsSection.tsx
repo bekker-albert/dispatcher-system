@@ -164,6 +164,8 @@ export default function ReportsSection({
     }),
     { indexes: [], nextIndex: 0 },
   ).indexes;
+  const showDayProductivity = reportColumnKeys.includes("day-productivity");
+  const showMonthProductivity = reportColumnKeys.includes("month-productivity");
 
   return (
     <>
@@ -227,8 +229,8 @@ export default function ReportsSection({
                     <ReportTh rowSpan={2} columnKey="area" printLabel={reportHeaderLabel("area", "Участок")} width={reportColumnWidthByKey.get("area")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("area", "Участок")}</ReportTh>
                     <ReportTh rowSpan={2} columnKey="work-name" printLabel={reportHeaderLabel("work-name", "Вид работ")} width={reportColumnWidthByKey.get("work-name")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("work-name", "Вид работ")}</ReportTh>
                     <ReportTh rowSpan={2} columnKey="unit" printLabel={reportHeaderLabel("unit", "Ед.")} width={reportColumnWidthByKey.get("unit")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("unit", "Ед.")}</ReportTh>
-                    <ReportTh colSpan={5} printLabel={reportHeaderLabel("day-group", "Текущая дата")}>{renderReportHeaderText("day-group", "Текущая дата")}</ReportTh>
-                    <ReportTh colSpan={5} printLabel={reportHeaderLabel("month-group", "С начала месяца")}>{renderReportHeaderText("month-group", "С начала месяца")}</ReportTh>
+                    <ReportTh colSpan={showDayProductivity ? 5 : 4} printLabel={reportHeaderLabel("day-group", "Текущая дата")}>{renderReportHeaderText("day-group", "Текущая дата")}</ReportTh>
+                    <ReportTh colSpan={showMonthProductivity ? 5 : 4} printLabel={reportHeaderLabel("month-group", "С начала месяца")}>{renderReportHeaderText("month-group", "С начала месяца")}</ReportTh>
                     <ReportTh colSpan={4} printLabel={reportHeaderLabel("year-group", "С начала года")}>{renderReportHeaderText("year-group", "С начала года")}</ReportTh>
                     <ReportTh colSpan={3} printLabel={reportHeaderLabel("annual-group", "Годовой план")}>{renderReportHeaderText("annual-group", "Годовой план")}</ReportTh>
                   </tr>
@@ -236,13 +238,17 @@ export default function ReportsSection({
                     <ReportTh columnKey="day-plan" printLabel={reportHeaderLabel("day-plan", "План суточный")} width={reportColumnWidthByKey.get("day-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-plan", "План суточный")}</ReportTh>
                     <ReportTh columnKey="day-fact" printLabel={reportHeaderLabel("day-fact", "Оперучет")} width={reportColumnWidthByKey.get("day-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-fact", "Оперучет")}</ReportTh>
                     <ReportTh columnKey="day-delta" printLabel={reportHeaderLabel("day-delta", "Откл.")} width={reportColumnWidthByKey.get("day-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-delta", "Откл.")}</ReportTh>
-                    <ReportTh columnKey="day-productivity" printLabel={reportHeaderLabel("day-productivity", "Произв. техники")} width={reportColumnWidthByKey.get("day-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-productivity", "Произв. техники")}</ReportTh>
+                    {showDayProductivity ? (
+                      <ReportTh columnKey="day-productivity" printLabel={reportHeaderLabel("day-productivity", "Произв. техники")} width={reportColumnWidthByKey.get("day-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-productivity", "Произв. техники")}</ReportTh>
+                    ) : null}
                     <ReportTh columnKey="day-reason" printLabel={reportHeaderLabel("day-reason", "Причина за сутки")} width={reportColumnWidthByKey.get("day-reason")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("day-reason", "Причина за сутки")}</ReportTh>
                     <ReportTh columnKey="month-total-plan" printLabel={reportHeaderLabel("month-total-plan", "План на месяц")} width={reportColumnWidthByKey.get("month-total-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-total-plan", "План на месяц")}</ReportTh>
                     <ReportTh columnKey="month-plan" printLabel={reportHeaderLabel("month-plan", "План с начала месяца")} width={reportColumnWidthByKey.get("month-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-plan", "План с начала месяца")}</ReportTh>
                     <ReportTh columnKey="month-fact" printLabel={reportHeaderLabel("month-fact", "Маркзамер + оперучет")} width={reportColumnWidthByKey.get("month-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-fact", "Маркзамер + оперучет")}</ReportTh>
                     <ReportTh columnKey="month-delta" printLabel={reportHeaderLabel("month-delta", "Откл.")} width={reportColumnWidthByKey.get("month-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-delta", "Откл.")}</ReportTh>
-                    <ReportTh columnKey="month-productivity" printLabel={reportHeaderLabel("month-productivity", "Произв. накоп.")} width={reportColumnWidthByKey.get("month-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-productivity", "Произв. накоп.")}</ReportTh>
+                    {showMonthProductivity ? (
+                      <ReportTh columnKey="month-productivity" printLabel={reportHeaderLabel("month-productivity", "Произв. накоп.")} width={reportColumnWidthByKey.get("month-productivity")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("month-productivity", "Произв. накоп.")}</ReportTh>
+                    ) : null}
                     <ReportTh columnKey="year-plan" printLabel={reportHeaderLabel("year-plan", "План с начала года")} width={reportColumnWidthByKey.get("year-plan")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-plan", "План с начала года")}</ReportTh>
                     <ReportTh columnKey="year-fact" printLabel={reportHeaderLabel("year-fact", "Маркзамер + недостающий оперучет")} width={reportColumnWidthByKey.get("year-fact")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-fact", "Маркзамер + недостающий оперучет")}</ReportTh>
                     <ReportTh columnKey="year-delta" printLabel={reportHeaderLabel("year-delta", "Откл.")} width={reportColumnWidthByKey.get("year-delta")} onResizeStart={onStartReportColumnResize}>{renderReportHeaderText("year-delta", "Откл.")}</ReportTh>
@@ -286,9 +292,11 @@ export default function ReportsSection({
                           <ReportTd align="center">{formatNumber(row.dayPlan)}</ReportTd>
                           <ReportTd align="center">{formatNumber(row.dayFact)}</ReportTd>
                           <ReportTd align="center" tone={dayDelta < 0 ? "bad" : "good"}>{formatNumber(dayDelta)}</ReportTd>
-                          <ReportTd align="center">
-                            <ReportMetric value={formatNumber(row.dayProductivity || row.dayFact)} note={formatPercent(row.dayFact, row.dayPlan)} />
-                          </ReportTd>
+                          {showDayProductivity ? (
+                            <ReportTd align="center">
+                              <ReportMetric value={formatNumber(row.dayProductivity || row.dayFact)} note={formatPercent(row.dayFact, row.dayPlan)} />
+                            </ReportTd>
+                          ) : null}
                           <ReportTd align="center" tone={dayReasonMissing ? "warn" : undefined} variant="reason">
                             {dayDelta < 0 ? (
                               <div className="report-reason-cell-content">
@@ -308,9 +316,11 @@ export default function ReportsSection({
                             <ReportMetric value={formatNumber(monthFact)} note={`марк ${formatNumber(row.monthSurveyFact)}`} />
                           </ReportTd>
                           <ReportTd align="center" tone={monthDelta < 0 ? "bad" : "good"}>{formatNumber(monthDelta)}</ReportTd>
-                          <ReportTd align="center">
-                            <ReportMetric value={formatNumber(row.monthProductivity || monthFact)} note={formatPercent(monthFact, row.monthPlan)} />
-                          </ReportTd>
+                          {showMonthProductivity ? (
+                            <ReportTd align="center">
+                              <ReportMetric value={formatNumber(row.monthProductivity || monthFact)} note={formatPercent(monthFact, row.monthPlan)} />
+                            </ReportTd>
+                          ) : null}
                           <ReportTd align="center">{formatNumber(row.yearPlan)}</ReportTd>
                           <ReportTd align="center">
                             <ReportMetric value={formatNumber(yearFact)} note={`марк ${formatNumber(row.yearSurveyFact)}`} />
@@ -338,7 +348,7 @@ export default function ReportsSection({
                 <tbody>
                   {filteredReportsCount === 0 && (
                     <tr>
-                      <ReportTd colSpan={20}>По выбранному заказчику пока нет настроенных строк.</ReportTd>
+                      <ReportTd colSpan={reportColumnKeys.length}>По выбранному заказчику пока нет настроенных строк.</ReportTd>
                     </tr>
                   )}
                 </tbody>

@@ -450,7 +450,8 @@ export default function App() {
   const [expandedAdminTab, setExpandedAdminTab] = useState<string | null>("reports");
   const [editingTopTabId, setEditingTopTabId] = useState<string | null>(null);
   const [editingSubTabId, setEditingSubTabId] = useState<string | null>(null);
-  const [, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База Supabase подключается..." : "База Supabase не настроена.");
+  const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База данных подключается..." : "База данных не настроена.");
+  const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!supabaseConfigured);
   const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
@@ -1152,11 +1153,14 @@ export default function App() {
 
     async function loadPtoDatabase() {
       if (!supabaseConfigured) {
-        setPtoDatabaseMessage("База Supabase не настроена.");
+        setPtoDatabaseReady(true);
+        setPtoDatabaseMessage("База данных не настроена.");
         return;
       }
 
-      setPtoDatabaseMessage("Загружаю ПТО из Supabase...");
+      ptoDatabaseLoadedRef.current = false;
+      setPtoDatabaseReady(false);
+      setPtoDatabaseMessage("Загружаю ПТО из базы данных...");
 
       try {
         const { loadPtoStateFromSupabase } = await import("@/lib/supabase/pto");
@@ -1166,9 +1170,10 @@ export default function App() {
         if (!databaseState) {
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
+          setPtoDatabaseReady(true);
           if (hasStoredPtoStateRef.current) {
             setPtoSaveRevision((revision) => revision + 1);
-            setPtoDatabaseMessage("В Supabase данных ПТО нет — оставил локальные данные и поставил сохранение в базу.");
+            setPtoDatabaseMessage("В базе данных ПТО нет — оставил локальные данные и поставил сохранение в базу.");
           } else {
             setPtoDatabaseMessage("База подключена. Данных ПТО пока нет — внеси изменение, оно сохранится автоматически.");
           }
@@ -1190,8 +1195,9 @@ export default function App() {
           savePtoLocalRecoveryBackup("restored-client-snapshot-to-supabase", databaseState.updatedAt);
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
+          setPtoDatabaseReady(true);
           setPtoSaveRevision((revision) => revision + 1);
-          setPtoDatabaseMessage("Локальные данные ПТО восстановлены из снимка и поставлены на сохранение в Supabase.");
+          setPtoDatabaseMessage("Локальные данные ПТО восстановлены из снимка и поставлены на сохранение в базу данных.");
           return;
         }
 
@@ -1249,9 +1255,14 @@ export default function App() {
         setPtoColumnWidths(normalizeNumberRecord(nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths, 44, 800));
         setPtoRowHeights(normalizeNumberRecord(nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights, 28, 180));
         setPtoHeaderLabels(normalizeStringRecord(nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels));
-        setPtoDatabaseMessage("ПТО загружено из Supabase.");
+        setPtoDatabaseReady(true);
+        setPtoDatabaseMessage("ПТО загружено из базы данных.");
       } catch (error) {
-        if (!cancelled) setPtoDatabaseMessage(`Supabase пока не готов: ${errorToMessage(error)}`);
+        if (!cancelled) {
+          ptoDatabaseLoadedRef.current = false;
+          setPtoDatabaseReady(false);
+          setPtoDatabaseMessage("Не удалось загрузить ПТО из базы данных: " + errorToMessage(error));
+        }
       }
     }
 
@@ -1486,15 +1497,18 @@ export default function App() {
 
   const savePtoDatabaseChanges = useCallback(async (mode: "auto" | "manual" = "manual") => {
     if (!supabaseConfigured) {
-      setPtoDatabaseMessage("База Supabase не настроена.");
+      setPtoDatabaseMessage("База данных не настроена.");
       return;
     }
 
-    if (!ptoDatabaseLoadedRef.current) return;
+    if (!ptoDatabaseLoadedRef.current) {
+      setPtoDatabaseMessage("База данных еще загружается. Сохранение ПТО отложено.");
+      return;
+    }
 
     const snapshotToSave = JSON.stringify(ptoDatabaseStateRef.current);
     if (mode === "auto" && snapshotToSave === ptoDatabaseSaveSnapshotRef.current) {
-      setPtoDatabaseMessage("ПТО сохранено в Supabase.");
+      setPtoDatabaseMessage("ПТО сохранено в базе данных.");
       return;
     }
 
@@ -1504,15 +1518,15 @@ export default function App() {
     }
 
     ptoDatabaseSavingRef.current = true;
-    setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в Supabase..." : "Сохраняю ПТО в Supabase...");
+    setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в базе данных..." : "Сохраняю ПТО в базе данных...");
 
     try {
       const { savePtoStateToSupabase } = await import("@/lib/supabase/pto");
       await savePtoStateToSupabase(ptoDatabaseStateRef.current);
       ptoDatabaseSaveSnapshotRef.current = snapshotToSave;
-      setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в Supabase." : "ПТО сохранено в Supabase.");
+      setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в базе данных." : "ПТО сохранено в базе данных.");
     } catch (error) {
-      setPtoDatabaseMessage(`Не удалось сохранить в Supabase: ${errorToMessage(error)}`);
+      setPtoDatabaseMessage(`Не удалось сохранить в базе данных: ${errorToMessage(error)}`);
     } finally {
       ptoDatabaseSavingRef.current = false;
       if (ptoDatabaseSaveQueuedRef.current) {
@@ -1931,27 +1945,35 @@ export default function App() {
     }
   }, []);
 
+  const visibleReportColumnKeys = useMemo(() => (
+    reportArea === "Р’СЃРµ СѓС‡Р°СЃС‚РєРё"
+      ? reportColumnKeys.filter((key) => key !== "day-productivity" && key !== "month-productivity")
+      : reportColumnKeys
+  ), [reportArea]);
+
   const autoReportColumnWidths = useMemo(() => (
-    Object.fromEntries(reportColumnKeys.map((key, index) => {
-      if (!needsDerivedReportRows) return [key, defaultReportColumnWidths[index] ?? 80];
+    Object.fromEntries(visibleReportColumnKeys.map((key) => {
+      const defaultIndex = reportColumnKeys.indexOf(key);
+      if (!needsDerivedReportRows) return [key, defaultReportColumnWidths[defaultIndex] ?? 80];
 
       const header = reportHeaderLabels[key]?.trim() || reportColumnHeaderFallbacks[key];
       const values = filteredReports.map((row) => reportColumnTextValue(key, row));
       return [key, reportAutoColumnWidth(key, header, values)];
     })) as Record<ReportColumnKey, number>
-  ), [filteredReports, needsDerivedReportRows, reportColumnTextValue, reportHeaderLabels]);
+  ), [filteredReports, needsDerivedReportRows, reportColumnTextValue, reportHeaderLabels, visibleReportColumnKeys]);
 
   const reportTableColumnWidths = useMemo(() => (
-    reportColumnKeys.map((key, index) => {
-      const autoWidth = autoReportColumnWidths[key] ?? defaultReportColumnWidths[index] ?? 80;
+    visibleReportColumnKeys.map((key) => {
+      const defaultIndex = reportColumnKeys.indexOf(key);
+      const autoWidth = autoReportColumnWidths[key] ?? defaultReportColumnWidths[defaultIndex] ?? 80;
       if (reportCompactColumnKeys.has(key)) return autoWidth;
 
       return Math.min(520, Math.max(autoWidth, Math.round(reportColumnWidths[key] ?? 0)));
     })
-  ), [autoReportColumnWidths, reportColumnWidths]);
+  ), [autoReportColumnWidths, reportColumnWidths, visibleReportColumnKeys]);
   const reportColumnWidthByKey = useMemo(() => (
-    new Map(reportColumnKeys.map((key, index) => [key, reportTableColumnWidths[index]]))
-  ), [reportTableColumnWidths]);
+    new Map(visibleReportColumnKeys.map((key, index) => [key, reportTableColumnWidths[index]]))
+  ), [reportTableColumnWidths, visibleReportColumnKeys]);
   const reportTableMinWidth = useMemo(() => (
     reportTableColumnWidths.reduce((sum, width) => sum + width, 0)
   ), [reportTableColumnWidths]);
@@ -5856,6 +5878,13 @@ export default function App() {
     window.print();
   }, []);
 
+  const renderPtoDatabaseGate = () => (
+    <SectionCard title="">
+      <div style={blockStyle}>{ptoDatabaseMessage}</div>
+    </SectionCard>
+  );
+  const shouldGatePtoDatabase = supabaseConfigured && !ptoDatabaseReady;
+
   return (
     <div className="app-print-root" style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
       <style>{reportPrintCss}</style>
@@ -5962,6 +5991,7 @@ export default function App() {
         </div>
 
         {renderedTopTab === "reports" && (
+          shouldGatePtoDatabase ? renderPtoDatabaseGate() : (
           <ReportsSection
             reportAreaTabs={reportAreaTabs}
             reportArea={reportArea}
@@ -5972,7 +6002,7 @@ export default function App() {
             reportCompletionCards={reportCompletionCards}
             reportTableMinWidth={reportTableMinWidth}
             reportTableColumnWidths={reportTableColumnWidths}
-            reportColumnKeys={reportColumnKeys}
+            reportColumnKeys={visibleReportColumnKeys}
             reportColumnWidthByKey={reportColumnWidthByKey}
             reportHeaderLabel={reportHeaderLabel}
             renderReportHeaderText={renderReportHeaderText}
@@ -5985,6 +6015,7 @@ export default function App() {
             onUpdateReportDayReasonDraft={updateReportDayReasonDraft}
             onCommitReportYearReason={commitReportYearReason}
           />
+          )
         )}
 
         {renderedTopTab === "dispatch" && (
@@ -6097,6 +6128,7 @@ export default function App() {
         )}
 
         {renderedTopTab === "pto" && (
+          shouldGatePtoDatabase ? renderPtoDatabaseGate() : (
           <PtoSection
             ptoTab={ptoTab}
             activePtoSubtabLabel={activePtoSubtab?.label ?? ptoTab}
@@ -6128,6 +6160,7 @@ export default function App() {
               { showLocation: false, editableMonthTotal: false },
             )}
           />
+          )
         )}
 
         {renderedTopTab === "tb" && (
