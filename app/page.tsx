@@ -3,7 +3,7 @@
 import { Check, ChevronDown, ChevronRight, Database, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
@@ -123,6 +123,7 @@ const clientIdStorageKey = "dispatcher:client-id";
 const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
 const clientSnapshotRestoreFlagKey = "dispatcher:restore-client-snapshot";
 const clientSnapshotSaveDelayMs = 1500;
+const clientSnapshotAutoMinIntervalMs = 120000;
 const saveStatusSavedHideMs = 2600;
 const saveStatusAttentionHideMs = 30000;
 const ptoLocalStateKeys = [
@@ -384,6 +385,7 @@ export default function App() {
   const clientSnapshotSaveTimerRef = useRef<number | null>(null);
   const clientSnapshotSaveSnapshotRef = useRef("");
   const clientSnapshotSaveDisabledRef = useRef(false);
+  const clientSnapshotLastAutoQueuedAtRef = useRef(0);
   const saveStatusTimerRef = useRef<number | null>(null);
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
@@ -629,6 +631,11 @@ export default function App() {
 
   const requestClientSnapshotSave = useCallback((reason = "auto") => {
     if (!supabaseConfigured || clientSnapshotSaveDisabledRef.current) return;
+
+    const manualSnapshot = reason.startsWith("manual");
+    const now = Date.now();
+    if (!manualSnapshot && now - clientSnapshotLastAutoQueuedAtRef.current < clientSnapshotAutoMinIntervalMs) return;
+    if (!manualSnapshot) clientSnapshotLastAutoQueuedAtRef.current = now;
 
     if (clientSnapshotSaveTimerRef.current !== null) {
       window.clearTimeout(clientSnapshotSaveTimerRef.current);
@@ -1812,7 +1819,7 @@ export default function App() {
   const deferredPtoSurveyRows = useDeferredValue(ptoSurveyRows);
   const deferredPtoOperRows = useDeferredValue(ptoOperRows);
   const deferredVehicleRows = useDeferredValue(vehicleRows);
-  const renderedTopTab = topTab;
+  const renderedTopTab = useDeferredValue(topTab);
   const needsReportRows = renderedTopTab === "reports"
     || (renderedTopTab === "admin" && adminSection === "reports");
   const needsDerivedReportRows = renderedTopTab === "reports";
@@ -2606,7 +2613,9 @@ export default function App() {
   }
 
   function selectPtoTab(tab: string) {
-    setPtoTab(tab);
+    startTransition(() => {
+      setPtoTab(tab);
+    });
   }
 
   function selectPtoPlanYear(year: string) {
