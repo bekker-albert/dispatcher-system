@@ -1934,17 +1934,18 @@ export default function App() {
   const activeAdminReportVisibleRowKeys = useMemo(() => (
     reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys)
   ), [activeAdminAutoReportRowKeys, activeAdminReportCustomer]);
-  const activeAdminReportSummaryPlanRowKeys = useMemo(() => new Set(
-    activeAdminReportCustomer.summaryRows
-      .map((summary) => summary.planRowKey)
-      .filter((key): key is string => Boolean(key?.trim())),
+  const activeAdminReportSummarySourceRowKeys = useMemo(() => new Set(
+    activeAdminReportCustomer.summaryRows.flatMap((summary) => [
+      ...summary.rowKeys,
+      ...(summary.planRowKey?.trim() ? [summary.planRowKey] : []),
+    ]),
   ), [activeAdminReportCustomer.summaryRows]);
   const activeAdminReportVisibleRows = useMemo(() => (
     activeAdminReportBaseRows.filter((row) => {
       const rowKey = reportRowKey(row);
-      return activeAdminReportVisibleRowKeys.has(rowKey) && !activeAdminReportSummaryPlanRowKeys.has(rowKey);
+      return activeAdminReportVisibleRowKeys.has(rowKey) && !activeAdminReportSummarySourceRowKeys.has(rowKey);
     })
-  ), [activeAdminReportBaseRows, activeAdminReportSummaryPlanRowKeys, activeAdminReportVisibleRowKeys]);
+  ), [activeAdminReportBaseRows, activeAdminReportSummarySourceRowKeys, activeAdminReportVisibleRowKeys]);
   const activeAdminReportOrderRows = useMemo(() => {
     if (!needsAdminReportRows) return [];
 
@@ -2021,15 +2022,16 @@ export default function App() {
     const customerRows = reportRowsForCustomer(derivedReportRows, activeReportCustomer);
     const customerAutoRowKeys = new Set(customerRows.filter(reportRowHasAutoShowData).map(reportRowKey));
     const visibleRowKeys = reportCustomerEffectiveRowKeys(activeReportCustomer, customerAutoRowKeys);
-    const summaryPlanRowKeys = new Set(
-      activeReportCustomer.summaryRows
-        .map((summary) => summary.planRowKey)
-        .filter((key): key is string => Boolean(key?.trim())),
+    const summarySourceRowKeys = new Set(
+      activeReportCustomer.summaryRows.flatMap((summary) => [
+        ...summary.rowKeys,
+        ...(summary.planRowKey?.trim() ? [summary.planRowKey] : []),
+      ]),
     );
     const selectedRows = customerRows
       .filter((row) => {
         const rowKey = reportRowKey(row);
-        return visibleRowKeys.has(rowKey) && !summaryPlanRowKeys.has(rowKey);
+        return visibleRowKeys.has(rowKey) && !summarySourceRowKeys.has(rowKey);
       })
       .map((row) => {
         const rowKey = reportRowKey(row);
