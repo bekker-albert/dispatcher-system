@@ -36,10 +36,6 @@ const defaultReportForm: ReportRow = {
   annualFact: 0,
 };
 
-function sourceValue(source: { matched: boolean; value: number }, fallback: number) {
-  return source.matched ? source.value : fallback;
-}
-
 export function reportPtoIndexKey(area: string, name: string) {
   return `${normalizeLookupValue(cleanAreaName(area))}::${normalizeLookupValue(name)}`;
 }
@@ -261,6 +257,53 @@ function carryoverTotal(entry: ReportPtoIndexEntry | undefined, year: string) {
   return entry?.carryoverTotals.get(year) ?? 0;
 }
 
+function latestFactDateInRange(entry: ReportPtoIndexEntry | undefined, startDate: string, endDate: string) {
+  if (!entry || startDate > endDate) return null;
+
+  const endIndex = upperBoundPrefixIndex(entry.prefixTotals, endDate);
+  for (let index = endIndex; index >= 0; index -= 1) {
+    const date = entry.prefixTotals[index].date;
+    if (date < startDate) return null;
+    return date;
+  }
+
+  return null;
+}
+
+function surveyOperFactThroughDate(
+  surveyEntry: ReportPtoIndexEntry | undefined,
+  operEntry: ReportPtoIndexEntry | undefined,
+  startDate: string,
+  endDate: string,
+  options: { carryoverYear?: string } = {},
+) {
+  const surveyDate = latestFactDateInRange(surveyEntry, startDate, endDate);
+  const surveyCarryover = options.carryoverYear ? carryoverTotal(surveyEntry, options.carryoverYear) : 0;
+  const operCarryover = options.carryoverYear ? carryoverTotal(operEntry, options.carryoverYear) : 0;
+
+  if (surveyDate) {
+    return {
+      matched: true,
+      surveyFact: surveyCarryover + rangeTotal(surveyEntry, startDate, surveyDate),
+      operFact: rangeTotal(operEntry, nextDate(surveyDate), endDate),
+    };
+  }
+
+  if (surveyCarryover !== 0) {
+    return {
+      matched: true,
+      surveyFact: surveyCarryover,
+      operFact: rangeTotal(operEntry, startDate, endDate),
+    };
+  }
+
+  return {
+    matched: Boolean(surveyEntry || operEntry),
+    surveyFact: 0,
+    operFact: operCarryover + rangeTotal(operEntry, startDate, endDate),
+  };
+}
+
 export function deriveReportRowFromPto(
   row: ReportRow,
   reportDateValue: string,
@@ -268,73 +311,13 @@ export function deriveReportRowFromPto(
   surveyRows: PtoPlanRow[],
   operRows: PtoPlanRow[],
 ): ReportRow {
-  const year = reportDateValue.slice(0, 4);
-  const month = reportDateValue.slice(0, 7);
-  const cutoffDate = reportSurveyCheckpoint(reportDateValue);
-
-  const dayPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date === reportDateValue),
-    row.dayPlan,
+  return deriveReportRowFromPtoIndex(
+    row,
+    reportDateValue,
+    buildReportPtoIndex(planRows),
+    buildReportPtoIndex(surveyRows),
+    buildReportPtoIndex(operRows),
   );
-  const monthTotalPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(month)),
-    row.monthTotalPlan,
-  );
-  const monthPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(month) && date <= reportDateValue),
-    row.monthPlan,
-  );
-  const yearPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(year) && date <= reportDateValue, { includeCarryover: true, carryoverYear: year }),
-    row.yearPlan,
-  );
-  const annualPlan = sourceValue(
-    sumPtoRows(planRows, row, (date) => date.startsWith(year), { includeCarryover: true, carryoverYear: year }),
-    row.annualPlan,
-  );
-
-  const dayOperFact = sumPtoRows(operRows, row, (date) => date === reportDateValue);
-  const daySurveyFact = sumPtoRows(surveyRows, row, (date) => date === reportDateValue);
-  const dayFact = dayOperFact.value || daySurveyFact.value || (dayOperFact.matched || daySurveyFact.matched ? 0 : row.dayFact);
-
-  const monthSurveyFact = sourceValue(
-    sumPtoRows(surveyRows, row, (date) => date.startsWith(month) && date <= cutoffDate),
-    row.monthSurveyFact,
-  );
-  const monthOperFact = sourceValue(
-    sumPtoRows(operRows, row, (date) => date.startsWith(month) && date > cutoffDate && date <= reportDateValue),
-    row.monthOperFact,
-  );
-  const yearSurveyFact = sourceValue(
-    sumPtoRows(surveyRows, row, (date) => date.startsWith(year) && date <= cutoffDate, { includeCarryover: true, carryoverYear: year }),
-    row.yearSurveyFact,
-  );
-  const yearOperFact = sourceValue(
-    sumPtoRows(operRows, row, (date) => date.startsWith(year) && date > cutoffDate && date <= reportDateValue, { includeCarryover: true, carryoverYear: year }),
-    row.yearOperFact,
-  );
-
-  const monthFact = monthSurveyFact + monthOperFact || row.monthFact;
-  const yearFact = yearSurveyFact + yearOperFact || row.yearFact;
-
-  return {
-    ...row,
-    dayPlan,
-    dayFact,
-    dayProductivity: row.dayProductivity || dayFact,
-    monthTotalPlan,
-    monthPlan,
-    monthSurveyFact,
-    monthOperFact,
-    monthFact,
-    monthProductivity: row.monthProductivity || monthFact,
-    yearPlan,
-    yearSurveyFact,
-    yearOperFact,
-    yearFact,
-    annualPlan,
-    annualFact: yearFact,
-  };
 }
 
 export function deriveReportRowFromPtoIndex(
@@ -350,8 +333,6 @@ export function deriveReportRowFromPtoIndex(
   const yearEnd = `${year}-12-31`;
   const monthStart = `${month}-01`;
   const monthEnd = `${month}-31`;
-  const cutoffDate = reportSurveyCheckpoint(reportDateValue);
-  const operStartDate = nextDate(cutoffDate);
   const planEntry = reportIndexEntry(planIndex, row);
   const surveyEntry = reportIndexEntry(surveyIndex, row);
   const operEntry = reportIndexEntry(operIndex, row);
@@ -366,13 +347,15 @@ export function deriveReportRowFromPtoIndex(
   const daySurveyFact = exactDateTotal(surveyEntry, reportDateValue);
   const dayFact = dayOperFact || daySurveyFact || (operEntry || surveyEntry ? 0 : row.dayFact);
 
-  const monthSurveyFact = indexedSourceValue(surveyEntry, rangeTotal(surveyEntry, monthStart, cutoffDate), row.monthSurveyFact);
-  const monthOperFact = indexedSourceValue(operEntry, rangeTotal(operEntry, operStartDate, reportDateValue), row.monthOperFact);
-  const yearSurveyFact = indexedSourceValue(surveyEntry, carryoverTotal(surveyEntry, year) + rangeTotal(surveyEntry, yearStart, cutoffDate), row.yearSurveyFact);
-  const yearOperFact = indexedSourceValue(operEntry, carryoverTotal(operEntry, year) + rangeTotal(operEntry, operStartDate, reportDateValue), row.yearOperFact);
+  const monthFactSource = surveyOperFactThroughDate(surveyEntry, operEntry, monthStart, reportDateValue);
+  const yearFactSource = surveyOperFactThroughDate(surveyEntry, operEntry, yearStart, reportDateValue, { carryoverYear: year });
+  const monthSurveyFact = monthFactSource.matched ? monthFactSource.surveyFact : row.monthSurveyFact;
+  const monthOperFact = monthFactSource.matched ? monthFactSource.operFact : row.monthOperFact;
+  const yearSurveyFact = yearFactSource.matched ? yearFactSource.surveyFact : row.yearSurveyFact;
+  const yearOperFact = yearFactSource.matched ? yearFactSource.operFact : row.yearOperFact;
 
-  const monthFact = monthSurveyFact + monthOperFact || row.monthFact;
-  const yearFact = yearSurveyFact + yearOperFact || row.yearFact;
+  const monthFact = monthFactSource.matched ? monthSurveyFact + monthOperFact : row.monthFact;
+  const yearFact = yearFactSource.matched ? yearSurveyFact + yearOperFact : row.yearFact;
 
   return {
     ...row,

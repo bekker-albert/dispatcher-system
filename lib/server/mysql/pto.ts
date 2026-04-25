@@ -84,7 +84,6 @@ type PtoDayValuePatch = {
 
 const ptoManualYearsKey = "pto_manual_years";
 const ptoUiStateKey = "pto_ui_state";
-const ptoTables: MysqlPtoTable[] = ["plan", "oper", "survey"];
 const batchSize = 250;
 
 function asStringArray(value: unknown): string[] {
@@ -445,17 +444,19 @@ export async function savePtoDayValuesToMysql(table: MysqlPtoTable, values: PtoD
   }
 }
 
-export async function deletePtoRowsFromMysql(rowIds: string[]) {
+export async function deletePtoRowsFromMysql(table: MysqlPtoTable, rowIds: string[]) {
   if (rowIds.length === 0) return;
 
   const placeholders = rowIds.map(() => "?").join(", ");
 
-  for (const table of ptoTables) {
-    await dbExecute(
-      `DELETE FROM pto_rows WHERE table_type = ? AND row_id IN (${placeholders})`,
-      [table, ...rowIds],
-    );
-  }
+  await dbExecute(
+    `DELETE FROM pto_day_values WHERE table_type = ? AND row_id IN (${placeholders})`,
+    [table, ...rowIds],
+  );
+  await dbExecute(
+    `DELETE FROM pto_rows WHERE table_type = ? AND row_id IN (${placeholders})`,
+    [table, ...rowIds],
+  );
 }
 
 export async function deletePtoYearFromMysql(year: string) {

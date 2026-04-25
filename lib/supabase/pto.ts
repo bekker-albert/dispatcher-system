@@ -90,7 +90,6 @@ const ptoBucketRowsTable = "pto_bucket_rows";
 const ptoBucketValuesTable = "pto_bucket_values";
 const ptoManualYearsKey = "pto_manual_years";
 const ptoUiStateKey = "pto_ui_state";
-const ptoTables: SupabasePtoTable[] = ["plan", "oper", "survey"];
 const batchSize = 500;
 
 function requireSupabase() {
@@ -497,23 +496,28 @@ export async function savePtoDayValuesToSupabase(table: SupabasePtoTable, values
   }
 }
 
-export async function deletePtoRowsFromSupabase(rowIds: string[]) {
+export async function deletePtoRowsFromSupabase(table: SupabasePtoTable, rowIds: string[]) {
   if (serverDatabaseConfigured) {
-    await databaseRequest("pto", "delete", { rowIds });
+    await databaseRequest("pto", "delete", { table, rowIds });
     return;
   }
 
   if (rowIds.length === 0) return;
   const client = requireSupabase();
 
-  for (const table of ptoTables) {
-    const { error } = await client
-      .from(ptoRowsTable)
-      .delete()
-      .eq("table_type", table)
-      .in("row_id", rowIds);
-    if (error) throw error;
-  }
+  const { error: dayValuesError } = await client
+    .from(ptoDayValuesTable)
+    .delete()
+    .eq("table_type", table)
+    .in("row_id", rowIds);
+  if (dayValuesError) throw dayValuesError;
+
+  const { error } = await client
+    .from(ptoRowsTable)
+    .delete()
+    .eq("table_type", table)
+    .in("row_id", rowIds);
+  if (error) throw error;
 }
 
 export async function deletePtoYearFromSupabase(year: string) {

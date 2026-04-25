@@ -3422,26 +3422,31 @@ export default function App() {
   }
 
   function removeLinkedPtoDateRow(row: PtoPlanRow) {
+    const table = currentPtoDateTableKey();
+    if (!table) return;
     const rowName = [cleanAreaName(row.area), row.structure].filter(Boolean).join(" / ") || "строку ПТО";
-    const confirmed = window.confirm(`Вы точно хотите удалить ${rowName}? Строка удалится из Плана, Оперучета и Замера.`);
+    const confirmed = window.confirm(`\u0412\u044b \u0442\u043e\u0447\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u0443\u0434\u0430\u043b\u0438\u0442\u044c ${rowName}? \u0421\u0442\u0440\u043e\u043a\u0430 \u0443\u0434\u0430\u043b\u0438\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0438\u0437 \u0432\u043a\u043b\u0430\u0434\u043a\u0438 "${currentPtoTableLabel()}".`);
     if (!confirmed) return;
 
-    const signature = ptoLinkedRowSignature(row);
-    const removeRow = (current: PtoPlanRow[]) => current.filter((item) => !ptoLinkedRowMatches(item, row.id, signature));
+    const removeRow = (current: PtoPlanRow[]) => current.filter((item) => item.id !== row.id);
 
-    setPtoPlanRows(removeRow);
-    setPtoOperRows(removeRow);
-    setPtoSurveyRows(removeRow);
+    if (table === "plan") {
+      setPtoPlanRows(removeRow);
+    } else if (table === "oper") {
+      setPtoOperRows(removeRow);
+    } else {
+      setPtoSurveyRows(removeRow);
+    }
     if (supabaseConfigured && ptoDatabaseLoadedRef.current) {
       void import("@/lib/supabase/pto")
-        .then(({ deletePtoRowsFromSupabase }) => deletePtoRowsFromSupabase([row.id]))
+        .then(({ deletePtoRowsFromSupabase }) => deletePtoRowsFromSupabase(table, [row.id]))
         .catch((error) => console.warn("Supabase PTO row delete failed:", error));
     }
     requestPtoDatabaseSave();
     addAdminLog({
       action: "Удаление",
       section: "ПТО",
-      details: `Удалена строка: ${rowName}.`,
+      details: `\u0423\u0434\u0430\u043b\u0435\u043d\u0430 \u0441\u0442\u0440\u043e\u043a\u0430 \u0438\u0437 ${currentPtoTableLabel()}: ${rowName}.`,
     });
   }
 

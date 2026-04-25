@@ -153,7 +153,7 @@ export async function POST(request: Request) {
         return json({ ok: true }, 200, request);
       }
       if (action === "delete") {
-        await pto.deletePtoRowsFromMysql((record.rowIds ?? []) as string[]);
+        await pto.deletePtoRowsFromMysql(record.table as PtoDateTableKey, (record.rowIds ?? []) as string[]);
         return json({ ok: true }, 200, request);
       }
       if (action === "save-bucket-row") {

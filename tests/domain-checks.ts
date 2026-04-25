@@ -198,6 +198,58 @@ assert.equal(derivedReportRow.yearPlan, 100);
 assert.deepEqual(indexedDerivedReportRow, derivedReportRow);
 assert.equal(reportYearFact(derivedReportRow), 80);
 assert.equal(delta(derivedReportRow.dayPlan, derivedReportRow.dayFact), -20);
+
+const surveyCutoffPlanRow = normalizePtoPlanRow({
+  id: "plan-survey-cutoff",
+  area: "Aksu",
+  structure: "Survey Cutoff",
+  unit: "m3",
+  dailyPlans: { "2026-04-24": 1 },
+  years: ["2026"],
+});
+const surveyCutoffOperRow = normalizePtoPlanRow({
+  id: "oper-survey-cutoff",
+  area: "Aksu",
+  structure: "Survey Cutoff",
+  unit: "m3",
+  dailyPlans: Object.fromEntries(dateRange("2026-04-01", "2026-04-24").map((date) => [date, 1])),
+  years: ["2026"],
+});
+const surveyCutoffSurveyRow = normalizePtoPlanRow({
+  id: "survey-survey-cutoff",
+  area: "Aksu",
+  structure: "Survey Cutoff",
+  unit: "m3",
+  dailyPlans: {
+    "2026-04-05": 10,
+    "2026-04-11": 20,
+    "2026-04-15": 30,
+    "2026-04-20": 40,
+  },
+  years: ["2026"],
+});
+const surveyCutoffReportRow = createReportRowFromPtoPlan(surveyCutoffPlanRow);
+const surveyCutoffDerivedRow = deriveReportRowFromPtoIndex(
+  surveyCutoffReportRow,
+  "2026-04-24",
+  buildReportPtoIndex([surveyCutoffPlanRow]),
+  buildReportPtoIndex([surveyCutoffSurveyRow]),
+  buildReportPtoIndex([surveyCutoffOperRow]),
+);
+const noSurveyDerivedRow = deriveReportRowFromPtoIndex(
+  surveyCutoffReportRow,
+  "2026-04-24",
+  buildReportPtoIndex([surveyCutoffPlanRow]),
+  buildReportPtoIndex([]),
+  buildReportPtoIndex([surveyCutoffOperRow]),
+);
+
+assert.equal(surveyCutoffDerivedRow.monthSurveyFact, 100);
+assert.equal(surveyCutoffDerivedRow.monthOperFact, 4);
+assert.equal(reportYearFact(surveyCutoffDerivedRow), 104);
+assert.equal(noSurveyDerivedRow.monthSurveyFact, 0);
+assert.equal(noSurveyDerivedRow.monthOperFact, 24);
+assert.equal(reportYearFact(noSurveyDerivedRow), 24);
 assert.ok(reportAutoColumnWidth("day-plan", "План суточный", ["123 456"]) <= 56);
 assert.ok(reportAutoColumnWidth("unit", "Ед.", ["м3"]) <= 34);
 assert.equal(defaultReportRows.length, 5);
