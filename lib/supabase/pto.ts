@@ -1,6 +1,8 @@
 import type { PtoBucketRow } from "../domain/pto/buckets";
 import type { PtoDateTableKey, PtoPlanRow } from "../domain/pto/date-table";
+import { databaseRequest } from "../database/rpc";
 import { supabase, supabaseConfigured } from "./client";
+import { serverDatabaseConfigured } from "./config";
 
 export type SupabasePtoTable = PtoDateTableKey;
 
@@ -285,6 +287,10 @@ async function upsertPtoBucketValues(records: PtoBucketValueRecord[]) {
 }
 
 export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | null> {
+  if (serverDatabaseConfigured) {
+    return databaseRequest<SupabasePtoState | null>("pto", "load");
+  }
+
   const client = requireSupabase();
 
   const [
@@ -364,6 +370,11 @@ export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | nul
 }
 
 export async function savePtoStateToSupabase(state: SupabasePtoState) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "save", { state });
+    return;
+  }
+
   const updatedAt = new Date().toISOString();
   const client = requireSupabase();
   const rowRecords = [
@@ -408,6 +419,11 @@ export async function savePtoDayValueToSupabase(
   day: string,
   value: number | null,
 ) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "save-day", { table, rowId, day, value });
+    return;
+  }
+
   const client = requireSupabase();
 
   if (value === null) {
@@ -430,6 +446,11 @@ export async function savePtoDayValueToSupabase(
 }
 
 export async function savePtoDayValuesToSupabase(table: SupabasePtoTable, values: PtoDayValuePatch[]) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "save-days", { table, values });
+    return;
+  }
+
   const client = requireSupabase();
   const upsertRecords = values
     .filter((item) => item.value !== null)
@@ -455,6 +476,11 @@ export async function savePtoDayValuesToSupabase(table: SupabasePtoTable, values
 }
 
 export async function deletePtoRowsFromSupabase(rowIds: string[]) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "delete", { rowIds });
+    return;
+  }
+
   if (rowIds.length === 0) return;
   const client = requireSupabase();
 
@@ -469,6 +495,11 @@ export async function deletePtoRowsFromSupabase(rowIds: string[]) {
 }
 
 export async function deletePtoYearFromSupabase(year: string) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "delete-year", { year });
+    return;
+  }
+
   const client = requireSupabase();
   const { error } = await client
     .from(ptoDayValuesTable)
@@ -479,6 +510,11 @@ export async function deletePtoYearFromSupabase(year: string) {
 }
 
 export async function savePtoBucketRowToSupabase(row: PtoBucketRow, sortIndex = 0) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "save-bucket-row", { row, sortIndex });
+    return;
+  }
+
   await upsertPtoBucketRows([{
     row_key: row.key,
     area: row.area,
@@ -489,6 +525,11 @@ export async function savePtoBucketRowToSupabase(row: PtoBucketRow, sortIndex = 
 }
 
 export async function deletePtoBucketRowFromSupabase(rowKeyValue: string) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "delete-bucket-row", { rowKey: rowKeyValue });
+    return;
+  }
+
   const client = requireSupabase();
   const { error } = await client
     .from(ptoBucketRowsTable)
@@ -498,6 +539,11 @@ export async function deletePtoBucketRowFromSupabase(rowKeyValue: string) {
 }
 
 export async function savePtoBucketValueToSupabase(cellKey: string, value: number | null) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "save-bucket-value", { cellKey, value });
+    return;
+  }
+
   const parsed = splitBucketCellKey(cellKey);
   if (!parsed) return;
 
@@ -521,6 +567,11 @@ export async function savePtoBucketValueToSupabase(cellKey: string, value: numbe
 }
 
 export async function deletePtoBucketValuesFromSupabase(cellKeys: string[]) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("pto", "delete-bucket-values", { cellKeys });
+    return;
+  }
+
   const client = requireSupabase();
 
   for (const cellKey of cellKeys) {

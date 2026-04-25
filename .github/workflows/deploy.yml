@@ -38,7 +38,7 @@ jobs:
             cd /var/www/dispatcher/data/www/aam-dispatch.kz
             git fetch --prune origin main
             git reset --hard origin/main
-            npm ci
+            npm install --no-audit --no-fund --prefer-offline
             npm run build
             /usr/lib/ispnodejs/bin/pm2 reload aam-dispatch --update-env
           EOF

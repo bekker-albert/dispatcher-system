@@ -65,7 +65,7 @@ assert.equal(defaultPtoOperRows.length, 5);
 assert.equal(defaultPtoPlanRows[0].dailyPlans[defaultReportDate], 2064);
 assert.equal(defaultOrgMembers.length, 3);
 assert.equal(adminSectionTabs.some((tab) => tab.value === "vehicles"), true);
-assert.equal(structureSectionTabs.at(-1)?.value, "roles");
+assert.equal(structureSectionTabs.at(-1)?.value, "schedule");
 assert.equal(defaultDependencyNodes.some((node) => node.id === "reports"), true);
 assert.equal(defaultDependencyLinks.every((link) => defaultDependencyNodes.some((node) => node.id === link.fromNodeId) && defaultDependencyNodes.some((node) => node.id === link.toNodeId)), true);
 assert.equal(dependencyStages.at(-1)?.nodeIds.includes("reports"), true);

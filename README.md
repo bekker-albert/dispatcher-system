@@ -16,20 +16,27 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Supabase setup
+## Database setup
 
-1. Open the Supabase project.
-2. Go to SQL Editor.
-3. Paste and run `supabase/pto-schema.sql`.
-4. Add these variables locally in `.env.local` and on the hosting site:
+Production uses the server MySQL database through Next.js API routes. The password must stay only in `.env.local` on the server.
+
+```bash
+NEXT_PUBLIC_DATA_PROVIDER=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=aam_dispatch
+DB_USER=dispatcher_ad
+DB_PASSWORD=
+```
+
+The app creates required MySQL tables automatically on the first database request if the database user has rights inside its own database.
+
+Supabase remains as a fallback for old local setups. To use it instead of MySQL, remove `NEXT_PUBLIC_DATA_PROVIDER=mysql` and set:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 ```
-
-The database step stores PTO tabs: plan, operation accounting, survey, and PTO years.
-For the prototype stage, PTO data is available through the public anon key so the app can work without a login screen. Add proper users and roles before opening the public site for real operations.
 
 ## Desktop shortcut
 

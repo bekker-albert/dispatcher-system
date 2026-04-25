@@ -1,6 +1,8 @@
 import { normalizeVehicleRow } from "../domain/vehicles/defaults";
 import type { VehicleRow } from "../domain/vehicles/types";
+import { databaseRequest } from "../database/rpc";
 import { supabase, supabaseConfigured } from "./client";
+import { serverDatabaseConfigured } from "./config";
 
 export type SupabaseVehiclesState = {
   updatedAt?: string;
@@ -69,6 +71,10 @@ function recordToVehicle(record: VehicleRecord): VehicleRow {
 }
 
 export async function loadVehiclesFromSupabase(): Promise<SupabaseVehiclesState | null> {
+  if (serverDatabaseConfigured) {
+    return databaseRequest<SupabaseVehiclesState | null>("vehicles", "load");
+  }
+
   const client = requireSupabase();
   const { data, error } = await client
     .from(vehiclesTable)
@@ -92,6 +98,11 @@ export async function loadVehiclesFromSupabase(): Promise<SupabaseVehiclesState 
 }
 
 export async function saveVehiclesToSupabase(rows: VehicleRow[]) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("vehicles", "save", { rows });
+    return;
+  }
+
   const records = rows.map(vehicleToRecord);
   if (records.length === 0) return;
   const client = requireSupabase();
@@ -106,6 +117,11 @@ export async function saveVehiclesToSupabase(rows: VehicleRow[]) {
 }
 
 export async function replaceVehiclesInSupabase(rows: VehicleRow[]) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("vehicles", "replace", { rows });
+    return;
+  }
+
   const client = requireSupabase();
   const { error: deleteError } = await client
     .from(vehiclesTable)
@@ -117,6 +133,11 @@ export async function replaceVehiclesInSupabase(rows: VehicleRow[]) {
 }
 
 export async function deleteVehicleFromSupabase(id: number) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("vehicles", "delete", { id });
+    return;
+  }
+
   const client = requireSupabase();
   const { error } = await client
     .from(vehiclesTable)

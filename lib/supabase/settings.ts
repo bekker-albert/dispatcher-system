@@ -1,4 +1,6 @@
+import { databaseRequest } from "../database/rpc";
 import { supabase, supabaseConfigured } from "./client";
+import { serverDatabaseConfigured } from "./config";
 
 export type SupabaseSettingRecord = {
   key: string;
@@ -17,6 +19,10 @@ function requireSupabase() {
 }
 
 export async function loadAppSettingsFromSupabase(keys: string[]) {
+  if (serverDatabaseConfigured) {
+    return databaseRequest<SupabaseSettingRecord[]>("settings", "load", { keys });
+  }
+
   if (keys.length === 0) return [];
   const client = requireSupabase();
   const { data, error } = await client
@@ -29,6 +35,11 @@ export async function loadAppSettingsFromSupabase(keys: string[]) {
 }
 
 export async function saveAppSettingsToSupabase(settings: Record<string, unknown>) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("settings", "save", { settings });
+    return;
+  }
+
   const records = Object.entries(settings).map(([key, value]) => ({
     key,
     value,
