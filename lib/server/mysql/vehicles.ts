@@ -1,6 +1,6 @@
 import type { RowDataPacket } from "mysql2/promise";
-import { normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
-import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import { normalizeVehicleRow } from "../../domain/vehicles/defaults";
+import type { VehicleRow } from "../../domain/vehicles/types";
 import { dbExecute, dbRows } from "./pool";
 import { parseJson, stringifyJson, toIsoLike } from "./json";
 

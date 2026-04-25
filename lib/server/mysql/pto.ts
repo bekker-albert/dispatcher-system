@@ -1,6 +1,6 @@
 import type { RowDataPacket } from "mysql2/promise";
-import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
-import type { PtoDateTableKey, PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { PtoBucketRow } from "../../domain/pto/buckets";
+import type { PtoDateTableKey, PtoPlanRow } from "../../domain/pto/date-table";
 import { dbExecute, dbRows } from "./pool";
 import { parseJson, stringifyJson, toDateKey, toIsoLike } from "./json";
 
