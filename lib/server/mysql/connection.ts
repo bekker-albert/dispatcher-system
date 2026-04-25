@@ -10,3 +10,10 @@ export function getMysqlPool() {
 
   return pool;
 }
+
+export async function closeMysqlPool() {
+  if (!pool) return;
+
+  await pool.end();
+  pool = null;
+}

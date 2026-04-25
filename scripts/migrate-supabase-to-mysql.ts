@@ -103,7 +103,15 @@ async function run() {
   }, null, 2));
 }
 
-run().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+async function closeConnections() {
+  const { closeMysqlPool } = await import("../lib/server/mysql/connection");
+  await closeMysqlPool();
+}
+
+run()
+  .then(closeConnections)
+  .catch(async (error) => {
+    console.error(error);
+    await closeConnections().catch(() => undefined);
+    process.exit(1);
+  });

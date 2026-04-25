@@ -237,6 +237,26 @@ function latestUpdatedAt(...groups: Array<Array<{ updated_at?: string | null }>>
     .at(-1);
 }
 
+async function loadPagedRecords<T>(
+  loadPage: (from: number, to: number) => Promise<{ data: T[] | null; error: unknown }>,
+) {
+  const records: T[] = [];
+
+  for (let from = 0; ; from += batchSize) {
+    const to = from + batchSize - 1;
+    const { data, error } = await loadPage(from, to);
+
+    if (error) throw error;
+
+    const page = data ?? [];
+    records.push(...page);
+
+    if (page.length < batchSize) break;
+  }
+
+  return records;
+}
+
 async function upsertPtoRows(records: PtoRowRecord[]) {
   if (!records.length) return;
   const client = requireSupabase();
@@ -293,46 +313,48 @@ export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | nul
 
   const client = requireSupabase();
 
-  const [
-    { data: rows, error: rowsError },
-    { data: dayValues, error: dayValuesError },
-    { data: settings, error: settingsError },
-    { data: bucketRows, error: bucketRowsError },
-    { data: bucketValues, error: bucketValuesError },
-  ] = await Promise.all([
-    client
-      .from(ptoRowsTable)
-      .select("*")
-      .order("table_type", { ascending: true })
-      .order("sort_index", { ascending: true }),
-    client
-      .from(ptoDayValuesTable)
-      .select("*")
-      .order("work_date", { ascending: true }),
+  const [ptoRows, ptoDayValues, { data: settings, error: settingsError }, ptoBucketRows, ptoBucketValues] = await Promise.all([
+    loadPagedRecords<PtoRowRecord>(async (from, to) => {
+      const result = await client
+        .from(ptoRowsTable)
+        .select("*")
+        .order("table_type", { ascending: true })
+        .order("sort_index", { ascending: true })
+        .range(from, to);
+      return { data: (result.data ?? null) as PtoRowRecord[] | null, error: result.error };
+    }),
+    loadPagedRecords<PtoDayValueRecord>(async (from, to) => {
+      const result = await client
+        .from(ptoDayValuesTable)
+        .select("*")
+        .order("work_date", { ascending: true })
+        .range(from, to);
+      return { data: (result.data ?? null) as PtoDayValueRecord[] | null, error: result.error };
+    }),
     client
       .from(ptoSettingsTable)
       .select("*")
       .in("key", [ptoManualYearsKey, ptoUiStateKey]),
-    client
-      .from(ptoBucketRowsTable)
-      .select("*")
-      .order("sort_index", { ascending: true }),
-    client
-      .from(ptoBucketValuesTable)
-      .select("*"),
+    loadPagedRecords<PtoBucketRowRecord>(async (from, to) => {
+      const result = await client
+        .from(ptoBucketRowsTable)
+        .select("*")
+        .order("sort_index", { ascending: true })
+        .range(from, to);
+      return { data: (result.data ?? null) as PtoBucketRowRecord[] | null, error: result.error };
+    }),
+    loadPagedRecords<PtoBucketValueRecord>(async (from, to) => {
+      const result = await client
+        .from(ptoBucketValuesTable)
+        .select("*")
+        .range(from, to);
+      return { data: (result.data ?? null) as PtoBucketValueRecord[] | null, error: result.error };
+    }),
   ]);
 
-  if (rowsError) throw rowsError;
-  if (dayValuesError) throw dayValuesError;
   if (settingsError) throw settingsError;
-  if (bucketRowsError) throw bucketRowsError;
-  if (bucketValuesError) throw bucketValuesError;
 
-  const ptoRows = (rows ?? []) as PtoRowRecord[];
-  const ptoDayValues = (dayValues ?? []) as PtoDayValueRecord[];
   const ptoSettings = (settings ?? []) as PtoSettingRecord[];
-  const ptoBucketRows = (bucketRows ?? []) as PtoBucketRowRecord[];
-  const ptoBucketValues = (bucketValues ?? []) as PtoBucketValueRecord[];
 
   if (
     ptoRows.length === 0
