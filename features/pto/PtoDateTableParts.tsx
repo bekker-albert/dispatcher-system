@@ -29,6 +29,8 @@ export function PtoPlanTh({
   width,
   onResizeStart,
 }: PtoPlanThProps) {
+  const justifyContent = align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start";
+
   return (
     <th
       colSpan={colSpan}
@@ -39,7 +41,7 @@ export function PtoPlanTh({
         ...(width ? { width, minWidth: width, maxWidth: width } : null),
       }}
     >
-      <div style={ptoHeaderContentStyle}>{children}</div>
+      <div style={{ ...ptoHeaderContentStyle, justifyContent, textAlign: align }}>{children}</div>
       {columnKey && width && onResizeStart ? (
         <span
           onMouseDown={(event) => onResizeStart(event, columnKey, width)}
@@ -90,6 +92,9 @@ const ptoPlanThStyle: CSSProperties = {
 };
 
 const ptoHeaderContentStyle: CSSProperties = {
+  display: "flex",
+  width: "100%",
+  alignItems: "center",
   minWidth: 0,
   overflow: "visible",
   whiteSpace: "normal",
@@ -97,6 +102,7 @@ const ptoHeaderContentStyle: CSSProperties = {
   wordBreak: "normal",
   hyphens: "none",
   lineHeight: 1.15,
+  textAlign: "inherit",
 };
 
 const ptoColumnResizeHandleStyle: CSSProperties = {
@@ -133,7 +139,7 @@ const ptoEditingFormulaCellStyle: CSSProperties = {
 };
 
 export function ptoStatusControlStyle(status: PtoStatus): CSSProperties {
-  if (status === "Новая") {
+  if (status === "Новая" || status === "Пусто") {
     return {
       background: "#f1f5f9",
       borderColor: "#cbd5e1",

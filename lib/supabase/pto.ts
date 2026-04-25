@@ -36,8 +36,8 @@ type PtoRowRecord = {
   area: string | null;
   location: string | null;
   structure: string | null;
+  customer_code: string | null;
   unit: string | null;
-  coefficient: number | string | null;
   status: string | null;
   carryover: number | string | null;
   carryovers: unknown;
@@ -134,8 +134,8 @@ function ptoRowsToRecords(table: SupabasePtoTable, rows: SupabasePtoRow[]): PtoR
     area: row.area,
     location: row.location,
     structure: row.structure,
+    customer_code: row.customerCode ?? "",
     unit: row.unit,
-    coefficient: Number(row.coefficient ?? 0),
     status: row.status,
     carryover: Number(row.carryover ?? 0),
     carryovers: row.carryovers ?? {},
@@ -164,8 +164,8 @@ function recordToRow(record: PtoRowRecord, dailyPlans: Record<string, number>): 
     area: record.area ?? "",
     location: record.location ?? "",
     structure: record.structure ?? "",
+    customerCode: record.customer_code ?? "",
     unit: record.unit ?? "",
-    coefficient: asFiniteNumber(record.coefficient),
     status: record.status ?? "",
     carryover: asFiniteNumber(record.carryover),
     carryovers: asNumberRecord(record.carryovers),

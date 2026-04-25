@@ -17,11 +17,11 @@ import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportPtoDateStatusFromIndexes, reportPtoDateStatusHasAny, reportRowKey, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
+import { createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowAutoStatus, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
-import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoColumnDefaults, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoUnitOptions, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoColumnDefaults, ptoCustomerCodeOptions, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoUnitOptions, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -55,7 +55,7 @@ type PtoFormulaCell = {
   table: string;
   year: string;
   rowId: string;
-  kind: "coefficient" | "carryover" | "month" | "day";
+  kind: "carryover" | "month" | "day";
   label: string;
   day?: string;
   month?: string;
@@ -1685,9 +1685,25 @@ export default function App() {
     if (!needsReportRows) return [];
 
     const rowsByKey = new Map<string, ReportRow>();
+    const plannedBaseKeys = new Set(
+      deferredPtoPlanRows
+        .filter((row) => row.structure.trim())
+        .map((row) => reportRowKey({ area: cleanAreaName(row.area), name: row.structure })),
+    );
 
-    [...deferredPtoPlanRows, ...deferredPtoSurveyRows, ...deferredPtoOperRows].forEach((row) => {
+    deferredPtoPlanRows.forEach((row) => {
       if (!row.structure.trim()) return;
+
+      const reportRow = createReportRowFromPtoPlan(row);
+      const key = reportRowKey(reportRow);
+      if (!rowsByKey.has(key)) rowsByKey.set(key, reportRow);
+    });
+
+    [...deferredPtoSurveyRows, ...deferredPtoOperRows].forEach((row) => {
+      if (!row.structure.trim()) return;
+
+      const baseKey = reportRowKey({ area: cleanAreaName(row.area), name: row.structure });
+      if (plannedBaseKeys.has(baseKey)) return;
 
       const reportRow = createReportRowFromPtoPlan(row);
       const key = reportRowKey(reportRow);
@@ -1701,7 +1717,7 @@ export default function App() {
   const reportPtoIndexes = useMemo(() => (
     needsReportIndexes
       ? {
-        plan: buildReportPtoIndex(deferredPtoPlanRows),
+        plan: buildReportPtoIndex(deferredPtoPlanRows, { includeCustomerCode: true }),
         survey: buildReportPtoIndex(deferredPtoSurveyRows),
         oper: buildReportPtoIndex(deferredPtoOperRows),
       }
@@ -1718,7 +1734,7 @@ export default function App() {
   ), [needsAdminReportRows, reportAreaOrder, reportBaseRows]);
 
   const derivedReportRows = useMemo(() => (
-    needsDerivedReportRows && reportPtoIndexes ? reportBaseRows.map((row) => {
+    needsAutoReportRows && reportPtoIndexes ? reportBaseRows.map((row) => {
       const derivedRow = deriveReportRowFromPtoIndex(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper);
       const rowKey = reportRowKey(row);
       const dayReason = reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? derivedRow.dayReason;
@@ -1739,7 +1755,7 @@ export default function App() {
         yearReason,
       };
     }) : []
-  ), [needsDerivedReportRows, reportBaseRows, reportDate, reportPtoIndexes, reportReasons]);
+  ), [needsAutoReportRows, reportBaseRows, reportDate, reportPtoIndexes, reportReasons]);
 
   const activeReportCustomer = useMemo(() => (
     reportCustomers.find((customer) => customer.id === reportCustomerId)
@@ -1753,27 +1769,38 @@ export default function App() {
     ?? reportCustomers[0]
     ?? defaultReportCustomers[0]
   ), [adminReportCustomerId, reportCustomers]);
-
   const adminReportBaseRows = useMemo(() => (
     needsAdminReportRows ? sortReportRowsByAreaOrder(reportBaseRows, reportAreaOrder, reportWorkOrder) : []
   ), [needsAdminReportRows, reportAreaOrder, reportBaseRows, reportWorkOrder]);
-  const adminReportRowsByKey = useMemo(() => (
-    new Map(adminReportBaseRows.map((row) => [reportRowKey(row), row]))
-  ), [adminReportBaseRows]);
-  const reportPtoDateStatusByKey = useMemo(() => (
-    (needsAdminReportRows || renderedTopTab === "reports") && reportPtoIndexes
-      ? new Map(reportBaseRows.map((row) => [reportRowKey(row), reportPtoDateStatusFromIndexes(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper)]))
-      : new Map<string, ReturnType<typeof reportPtoDateStatusFromIndexes>>()
-  ), [needsAdminReportRows, renderedTopTab, reportBaseRows, reportDate, reportPtoIndexes]);
-  const autoReportRowKeys = useMemo(() => (
-    needsAutoReportRows
-      ? new Set(
-        reportBaseRows
-          .filter((row) => reportPtoDateStatusHasAny(reportPtoDateStatusByKey.get(reportRowKey(row))))
-          .map(reportRowKey),
+  const derivedReportRowsByKey = useMemo(() => (
+    new Map(derivedReportRows.map((row) => [reportRowKey(row), row]))
+  ), [derivedReportRows]);
+  const reportAutoRowKeysForCustomer = useCallback((customer: ReportCustomerConfig) => (
+    new Set(
+      reportRowsForCustomer(derivedReportRows, customer)
+        .filter(reportRowHasAutoShowData)
+        .map(reportRowKey),
+    )
+  ), [derivedReportRows]);
+  const activeAdminReportBaseRows = useMemo(() => (
+    needsAdminReportRows
+      ? reportRowsForCustomer(adminReportBaseRows, activeAdminReportCustomer)
+      : []
+  ), [activeAdminReportCustomer, adminReportBaseRows, needsAdminReportRows]);
+  const activeAdminReportAreaOptions = useMemo(() => (
+    needsAdminReportRows
+      ? sortAreaNamesByOrder(
+        uniqueSorted(activeAdminReportBaseRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+        reportAreaOrder,
       )
-      : new Set<string>()
-  ), [needsAutoReportRows, reportBaseRows, reportPtoDateStatusByKey]);
+      : []
+  ), [activeAdminReportBaseRows, needsAdminReportRows, reportAreaOrder]);
+  const activeAdminReportRowsByKey = useMemo(() => (
+    new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]))
+  ), [activeAdminReportBaseRows]);
+  const activeAdminAutoReportRowKeys = useMemo(() => (
+    needsAdminReportRows ? reportAutoRowKeysForCustomer(activeAdminReportCustomer) : new Set<string>()
+  ), [activeAdminReportCustomer, needsAdminReportRows, reportAutoRowKeysForCustomer]);
 
   const adminReportWorkOrderGroups = useMemo(() => (
     needsAdminReportRows
@@ -1790,17 +1817,17 @@ export default function App() {
 
   const activeAdminReportSelectedCount = useMemo(() => (
     needsAdminReportRows
-      ? adminReportBaseRows.filter((row) => reportCustomerEffectiveRowKeys(activeAdminReportCustomer, autoReportRowKeys).has(reportRowKey(row))).length
+      ? activeAdminReportBaseRows.filter((row) => reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys).has(reportRowKey(row))).length
       : 0
-  ), [activeAdminReportCustomer, adminReportBaseRows, autoReportRowKeys, needsAdminReportRows]);
+  ), [activeAdminAutoReportRowKeys, activeAdminReportBaseRows, activeAdminReportCustomer, needsAdminReportRows]);
   const activeAdminReportRowLabelEntries = useMemo(() => (
     needsAdminReportRows
       ? Object.entries(activeAdminReportCustomer.rowLabels).flatMap(([rowKey, label]) => {
-        const row = adminReportRowsByKey.get(rowKey);
+        const row = activeAdminReportRowsByKey.get(rowKey);
         return row ? [{ rowKey, label, row }] : [];
       })
       : []
-  ), [activeAdminReportCustomer, adminReportRowsByKey, needsAdminReportRows]);
+  ), [activeAdminReportCustomer, activeAdminReportRowsByKey, needsAdminReportRows]);
   const activeAdminReportUsesSummaryRows = reportCustomerUsesSummaryRows(activeAdminReportCustomer);
   const visibleAdminReportCustomerSettingsTab: AdminReportCustomerSettingsTab = activeAdminReportUsesSummaryRows || adminReportCustomerSettingsTab !== "summary"
     ? adminReportCustomerSettingsTab
@@ -1809,8 +1836,10 @@ export default function App() {
   const customerReportRows = useMemo(() => {
     if (!needsDerivedReportRows) return [];
 
-    const visibleRowKeys = reportCustomerEffectiveRowKeys(activeReportCustomer, autoReportRowKeys);
-    const selectedRows = derivedReportRows
+    const customerRows = reportRowsForCustomer(derivedReportRows, activeReportCustomer);
+    const customerAutoRowKeys = new Set(customerRows.filter(reportRowHasAutoShowData).map(reportRowKey));
+    const visibleRowKeys = reportCustomerEffectiveRowKeys(activeReportCustomer, customerAutoRowKeys);
+    const selectedRows = customerRows
       .filter((row) => visibleRowKeys.has(reportRowKey(row)))
       .map((row) => {
         const rowKey = reportRowKey(row);
@@ -1818,7 +1847,7 @@ export default function App() {
 
         return customerLabel ? { ...row, name: customerLabel, displayKey: rowKey } : row;
       });
-    const rowsByKey = new Map(derivedReportRows.map((row) => [reportRowKey(row), row]));
+    const rowsByKey = new Map(customerRows.map((row) => [reportRowKey(row), row]));
     const summaryRows = reportCustomerUsesSummaryRows(activeReportCustomer)
       ? activeReportCustomer.summaryRows.flatMap((summary) => {
         const sourceRows = summary.rowKeys
@@ -1830,7 +1859,7 @@ export default function App() {
       : [];
 
     return sortReportRowsByAreaOrder([...selectedRows, ...summaryRows], reportAreaOrder, reportWorkOrder);
-  }, [activeReportCustomer, autoReportRowKeys, derivedReportRows, needsDerivedReportRows, reportAreaOrder, reportWorkOrder]);
+  }, [activeReportCustomer, derivedReportRows, needsDerivedReportRows, reportAreaOrder, reportWorkOrder]);
 
   const reportAreaTabs = useMemo(() => [
     "Все участки",
@@ -1913,7 +1942,7 @@ export default function App() {
       case "day-delta":
         return formatNumber(delta(row.dayPlan, row.dayFact));
       case "day-productivity":
-        return `${formatNumber(row.dayProductivity || row.dayFact)} ${formatPercent(row.dayFact, row.dayPlan)}`;
+        return `${formatNumber(row.dayProductivity || row.dayFact)}\n${formatPercent(row.dayFact, row.dayPlan)}`;
       case "day-reason":
         return reportReason(row.dayFact, row.dayPlan, row.dayReason);
       case "month-total-plan":
@@ -1921,15 +1950,15 @@ export default function App() {
       case "month-plan":
         return formatNumber(row.monthPlan);
       case "month-fact":
-        return `${formatNumber(monthFact)} марк ${formatNumber(row.monthSurveyFact)} + опер ${formatNumber(row.monthOperFact)}`;
+        return `${formatNumber(monthFact)}\nмарк ${formatNumber(row.monthSurveyFact)}`;
       case "month-delta":
         return formatNumber(delta(row.monthPlan, monthFact));
       case "month-productivity":
-        return `${formatNumber(row.monthProductivity || monthFact)} ${formatPercent(monthFact, row.monthPlan)}`;
+        return `${formatNumber(row.monthProductivity || monthFact)}\n${formatPercent(monthFact, row.monthPlan)}`;
       case "year-plan":
         return formatNumber(row.yearPlan);
       case "year-fact":
-        return `${formatNumber(yearFact)} марк ${formatNumber(row.yearSurveyFact)} + опер ${formatNumber(row.yearOperFact)}`;
+        return `${formatNumber(yearFact)}\nмарк ${formatNumber(row.yearSurveyFact)}`;
       case "year-delta":
         return formatNumber(delta(row.yearPlan, yearFact));
       case "year-reason":
@@ -1946,7 +1975,7 @@ export default function App() {
   }, []);
 
   const visibleReportColumnKeys = useMemo(() => (
-    reportArea === "Р’СЃРµ СѓС‡Р°СЃС‚РєРё"
+    normalizeLookupValue(reportArea) === normalizeLookupValue("Все участки")
       ? reportColumnKeys.filter((key) => key !== "day-productivity" && key !== "month-productivity")
       : reportColumnKeys
   ), [reportArea]);
@@ -1974,10 +2003,6 @@ export default function App() {
   const reportColumnWidthByKey = useMemo(() => (
     new Map(visibleReportColumnKeys.map((key, index) => [key, reportTableColumnWidths[index]]))
   ), [reportTableColumnWidths, visibleReportColumnKeys]);
-  const reportTableMinWidth = useMemo(() => (
-    reportTableColumnWidths.reduce((sum, width) => sum + width, 0)
-  ), [reportTableColumnWidths]);
-
   const reportMonthEnd = `${reportDate.slice(0, 8)}${new Date(Number(reportDate.slice(0, 4)), Number(reportDate.slice(5, 7)), 0).getDate()}`;
   const reportCompletionCards = useMemo(() => {
     if (!needsDerivedReportRows) return [];
@@ -2841,10 +2866,23 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify([]));
   }
 
-  function updateReportCustomer(customerId: string, patch: Partial<Pick<ReportCustomerConfig, "label" | "visible" | "autoShowRows">>) {
-    setReportCustomers((current) => current.map((customer) => (
-      customer.id === customerId ? { ...customer, ...patch } : customer
-    )));
+  function updateReportCustomer(customerId: string, patch: Partial<Pick<ReportCustomerConfig, "label" | "ptoCode" | "visible" | "autoShowRows">>) {
+    setReportCustomers((current) => current.map((customer) => {
+      if (customer.id !== customerId) return customer;
+
+      if (customer.autoShowRows && patch.autoShowRows === false) {
+        const customerAutoRowKeys = reportAutoRowKeysForCustomer(customer);
+
+        return {
+          ...customer,
+          ...patch,
+          rowKeys: Array.from(reportCustomerEffectiveRowKeys(customer, customerAutoRowKeys)),
+          hiddenRowKeys: [],
+        };
+      }
+
+      return { ...customer, ...patch, ptoCode: patch.ptoCode !== undefined ? normalizePtoCustomerCode(patch.ptoCode) : customer.ptoCode };
+    }));
     addAdminLog({
       action: "Редактирование",
       section: "Отчетность",
@@ -2857,6 +2895,7 @@ export default function App() {
     const customer: ReportCustomerConfig = {
       id: customerId,
       label: `Заказчик ${reportCustomers.length + 1}`,
+      ptoCode: `C${reportCustomers.length + 1}`,
       visible: true,
       autoShowRows: false,
       rowKeys: [],
@@ -2944,9 +2983,10 @@ export default function App() {
     setReportCustomers((current) => current.map((customer) => {
       if (customer.id !== customerId) return customer;
 
-      const effectiveRowKeys = reportCustomerEffectiveRowKeys(customer, autoReportRowKeys);
+      const customerAutoRowKeys = reportAutoRowKeysForCustomer(customer);
+      const effectiveRowKeys = reportCustomerEffectiveRowKeys(customer, customerAutoRowKeys);
       const currentlyVisible = effectiveRowKeys.has(rowKey);
-      const autoCanShow = customer.autoShowRows && autoReportRowKeys.has(rowKey);
+      const autoCanShow = customer.autoShowRows && customerAutoRowKeys.has(rowKey);
       const nextRowKeys = currentlyVisible
         ? customer.rowKeys.filter((key) => key !== rowKey)
         : Array.from(new Set([...customer.rowKeys, rowKey]));
@@ -2988,9 +3028,11 @@ export default function App() {
     const customer = reportCustomers.find((item) => item.id === customerId);
     if (!customer) return;
 
-    const customerVisibleRowKeys = reportCustomerEffectiveRowKeys(customer, autoReportRowKeys);
-    const selectedRows = adminReportBaseRows.filter((row) => customerVisibleRowKeys.has(reportRowKey(row)));
-    const sourceRows = selectedRows.length > 0 ? selectedRows : adminReportBaseRows;
+    const customerAutoRowKeys = reportAutoRowKeysForCustomer(customer);
+    const customerRows = reportRowsForCustomer(adminReportBaseRows, customer);
+    const customerVisibleRowKeys = reportCustomerEffectiveRowKeys(customer, customerAutoRowKeys);
+    const selectedRows = customerRows.filter((row) => customerVisibleRowKeys.has(reportRowKey(row)));
+    const sourceRows = selectedRows.length > 0 ? selectedRows : customerRows;
     const targetRow = sourceRows.find((item) => !customer.rowLabels[reportRowKey(item)]) ?? sourceRows[0];
     if (!targetRow) return;
 
@@ -3016,8 +3058,8 @@ export default function App() {
   function changeReportCustomerRowLabelSource(customerId: string, currentRowKey: string, nextRowKey: string) {
     if (currentRowKey === nextRowKey) return;
 
-    const currentRow = adminReportRowsByKey.get(currentRowKey);
-    const nextRow = adminReportRowsByKey.get(nextRowKey);
+    const currentRow = activeAdminReportRowsByKey.get(currentRowKey);
+    const nextRow = activeAdminReportRowsByKey.get(nextRowKey);
     if (!nextRow) return;
 
     setReportCustomers((current) => current.map((customer) => {
@@ -3080,7 +3122,7 @@ export default function App() {
 
   function reportRowsForSummaryArea(area: string) {
     const areaKey = normalizeLookupValue(area);
-    return adminReportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey);
+    return activeAdminReportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey);
   }
 
   function reportRowKeysForSummaryArea(area: string) {
@@ -3090,7 +3132,7 @@ export default function App() {
   function addReportSummaryRow(customerId: string) {
     const customer = reportCustomers.find((item) => item.id === customerId);
     if (!customer || !reportCustomerUsesSummaryRows(customer)) return;
-    const area = reportAreaOrderOptions[0] ?? adminReportBaseRows[0]?.area ?? "";
+    const area = activeAdminReportAreaOptions[0] ?? activeAdminReportBaseRows[0]?.area ?? "";
     const summaryId = createId();
 
     setReportCustomers((current) => current.map((customer) => (
@@ -3227,7 +3269,6 @@ export default function App() {
       location: overrides.location,
       structure: overrides.structure,
       unit: overrides.unit,
-      coefficient: overrides.coefficient,
       years: overrides.years,
     };
     const planRow = createEmptyPtoDateRow("Новая", ptoAreaFilter, ptoPlanYear, id, ptoTab === "plan" ? overrides : sharedOverrides);
@@ -3294,8 +3335,8 @@ export default function App() {
   }
 
   function updatePtoDateRow(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, field: keyof Omit<PtoPlanRow, "id" | "dailyPlans">, value: string) {
-    const numericFields: Array<keyof PtoPlanRow> = ["coefficient", "carryover"];
-    const sharedFields: Array<keyof Omit<PtoPlanRow, "id" | "dailyPlans">> = ["area", "location", "structure", "unit", "coefficient"];
+    const numericFields: Array<keyof PtoPlanRow> = ["carryover"];
+    const sharedFields: Array<keyof Omit<PtoPlanRow, "id" | "dailyPlans">> = ["area", "location", "structure", "unit"];
     const updatedValue = numericFields.includes(field) ? parseDecimalValue(value) : value;
     const linkedRow = [...ptoPlanRows, ...ptoOperRows, ...ptoSurveyRows].find((row) => row.id === id);
     const linkedSignature = linkedRow ? ptoLinkedRowSignature(linkedRow) : "";
@@ -4203,10 +4244,10 @@ export default function App() {
 
   function exportPtoDateTableToExcel() {
     const meta = currentPtoDateExcelMeta();
-    const rows = createPtoPlanExportRows(meta.rows, ptoPlanYear, ptoAreaFilter);
+    const rows = createPtoPlanExportRows(meta.rows, ptoPlanYear, ptoAreaFilter, meta.table);
     const fileName = ptoDateExportFileName(meta, ptoPlanYear, ptoAreaFilter);
     const blob = createXlsxBlob(rows, meta.label, {
-      columns: createPtoPlanExportColumns(ptoPlanYear),
+      columns: createPtoPlanExportColumns(ptoPlanYear, meta.table),
       outlineSummaryRight: false,
     });
     const url = URL.createObjectURL(blob);
@@ -4242,7 +4283,7 @@ export default function App() {
       return;
     }
 
-    setPtoPlanRows((current) => mergeImportedPtoPlanRows(current, importedRows));
+    setPtoPlanRows((current) => mergeImportedPtoPlanRows(current, importedRows, { includeCustomerCode: true }));
     setPtoOperRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
     setPtoSurveyRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
   }
@@ -4255,7 +4296,7 @@ export default function App() {
     const meta = currentPtoDateExcelMeta();
 
     try {
-      const importedRows = createPtoPlanRowsFromImportTable(await parseTableImportFile(file), ptoPlanYear, meta.rows);
+      const importedRows = createPtoPlanRowsFromImportTable(await parseTableImportFile(file), ptoPlanYear, meta.rows, meta.table);
       if (!importedRows.length) {
         window.alert(`В выбранном файле не найдены строки таблицы "${meta.label}".`);
         return;
@@ -4397,6 +4438,7 @@ export default function App() {
     options: { showLocation?: boolean; editableMonthTotal?: boolean } = {},
   ) {
     const showLocation = options.showLocation !== false;
+    const showCustomerCode = ptoTab === "plan";
     const editableMonthTotal = options.editableMonthTotal === true;
     const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
     const rowById = new Map(rows.map((row) => [row.id, row] as const));
@@ -4439,7 +4481,10 @@ export default function App() {
       return value;
     };
     const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;
-    const columnWidth = (key: string, fallback: number) => Math.min(800, Math.max(44, Math.round(ptoColumnWidths[key] ?? fallback)));
+    const columnWidth = (key: string, fallback: number) => {
+      const minWidth = key === "customerCode" ? 88 : 44;
+      return Math.min(800, Math.max(minWidth, Math.round(ptoColumnWidths[key] ?? fallback)));
+    };
     const readonlyExpandedMonth = reportDate.startsWith(`${ptoPlanYear}-`) ? reportDate.slice(0, 7) : (ptoYearMonths[0] ?? `${ptoPlanYear}-01`);
     const displayPtoMonthGroups = ptoDateEditing
       ? ptoMonthGroups
@@ -4448,11 +4493,11 @@ export default function App() {
           expanded: group.month === readonlyExpandedMonth,
         }));
     const baseColumns: PtoTableColumn[] = [
+      ...(showCustomerCode ? [{ key: "customerCode", width: columnWidth("customerCode", ptoColumnDefaults.customerCode) }] : []),
       { key: "area", width: columnWidth("area", ptoColumnDefaults.area) },
       ...(showLocation ? [{ key: "location", width: columnWidth("location", ptoColumnDefaults.location) }] : []),
       { key: "structure", width: columnWidth("structure", ptoColumnDefaults.structure) },
       { key: "unit", width: columnWidth("unit", ptoColumnDefaults.unit) },
-      { key: "coefficient", width: columnWidth("coefficient", ptoColumnDefaults.coefficient) },
       { key: "status", width: columnWidth("status", ptoColumnDefaults.status) },
       { key: `carryover:${ptoPlanYear}`, width: columnWidth(`carryover:${ptoPlanYear}`, ptoColumnDefaults.carryover) },
       { key: "year-total", width: columnWidth("year-total", ptoColumnDefaults.yearTotal) },
@@ -4587,11 +4632,11 @@ export default function App() {
               </colgroup>
               <thead>
                 <tr>
+                  {showCustomerCode ? <PtoPlanTh rowSpan={2} align="center" columnKey="customerCode" width={columnWidthByKey.get("customerCode")}>{ptoHeaderLabel("customerCode", "Заказчик")}</PtoPlanTh> : null}
                   <PtoPlanTh rowSpan={2} columnKey="area" width={columnWidthByKey.get("area")}>{ptoHeaderLabel("area", "Участок")}</PtoPlanTh>
                   {showLocation ? <PtoPlanTh rowSpan={2} columnKey="location" width={columnWidthByKey.get("location")}>{ptoHeaderLabel("location", "Местонахождение")}</PtoPlanTh> : null}
                   <PtoPlanTh rowSpan={2} columnKey="structure" width={columnWidthByKey.get("structure")}>{ptoHeaderLabel("structure", "Структура")}</PtoPlanTh>
                   <PtoPlanTh rowSpan={2} align="center" columnKey="unit" width={columnWidthByKey.get("unit")}>{ptoHeaderLabel("unit", "Ед.")}</PtoPlanTh>
-                  <PtoPlanTh rowSpan={2} align="center" columnKey="coefficient" width={columnWidthByKey.get("coefficient")}>{ptoHeaderLabel("coefficient", "Коэфф.")}</PtoPlanTh>
                   <PtoPlanTh rowSpan={2} align="center" columnKey="status" width={columnWidthByKey.get("status")}>{ptoHeaderLabel("status", "Статус")}</PtoPlanTh>
                   <PtoPlanTh rowSpan={2} align="center" columnKey={`carryover:${ptoPlanYear}`} width={columnWidthByKey.get(`carryover:${ptoPlanYear}`)}>{ptoHeaderLabel(`carryover:${ptoPlanYear}`, carryoverHeader)}</PtoPlanTh>
                   <PtoPlanTh rowSpan={2} align="center" columnKey="year-total" width={columnWidthByKey.get("year-total")}>{ptoHeaderLabel("year-total", "Итого год")}</PtoPlanTh>
@@ -4634,11 +4679,11 @@ export default function App() {
 
                   return (
                     <tr key={row.id} style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}>
+                      {showCustomerCode ? <PtoPlanTd align="center">{renderReadonlyTextCell(normalizePtoCustomerCode(row.customerCode), "center")}</PtoPlanTd> : null}
                       <PtoPlanTd>{renderReadonlyTextCell(row.area)}</PtoPlanTd>
                       {showLocation ? <PtoPlanTd>{renderReadonlyTextCell(row.location)}</PtoPlanTd> : null}
                       <PtoPlanTd>{renderReadonlyTextCell(row.structure)}</PtoPlanTd>
                       <PtoPlanTd align="center">{renderReadonlyTextCell(normalizePtoUnit(row.unit), "center")}</PtoPlanTd>
-                      <PtoPlanTd align="center">{renderReadonlyNumberCell(row.coefficient)}</PtoPlanTd>
                       <PtoPlanTd align="center">
                         <span
                           title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
@@ -4675,9 +4720,7 @@ export default function App() {
     const activeFormulaRow = activeFormulaCell ? rowById.get(activeFormulaCell.rowId) : undefined;
     const activeFormulaRowTotals = activeFormulaRow ? getRowDateTotals(activeFormulaRow) : undefined;
     const activeFormulaValue = activeFormulaRow && activeFormulaCell
-      ? activeFormulaCell.kind === "coefficient"
-        ? activeFormulaRow.coefficient
-        : activeFormulaCell.kind === "carryover"
+      ? activeFormulaCell.kind === "carryover"
           ? getEffectiveCarryover(activeFormulaRow)
           : activeFormulaCell.kind === "month" && activeFormulaCell.month
             ? activeFormulaRowTotals?.monthTotals.get(activeFormulaCell.month)?.value
@@ -4701,7 +4744,6 @@ export default function App() {
     const tableSpacerColSpan = tableColumns.length;
     const formulaCellRows = renderedRows.map((row) => {
       const cells: Array<Omit<PtoFormulaCell, "table" | "year">> = [
-        { rowId: row.id, kind: "coefficient", label: "Коэфф." },
         { rowId: row.id, kind: "carryover", label: carryoverHeader },
         ...displayPtoMonthGroups.flatMap((group) => [
           ...(editableMonthTotal
@@ -4735,7 +4777,6 @@ export default function App() {
     const formulaSelectionScope = `${ptoTab}:${ptoPlanYear}:`;
     const selectedFormulaCellKeys = new Set(ptoSelectedCellKeys.filter((key) => key.startsWith(formulaSelectionScope)));
     const formulaCellTemplates: Array<Omit<PtoFormulaCell, "table" | "year" | "rowId">> = [
-      { kind: "coefficient", label: "coefficient" },
       { kind: "carryover", label: carryoverHeader },
       ...displayPtoMonthGroups.flatMap((group) => [
         ...(editableMonthTotal
@@ -4780,7 +4821,6 @@ export default function App() {
       const row = rowById.get(cell.rowId);
       if (!row) return undefined;
 
-      if (cell.kind === "coefficient") return row.coefficient;
       if (cell.kind === "carryover") return getEffectiveCarryover(row);
       if (cell.kind === "month" && cell.month) return getRowDateTotals(row).monthTotals.get(cell.month)?.value;
       if (cell.kind === "day" && cell.day) return row.dailyPlans[cell.day];
@@ -4947,11 +4987,6 @@ export default function App() {
       if (!ptoDateEditing) return false;
       if (cell.editable === false) return false;
       if (value.trim() !== "" && parseDecimalInput(value) === null) return false;
-
-      if (cell.kind === "coefficient") {
-        updatePtoDateRow(setRows, cell.rowId, "coefficient", value);
-        return true;
-      }
 
       if (cell.kind === "carryover") {
         if (value.trim() === "") {
@@ -5147,18 +5182,23 @@ export default function App() {
       const nextRowId = addLinkedPtoDateRow({
         area: row.area,
         location: row.location,
+        customerCode: showCustomerCode ? row.customerCode : "",
         unit: row.unit,
       }, row);
       setPtoPendingFieldFocus({ rowId: nextRowId, field: "structure" });
     };
 
-    const commitPtoDraftField = (field: "area" | "location" | "structure" | "unit" | "coefficient", value: string) => {
+    const commitPtoDraftField = (field: "area" | "location" | "customerCode" | "structure" | "unit", value: string) => {
       if (!ptoDateEditing) return;
       if (!value.trim()) return;
-      if (field === "coefficient" && parseDecimalInput(value) === null) return;
 
+      const normalizedValue = field === "unit"
+        ? normalizePtoUnit(value)
+        : field === "customerCode"
+          ? normalizePtoCustomerCode(value)
+          : value;
       const nextRowId = addLinkedPtoDateRow({
-        [field]: field === "unit" ? normalizePtoUnit(value) : field === "coefficient" ? parseDecimalValue(value) : value,
+        [field]: normalizedValue,
       });
       setPtoPendingFieldFocus({ rowId: nextRowId, field });
       requestPtoDatabaseSave();
@@ -5358,11 +5398,11 @@ export default function App() {
             </colgroup>
             <thead>
               <tr>
+                {showCustomerCode ? <PtoPlanTh rowSpan={2} align="center" columnKey="customerCode" width={columnWidthByKey.get("customerCode")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("customerCode", "Заказчик", "center")}</PtoPlanTh> : null}
                 <PtoPlanTh rowSpan={2} columnKey="area" width={columnWidthByKey.get("area")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("area", "Участок")}</PtoPlanTh>
                 {showLocation ? <PtoPlanTh rowSpan={2} columnKey="location" width={columnWidthByKey.get("location")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("location", "Местонахождение")}</PtoPlanTh> : null}
                 <PtoPlanTh rowSpan={2} columnKey="structure" width={columnWidthByKey.get("structure")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("structure", "Структура")}</PtoPlanTh>
                 <PtoPlanTh rowSpan={2} align="center" columnKey="unit" width={columnWidthByKey.get("unit")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("unit", "Ед.", "center")}</PtoPlanTh>
-                <PtoPlanTh rowSpan={2} align="center" columnKey="coefficient" width={columnWidthByKey.get("coefficient")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("coefficient", "Коэфф.", "center")}</PtoPlanTh>
                 <PtoPlanTh rowSpan={2} align="center" columnKey="status" width={columnWidthByKey.get("status")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("status", "Статус", "center")}</PtoPlanTh>
                 <PtoPlanTh rowSpan={2} align="center" columnKey={`carryover:${ptoPlanYear}`} width={columnWidthByKey.get(`carryover:${ptoPlanYear}`)} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText(`carryover:${ptoPlanYear}`, carryoverHeader, "center")}</PtoPlanTh>
                 <PtoPlanTh rowSpan={2} align="center" columnKey="year-total" width={columnWidthByKey.get("year-total")} onResizeStart={ptoColumnResizeHandler}>{renderPtoHeaderText("year-total", "Итого год", "center")}</PtoPlanTh>
@@ -5411,18 +5451,14 @@ export default function App() {
                     }
                   : null;
                 const showInlineAddRowButton = ptoDateEditing && rowIndex < filteredRows.length - 1;
-                const coefficientCellActive = ptoDateEditing && formulaCellActive(row.id, "coefficient");
                 const carryoverCellActive = ptoDateEditing && formulaCellActive(row.id, "carryover");
-                const coefficientCellSelected = ptoDateEditing && formulaCellSelected(row.id, "coefficient");
                 const carryoverCellSelected = ptoDateEditing && formulaCellSelected(row.id, "carryover");
-                const coefficientCellEditing = ptoDateEditing && formulaCellEditing(row.id, "coefficient");
                 const carryoverCellEditing = ptoDateEditing && formulaCellEditing(row.id, "carryover");
                 const rowStatus = ptoAutomatedStatus(row, reportDate);
                 const effectiveCarryover = getEffectiveCarryover(row);
                 const rowDateTotals = getRowDateTotals(row);
                 const rowYearTotalWithCarryover = Math.round(((rowDateTotals?.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
                 const rowFormulaCells = formulaCellsByRowId.get(row.id) ?? [];
-                const coefficientCell = rowFormulaCells.find((cell) => cell.kind === "coefficient") ?? { rowId: row.id, kind: "coefficient" as const, label: "Коэфф." };
                 const carryoverCell = rowFormulaCells.find((cell) => cell.kind === "carryover") ?? { rowId: row.id, kind: "carryover" as const, label: carryoverHeader };
                 const rowHeightKey = `${ptoTab}:${row.id}`;
                 const rowHeight = ptoRowHeights[rowHeightKey];
@@ -5464,6 +5500,27 @@ export default function App() {
                       setPtoDropTarget(null);
                     }}
                   >
+                    {showCustomerCode ? (
+                      <PtoPlanTd align="center">
+                        {ptoDateEditing ? (
+                          <select
+                            data-pto-row-field={ptoRowFieldDomKey(row.id, "customerCode")}
+                            value={normalizePtoCustomerCode(row.customerCode)}
+                            onChange={(event) => {
+                              updatePtoDateRow(setRows, row.id, "customerCode", event.target.value);
+                              requestPtoDatabaseSave();
+                            }}
+                            style={{ ...ptoPlanInputStyle, textAlign: "center" }}
+                            title="AAM - ТОО AA Mining, AA - АО АК Алтыналмас, AAE - ТОО AA Engineering"
+                          >
+                            <option value="">—</option>
+                            {ptoCustomerCodeOptions.map((option) => (
+                              <option key={option.code} value={option.code}>{option.code}</option>
+                            ))}
+                          </select>
+                        ) : renderReadonlyTextCell(normalizePtoCustomerCode(row.customerCode), "center")}
+                      </PtoPlanTd>
+                    ) : null}
                     <PtoPlanTd>
                       {dropLineStyle ? <span style={dropLineStyle} /> : null}
                       {ptoDateEditing ? (
@@ -5569,37 +5626,6 @@ export default function App() {
                           ))}
                         </select>
                       ) : renderReadonlyTextCell(normalizePtoUnit(row.unit), "center")}
-                    </PtoPlanTd>
-                    <PtoPlanTd active={coefficientCellActive} selected={coefficientCellSelected} editing={coefficientCellEditing} align="center">
-                      {ptoDateEditing ? (
-                        <input
-                          readOnly={!coefficientCellEditing}
-                          data-pto-row-field={ptoRowFieldDomKey(row.id, "coefficient")}
-                          data-pto-cell-key={formulaCellDomKey(coefficientCell)}
-                          type="text"
-                          inputMode="decimal"
-                          value={coefficientCellEditing ? ptoFormulaDraft : formatPtoCellNumber(row.coefficient)}
-                          onFocus={() => {
-                            if (!ptoSelectionDraggingRef.current) selectFormulaCell(coefficientCell, row.coefficient);
-                          }}
-                          onMouseDown={(event) => handleFormulaCellMouseDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
-                          onMouseEnter={(event) => handleFormulaCellMouseEnter(event, coefficientCell, row.coefficient, coefficientCellEditing)}
-                          onClick={(event) => {
-                            if (event.shiftKey && !coefficientCellEditing) selectFormulaRange(coefficientCell, row.coefficient);
-                          }}
-                          onDoubleClick={(event) => {
-                            startInlineFormulaEdit(coefficientCell, row.coefficient);
-                            event.currentTarget.select();
-                          }}
-                          onChange={(event) => updateFormulaValue(event.target.value)}
-                          onBlur={() => {
-                            if (coefficientCellEditing) commitInlineFormulaEdit();
-                          }}
-                          onKeyDown={(event) => handleFormulaCellKeyDown(event, coefficientCell, row.coefficient, coefficientCellEditing)}
-                          title={formatPtoFormulaNumber(row.coefficient)}
-                          style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
-                        />
-                      ) : renderReadonlyNumberCell(row.coefficient)}
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       <span
@@ -5769,6 +5795,16 @@ export default function App() {
                 </tr>
               ) : null}
               {ptoDateEditing ? <tr style={ptoDraftRowStyle}>
+                {showCustomerCode ? (
+                  <PtoPlanTd align="center">
+                    <select value="" onChange={(event) => commitPtoDraftField("customerCode", event.target.value)} style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}>
+                      <option value="">Заказчик</option>
+                      {ptoCustomerCodeOptions.map((option) => (
+                        <option key={option.code} value={option.code}>{option.code}</option>
+                      ))}
+                    </select>
+                  </PtoPlanTd>
+                ) : null}
                 <PtoPlanTd>
                   <div style={ptoAreaCellStyle}>
                     <button
@@ -5798,9 +5834,6 @@ export default function App() {
                       <option key={unit} value={unit}>{unit}</option>
                     ))}
                   </select>
-                </PtoPlanTd>
-                <PtoPlanTd align="center">
-                  <input value="" inputMode="decimal" onChange={(event) => commitPtoDraftField("coefficient", event.target.value)} placeholder="0" style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle, ...ptoDraftInputStyle }} />
                 </PtoPlanTd>
                 <PtoPlanTd align="center">
                   <span style={ptoDraftStatusStyle}>Новая</span>
@@ -6000,7 +6033,6 @@ export default function App() {
             activeReportCustomerLabel={activeReportCustomer.label}
             reportDate={reportDate}
             reportCompletionCards={reportCompletionCards}
-            reportTableMinWidth={reportTableMinWidth}
             reportTableColumnWidths={reportTableColumnWidths}
             reportColumnKeys={visibleReportColumnKeys}
             reportColumnWidthByKey={reportColumnWidthByKey}
@@ -6428,7 +6460,7 @@ export default function App() {
                     <div style={reportSourceGridStyle}>
                       <SourceNote title="База смены" source="БД" text="дата, участок, техника, рейсы, часы, смена, диспетчер, состояние техники" />
                       <SourceNote title="Справочник техники" source="СводТехники / Список техники" text="марка, модель, госномер, гаражный номер, статус, участок и местоположение" />
-                      <SourceNote title="ПТО" source="План, ПланС, График, Объемы кузова" text="план по датам, объем кузова, коэффициенты и плановые показатели" />
+                      <SourceNote title="ПТО" source="План, ПланС, График, Объемы кузова" text="план по датам, объем кузова и плановые показатели" />
                       <SourceNote title="Итог" source="AAM" text="отчетность собирает план, маркзамер, оперучет, производительность и причины" />
                     </div>
                     <div style={dependencyStageGridStyle}>
@@ -7359,8 +7391,15 @@ export default function App() {
                     onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { label: e.target.value })}
                     style={adminReportCustomerNameInputStyle}
                   />
+                  <input
+                    aria-label="Сокращение заказчика для ПТО"
+                    value={activeAdminReportCustomer.ptoCode}
+                    onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { ptoCode: e.target.value })}
+                    style={{ ...adminReportCustomerNameInputStyle, textAlign: "center" }}
+                    title="Этот код используется в столбце Заказчик во вкладке ПТО - План"
+                  />
                   <div style={adminReportCustomerMetaStyle}>
-                    {activeAdminReportSelectedCount} строк{activeAdminReportUsesSummaryRows ? ` · ${activeAdminReportCustomer.summaryRows.length} итоговых` : ""}
+                    Код ПТО: {activeAdminReportCustomer.ptoCode || "не задан"} · {activeAdminReportSelectedCount} строк{activeAdminReportUsesSummaryRows ? ` · ${activeAdminReportCustomer.summaryRows.length} итоговых` : ""}
                   </div>
                   <label style={adminReportVisibleToggleStyle}>
                     <input type="checkbox" checked={activeAdminReportCustomer.visible} onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { visible: e.target.checked })} />
@@ -7394,8 +7433,6 @@ export default function App() {
                           <col style={{ width: 360 }} />
                           <col style={{ width: 56 }} />
                           <col style={{ width: 116 }} />
-                          <col style={{ width: 116 }} />
-                          <col style={{ width: 116 }} />
                         </colgroup>
                         <thead>
                           <tr style={{ background: "#f8fafc" }}>
@@ -7403,16 +7440,14 @@ export default function App() {
                             <th style={adminReportThStyle}>Участок</th>
                             <th style={adminReportThStyle}>Строка из ПТО</th>
                             <th style={adminReportThStyle}>Ед.</th>
-                            <th style={adminReportThStyle}>План</th>
-                            <th style={adminReportThStyle}>Оперучет</th>
-                            <th style={adminReportThStyle}>Замер</th>
+                            <th style={adminReportThStyle}>Статус</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {adminReportBaseRows.map((row) => {
+                          {activeAdminReportBaseRows.map((row) => {
                             const rowKey = reportRowKey(row);
-                            const rowStatus = reportPtoDateStatusByKey.get(rowKey);
-                            const visibleRowKeys = reportCustomerEffectiveRowKeys(activeAdminReportCustomer, autoReportRowKeys);
+                            const rowStatus = reportRowAutoStatus(derivedReportRowsByKey.get(rowKey) ?? row);
+                            const visibleRowKeys = reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys);
                             return (
                               <tr key={`${activeAdminReportCustomer.id}-${rowKey}`}>
                                 <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
@@ -7429,13 +7464,7 @@ export default function App() {
                               <td style={adminReportNameTdStyle}>{row.name}</td>
                               <td style={{ ...adminReportTdStyle, textAlign: "center" }}>{row.unit}</td>
                               <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
-                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus?.plan ?? "Новая") }}>{rowStatus?.plan ?? "Новая"}</span>
-                              </td>
-                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
-                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus?.oper ?? "Новая") }}>{rowStatus?.oper ?? "Новая"}</span>
-                              </td>
-                              <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
-                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus?.survey ?? "Новая") }}>{rowStatus?.survey ?? "Новая"}</span>
+                                <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}>{rowStatus}</span>
                               </td>
                             </tr>
                             );
@@ -7467,8 +7496,8 @@ export default function App() {
                               <span />
                             </div>
                             {activeAdminReportRowLabelEntries.map(({ rowKey, label, row }) => {
-                              const hasStoredArea = reportAreaOrderOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(row.area));
-                              const visibleArea = hasStoredArea ? row.area : reportAreaOrderOptions[0] ?? row.area;
+                              const hasStoredArea = activeAdminReportAreaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(row.area));
+                              const visibleArea = hasStoredArea ? row.area : activeAdminReportAreaOptions[0] ?? row.area;
                               const areaRows = reportRowsForSummaryArea(visibleArea);
                               const hasStoredRow = areaRows.some((areaRow) => reportRowKey(areaRow) === rowKey);
                               const rowLabelEditing = editingReportRowLabelKeys.includes(rowKey);
@@ -7486,7 +7515,7 @@ export default function App() {
                                         style={adminReportRenameInputStyle}
                                         aria-label="Участок строки для заказчика"
                                       >
-                                        {reportAreaOrderOptions.map((area) => (
+                                        {activeAdminReportAreaOptions.map((area) => (
                                           <option key={area} value={area}>{area}</option>
                                         ))}
                                         {!hasStoredArea && row.area ? <option value={row.area}>{row.area}</option> : null}
@@ -7556,8 +7585,8 @@ export default function App() {
                       ) : null}
 
                       {activeAdminReportCustomer.summaryRows.map((summary) => {
-                        const hasStoredArea = reportAreaOrderOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
-                        const visibleSummaryArea = hasStoredArea ? summary.area : reportAreaOrderOptions[0] ?? summary.area;
+                        const hasStoredArea = activeAdminReportAreaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
+                        const visibleSummaryArea = hasStoredArea ? summary.area : activeAdminReportAreaOptions[0] ?? summary.area;
                         const summaryAreaRows = reportRowsForSummaryArea(visibleSummaryArea);
                         const selectedSummaryRows = summaryAreaRows.filter((row) => summary.rowKeys.includes(reportRowKey(row)));
                         const summaryExpanded = expandedReportSummaryIds.includes(summary.id);
@@ -7573,7 +7602,7 @@ export default function App() {
                               {summaryExpanded ? (
                                 <>
                                   <select value={visibleSummaryArea} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "area", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Участок итоговой строки">
-                                    {reportAreaOrderOptions.map((area) => (
+                                    {activeAdminReportAreaOptions.map((area) => (
                                       <option key={area} value={area}>{area}</option>
                                     ))}
                                     {!hasStoredArea && summary.area ? <option value={summary.area}>{summary.area}</option> : null}
@@ -7852,7 +7881,7 @@ const adminReportCustomerCardStyle: React.CSSProperties = {
 
 const adminReportCustomerSummaryStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(180px, 300px) auto auto auto",
+  gridTemplateColumns: "minmax(180px, 300px) 72px auto auto auto",
   alignItems: "center",
   gap: 8,
   padding: "8px 10px",
@@ -8152,26 +8181,28 @@ const adminReportSummarySelectionPanelStyle: React.CSSProperties = {
 const adminReportSummaryRowOptionStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "auto minmax(0, 1fr) max-content",
-  gap: 8,
+  gap: 6,
   alignItems: "center",
   border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  padding: 8,
+  borderRadius: 6,
+  padding: "5px 6px",
   background: "#f8fafc",
+  fontSize: 11,
   fontWeight: 400,
 };
 
 const adminReportSummaryRowNameStyle: React.CSSProperties = {
   minWidth: 0,
+  fontSize: 11,
   fontWeight: 400,
-  lineHeight: 1.25,
+  lineHeight: 1.18,
   overflowWrap: "normal",
   wordBreak: "normal",
 };
 
 const adminReportSummaryRowUnitStyle: React.CSSProperties = {
   color: "#64748b",
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 400,
   justifySelf: "end",
   textAlign: "right",

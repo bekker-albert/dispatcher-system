@@ -1,7 +1,7 @@
 import { normalizeLookupValue, uniqueSorted } from "../../utils/text";
-import { ptoAutomatedStatus, type PtoPlanRow, type PtoStatus } from "../pto/date-table";
+import { normalizePtoCustomerCode, ptoAutomatedStatus, type PtoPlanRow, type PtoStatus } from "../pto/date-table";
 import { ptoRowsForReport, normalizeReportRow, reportPtoIndexKey, type ReportPtoIndex } from "./calculation";
-import { reportColumnAutoMaxWidths, reportColumnAutoMinWidths, reportColumnTextCaps, reportCompactColumnKeys, reportReasonColumnKeys, type ReportColumnKey } from "./columns";
+import { reportColumnAutoMaxWidths, reportColumnAutoMinWidths, reportColumnTextCaps, reportCompactColumnKeys, reportNumericColumnKeys, reportNumericColumnSizing, reportReasonColumnKeys, type ReportColumnKey, type ReportNumericColumnSizing } from "./columns";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "./facts";
 import { aggregateReportReasons } from "./reasons";
 import type { ReportCustomerConfig, ReportPtoDateStatus, ReportRow, ReportSummaryRowConfig } from "./types";
@@ -20,8 +20,47 @@ const reportCalendarDateFormatter = new Intl.DateTimeFormat("ru-RU", {
   year: "numeric",
 });
 
-export function reportRowKey(row: Pick<ReportRow, "area" | "name">) {
+export function reportRowKey(row: Pick<ReportRow, "area" | "name"> & Partial<Pick<ReportRow, "customerCode">>) {
+  const baseKey = `${normalizeLookupValue(row.area)}::${normalizeLookupValue(row.name)}`;
+  const customerCode = normalizePtoCustomerCode(row.customerCode);
+
+  return customerCode ? `${baseKey}::${normalizeLookupValue(customerCode)}` : baseKey;
+}
+
+export function reportRowCustomerCode(row: Partial<Pick<ReportRow, "customerCode">>) {
+  return normalizePtoCustomerCode(row.customerCode) || "AAM";
+}
+
+export function reportRowBasePtoKey(row: Pick<ReportRow, "area" | "name">) {
   return `${normalizeLookupValue(row.area)}::${normalizeLookupValue(row.name)}`;
+}
+
+export function reportRowMatchesCustomer(row: ReportRow, customer: ReportCustomerConfig) {
+  const rowCode = reportRowCustomerCode(row);
+  const customerCode = normalizePtoCustomerCode(customer.ptoCode) || "AAM";
+
+  if (customerCode === "AAM") return rowCode === "AAM";
+
+  return rowCode === customerCode || rowCode === "AAM";
+}
+
+export function reportRowsForCustomer(rows: ReportRow[], customer: ReportCustomerConfig) {
+  const customerCode = normalizePtoCustomerCode(customer.ptoCode) || "AAM";
+  const matchingRows = rows.filter((row) => reportRowMatchesCustomer(row, customer));
+
+  if (customerCode === "AAM") return matchingRows;
+
+  const assignedRowKeys = new Set(
+    rows
+      .filter((row) => reportRowCustomerCode(row) === customerCode)
+      .map(reportRowBasePtoKey),
+  );
+
+  return matchingRows.filter((row) => {
+    if (reportRowCustomerCode(row) !== "AAM") return true;
+
+    return !assignedRowKeys.has(reportRowBasePtoKey(row));
+  });
 }
 
 export function reportRowDisplayKey(row: ReportRow) {
@@ -117,9 +156,45 @@ function reportCompactValueLength(value: string) {
   );
 }
 
+function reportNumericLineWidth(value: string, sizing: ReportNumericColumnSizing) {
+  return [...value].reduce((width, char) => {
+    if (/\d/.test(char)) return width + sizing.digitPx;
+    if (char === " " || char === "\u00a0" || char === "\u202f") return width + sizing.groupSpacePx;
+    if (char === "-" || char === "+") return width + sizing.signPx;
+    if (char === "%") return width + sizing.percentPx;
+    if (char === "." || char === "," || char === ":") return width + sizing.groupSpacePx;
+    return width + sizing.labelPx;
+  }, sizing.paddingPx);
+}
+
+function reportNumericValueWidth(value: string, sizing: ReportNumericColumnSizing) {
+  const lines = value
+    .replace(/\u00a0/g, " ")
+    .replace(/\u202f/g, " ")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return sizing.paddingPx;
+  return Math.ceil(lines.reduce((max, line) => Math.max(max, reportNumericLineWidth(line, sizing)), 0));
+}
+
+function reportNumericHeaderWidth(header: string, sizing: ReportNumericColumnSizing) {
+  const headerChars = Math.max(2, Math.min(reportLongestWordLength(header), sizing.headerChars));
+  return Math.ceil(headerChars * sizing.digitPx + sizing.paddingPx);
+}
+
 export function reportAutoColumnWidth(key: ReportColumnKey, header: string, values: string[]) {
   const minWidth = reportColumnAutoMinWidths[key] ?? 42;
   const maxWidth = reportColumnAutoMaxWidths[key];
+
+  if (reportNumericColumnKeys.has(key)) {
+    const sizing = reportNumericColumnSizing[key];
+    if (!sizing) return minWidth;
+
+    const valueWidth = values.reduce((max, value) => Math.max(max, reportNumericValueWidth(value, sizing)), 0);
+    return Math.min(maxWidth, Math.max(minWidth, reportNumericHeaderWidth(header, sizing), valueWidth));
+  }
 
   if (reportCompactColumnKeys.has(key)) {
     const headerChars = Math.max(2, Math.min(reportLongestWordLength(header), key === "area" ? 8 : key === "unit" ? 3 : 5));
@@ -247,26 +322,26 @@ export function reportPtoDateStatus(report: ReportRow, date: string, planRows: P
   };
 }
 
-function ptoIndexRowsForReport(index: ReportPtoIndex, report: ReportRow) {
-  return index.get(reportPtoIndexKey(report.area, report.name))?.rows ?? [];
+function ptoIndexRowsForReport(index: ReportPtoIndex, report: ReportRow, includeCustomerCode = true) {
+  return index.get(reportPtoIndexKey(report.area, report.name, includeCustomerCode ? report.customerCode : ""))?.rows ?? [];
 }
 
-function ptoIndexRowsHaveValueOnDate(index: ReportPtoIndex, report: ReportRow, date: string) {
-  return index.get(reportPtoIndexKey(report.area, report.name))?.dailyTotals.has(date) ?? false;
+function ptoIndexRowsHaveValueOnDate(index: ReportPtoIndex, report: ReportRow, date: string, includeCustomerCode = true) {
+  return index.get(reportPtoIndexKey(report.area, report.name, includeCustomerCode ? report.customerCode : ""))?.dailyTotals.has(date) ?? false;
 }
 
-function ptoIndexRowsStatusForReport(index: ReportPtoIndex, report: ReportRow, date: string): PtoStatus {
-  return ptoRowsStatusForReport(ptoIndexRowsForReport(index, report), report, date);
+function ptoIndexRowsStatusForReport(index: ReportPtoIndex, report: ReportRow, date: string, includeCustomerCode = true): PtoStatus {
+  return ptoRowsStatusForReport(ptoIndexRowsForReport(index, report, includeCustomerCode), report, date);
 }
 
 export function reportPtoDateStatusFromIndexes(report: ReportRow, date: string, planIndex: ReportPtoIndex, surveyIndex: ReportPtoIndex, operIndex: ReportPtoIndex): ReportPtoDateStatus {
   return {
     plan: ptoIndexRowsStatusForReport(planIndex, report, date),
-    oper: ptoIndexRowsStatusForReport(operIndex, report, date),
-    survey: ptoIndexRowsStatusForReport(surveyIndex, report, date),
+    oper: ptoIndexRowsStatusForReport(operIndex, report, date, false),
+    survey: ptoIndexRowsStatusForReport(surveyIndex, report, date, false),
     planHasDateValue: ptoIndexRowsHaveValueOnDate(planIndex, report, date),
-    operHasDateValue: ptoIndexRowsHaveValueOnDate(operIndex, report, date),
-    surveyHasDateValue: ptoIndexRowsHaveValueOnDate(surveyIndex, report, date),
+    operHasDateValue: ptoIndexRowsHaveValueOnDate(operIndex, report, date, false),
+    surveyHasDateValue: ptoIndexRowsHaveValueOnDate(surveyIndex, report, date, false),
   };
 }
 
@@ -274,8 +349,41 @@ export function reportPtoDateStatusHasAny(status: ReportPtoDateStatus | undefine
   return Boolean(status?.planHasDateValue || status?.operHasDateValue || status?.surveyHasDateValue);
 }
 
+function reportNumericValueExists(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) && value !== 0;
+}
+
+type ReportAutoStatusSource = Pick<ReportRow, "dayPlan" | "dayFact" | "monthTotalPlan" | "monthPlan" | "monthFact">
+  & Partial<Pick<ReportRow, "yearPlan" | "yearFact" | "annualPlan">>;
+
+export function reportRowHasAutoShowData(row: ReportAutoStatusSource) {
+  return reportNumericValueExists(row.dayPlan)
+    || reportNumericValueExists(row.dayFact)
+    || reportNumericValueExists(row.monthPlan)
+    || reportNumericValueExists(row.monthFact);
+}
+
+export function reportRowAutoStatus(row: ReportAutoStatusSource): PtoStatus {
+  const hasCurrentData = reportNumericValueExists(row.dayPlan)
+    || reportNumericValueExists(row.dayFact)
+    || reportNumericValueExists(row.monthPlan)
+    || reportNumericValueExists(row.monthFact);
+  const hasFuturePlan = reportNumericValueExists(row.monthTotalPlan - row.monthPlan)
+    || reportNumericValueExists((row.annualPlan ?? 0) - (row.yearPlan ?? 0));
+  const hasPreviousData = reportNumericValueExists(row.yearPlan)
+    || reportNumericValueExists(row.yearFact);
+
+  if (hasCurrentData) return "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435";
+  if (hasFuturePlan) return "\u0417\u0430\u043f\u043b\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043e";
+  if (hasPreviousData) return "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0430";
+  return "\u041f\u0443\u0441\u0442\u043e";
+}
+
 export function reportCustomerEffectiveRowKeys(customer: ReportCustomerConfig, autoRowKeys: Set<string>) {
-  if (customer.autoShowRows) return new Set(autoRowKeys);
+  if (customer.autoShowRows) {
+    const hiddenRowKeys = new Set(customer.hiddenRowKeys);
+    return new Set(Array.from(autoRowKeys).filter((key) => !hiddenRowKeys.has(key)));
+  }
 
   return new Set(customer.rowKeys);
 }

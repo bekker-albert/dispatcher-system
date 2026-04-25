@@ -2,7 +2,7 @@
 
 import { Printer } from "lucide-react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
-import type { ReportColumnKey } from "@/lib/domain/reports/columns";
+import { reportFlexibleColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { reportReasonEntryKey } from "@/lib/domain/reports/reasons";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import { delta, formatNumber, formatPercent, formatReportTitleDate, formatReportWorkName } from "@/lib/domain/reports/display";
@@ -32,7 +32,6 @@ type ReportsSectionProps = {
   activeReportCustomerLabel: string;
   reportDate: string;
   reportCompletionCards: ReportCompletionCard[];
-  reportTableMinWidth: number;
   reportTableColumnWidths: number[];
   reportColumnKeys: readonly ReportColumnKey[];
   reportColumnWidthByKey: Map<ReportColumnKey, number>;
@@ -104,7 +103,6 @@ export default function ReportsSection({
   activeReportCustomerLabel,
   reportDate,
   reportCompletionCards,
-  reportTableMinWidth,
   reportTableColumnWidths,
   reportColumnKeys,
   reportColumnWidthByKey,
@@ -166,6 +164,11 @@ export default function ReportsSection({
   ).indexes;
   const showDayProductivity = reportColumnKeys.includes("day-productivity");
   const showMonthProductivity = reportColumnKeys.includes("month-productivity");
+  const reportColumnStyle = (key: ReportColumnKey, index: number): CSSProperties => (
+    reportFlexibleColumnKeys.has(key)
+      ? {}
+      : { width: `${reportTableColumnWidths[index]}px` }
+  );
 
   return (
     <>
@@ -220,7 +223,7 @@ export default function ReportsSection({
                     <col
                       key={key}
                       className={`report-print-col report-print-col-${key}`}
-                      style={{ width: `${(reportTableColumnWidths[index] / Math.max(reportTableMinWidth, 1)) * 100}%` }}
+                      style={reportColumnStyle(key, index)}
                     />
                   ))}
                 </colgroup>

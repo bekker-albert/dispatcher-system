@@ -1,5 +1,6 @@
 import { createId } from "../../utils/id";
 import { isRecord } from "../../utils/normalizers";
+import { normalizePtoCustomerCode } from "../pto/date-table";
 import type { ReportCustomerConfig, ReportSummaryRowConfig } from "./types";
 
 export function normalizeStoredReportCustomers(value: unknown, defaultReportCustomers: ReportCustomerConfig[]): ReportCustomerConfig[] {
@@ -52,6 +53,7 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
     return [{
       id: item.id,
       label: typeof item.label === "string" && item.label.trim() ? item.label : "Заказчик",
+      ptoCode: normalizePtoCustomerCode(typeof item.ptoCode === "string" ? item.ptoCode : fallback?.ptoCode),
       visible: item.visible !== false,
       autoShowRows: typeof item.autoShowRows === "boolean" ? item.autoShowRows : fallback?.autoShowRows ?? false,
       rowKeys,
@@ -70,6 +72,7 @@ export function normalizeStoredReportCustomers(value: unknown, defaultReportCust
     return {
       ...customer,
       label: customer.label.trim() || fallback?.label || "Заказчик",
+      ptoCode: normalizePtoCustomerCode(customer.ptoCode || fallback?.ptoCode),
       visible: customer.visible !== false,
       autoShowRows: customer.autoShowRows === true,
       rowKeys: Array.from(new Set(customer.rowKeys)),

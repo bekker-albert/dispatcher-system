@@ -48,6 +48,54 @@ export const reportColumnHeaderFallbacks: Record<ReportColumnKey, string> = {
 
 export const reportReasonColumnKeys = new Set<ReportColumnKey>(["day-reason", "year-reason"]);
 
+export const reportFlexibleColumnKeys = new Set<ReportColumnKey>(["work-name", "day-reason", "year-reason"]);
+
+export const reportNumericColumnKeys = new Set<ReportColumnKey>([
+  "day-plan",
+  "day-fact",
+  "day-delta",
+  "day-productivity",
+  "month-total-plan",
+  "month-plan",
+  "month-fact",
+  "month-delta",
+  "month-productivity",
+  "year-plan",
+  "year-fact",
+  "year-delta",
+  "annual-plan",
+  "annual-fact",
+  "annual-remaining",
+]);
+
+export type ReportNumericColumnSizing = {
+  headerChars: number;
+  digitPx: number;
+  groupSpacePx: number;
+  signPx: number;
+  percentPx: number;
+  labelPx: number;
+  paddingPx: number;
+};
+
+export const reportNumericColumnSizing: Partial<Record<ReportColumnKey, ReportNumericColumnSizing>> = {
+  "day-plan": { headerChars: 5, digitPx: 6.5, groupSpacePx: 3, signPx: 4, percentPx: 7, labelPx: 5, paddingPx: 18 },
+  "day-fact": { headerChars: 7, digitPx: 6.5, groupSpacePx: 3, signPx: 4, percentPx: 7, labelPx: 5, paddingPx: 18 },
+  "day-delta": { headerChars: 5, digitPx: 6.5, groupSpacePx: 3, signPx: 5, percentPx: 7, labelPx: 5, paddingPx: 20 },
+  "day-productivity": { headerChars: 6, digitPx: 6.2, groupSpacePx: 2.8, signPx: 4, percentPx: 6.5, labelPx: 5, paddingPx: 18 },
+  "month-total-plan": { headerChars: 5, digitPx: 6.6, groupSpacePx: 3, signPx: 4, percentPx: 7, labelPx: 5, paddingPx: 19 },
+  "month-plan": { headerChars: 5, digitPx: 6.6, groupSpacePx: 3, signPx: 4, percentPx: 7, labelPx: 5, paddingPx: 19 },
+  "month-fact": { headerChars: 8, digitPx: 6.6, groupSpacePx: 3, signPx: 4, percentPx: 7, labelPx: 4.6, paddingPx: 21 },
+  "month-delta": { headerChars: 5, digitPx: 6.6, groupSpacePx: 3, signPx: 5, percentPx: 7, labelPx: 5, paddingPx: 21 },
+  "month-productivity": { headerChars: 6, digitPx: 6.3, groupSpacePx: 2.8, signPx: 4, percentPx: 6.5, labelPx: 5, paddingPx: 19 },
+  "year-plan": { headerChars: 5, digitPx: 6.7, groupSpacePx: 3.1, signPx: 4, percentPx: 7, labelPx: 5, paddingPx: 20 },
+  "year-fact": { headerChars: 8, digitPx: 6.7, groupSpacePx: 3.1, signPx: 4, percentPx: 7, labelPx: 4.6, paddingPx: 22 },
+  "year-delta": { headerChars: 5, digitPx: 6.7, groupSpacePx: 3.1, signPx: 5, percentPx: 7, labelPx: 5, paddingPx: 22 },
+  "annual-plan": { headerChars: 7, digitPx: 6.8, groupSpacePx: 3.2, signPx: 4, percentPx: 7, labelPx: 5, paddingPx: 21 },
+  "annual-fact": { headerChars: 7, digitPx: 6.8, groupSpacePx: 3.2, signPx: 4, percentPx: 7, labelPx: 5, paddingPx: 21 },
+  "annual-remaining": { headerChars: 7, digitPx: 6.8, groupSpacePx: 3.2, signPx: 5, percentPx: 7, labelPx: 5, paddingPx: 23 },
+};
+
 export const reportCompactColumnKeys = new Set<ReportColumnKey>([
   "area",
   "unit",
@@ -95,23 +143,23 @@ export const reportColumnAutoMaxWidths: Record<ReportColumnKey, number> = {
   area: 92,
   "work-name": 240,
   unit: 34,
-  "day-plan": 56,
-  "day-fact": 56,
-  "day-delta": 52,
-  "day-productivity": 60,
+  "day-plan": 78,
+  "day-fact": 78,
+  "day-delta": 76,
+  "day-productivity": 72,
   "day-reason": 260,
-  "month-total-plan": 62,
-  "month-plan": 62,
-  "month-fact": 68,
-  "month-delta": 52,
-  "month-productivity": 60,
-  "year-plan": 62,
-  "year-fact": 68,
-  "year-delta": 52,
+  "month-total-plan": 86,
+  "month-plan": 86,
+  "month-fact": 96,
+  "month-delta": 88,
+  "month-productivity": 78,
+  "year-plan": 92,
+  "year-fact": 104,
+  "year-delta": 94,
   "year-reason": 300,
-  "annual-plan": 62,
-  "annual-fact": 62,
-  "annual-remaining": 60,
+  "annual-plan": 96,
+  "annual-fact": 96,
+  "annual-remaining": 104,
 };
 
 export const reportColumnAutoMinWidths: Record<ReportColumnKey, number> = {
@@ -121,20 +169,20 @@ export const reportColumnAutoMinWidths: Record<ReportColumnKey, number> = {
   "day-plan": 44,
   "day-fact": 44,
   "day-delta": 42,
-  "day-productivity": 50,
+  "day-productivity": 48,
   "day-reason": 120,
-  "month-total-plan": 48,
-  "month-plan": 48,
-  "month-fact": 54,
-  "month-delta": 42,
+  "month-total-plan": 54,
+  "month-plan": 54,
+  "month-fact": 62,
+  "month-delta": 50,
   "month-productivity": 50,
-  "year-plan": 48,
-  "year-fact": 54,
-  "year-delta": 42,
+  "year-plan": 56,
+  "year-fact": 64,
+  "year-delta": 52,
   "year-reason": 140,
-  "annual-plan": 48,
-  "annual-fact": 48,
-  "annual-remaining": 48,
+  "annual-plan": 58,
+  "annual-fact": 58,
+  "annual-remaining": 62,
 };
 
 export const defaultReportColumnWidths = [

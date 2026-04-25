@@ -4,6 +4,7 @@ export type ReportRow = {
   area: string;
   name: string;
   displayKey?: string;
+  customerCode?: string;
   unit: string;
   dayPlan: number;
   dayFact: number;
@@ -35,6 +36,7 @@ export type ReportSummaryRowConfig = {
 export type ReportCustomerConfig = {
   id: string;
   label: string;
+  ptoCode: string;
   visible: boolean;
   autoShowRows: boolean;
   rowKeys: string[];

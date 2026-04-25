@@ -41,8 +41,8 @@ const statements = [
     area TEXT NULL,
     location TEXT NULL,
     structure TEXT NULL,
+    customer_code VARCHAR(32) NULL,
     unit VARCHAR(64) NULL,
-    coefficient DECIMAL(20, 6) NULL,
     status VARCHAR(191) NULL,
     carryover DECIMAL(20, 6) NULL,
     carryovers JSON NULL,
@@ -117,6 +117,19 @@ export async function ensureMysqlSchema() {
           && typeof error === "object"
           && "code" in error
           && (error as { code?: string }).code === "ER_DUP_KEYNAME"
+        )) {
+          throw error;
+        }
+      }
+
+      try {
+        await getMysqlPool().execute("ALTER TABLE pto_rows ADD COLUMN customer_code VARCHAR(32) NULL AFTER structure");
+      } catch (error) {
+        if (!(
+          error
+          && typeof error === "object"
+          && "code" in error
+          && (error as { code?: string }).code === "ER_DUP_FIELDNAME"
         )) {
           throw error;
         }

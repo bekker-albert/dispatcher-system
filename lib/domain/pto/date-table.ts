@@ -6,8 +6,8 @@ export type PtoPlanRow = {
   area: string;
   location: string;
   structure: string;
+  customerCode?: string;
   unit: string;
-  coefficient: number;
   status: string;
   carryover: number;
   carryovers?: Record<string, number>;
@@ -26,8 +26,8 @@ export const ptoColumnDefaults = {
   area: 138,
   location: 150,
   structure: 250,
+  customerCode: 88,
   unit: 58,
-  coefficient: 82,
   status: 118,
   carryover: 110,
   yearTotal: 118,
@@ -35,6 +35,11 @@ export const ptoColumnDefaults = {
   day: 86,
 };
 export const ptoUnitOptions = ["\u043c2", "\u043c3", "\u0442\u043d"] as const;
+export const ptoCustomerCodeOptions = [
+  { code: "AAM", label: "\u0422\u041e\u041e AA Mining", customerId: "aa-mining" },
+  { code: "AA", label: "\u0410\u041e \u0410\u041a \u0410\u043b\u0442\u044b\u043d\u0430\u043b\u043c\u0430\u0441", customerId: "ak-altynalmas" },
+  { code: "AAE", label: "\u0422\u041e\u041e AA Engineering", customerId: "aa-engineering" },
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -205,6 +210,20 @@ export function normalizePtoUnit(value: string | undefined) {
   return "\u043c3";
 }
 
+export function normalizePtoCustomerCode(value: string | undefined) {
+  const text = (value ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  if (!text) return "";
+
+  const matched = ptoCustomerCodeOptions.find((option) => option.code === text);
+  return matched?.code ?? text.slice(0, 12);
+}
+
+export function ptoCustomerCodeLabel(code: string | undefined) {
+  const normalizedCode = normalizePtoCustomerCode(code);
+  const matched = ptoCustomerCodeOptions.find((option) => option.code === normalizedCode);
+  return matched ? `${matched.code} - ${matched.label}` : normalizedCode;
+}
+
 export function ptoAutomatedStatus(row: PtoPlanRow, selectedDate: string): PtoStatus {
   const month = selectedDate.slice(0, 7);
   const filledDates = Object.entries(row.dailyPlans)
@@ -238,6 +257,13 @@ export function ptoLinkedRowSignature(row: PtoPlanRow) {
   ].map(normalizeLookupValue).join(":");
 
   return signature === "::" ? "" : signature;
+}
+
+export function ptoCustomerPlanRowSignature(row: PtoPlanRow) {
+  const baseSignature = ptoLinkedRowSignature(row);
+  const customerCode = normalizePtoCustomerCode(row.customerCode);
+
+  return customerCode ? `${baseSignature}:${normalizeLookupValue(customerCode)}` : baseSignature;
 }
 
 export function ptoAreaMatches(rowArea: string, filterArea: string) {
@@ -285,8 +311,8 @@ export function createEmptyPtoDateRow(
     area: resolvedArea,
     location: overrides.location ?? "",
     structure: overrides.structure ?? "",
+    customerCode: normalizePtoCustomerCode(overrides.customerCode),
     unit: normalizePtoUnit(overrides.unit),
-    coefficient: Number(overrides.coefficient ?? 0),
     status,
     carryover: Number(overrides.carryover ?? 0),
     carryovers: overrides.carryovers,
@@ -315,8 +341,8 @@ export function ptoFieldLogLabel(field: string) {
     area: "\u0423\u0447\u0430\u0441\u0442\u043e\u043a",
     location: "\u041c\u0435\u0441\u0442\u043e\u043d\u0430\u0445\u043e\u0436\u0434\u0435\u043d\u0438\u0435",
     structure: "\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430",
+    customerCode: "\u0417\u0430\u043a\u0430\u0437\u0447\u0438\u043a",
     unit: "\u0415\u0434.",
-    coefficient: "\u041a\u043e\u044d\u0444\u0444.",
     carryover: "\u041e\u0441\u0442\u0430\u0442\u043a\u0438",
   };
 
@@ -342,10 +368,17 @@ export function ptoAutoCarryover(row: PtoPlanRow, year: string, rows: PtoPlanRow
 
   const previousYear = String(numericYear - 1);
   const signature = ptoLinkedRowSignature(row);
+  const customerPlanSignature = ptoCustomerPlanRowSignature(row);
   if (!signature) return 0;
 
   return rows
-    .filter((item) => ptoLinkedRowSignature(item) === signature && ptoRowHasYear(item, previousYear))
+    .filter((item) => {
+      const itemSignature = row.customerCode || item.customerCode
+        ? ptoCustomerPlanRowSignature(item)
+        : ptoLinkedRowSignature(item);
+
+      return itemSignature === (row.customerCode ? customerPlanSignature : signature) && ptoRowHasYear(item, previousYear);
+    })
     .reduce((sum, item) => sum + ptoYearTotalWithCarryover(item, previousYear, rows, visited), 0);
 }
 
@@ -399,8 +432,8 @@ export function normalizePtoPlanRow(row: Partial<PtoPlanRow>): PtoPlanRow {
     area: row.area ?? "",
     location: row.location ?? "",
     structure: row.structure ?? "",
+    customerCode: normalizePtoCustomerCode(row.customerCode),
     unit: normalizePtoUnit(row.unit),
-    coefficient: Number(row.coefficient ?? 0),
     status: row.status ?? "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435",
     carryover: legacyCarryover,
     carryovers: storedCarryovers,

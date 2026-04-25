@@ -27,8 +27,8 @@ export function ReportCompletionGauge({
     <div style={reportGaugeStyle} aria-label={`Выполнение плана: ${percent}%`}>
       <div style={{ ...reportGaugeCircleStyle, background: `conic-gradient(#16a34a ${visiblePercent * 3.6}deg, #e2e8f0 0deg)` }}>
         <div style={reportGaugeInnerStyle}>
-          <span style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{percent}%</span>
-          <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>план</span>
+          <span style={getReportGaugePercentStyle(percent)}>{percent}%</span>
+          <span style={reportGaugeLabelStyle}>план</span>
         </div>
       </div>
       <div style={{ minWidth: 0 }}>
@@ -125,9 +125,9 @@ export function ReportTd({
 
 export function ReportMetric({ value, note }: { value: string; note: string }) {
   return (
-    <div style={{ display: "grid", gap: 1 }}>
-      <span style={{ fontWeight: 700, lineHeight: 1, whiteSpace: "nowrap" }}>{value}</span>
-      <span style={{ color: "#64748b", fontSize: 9, lineHeight: 1.05 }}>{note}</span>
+    <div className="report-metric" style={reportMetricStyle}>
+      <span className="report-metric-value" style={reportMetricValueStyle}>{value}</span>
+      <span className="report-metric-note" style={reportMetricNoteStyle}>{note}</span>
     </div>
   );
 }
@@ -157,6 +157,32 @@ const reportGaugeInnerStyle: CSSProperties = {
   display: "grid",
   placeItems: "center",
   alignContent: "center",
+  gap: 1,
+};
+
+const reportGaugePercentStyle: CSSProperties = {
+  fontSize: 22,
+  fontWeight: 800,
+  lineHeight: 1,
+  letterSpacing: 0,
+  whiteSpace: "nowrap",
+};
+
+function getReportGaugePercentStyle(percent: number): CSSProperties {
+  if (percent >= 100) {
+    return { ...reportGaugePercentStyle, fontSize: 18 };
+  }
+
+  return reportGaugePercentStyle;
+}
+
+const reportGaugeLabelStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 9,
+  fontWeight: 700,
+  lineHeight: 1,
+  letterSpacing: 0,
+  textTransform: "uppercase",
 };
 
 const reportGaugeStatsStyle: CSSProperties = {
@@ -174,6 +200,27 @@ const reportCatchUpStyle: CSSProperties = {
   color: "#334155",
   fontSize: 12,
   marginTop: 8,
+};
+
+const reportMetricStyle: CSSProperties = {
+  display: "grid",
+  gap: 1,
+  justifyItems: "center",
+  lineHeight: 1,
+};
+
+const reportMetricValueStyle: CSSProperties = {
+  fontWeight: 700,
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+};
+
+const reportMetricNoteStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 10,
+  fontWeight: 400,
+  lineHeight: 1.05,
+  whiteSpace: "nowrap",
 };
 
 const reportThStyle: CSSProperties = {

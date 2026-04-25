@@ -1,5 +1,5 @@
 import { cleanAreaName, normalizeLookupValue } from "../../utils/text";
-import { dateRange, nextDate, ptoEffectiveCarryover, ptoLinkedRowSignature, type PtoPlanRow } from "../pto/date-table";
+import { dateRange, nextDate, normalizePtoCustomerCode, ptoCustomerPlanRowSignature, ptoEffectiveCarryover, ptoLinkedRowSignature, type PtoPlanRow } from "../pto/date-table";
 import { reportYearFact } from "./facts";
 import type { ReportRow } from "./types";
 
@@ -36,12 +36,15 @@ const defaultReportForm: ReportRow = {
   annualFact: 0,
 };
 
-export function reportPtoIndexKey(area: string, name: string) {
-  return `${normalizeLookupValue(cleanAreaName(area))}::${normalizeLookupValue(name)}`;
+export function reportPtoIndexKey(area: string, name: string, customerCode = "") {
+  const baseKey = `${normalizeLookupValue(cleanAreaName(area))}::${normalizeLookupValue(name)}`;
+  const normalizedCustomerCode = normalizePtoCustomerCode(customerCode);
+
+  return normalizedCustomerCode ? `${baseKey}::${normalizeLookupValue(normalizedCustomerCode)}` : baseKey;
 }
 
-function reportIndexKey(row: Pick<ReportRow, "area" | "name">) {
-  return reportPtoIndexKey(row.area, row.name);
+function reportIndexKey(row: Pick<ReportRow, "area" | "name"> & Partial<Pick<ReportRow, "customerCode">>, includeCustomerCode = true) {
+  return reportPtoIndexKey(row.area, row.name, includeCustomerCode ? row.customerCode : "");
 }
 
 function rowYears(row: PtoPlanRow) {
@@ -55,12 +58,13 @@ function rowYears(row: PtoPlanRow) {
   ].filter((year) => /^\d{4}$/.test(year)));
 }
 
-export function buildReportPtoIndex(rows: PtoPlanRow[]): ReportPtoIndex {
+export function buildReportPtoIndex(rows: PtoPlanRow[], options: { includeCustomerCode?: boolean } = {}): ReportPtoIndex {
   const index: ReportPtoIndex = new Map();
   const yearsBySignature = new Map<string, Set<string>>();
+  const includeCustomerCode = options.includeCustomerCode === true;
 
   rows.forEach((row) => {
-    const signature = ptoLinkedRowSignature(row);
+    const signature = includeCustomerCode ? ptoCustomerPlanRowSignature(row) : ptoLinkedRowSignature(row);
     if (!signature) return;
 
     const years = yearsBySignature.get(signature) ?? new Set<string>();
@@ -71,7 +75,7 @@ export function buildReportPtoIndex(rows: PtoPlanRow[]): ReportPtoIndex {
   rows.forEach((row) => {
     if (!row.structure.trim()) return;
 
-    const key = reportPtoIndexKey(row.area, row.structure);
+    const key = reportPtoIndexKey(row.area, row.structure, includeCustomerCode ? row.customerCode : "");
     const entry = index.get(key) ?? {
       matched: 0,
       rows: [],
@@ -101,7 +105,7 @@ export function buildReportPtoIndex(rows: PtoPlanRow[]): ReportPtoIndex {
       });
 
     entry.rows.forEach((row) => {
-      const signature = ptoLinkedRowSignature(row);
+      const signature = includeCustomerCode ? ptoCustomerPlanRowSignature(row) : ptoLinkedRowSignature(row);
       const signatureYears = signature ? yearsBySignature.get(signature) : undefined;
 
       rowYears(row).forEach((year) => {
@@ -153,6 +157,7 @@ export function createReportRowFromPtoPlan(row: PtoPlanRow): ReportRow {
   return normalizeReportRow({
     area: cleanAreaName(row.area),
     name: row.structure,
+    customerCode: normalizePtoCustomerCode(row.customerCode),
     unit: row.unit === "Тонна" ? "тн" : row.unit === "Куб" ? "м3" : row.unit,
     dayReason: "",
     yearReason: "",
@@ -204,10 +209,6 @@ export function sumReportPtoIndex(
   });
 
   return { matched: entry.matched > 0, value };
-}
-
-function reportIndexEntry(index: ReportPtoIndex, report: ReportRow) {
-  return index.get(reportIndexKey(report));
 }
 
 function indexedSourceValue(entry: ReportPtoIndexEntry | undefined, value: number, fallback: number) {
@@ -315,7 +316,7 @@ export function deriveReportRowFromPto(
   return deriveReportRowFromPtoIndex(
     row,
     reportDateValue,
-    buildReportPtoIndex(planRows),
+    buildReportPtoIndex(planRows, { includeCustomerCode: true }),
     buildReportPtoIndex(surveyRows),
     buildReportPtoIndex(operRows),
   );
@@ -334,9 +335,9 @@ export function deriveReportRowFromPtoIndex(
   const yearEnd = `${year}-12-31`;
   const monthStart = `${month}-01`;
   const monthEnd = `${month}-31`;
-  const planEntry = reportIndexEntry(planIndex, row);
-  const surveyEntry = reportIndexEntry(surveyIndex, row);
-  const operEntry = reportIndexEntry(operIndex, row);
+  const planEntry = planIndex.get(reportIndexKey(row, true));
+  const surveyEntry = surveyIndex.get(reportIndexKey(row, false));
+  const operEntry = operIndex.get(reportIndexKey(row, false));
 
   const dayPlan = indexedSourceValue(planEntry, exactDateTotal(planEntry, reportDateValue), row.dayPlan);
   const monthTotalPlan = indexedSourceValue(planEntry, rangeTotal(planEntry, monthStart, monthEnd), row.monthTotalPlan);

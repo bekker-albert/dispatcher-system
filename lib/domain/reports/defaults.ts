@@ -118,6 +118,7 @@ export const defaultReportCustomers: ReportCustomerConfig[] = [
   {
     id: "aa-mining",
     label: "ТОО AA Mining",
+    ptoCode: "AAM",
     visible: true,
     autoShowRows: true,
     rowKeys: defaultReportRows.map(reportRowKey),
@@ -128,6 +129,7 @@ export const defaultReportCustomers: ReportCustomerConfig[] = [
   {
     id: "ak-altynalmas",
     label: "АО АК Алтыналмас",
+    ptoCode: "AA",
     visible: true,
     autoShowRows: false,
     rowKeys: [],
@@ -138,6 +140,7 @@ export const defaultReportCustomers: ReportCustomerConfig[] = [
   {
     id: "aa-engineering",
     label: "ТОО AA Engineering",
+    ptoCode: "AAE",
     visible: true,
     autoShowRows: false,
     rowKeys: [],

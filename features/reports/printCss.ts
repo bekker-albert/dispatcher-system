@@ -174,6 +174,25 @@ export const reportPrintCss = `
     padding: 0.8px 1.5px !important;
   }
 
+  .report-print-table .report-metric {
+    gap: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .report-print-table .report-metric-value {
+    font-size: 1em !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+  }
+
+  .report-print-table .report-metric-note {
+    color: #475569 !important;
+    font-size: 1em !important;
+    font-weight: 500 !important;
+    line-height: 1.02 !important;
+    white-space: nowrap !important;
+  }
+
   .report-print-table th {
     line-height: 1.08 !important;
     padding-bottom: 1.4px !important;

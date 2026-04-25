@@ -35,8 +35,8 @@ type PtoRowRecord = RowDataPacket & {
   area: string | null;
   location: string | null;
   structure: string | null;
+  customer_code: string | null;
   unit: string | null;
-  coefficient: number | string | null;
   status: string | null;
   carryover: number | string | null;
   carryovers: unknown;
@@ -120,8 +120,8 @@ function ptoRowsToRecords(table: MysqlPtoTable, rows: MysqlPtoRow[]) {
     area: row.area,
     location: row.location,
     structure: row.structure,
+    customer_code: row.customerCode ?? "",
     unit: row.unit,
-    coefficient: Number(row.coefficient ?? 0),
     status: row.status,
     carryover: Number(row.carryover ?? 0),
     carryovers: row.carryovers ?? {},
@@ -150,8 +150,8 @@ function recordToRow(record: PtoRowRecord, dailyPlans: Record<string, number>): 
     area: record.area ?? "",
     location: record.location ?? "",
     structure: record.structure ?? "",
+    customerCode: record.customer_code ?? "",
     unit: record.unit ?? "",
-    coefficient: asFiniteNumber(record.coefficient),
     status: record.status ?? "",
     carryover: asFiniteNumber(record.carryover),
     carryovers: asNumberRecord(parseJson(record.carryovers, record.carryovers)),
@@ -213,8 +213,8 @@ async function upsertPtoRows(records: ReturnType<typeof ptoRowsToRecords>) {
       record.area,
       record.location,
       record.structure,
+      record.customer_code,
       record.unit,
-      record.coefficient,
       record.status,
       record.carryover,
       stringifyJson(record.carryovers),
@@ -225,15 +225,15 @@ async function upsertPtoRows(records: ReturnType<typeof ptoRowsToRecords>) {
 
     await dbExecute(
       `INSERT INTO pto_rows (
-        table_type, row_id, area, location, structure, unit, coefficient, status,
+        table_type, row_id, area, location, structure, customer_code, unit, status,
         carryover, carryovers, carryover_manual_years, years, sort_index
       ) VALUES ${placeholders}
       ON DUPLICATE KEY UPDATE
         area = VALUES(area),
         location = VALUES(location),
         structure = VALUES(structure),
+        customer_code = VALUES(customer_code),
         unit = VALUES(unit),
-        coefficient = VALUES(coefficient),
         status = VALUES(status),
         carryover = VALUES(carryover),
         carryovers = VALUES(carryovers),

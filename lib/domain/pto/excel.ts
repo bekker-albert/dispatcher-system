@@ -6,9 +6,11 @@ import {
   createEmptyPtoDateRow,
   distributeMonthlyTotal,
   monthDays,
+  normalizePtoCustomerCode,
   normalizePtoPlanRow,
   normalizePtoUnit,
   previousPtoYearLabel,
+  ptoCustomerPlanRowSignature,
   ptoAreaMatches,
   ptoLinkedRowSignature,
   ptoMonthTotal,
@@ -130,13 +132,14 @@ function ptoPlanExportCell(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : "";
 }
 
-export function createPtoPlanExportRows(rows: PtoPlanRow[], year: string, areaFilterValue: string) {
+export function createPtoPlanExportRows(rows: PtoPlanRow[], year: string, areaFilterValue: string, table: PtoDateTableKey = "plan") {
   const months = yearMonths(year);
+  const includeCustomerCode = table === "plan";
   const headers = [
+    ...(includeCustomerCode ? ["Заказчик"] : []),
     "Участок",
     "Вид работ",
     "Ед.",
-    "Коэфф.",
     `Остатки ${previousPtoYearLabel(year)}`,
     "Итого год",
     ...months.flatMap((month) => [
@@ -147,10 +150,10 @@ export function createPtoPlanExportRows(rows: PtoPlanRow[], year: string, areaFi
   const exportRows = rows
     .filter((row) => ptoAreaMatches(row.area, areaFilterValue) && ptoRowHasYear(row, year))
     .map((row) => [
+      ...(includeCustomerCode ? [normalizePtoCustomerCode(row.customerCode)] : []),
       cleanAreaName(row.area),
       row.structure,
       normalizePtoUnit(row.unit),
-      ptoPlanExportCell(row.coefficient),
       ptoPlanExportCell(ptoStoredCarryover(row, year)),
       ptoPlanExportCell(ptoYearTotalWithCarryover(row, year, rows)),
       ...months.flatMap((month) => {
@@ -167,12 +170,13 @@ export function createPtoPlanExportRows(rows: PtoPlanRow[], year: string, areaFi
   return [headers, ...exportRows];
 }
 
-export function createPtoPlanExportColumns(year: string) {
+export function createPtoPlanExportColumns(year: string, table: PtoDateTableKey = "plan") {
+  const includeCustomerCode = table === "plan";
   const columns: XlsxColumnOption[] = [
+    ...(includeCustomerCode ? [{ width: 10 }] : []),
     { width: 14 },
     { width: 42 },
     { width: 7 },
-    { width: 10 },
     { width: 15 },
     { width: 15 },
   ];
@@ -187,7 +191,12 @@ export function createPtoPlanExportColumns(year: string) {
   return columns;
 }
 
-export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: string, currentRows: PtoPlanRow[]) {
+function ptoImportRowSignature(row: PtoPlanRow, includeCustomerCode: boolean) {
+  return includeCustomerCode ? ptoCustomerPlanRowSignature(row) : ptoLinkedRowSignature(row);
+}
+
+export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: string, currentRows: PtoPlanRow[], table: PtoDateTableKey = "plan") {
+  const includeCustomerCode = table === "plan";
   const [headers = [], ...rows] = tableRows
     .map((row) => row.map((cell) => String(cell ?? "").trim()))
     .filter((row) => row.some(Boolean));
@@ -195,9 +204,9 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
 
   const columns = {
     area: findTableColumn(headers, ["Участок", "Участки"]),
+    customerCode: includeCustomerCode ? findTableColumn(headers, ["Заказчик", "Сокр.", "Сокращение", "Код заказчика", "Код"]) : -1,
     structure: findTableColumn(headers, ["Вид работ", "Структура", "Работа"]),
     unit: findTableColumn(headers, ["Ед.", "Ед", "Ед. изм.", "Единица", "Единица измерения"]),
-    coefficient: findTableColumn(headers, ["Коэфф.", "Коэфф", "Коэффициент"]),
     carryover: findTableColumn(headers, [`Остатки ${previousPtoYearLabel(year)}`, "Остатки", "Остаток"]),
   };
 
@@ -213,7 +222,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
     .filter((column) => column.month.startsWith(`${year}-`));
   const currentBySignature = new Map(
     currentRows
-      .map((row) => [ptoLinkedRowSignature(row), row] as const)
+      .map((row) => [ptoImportRowSignature(row, includeCustomerCode), row] as const)
       .filter(([signature]) => signature),
   );
   let previousArea = "";
@@ -224,13 +233,14 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
       if (rawArea) previousArea = rawArea;
 
       const area = normalizePtoPlanImportArea(rawArea || previousArea);
+      const customerCode = includeCustomerCode ? normalizePtoCustomerCode(ptoPlanImportCell(row, columns.customerCode)) : "";
       const structure = ptoPlanImportCell(row, columns.structure);
       const unit = normalizePtoUnit(ptoPlanImportCell(row, columns.unit));
       if (!area && !structure) return null;
       if (!structure) return null;
 
-      const signatureProbe = normalizePtoPlanRow({ area, structure, unit });
-      const existing = currentBySignature.get(ptoLinkedRowSignature(signatureProbe));
+      const signatureProbe = normalizePtoPlanRow({ area, customerCode, structure, unit });
+      const existing = currentBySignature.get(ptoImportRowSignature(signatureProbe, includeCustomerCode));
       const dailyPlans = Object.fromEntries(
         Object.entries(existing?.dailyPlans ?? {}).filter(([date]) => !date.startsWith(`${year}-`)),
       );
@@ -269,7 +279,6 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
       });
 
       const carryover = parseDecimalInput(ptoPlanImportCell(row, columns.carryover));
-      const coefficient = parseDecimalInput(ptoPlanImportCell(row, columns.coefficient));
       const carryovers = {
         ...(existing?.carryovers ?? {}),
         ...(carryover === null ? {} : { [year]: carryover }),
@@ -282,9 +291,9 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
         id: existing?.id ?? createId(),
         area,
         location: existing?.location ?? "",
+        customerCode,
         structure,
         unit,
-        coefficient: coefficient ?? existing?.coefficient ?? 0,
         status: existing?.status ?? "Новая",
         carryover: existing?.carryover ?? 0,
         carryovers,
@@ -296,15 +305,16 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
     .filter((row): row is PtoPlanRow => row !== null);
 }
 
-export function mergeImportedPtoPlanRows(currentRows: PtoPlanRow[], importedRows: PtoPlanRow[]) {
+export function mergeImportedPtoPlanRows(currentRows: PtoPlanRow[], importedRows: PtoPlanRow[], options: { includeCustomerCode?: boolean } = {}) {
+  const includeCustomerCode = options.includeCustomerCode === true;
   const importedBySignature = new Map(
     importedRows
-      .map((row) => [ptoLinkedRowSignature(row), row] as const)
+      .map((row) => [ptoImportRowSignature(row, includeCustomerCode), row] as const)
       .filter(([signature]) => signature),
   );
   const usedSignatures = new Set<string>();
   const mergedRows = currentRows.map((row) => {
-    const signature = ptoLinkedRowSignature(row);
+    const signature = ptoImportRowSignature(row, includeCustomerCode);
     const importedRow = signature ? importedBySignature.get(signature) : undefined;
     if (!importedRow) return row;
 
@@ -313,7 +323,7 @@ export function mergeImportedPtoPlanRows(currentRows: PtoPlanRow[], importedRows
   });
 
   importedRows.forEach((row) => {
-    const signature = ptoLinkedRowSignature(row);
+    const signature = ptoImportRowSignature(row, includeCustomerCode);
     if (!signature || usedSignatures.has(signature)) return;
 
     usedSignatures.add(signature);
@@ -337,7 +347,6 @@ export function ensureImportedRowsInLinkedPtoTable(currentRows: PtoPlanRow[], im
       location: row.location,
       structure: row.structure,
       unit: row.unit,
-      coefficient: row.coefficient,
       years: row.years,
     }));
   });
