@@ -23,6 +23,8 @@ type DatabaseResponse<T> = {
   error?: unknown;
 };
 
+const databaseRequestTimeoutMs = 30000;
+
 function databaseApiUrl() {
   if (typeof window === "undefined") return "/api/database";
 
@@ -38,13 +40,28 @@ export async function databaseRequest<T>(
   action: DatabaseAction,
   payload?: unknown,
 ): Promise<T> {
-  const response = await fetch(databaseApiUrl(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ resource, action, payload }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), databaseRequestTimeoutMs);
+
+  let response: Response;
+
+  try {
+    response = await fetch(databaseApiUrl(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ resource, action, payload }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Сервер базы данных не ответил за 30 секунд.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const body = await response.json().catch(() => ({})) as DatabaseResponse<T>;
 

@@ -1260,6 +1260,18 @@ export default function App() {
         const databaseState = await loadPtoStateFromSupabase();
         if (cancelled) return;
 
+        if (
+          databaseState
+          && (
+            !Array.isArray(databaseState.manualYears)
+            || !Array.isArray(databaseState.planRows)
+            || !Array.isArray(databaseState.operRows)
+            || !Array.isArray(databaseState.surveyRows)
+          )
+        ) {
+          throw new Error("Сервер вернул не таблицу ПТО. Обнови страницу через Ctrl+F5 и повтори вход.");
+        }
+
         if (!databaseState) {
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
@@ -1368,8 +1380,9 @@ export default function App() {
       } catch (error) {
         if (!cancelled) {
           ptoDatabaseLoadedRef.current = false;
-          setPtoDatabaseReady(false);
+          setPtoDatabaseReady(true);
           setPtoDatabaseMessage("Не удалось загрузить ПТО из базы данных: " + errorToMessage(error));
+          showSaveStatus("error", "Не удалось загрузить ПТО из базы данных: " + errorToMessage(error));
         }
       }
     }
@@ -1379,7 +1392,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [adminDataLoaded]);
+  }, [adminDataLoaded, showSaveStatus]);
 
   const saveAppLocalState = useCallback(() => {
     window.localStorage.setItem(adminStorageKeys.reportCustomers, JSON.stringify(reportCustomers));
