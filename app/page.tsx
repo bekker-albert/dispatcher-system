@@ -1,16 +1,15 @@
 "use client";
 
-import { Check, ChevronDown, ChevronRight, Database, Download, Eye, EyeOff, Pencil, Plus, RotateCcw, Trash2, Upload } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
-import { ReportFactSourceCell, ReportFactSourceModal } from "@/features/reports/admin/ReportFactSourcePicker";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, resolveAutomaticWorkingDate, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
-import { adminLogLimit, formatAdminLogDate, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
+import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
@@ -18,7 +17,7 @@ import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowAutoStatus, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
+import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
@@ -27,7 +26,7 @@ import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultRe
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
-import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultCustomTabForm, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, subtabGroupLabels, type BaseTopTab, type CustomTab, type EditableSubtabGroup, type NewSubTabForm, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
+import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import { isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow, type VehicleSeedRow } from "@/lib/domain/vehicles/defaults";
@@ -43,7 +42,7 @@ import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, no
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
-import { IconButton, MiniIconButton, TopButton } from "@/shared/ui/buttons";
+import { IconButton, TopButton } from "@/shared/ui/buttons";
 import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
 import { HeaderSubButton } from "@/shared/ui/navigation";
 
@@ -276,6 +275,15 @@ const reportDateOverrideStorageKey = "dispatcher:report-date-override";
 const AdminVehiclesSection = dynamic(() => import("@/features/admin/vehicles/AdminVehiclesSection"), {
   ssr: false,
 });
+const AdminDatabaseSection = dynamic(() => import("@/features/admin/database/AdminDatabaseSection"), {
+  ssr: false,
+});
+const AdminLogsSection = dynamic(() => import("@/features/admin/logs/AdminLogsSection"), {
+  ssr: false,
+});
+const AdminNavigationSection = dynamic(() => import("@/features/admin/navigation/AdminNavigationSection"), {
+  ssr: false,
+});
 const DispatchSection = dynamic(() => import("@/features/dispatch/DispatchSection"), {
   ssr: false,
 });
@@ -283,6 +291,9 @@ const ReportsSection = dynamic(() => import("@/features/reports/ReportsSection")
   ssr: false,
 });
 const PtoSection = dynamic(() => import("@/features/pto/PtoSection"), {
+  ssr: false,
+});
+const AdminReportSettingsSection = dynamic(() => import("@/features/reports/admin/AdminReportSettingsSection"), {
   ssr: false,
 });
 
@@ -419,7 +430,6 @@ export default function App() {
   const [reportArea, setReportArea] = useState("Все участки");
   const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
   const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
-  const [adminReportTab, setAdminReportTab] = useState<"customer">("customer");
   const [adminReportCustomerSettingsTab, setAdminReportCustomerSettingsTab] = useState<AdminReportCustomerSettingsTab>("display");
   const [editingReportRowLabelKeys, setEditingReportRowLabelKeys] = useState<string[]>([]);
   const [expandedReportSummaryIds, setExpandedReportSummaryIds] = useState<string[]>([]);
@@ -453,8 +463,6 @@ export default function App() {
   const [ptoBucketManualRows, setPtoBucketManualRows] = useState<PtoBucketRow[]>([]);
   const [headerSubtabsOffset, setHeaderSubtabsOffset] = useState(0);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
-  const [customTabForm, setCustomTabForm] = useState(defaultCustomTabForm);
-  const [newSubTabForm, setNewSubTabForm] = useState<NewSubTabForm>({ group: "reports", label: "", content: "" });
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>(defaultOrgMembers);
   const [orgMemberForm, setOrgMemberForm] = useState<OrgMember>(defaultOrgMemberForm);
   const [editingOrgMemberId, setEditingOrgMemberId] = useState<string | null>(null);
@@ -465,14 +473,11 @@ export default function App() {
   const [editingDependencyNodeId, setEditingDependencyNodeId] = useState<string | null>(null);
   const [editingDependencyLinkId, setEditingDependencyLinkId] = useState<string | null>(null);
   const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
-  const [adminSection, setAdminSection] = useState<AdminSection>("menu");
+  const [adminSection, setAdminSection] = useState<AdminSection>("vehicles");
   const [clientSnapshots, setClientSnapshots] = useState<SupabaseClientSnapshot[]>([]);
   const [databasePanelMessage, setDatabasePanelMessage] = useState("");
   const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
   const [adminLogs, setAdminLogs] = useState<AdminLogEntry[]>([]);
-  const [expandedAdminTab, setExpandedAdminTab] = useState<string | null>("reports");
-  const [editingTopTabId, setEditingTopTabId] = useState<string | null>(null);
-  const [editingSubTabId, setEditingSubTabId] = useState<string | null>(null);
   const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(supabaseConfigured ? "База данных подключается..." : "База данных не настроена.");
   const [saveStatus, setSaveStatus] = useState<SaveStatusState>({ kind: "idle", message: "" });
   const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!supabaseConfigured);
@@ -3162,7 +3167,6 @@ export default function App() {
 
     setReportCustomers((current) => [...current, customer]);
     setAdminReportCustomerId(customerId);
-    setAdminReportTab("customer");
     setReportCustomerId(customerId);
     addAdminLog({
       action: "Добавление",
@@ -3190,7 +3194,6 @@ export default function App() {
     setReportCustomers(nextCustomers);
     setAdminReportCustomerId(nextCustomerId);
     setReportCustomerId((current) => (current === customerId ? nextCustomerId : current));
-    setAdminReportTab("customer");
     addAdminLog({
       action: "Удаление",
       section: "Отчетность",
@@ -3899,34 +3902,38 @@ export default function App() {
     });
   }
 
-  function addCustomTab() {
-    const title = customTabForm.title.trim();
-    if (!title) return;
+  function addCustomTab(title: string) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
 
     const nextTab: CustomTab = {
       id: createId(),
-      title,
-      description: customTabForm.description.trim(),
+      title: trimmedTitle,
+      description: "",
       items: [],
       visible: true,
     };
 
     setCustomTabs((current) => [...current, nextTab]);
-    setCustomTabForm(defaultCustomTabForm);
     setTopTab(customTabKey(nextTab.id));
   }
 
-  function updateTopTabLabel(id: BaseTopTab, label: string) {
+  function updateTopTabLabel(id: TopTabDefinition["id"], label: string) {
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel) return;
+
     setTopTabs((current) =>
-      current.map((tab) => (tab.id === id ? { ...tab, label } : tab)),
+      current.map((tab) => (tab.id === id ? { ...tab, label: trimmedLabel } : tab)),
     );
   }
 
-  function hideTopTab(id: BaseTopTab) {
-    if (id === "admin") return;
+  function deleteTopTab(id: TopTabDefinition["id"]) {
+    const tab = topTabs.find((item) => item.id === id);
+    if (!tab || tab.locked) return;
+    if (!window.confirm(`Удалить вкладку "${tab.label}"? Она будет скрыта, при необходимости ее можно вернуть.`)) return;
 
     setTopTabs((current) =>
-      current.map((tab) => (tab.id === id ? { ...tab, visible: false } : tab)),
+      current.map((item) => (item.id === id ? { ...item, visible: false } : item)),
     );
 
     if (topTab === id) {
@@ -3934,15 +3941,24 @@ export default function App() {
     }
   }
 
-  function showTopTab(id: BaseTopTab) {
+  function showTopTab(id: TopTabDefinition["id"]) {
     setTopTabs((current) =>
       current.map((tab) => (tab.id === id ? { ...tab, visible: true } : tab)),
     );
   }
 
-  function updateCustomTab(id: string, patch: Partial<CustomTab>) {
+  function updateCustomTabTitle(id: string, title: string) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
+
     setCustomTabs((current) =>
-      current.map((tab) => (tab.id === id ? { ...tab, ...patch } : tab)),
+      current.map((tab) => (tab.id === id ? { ...tab, title: trimmedTitle } : tab)),
+    );
+  }
+
+  function showCustomTab(id: string) {
+    setCustomTabs((current) =>
+      current.map((tab) => (tab.id === id ? { ...tab, visible: true } : tab)),
     );
   }
 
@@ -3955,97 +3971,6 @@ export default function App() {
     if (topTab === customTabKey(id)) {
       setTopTab("admin");
     }
-  }
-
-  function updateSubTabLabel(group: EditableSubtabGroup, id: string, label: string) {
-    const currentTab = subTabs[group].find((tab) => tab.id === id);
-
-    setSubTabs((current) => ({
-      ...current,
-      [group]: current[group].map((tab) =>
-        tab.id === id
-          ? { ...tab, label, value: group === "reports" && tab.value !== "Все участки" ? label : tab.value }
-          : tab,
-      ),
-    }));
-
-    if (group === "reports" && currentTab && currentTab.value !== "Все участки") {
-      if (reportArea === currentTab.value) {
-        setReportArea(label);
-      }
-    }
-  }
-
-  function updateSubTabContent(group: EditableSubtabGroup, id: string, content: string) {
-    setSubTabs((current) => ({
-      ...current,
-      [group]: current[group].map((tab) => (tab.id === id ? { ...tab, content } : tab)),
-    }));
-  }
-
-  function addSubTab() {
-    const label = newSubTabForm.label.trim();
-    if (!label) return;
-
-    const id = createId();
-    const nextTab: SubTabConfig = {
-      id,
-      label,
-      value: newSubTabForm.group === "reports" ? label : `custom:${id}`,
-      visible: true,
-      content: newSubTabForm.content.trim(),
-    };
-
-    setSubTabs((current) => ({
-      ...current,
-      [newSubTabForm.group]: [...current[newSubTabForm.group], nextTab],
-    }));
-    setNewSubTabForm({ group: "reports", label: "", content: "" });
-  }
-
-  function removeSubTab(group: EditableSubtabGroup, id: string) {
-    const removedTab = subTabs[group].find((tab) => tab.id === id);
-    if (!removedTab) return;
-
-    setSubTabs((current) => ({
-      ...current,
-      [group]: removedTab.builtIn
-        ? current[group].map((tab) => (tab.id === id ? { ...tab, visible: false } : tab))
-        : current[group].filter((tab) => tab.id !== id),
-    }));
-
-    if (group === "reports" && reportArea === removedTab.value) setReportArea("Все участки");
-    if (group === "dispatch" && dispatchTab === removedTab.value) setDispatchTab("daily");
-    if (group === "fleet" && fleetTab === removedTab.value) setFleetTab("all");
-    if (group === "contractors" && contractorTab === removedTab.value) setContractorTab("AA Mining");
-    if (group === "fuel" && fuelTab === removedTab.value) setFuelTab("general");
-    if (group === "pto" && ptoTab === removedTab.value) setPtoTab("bodies");
-    if (group === "tb" && tbTab === removedTab.value) setTbTab("list");
-  }
-
-  function showSubTab(group: EditableSubtabGroup, id: string) {
-    setSubTabs((current) => ({
-      ...current,
-      [group]: current[group].map((tab) => (tab.id === id ? { ...tab, visible: true } : tab)),
-    }));
-  }
-
-  function addQuickSubTab(group: EditableSubtabGroup) {
-    const id = createId();
-    const label = "Новая подвкладка";
-    const nextTab: SubTabConfig = {
-      id,
-      label,
-      value: group === "reports" ? label : `custom:${id}`,
-      visible: true,
-      content: "",
-    };
-
-    setSubTabs((current) => ({
-      ...current,
-      [group]: [...current[group], nextTab],
-    }));
-    setEditingSubTabId(id);
   }
 
   function updateOrgMember(id: string, field: keyof OrgMember, value: string | boolean) {
@@ -4185,15 +4110,6 @@ export default function App() {
   function deleteDependencyLink(id: string) {
     setDependencyLinks((current) => current.filter((link) => link.id !== id));
     setEditingDependencyLinkId((current) => (current === id ? null : current));
-  }
-
-  function getSubTabGroup(id: BaseTopTab): EditableSubtabGroup | null {
-    return id in subTabs ? (id as EditableSubtabGroup) : null;
-  }
-
-  function restoreDefaultNavigation() {
-    setTopTabs(defaultTopTabs);
-    setSubTabs(defaultSubTabs);
   }
 
   function startAdminVehiclesEditing() {
@@ -6755,200 +6671,18 @@ export default function App() {
 
         {renderedTopTab === "admin" && (
           <SectionCard title="">
-            {adminSection === "menu" && (
-              <div style={{ ...blockStyle, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-                  <div style={{ fontWeight: 700 }}>Вкладки</div>
-                  <IconButton label="Вернуть стандартное меню" onClick={restoreDefaultNavigation}>
-                    <RotateCcw size={16} aria-hidden />
-                  </IconButton>
-                </div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", minWidth: 980, borderCollapse: "collapse", fontSize: 14 }}>
-                    <thead>
-                      <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                        <CompactTh>Вкладка</CompactTh>
-                        <CompactTh>Тип</CompactTh>
-                        <CompactTh>Показ</CompactTh>
-                        <CompactTh>Подвкладки</CompactTh>
-                        <CompactTh>Действия</CompactTh>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topTabs.map((tab) => {
-                        const group = getSubTabGroup(tab.id);
-                        const isExpanded = expandedAdminTab === tab.id;
-                        const isEditing = editingTopTabId === tab.id;
-                        const visibleSubtabs = group ? subTabs[group].filter((subtab) => subtab.visible).length : 0;
-                        const totalSubtabs = group ? subTabs[group].length : 0;
-
-                        return (
-                          <Fragment key={tab.id}>
-                            <tr>
-                              <CompactTd>
-                                <div style={vehicleNameStyle}>{tab.label}</div>
-                                <VehicleMeta label="В меню" value={compactTopTabLabel(tab)} />
-                              </CompactTd>
-                              <CompactTd>Основная</CompactTd>
-                              <CompactTd>{tab.locked ? "Защищена" : tab.visible ? "Показывается" : "Скрыта"}</CompactTd>
-                              <CompactTd>{group ? `${visibleSubtabs} / ${totalSubtabs}` : "—"}</CompactTd>
-                              <CompactTd>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                  <IconButton label={isExpanded ? "Свернуть вкладку" : "Развернуть вкладку"} onClick={() => setExpandedAdminTab(isExpanded ? null : tab.id)}>
-                                    {isExpanded ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
-                                  </IconButton>
-                                  <IconButton label={isEditing ? "Завершить редактирование" : "Редактировать вкладку"} onClick={() => setEditingTopTabId(isEditing ? null : tab.id)}>
-                                    {isEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                                  </IconButton>
-                                  <IconButton
-                                    disabled={tab.locked}
-                                    label={tab.locked ? "Эту вкладку нельзя скрыть" : tab.visible ? "Скрыть вкладку" : "Вернуть вкладку"}
-                                    onClick={() => (tab.visible ? hideTopTab(tab.id) : showTopTab(tab.id))}
-                                  >
-                                    {tab.visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                                  </IconButton>
-                                </div>
-                              </CompactTd>
-                            </tr>
-                            {isExpanded && (
-                              <tr>
-                                <td colSpan={5} style={adminDetailCellStyle}>
-                                  <div style={{ display: "grid", gap: 10 }}>
-                                    {isEditing && (
-                                      <Field label="Название вкладки">
-                                        <input value={tab.label} onChange={(e) => updateTopTabLabel(tab.id, e.target.value)} style={inputStyle} />
-                                      </Field>
-                                    )}
-                                    {group ? (
-                                      <>
-                                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                          <div style={{ color: "#475569", fontWeight: 700 }}>Подвкладки внутри раздела</div>
-                                          <IconButton label="Добавить подвкладку" onClick={() => addQuickSubTab(group)}>
-                                            <Plus size={16} aria-hidden />
-                                          </IconButton>
-                                        </div>
-                                        <div style={{ display: "grid", gap: 8 }}>
-                                          {subTabs[group].map((subtab) => {
-                                            const isSubtabEditing = editingSubTabId === subtab.id;
-
-                                            return (
-                                              <div key={subtab.id} style={compactRowStyle}>
-                                                <div>
-                                                  <div style={{ fontWeight: 700 }}>{subtab.label}</div>
-                                                  <div style={{ color: "#64748b", marginTop: 3 }}>{subtab.visible ? "Показывается" : "Скрыта"}</div>
-                                                </div>
-                                                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                                                  <IconButton label={isSubtabEditing ? "Завершить редактирование" : "Редактировать подвкладку"} onClick={() => setEditingSubTabId(isSubtabEditing ? null : subtab.id)}>
-                                                    {isSubtabEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                                                  </IconButton>
-                                                  <IconButton label={subtab.visible ? "Скрыть подвкладку" : "Вернуть подвкладку"} onClick={() => (subtab.visible ? removeSubTab(group, subtab.id) : showSubTab(group, subtab.id))}>
-                                                    {subtab.visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                                                  </IconButton>
-                                                </div>
-                                                {isSubtabEditing && (
-                                                  <div style={adminInlineEditStyle}>
-                                                    <Field label="Название подвкладки">
-                                                      <input value={subtab.label} onChange={(e) => updateSubTabLabel(group, subtab.id, e.target.value)} style={inputStyle} />
-                                                    </Field>
-                                                    <Field label="Текст подвкладки">
-                                                      <input value={subtab.content ?? ""} onChange={(e) => updateSubTabContent(group, subtab.id, e.target.value)} placeholder="Текст для этой подвкладки" style={inputStyle} />
-                                                    </Field>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <div style={{ color: "#64748b" }}>У этого раздела нет подвкладок.</div>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </Fragment>
-                        );
-                      })}
-                      {customTabs.map((tab) => {
-                        const key = customTabKey(tab.id);
-                        const isExpanded = expandedAdminTab === key;
-                        const isEditing = editingTopTabId === key;
-
-                        return (
-                          <Fragment key={tab.id}>
-                            <tr>
-                              <CompactTd>
-                                <div style={adminTabNameWithDeleteStyle}>
-                                  <span style={{ ...vehicleNameStyle, marginBottom: 0 }}>{tab.title}</span>
-                                  {isExpanded ? (
-                                    <button
-                                      type="button"
-                                      aria-label={`Удалить вкладку ${tab.title}`}
-                                      onClick={() => deleteCustomTab(tab.id)}
-                                      style={adminInlineTrashButtonStyle}
-                                      title={`Удалить вкладку ${tab.title}`}
-                                    >
-                                      <Trash2 size={14} aria-hidden />
-                                    </button>
-                                  ) : null}
-                                </div>
-                                <VehicleMeta label="Описание" value={tab.description} />
-                              </CompactTd>
-                              <CompactTd>Пользовательская</CompactTd>
-                              <CompactTd>{tab.visible === false ? "Скрыта" : "Показывается"}</CompactTd>
-                              <CompactTd>{tab.items.length}</CompactTd>
-                              <CompactTd>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                  <IconButton label={isExpanded ? "Свернуть вкладку" : "Развернуть вкладку"} onClick={() => setExpandedAdminTab(isExpanded ? null : key)}>
-                                    {isExpanded ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
-                                  </IconButton>
-                                  <IconButton label={isEditing ? "Завершить редактирование" : "Редактировать вкладку"} onClick={() => setEditingTopTabId(isEditing ? null : key)}>
-                                    {isEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                                  </IconButton>
-                                  <IconButton label={tab.visible === false ? "Вернуть вкладку" : "Скрыть вкладку"} onClick={() => updateCustomTab(tab.id, { visible: tab.visible === false })}>
-                                    {tab.visible === false ? <Eye size={16} aria-hidden /> : <EyeOff size={16} aria-hidden />}
-                                  </IconButton>
-                                </div>
-                              </CompactTd>
-                            </tr>
-                            {isExpanded && (
-                              <tr>
-                                <td colSpan={5} style={adminDetailCellStyle}>
-                                  {isEditing ? (
-                                    <div style={adminInlineEditStyle}>
-                                      <Field label="Название вкладки">
-                                        <input value={tab.title} onChange={(e) => updateCustomTab(tab.id, { title: e.target.value })} style={inputStyle} />
-                                      </Field>
-                                      <Field label="Описание вкладки">
-                                        <input value={tab.description} onChange={(e) => updateCustomTab(tab.id, { description: e.target.value })} placeholder="Описание" style={inputStyle} />
-                                      </Field>
-                                    </div>
-                                  ) : (
-                                    <div style={{ color: "#64748b" }}>{tab.description || "Описание не заполнено."}</div>
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                          </Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "minmax(180px, 1fr) minmax(180px, 1fr) auto", gap: 10, alignItems: "end" }}>
-                  <Field label="Название новой вкладки">
-                    <input value={customTabForm.title} onChange={(e) => setCustomTabForm((current) => ({ ...current, title: e.target.value }))} placeholder="Например: Справочники" style={inputStyle} />
-                  </Field>
-                  <Field label="Описание новой вкладки">
-                    <input value={customTabForm.description} onChange={(e) => setCustomTabForm((current) => ({ ...current, description: e.target.value }))} placeholder="Краткое описание" style={inputStyle} />
-                  </Field>
-                  <IconButton label="Добавить вкладку" onClick={addCustomTab}>
-                    <Plus size={16} aria-hidden />
-                  </IconButton>
-                </div>
-              </div>
+            {adminSection === "navigation" && (
+              <AdminNavigationSection
+                topTabs={topTabs}
+                customTabs={customTabs}
+                onAddCustomTab={addCustomTab}
+                onUpdateTopTabLabel={updateTopTabLabel}
+                onUpdateCustomTabTitle={updateCustomTabTitle}
+                onDeleteTopTab={deleteTopTab}
+                onShowTopTab={showTopTab}
+                onDeleteCustomTab={deleteCustomTab}
+                onShowCustomTab={showCustomTab}
+              />
             )}
 
             {adminSection === "structure" && (
@@ -7399,65 +7133,6 @@ export default function App() {
               </div>
             )}
 
-            {adminSection === "subtabs" && (
-            <div style={{ ...blockStyle, marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Подвкладки</div>
-              <div style={{ display: "grid", gap: 14 }}>
-                {(Object.keys(subTabs) as EditableSubtabGroup[]).map((group) => (
-                  <div key={group} style={{ display: "grid", gap: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                      <div style={{ color: "#475569", fontWeight: 700 }}>{subtabGroupLabels[group]}</div>
-                      <TopButton active={false} onClick={() => setNewSubTabForm((current) => ({ ...current, group }))} label="Добавить сюда" />
-                    </div>
-                    {subTabs[group].map((tab) => (
-                      <div key={tab.id} style={{ display: "grid", gap: 10 }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10, alignItems: "center" }}>
-                          <div>
-                            <div style={{ fontWeight: 700 }}>{tab.label}</div>
-                            <div style={{ color: "#64748b", marginTop: 4 }}>{tab.visible ? "Показывается" : "Скрыта"}</div>
-                          </div>
-                          <TopButton active={editingSubTabId === tab.id} onClick={() => setEditingSubTabId(editingSubTabId === tab.id ? null : tab.id)} label={editingSubTabId === tab.id ? "Готово" : "Редактировать"} />
-                          <TopButton
-                            active={tab.visible}
-                            onClick={() => (tab.visible ? removeSubTab(group, tab.id) : showSubTab(group, tab.id))}
-                            label={tab.visible ? "Удалить" : "Вернуть"}
-                          />
-                        </div>
-                        {editingSubTabId === tab.id && (
-                          <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 260px) 1fr", gap: 10, alignItems: "center" }}>
-                            <Field label="Название подвкладки">
-                              <input value={tab.label} onChange={(e) => updateSubTabLabel(group, tab.id, e.target.value)} style={inputStyle} />
-                            </Field>
-                            <Field label="Текст подвкладки">
-                              <input value={tab.content ?? ""} onChange={(e) => updateSubTabContent(group, tab.id, e.target.value)} placeholder="Текст для этой подвкладки" style={inputStyle} />
-                            </Field>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "180px minmax(180px, 1fr) minmax(180px, 1fr) auto", gap: 10, alignItems: "center" }}>
-                <Field label="Раздел">
-                  <select value={newSubTabForm.group} onChange={(e) => setNewSubTabForm((current) => ({ ...current, group: e.target.value as EditableSubtabGroup }))} style={inputStyle}>
-                    {(Object.keys(subtabGroupLabels) as EditableSubtabGroup[]).map((group) => (
-                      <option key={group} value={group}>{subtabGroupLabels[group]}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Название подвкладки">
-                  <input value={newSubTabForm.label} onChange={(e) => setNewSubTabForm((current) => ({ ...current, label: e.target.value }))} placeholder="Например: Сменный журнал" style={inputStyle} />
-                </Field>
-                <Field label="Текст подвкладки">
-                  <input value={newSubTabForm.content} onChange={(e) => setNewSubTabForm((current) => ({ ...current, content: e.target.value }))} placeholder="Текст для новой подвкладки" style={inputStyle} />
-                </Field>
-                <TopButton active onClick={addSubTab} label="Добавить подвкладку" />
-              </div>
-              </div>
-            )}
-
             {adminSection === "ai" && (
               <div style={{ ...blockStyle, marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 14 }}>
@@ -7652,576 +7327,73 @@ export default function App() {
             )}
 
             {adminSection === "database" && (
-              <div style={{ ...blockStyle, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>База и восстановление</div>
-                    <div style={{ color: "#64748b", marginTop: 4 }}>
-                      Здесь видны аварийные снимки браузеров. Они нужны, чтобы восстановить данные, если часть информации осталась только на старом компьютере.
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <IconButton label="Создать снимок этого браузера" onClick={createClientSnapshotNow}>
-                      <Database size={16} aria-hidden />
-                    </IconButton>
-                    <IconButton label="Обновить список" onClick={refreshClientSnapshots} disabled={databasePanelLoading}>
-                      <RotateCcw size={16} aria-hidden />
-                    </IconButton>
-                  </div>
-                </div>
-
-                <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8, marginBottom: 12 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-                    <div>
-                      <div style={adminLogSummaryLabelStyle}>Supabase</div>
-                      <div style={adminLogSummaryValueStyle}>{supabaseConfigured ? "Подключен" : "Не настроен"}</div>
-                    </div>
-                    <div>
-                      <div style={adminLogSummaryLabelStyle}>ПТО в памяти</div>
-                      <div style={adminLogSummaryValueStyle}>
-                        {countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={adminLogSummaryLabelStyle}>Техника в памяти</div>
-                      <div style={adminLogSummaryValueStyle}>{vehicleRows.length}</div>
-                    </div>
-                    <div>
-                      <div style={adminLogSummaryLabelStyle}>Снимки браузеров</div>
-                      <div style={adminLogSummaryValueStyle}>{clientSnapshots.length}</div>
-                    </div>
-                  </div>
-                  {databasePanelMessage ? (
-                    <div style={{ color: "#475569", marginTop: 10, fontSize: 13 }}>{databasePanelMessage}</div>
-                  ) : null}
-                </div>
-
-                <div style={adminLogTableScrollStyle}>
-                  <table style={adminLogTableStyle}>
-                    <thead>
-                      <tr>
-                        <CompactTh>Дата снимка</CompactTh>
-                        <CompactTh>Браузер</CompactTh>
-                        <CompactTh>Данные</CompactTh>
-                        <CompactTh>Источник</CompactTh>
-                        <CompactTh>{" "}</CompactTh>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clientSnapshots.map((snapshot) => {
-                        const stats = clientSnapshotStats(snapshot);
-
-                        return (
-                          <tr key={snapshot.key}>
-                            <CompactTd>{formatAdminLogDate(snapshot.updatedAt ?? snapshot.savedAt ?? "")}</CompactTd>
-                            <CompactTd>{snapshot.clientId}</CompactTd>
-                            <CompactTd>
-                              ПТО строк: {stats.ptoRows} · техника: {stats.vehicles} · ковши: {stats.bucketValues} · ключей: {stats.appKeys}
-                            </CompactTd>
-                            <CompactTd>{snapshot.meta.reason || "Снимок браузера"}</CompactTd>
-                            <CompactTd>
-                              <IconButton label="Восстановить этот снимок" onClick={() => restoreClientSnapshot(snapshot)}>
-                                <RotateCcw size={16} aria-hidden />
-                              </IconButton>
-                            </CompactTd>
-                          </tr>
-                        );
-                      })}
-                      {clientSnapshots.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} style={adminLogEmptyCellStyle}>Снимков пока нет. Открой сайт на компьютере, где остались нужные данные, затем обнови список.</td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <AdminDatabaseSection
+                supabaseConfigured={supabaseConfigured}
+                ptoMemoryTotal={countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total}
+                vehicleCount={vehicleRows.length}
+                snapshots={clientSnapshots}
+                message={databasePanelMessage}
+                loading={databasePanelLoading}
+                getSnapshotStats={clientSnapshotStats}
+                onCreateSnapshot={createClientSnapshotNow}
+                onRefreshSnapshots={refreshClientSnapshots}
+                onRestoreSnapshot={restoreClientSnapshot}
+              />
             )}
 
             {adminSection === "logs" && (
-              <div style={{ ...blockStyle, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>Логи админки</div>
-                    <div style={{ color: "#64748b", marginTop: 4 }}>История редактирования, загрузки и выгрузки таблиц.</div>
-                  </div>
-                  <IconButton label="Очистить логи" onClick={clearAdminLogs} disabled={adminLogs.length === 0}>
-                    <Trash2 size={16} aria-hidden />
-                  </IconButton>
-                </div>
-
-                <div style={adminLogSummaryGridStyle}>
-                  <div style={adminLogSummaryCardStyle}>
-                    <div style={adminLogSummaryLabelStyle}>Последнее редактирование</div>
-                    {lastChangeLog ? (
-                      <>
-                        <div style={adminLogSummaryValueStyle}>{formatAdminLogDate(lastChangeLog.at)}</div>
-                        <div style={adminLogSummaryMetaStyle}>{lastChangeLog.section} · {lastChangeLog.user}</div>
-                        <div style={adminLogSummaryDetailsStyle}>{lastChangeLog.details}</div>
-                      </>
-                    ) : (
-                      <div style={adminLogSummaryEmptyStyle}>Редактирований пока нет.</div>
-                    )}
-                  </div>
-
-                  <div style={adminLogSummaryCardStyle}>
-                    <div style={adminLogSummaryLabelStyle}>Последняя загрузка таблицы</div>
-                    {lastUploadLog ? (
-                      <>
-                        <div style={adminLogSummaryValueStyle}>{formatAdminLogDate(lastUploadLog.at)}</div>
-                        <div style={adminLogSummaryMetaStyle}>{lastUploadLog.fileName || "Файл не указан"} · {lastUploadLog.user}</div>
-                        <div style={adminLogSummaryDetailsStyle}>{lastUploadLog.details}</div>
-                      </>
-                    ) : (
-                      <div style={adminLogSummaryEmptyStyle}>Загрузок пока нет.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={adminLogTableScrollStyle}>
-                  <table style={adminLogTableStyle}>
-                    <thead>
-                      <tr>
-                        <CompactTh>Дата и время</CompactTh>
-                        <CompactTh>Пользователь</CompactTh>
-                        <CompactTh>Раздел</CompactTh>
-                        <CompactTh>Действие</CompactTh>
-                        <CompactTh>Описание</CompactTh>
-                        <CompactTh>Файл / строки</CompactTh>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {adminLogs.map((log) => (
-                        <tr key={log.id}>
-                          <CompactTd>{formatAdminLogDate(log.at)}</CompactTd>
-                          <CompactTd>{log.user}</CompactTd>
-                          <CompactTd>{log.section}</CompactTd>
-                          <CompactTd>{log.action}</CompactTd>
-                          <CompactTd>{log.details}</CompactTd>
-                          <CompactTd>{[log.fileName, log.rowsCount !== undefined ? `${log.rowsCount} строк` : ""].filter(Boolean).join(" · ") || "—"}</CompactTd>
-                        </tr>
-                      ))}
-                      {adminLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} style={adminLogEmptyCellStyle}>Логов пока нет. Новые изменения и загрузки будут появляться здесь автоматически.</td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <AdminLogsSection
+                logs={adminLogs}
+                lastChangeLog={lastChangeLog}
+                lastUploadLog={lastUploadLog}
+                onClearLogs={clearAdminLogs}
+              />
             )}
 
             {adminSection === "reports" && (
-            <div style={{ marginTop: 16, display: "grid", gap: 12, alignItems: "start" }}>
-              <div style={adminReportSectionHeaderStyle}>
-                <div style={{ fontWeight: 700 }}>Настройка отчетности</div>
-              </div>
-
-              <div style={adminReportCustomerTabsStyle}>
-                {reportCustomers.map((customer) => (
-                  <TopButton
-                    key={customer.id}
-                    active={adminReportTab === "customer" && activeAdminReportCustomer.id === customer.id}
-                    onClick={() => {
-                      setAdminReportCustomerId(customer.id);
-                      setAdminReportTab("customer");
-                    }}
-                    label={customer.label}
-                    showDelete={adminReportTab === "customer" && activeAdminReportCustomer.id === customer.id && reportCustomers.length > 1}
-                    deleteLabel={`Удалить заказчика ${customer.label}`}
-                    onDelete={() => deleteReportCustomer(customer.id)}
-                  />
-                ))}
-                <IconButton label="Добавить заказчика" onClick={addReportCustomer}>
-                  <Plus size={16} aria-hidden />
-                </IconButton>
-              </div>
-
-                <div style={adminReportCustomerCardStyle}>
-                <div style={adminReportCustomerSummaryStyle}>
-                  <input
-                    aria-label="Заказчик"
-                    value={activeAdminReportCustomer.label}
-                    onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { label: e.target.value })}
-                    style={adminReportCustomerNameInputStyle}
-                  />
-                  <input
-                    aria-label="Сокращение заказчика для ПТО"
-                    value={activeAdminReportCustomer.ptoCode}
-                    onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { ptoCode: e.target.value })}
-                    style={{ ...adminReportCustomerNameInputStyle, textAlign: "center" }}
-                    title="Этот код используется в столбце Заказчик во вкладке ПТО - План"
-                  />
-                  <div style={adminReportCustomerMetaStyle}>
-                    Код ПТО: {activeAdminReportCustomer.ptoCode || "не задан"} · {activeAdminReportSelectedCount} строк{activeAdminReportUsesSummaryRows ? ` · ${activeAdminReportCustomer.summaryRows.length} итоговых` : ""}
-                  </div>
-                  <label style={adminReportVisibleToggleStyle}>
-                    <input type="checkbox" checked={activeAdminReportCustomer.visible} onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { visible: e.target.checked })} />
-                    Показывать вкладку
-                  </label>
-                  <label style={adminReportVisibleToggleStyle}>
-                    <input type="checkbox" checked={activeAdminReportCustomer.autoShowRows} onChange={(e) => updateReportCustomer(activeAdminReportCustomer.id, { autoShowRows: e.target.checked })} />
-                    Автоматический показ строк
-                  </label>
-                </div>
-
-                <div style={adminReportCustomerBodyStyle}>
-                  <div style={adminReportCustomerSettingsTabsStyle}>
-                    <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "order"} onClick={() => setAdminReportCustomerSettingsTab("order")} label="Порядок" />
-                    <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "display"} onClick={() => setAdminReportCustomerSettingsTab("display")} label="Отображение" />
-                    <AdminReportSettingsButton active={visibleAdminReportCustomerSettingsTab === "rename"} onClick={() => setAdminReportCustomerSettingsTab("rename")} label="Переименование строк" />
-                    <AdminReportSettingsButton
-                      active={visibleAdminReportCustomerSettingsTab === "summary"}
-                      disabled={!activeAdminReportUsesSummaryRows}
-                      onClick={() => setAdminReportCustomerSettingsTab("summary")}
-                      label="Итоговые строки"
-                    />
-                  </div>
-
-                  {visibleAdminReportCustomerSettingsTab === "order" ? (
-                    <div style={adminReportOrderPanelStyle}>
-                      <div style={adminReportCompactPanelStyle}>
-                        <div style={adminReportPanelTitleStyle}>Порядок отображения участков в отчете заказчика</div>
-                        <div style={adminReportAreaOrderListStyle}>
-                          {activeAdminReportAreaOptions.length === 0 ? (
-                            <div style={adminReportEmptyTextStyle}>Участков пока нет.</div>
-                          ) : (
-                            activeAdminReportAreaOptions.map((area, index) => (
-                              <div key={area} style={adminReportAreaOrderRowStyle}>
-                                <span style={adminReportAreaOrderNameStyle}>{index + 1}. {area}</span>
-                                <div style={adminReportAreaOrderActionsStyle}>
-                                  <MiniIconButton label="Поднять участок" onClick={() => moveReportAreaOrder(area, -1)} disabled={index === 0}>
-                                    <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
-                                  </MiniIconButton>
-                                  <MiniIconButton label="Опустить участок" onClick={() => moveReportAreaOrder(area, 1)} disabled={index === activeAdminReportAreaOptions.length - 1}>
-                                    <ChevronDown size={13} aria-hidden />
-                                  </MiniIconButton>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-
-                      <div style={adminReportOrderWorkPanelStyle}>
-                        <div style={adminReportPanelTitleStyle}>Порядок видов работ внутри участков</div>
-                        {adminReportWorkOrderGroups.length === 0 ? (
-                          <div style={adminReportEmptyTextStyle}>Видов работ пока нет.</div>
-                        ) : (
-                          <div style={adminReportWorkGroupGridStyle}>
-                            {adminReportWorkOrderGroups.map((group) => (
-                              <div key={group.area} style={adminReportWorkGroupStyle}>
-                                <div style={adminReportWorkGroupTitleStyle}>{group.area}</div>
-                                <div style={adminReportAreaOrderListStyle}>
-                                  {group.rows.map((row, index) => {
-                                    const rowKey = reportRowDisplayKey(row);
-                                    const isSummaryRow = rowKey.startsWith("summary:");
-                                    return (
-                                      <div key={rowKey} style={adminReportWorkOrderRowStyle}>
-                                        <span style={adminReportWorkOrderNameStyle}>
-                                          {index + 1}. {isSummaryRow ? "Итог: " : ""}{row.name}
-                                        </span>
-                                        <span style={adminReportWorkOrderUnitStyle}>{row.unit}</span>
-                                        <div style={adminReportAreaOrderActionsStyle}>
-                                          <MiniIconButton label="Поднять вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, -1)} disabled={index === 0}>
-                                            <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
-                                          </MiniIconButton>
-                                          <MiniIconButton label="Опустить вид работ" onClick={() => moveReportWorkOrder(group.area, rowKey, 1)} disabled={index === group.rows.length - 1}>
-                                            <ChevronDown size={13} aria-hidden />
-                                          </MiniIconButton>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {visibleAdminReportCustomerSettingsTab === "display" ? (
-                  <div style={adminReportRowsColumnStyle}>
-                    <div style={adminReportTableWrapStyle}>
-                      <table style={adminReportRowsTableStyle}>
-                        <colgroup>
-                          <col style={{ width: 54 }} />
-                          <col style={{ width: 130 }} />
-                          <col style={{ width: 720 }} />
-                          <col style={{ width: 56 }} />
-                          <col style={{ width: 116 }} />
-                          <col style={{ width: 142 }} />
-                        </colgroup>
-                        <thead>
-                          <tr style={{ background: "#f8fafc" }}>
-                            <th style={adminReportThStyle}>Показ</th>
-                            <th style={adminReportThStyle}>Участок</th>
-                            <th style={adminReportThStyle}>Строка из ПТО</th>
-                            <th style={adminReportThStyle}>Ед.</th>
-                            <th style={adminReportThStyle}>Статус</th>
-                            <th style={adminReportThStyle}>Факт/замер</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activeAdminReportBaseRows.map((row) => {
-                            const rowKey = reportRowKey(row);
-                            const rowStatus = reportRowAutoStatus(derivedReportRowsByKey.get(rowKey) ?? row);
-                            const factSourceRowKeys = activeAdminReportCustomer.factSourceRowKeys[rowKey] ?? [];
-                            return (
-                              <tr key={`${activeAdminReportCustomer.id}-${rowKey}`}>
-                                <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={activeAdminReportVisibleRowKeys.has(rowKey)}
-                                    disabled={activeAdminReportCustomer.autoShowRows}
-                                    onChange={() => toggleReportCustomerRow(activeAdminReportCustomer.id, rowKey)}
-                                    style={activeAdminReportCustomer.autoShowRows ? adminReportDisabledCheckboxStyle : undefined}
-                                    title={activeAdminReportCustomer.autoShowRows ? "Автоматический показ включен" : "Показать строку в отчете"}
-                                  />
-                                </td>
-                                <td style={adminReportTdStyle}>{row.area}</td>
-                                <td style={adminReportNameTdStyle}>{row.name}</td>
-                                <td style={{ ...adminReportTdStyle, textAlign: "center" }}>{row.unit}</td>
-                                <td style={{ ...adminReportTdStyle, textAlign: "center" }}>
-                                  <span style={{ ...adminReportPtoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}>{rowStatus}</span>
-                                </td>
-                                <td style={adminReportTdStyle}>
-                                  <ReportFactSourceCell
-                                    sourceRowKeys={factSourceRowKeys}
-                                    rowsByKey={activeAdminReportRowsByKey}
-                                    rowLabels={activeAdminReportCustomer.rowLabels}
-                                    onEdit={() => setEditingReportFactSourceRowKey(rowKey)}
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    <ReportFactSourceModal
-                      customer={activeAdminReportCustomer}
-                      targetRow={editingReportFactSourceRow}
-                      sourceOptions={editingReportFactSourceOptions}
-                      onClose={() => setEditingReportFactSourceRowKey(null)}
-                      onSetMode={setReportCustomerFactSourceMode}
-                      onToggleSource={toggleReportCustomerFactSourceRowKey}
-                    />
-                  </div>
-                  ) : null}
-
-                  {visibleAdminReportCustomerSettingsTab === "rename" ? (
-                    <div style={adminReportRowsColumnStyle}>
-                      <div style={adminReportRenamePanelStyle}>
-                        <div style={adminReportSectionHeaderStyle}>
-                          <IconButton label="Добавить переименование строки" onClick={() => addReportCustomerRowLabel(activeAdminReportCustomer.id)}>
-                            <Plus size={16} aria-hidden />
-                          </IconButton>
-                        </div>
-
-                        {activeAdminReportRowLabelEntries.length === 0 ? (
-                          <div style={adminReportEmptyTextStyle}>Переименований пока нет.</div>
-                        ) : (
-                          <div style={adminReportRenameListStyle}>
-                            <div style={adminReportRenameHeaderStyle}>
-                              <span>Участок</span>
-                              <span>Вид работ</span>
-                              <span>Название для заказчика</span>
-                              <span />
-                              <span />
-                            </div>
-                            {activeAdminReportRowLabelEntries.map(({ rowKey, label, row }) => {
-                              const hasStoredArea = activeAdminReportAreaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(row.area));
-                              const visibleArea = hasStoredArea ? row.area : activeAdminReportAreaOptions[0] ?? row.area;
-                              const areaRows = reportRowsForSummaryArea(visibleArea);
-                              const hasStoredRow = areaRows.some((areaRow) => reportRowKey(areaRow) === rowKey);
-                              const rowLabelEditing = editingReportRowLabelKeys.includes(rowKey);
-
-                              return (
-                                <div key={`${activeAdminReportCustomer.id}-rename-${rowKey}`} style={adminReportRenameRowStyle}>
-                                  {rowLabelEditing ? (
-                                    <>
-                                      <select
-                                        value={visibleArea}
-                                        onChange={(e) => {
-                                          const nextRow = reportRowsForSummaryArea(e.target.value)[0];
-                                          if (nextRow) changeReportCustomerRowLabelSource(activeAdminReportCustomer.id, rowKey, reportRowKey(nextRow));
-                                        }}
-                                        style={adminReportRenameInputStyle}
-                                        aria-label="Участок строки для заказчика"
-                                      >
-                                        {activeAdminReportAreaOptions.map((area) => (
-                                          <option key={area} value={area}>{area}</option>
-                                        ))}
-                                        {!hasStoredArea && row.area ? <option value={row.area}>{row.area}</option> : null}
-                                      </select>
-                                      <select
-                                        value={hasStoredRow ? rowKey : ""}
-                                        onChange={(e) => changeReportCustomerRowLabelSource(activeAdminReportCustomer.id, rowKey, e.target.value)}
-                                        style={adminReportRenameInputStyle}
-                                        aria-label="Вид работ для заказчика"
-                                      >
-                                        {!hasStoredRow ? <option value="">{row.name}</option> : null}
-                                        {areaRows.map((areaRow) => {
-                                          const areaRowKey = reportRowKey(areaRow);
-                                          return <option key={areaRowKey} value={areaRowKey}>{areaRow.name}</option>;
-                                        })}
-                                      </select>
-                                      <input
-                                        value={label}
-                                        onChange={(e) => updateReportCustomerRowLabel(activeAdminReportCustomer.id, rowKey, e.target.value, row.name)}
-                                        placeholder={row.name}
-                                        style={adminReportRenameInputStyle}
-                                        title={`Связка с ПТО: ${row.name}`}
-                                      />
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span style={adminReportSummaryValueStyle}>{visibleArea || "-"}</span>
-                                      <span style={adminReportSummaryValueStyle} title={row.name}>{row.name}</span>
-                                      <span style={adminReportSummaryValueStyle} title={label || row.name}>{label || row.name}</span>
-                                    </>
-                                  )}
-                                  <MiniIconButton label={rowLabelEditing ? "Сохранить переименование строки" : "Редактировать переименование строки"} onClick={() => (rowLabelEditing ? finishReportRowLabelEdit(rowKey) : startReportRowLabelEdit(rowKey))}>
-                                    {rowLabelEditing ? <Check size={13} aria-hidden /> : <Pencil size={13} aria-hidden />}
-                                  </MiniIconButton>
-                                  <MiniIconButton label="Удалить переименование строки" onClick={() => removeReportCustomerRowLabel(activeAdminReportCustomer.id, rowKey)}>
-                                    <Trash2 size={14} aria-hidden />
-                                  </MiniIconButton>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {visibleAdminReportCustomerSettingsTab === "summary" && activeAdminReportUsesSummaryRows ? (
-                    <div style={adminReportSummaryColumnStyle}>
-                      <div style={adminReportSectionHeaderStyle}>
-                        <IconButton label="Добавить итоговую строку" onClick={() => addReportSummaryRow(activeAdminReportCustomer.id)}>
-                          <Plus size={16} aria-hidden />
-                        </IconButton>
-                      </div>
-
-                      {activeAdminReportCustomer.summaryRows.length === 0 && (
-                        <div style={adminReportEmptyTextStyle}>Итоговых строк пока нет.</div>
-                      )}
-
-                      {activeAdminReportCustomer.summaryRows.length > 0 ? (
-                        <div style={adminReportSummaryListHeaderStyle}>
-                          <span>Участок</span>
-                          <span>Название итоговой строки</span>
-                          <span>Ед.</span>
-                          <span />
-                          <span />
-                        </div>
-                      ) : null}
-
-                      {activeAdminReportCustomer.summaryRows.map((summary) => {
-                        const hasStoredArea = activeAdminReportSummaryAreaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
-                        const visibleSummaryArea = hasStoredArea ? summary.area : activeAdminReportSummaryAreaOptions[0] ?? summary.area;
-                        const summaryAreaRows = reportRowsForSummaryArea(visibleSummaryArea);
-                        const selectedSummaryRows = summaryAreaRows.filter((row) => summary.rowKeys.includes(reportRowKey(row)));
-                        const summaryExpanded = expandedReportSummaryIds.includes(summary.id);
-                        const selectedSummaryLabels = selectedSummaryRows.map((row) => {
-                          const rowKey = reportRowKey(row);
-                          return activeAdminReportCustomer.rowLabels[rowKey]?.trim() || row.name;
-                        });
-                        const selectedSummaryText = selectedSummaryLabels.length > 0 ? selectedSummaryLabels.join(" + ") : "Строки не выбраны.";
-                        const selectedPlanRow = summary.planRowKey
-                          ? summaryAreaRows.find((row) => reportRowKey(row) === summary.planRowKey)
-                          : undefined;
-                        const selectedPlanText = selectedPlanRow
-                          ? activeAdminReportCustomer.rowLabels[reportRowKey(selectedPlanRow)]?.trim() || selectedPlanRow.name
-                          : "Авто: сумма выбранных строк";
-
-                        return (
-                          <div key={summary.id} style={adminReportSummaryCardStyle}>
-                            <div style={adminReportSummaryFormStyle}>
-                              {summaryExpanded ? (
-                                <>
-                                  <select value={visibleSummaryArea} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "area", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Участок итоговой строки">
-                                    {activeAdminReportSummaryAreaOptions.map((area) => (
-                                      <option key={area} value={area}>{area}</option>
-                                    ))}
-                                    {!hasStoredArea && summary.area ? <option value={summary.area}>{summary.area}</option> : null}
-                                  </select>
-                                  <input value={summary.label} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "label", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Название итоговой строки" />
-                                  <select value={summary.unit} onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "unit", e.target.value)} style={adminReportSummaryCompactInputStyle} aria-label="Единица измерения итоговой строки">
-                                    <option value="">Авто</option>
-                                    <option value="м2">м2</option>
-                                    <option value="м3">м3</option>
-                                    <option value="тн">тн</option>
-                                  </select>
-                                </>
-                              ) : (
-                                <>
-                                  <span style={adminReportSummaryValueStyle}>{visibleSummaryArea || "-"}</span>
-                                  <span style={adminReportSummaryValueStyle}>{summary.label || "Без названия"}</span>
-                                  <span style={{ ...adminReportSummaryValueStyle, textAlign: "right" }}>{summary.unit || "Авто"}</span>
-                                </>
-                              )}
-                              <MiniIconButton label={summaryExpanded ? "Сохранить суммирование" : "Редактировать суммирование"} onClick={() => (summaryExpanded ? finishReportSummaryEdit(summary.id) : startReportSummaryEdit(summary.id))}>
-                                {summaryExpanded ? <Check size={13} aria-hidden /> : <Pencil size={13} aria-hidden />}
-                              </MiniIconButton>
-                              <MiniIconButton label="Удалить итоговую строку" onClick={() => removeReportSummaryRow(activeAdminReportCustomer.id, summary.id)}>
-                                <Trash2 size={16} aria-hidden />
-                              </MiniIconButton>
-                            </div>
-                            <div style={adminReportSummaryNoteStyle} title={selectedPlanText}>План из ПТО: {selectedPlanText}</div>
-                            <div style={adminReportSummaryNoteStyle} title={selectedSummaryText}>Строки в сумме: {selectedSummaryText}</div>
-
-                            {summaryExpanded ? (
-                              <div style={adminReportSummarySelectionPanelStyle}>
-                                <div style={adminReportSummaryPlanPickerStyle}>
-                                  <span style={adminReportSummaryRowsHeaderStyle}>План из ПТО</span>
-                                  <select
-                                    value={selectedPlanRow ? summary.planRowKey ?? "" : ""}
-                                    onChange={(e) => updateReportSummaryRow(activeAdminReportCustomer.id, summary.id, "planRowKey", e.target.value)}
-                                    style={adminReportSummaryCompactInputStyle}
-                                    aria-label="План из ПТО для итоговой строки"
-                                  >
-                                    <option value="">Авто: сумма выбранных строк</option>
-                                    {summaryAreaRows.map((row) => {
-                                      const rowKey = reportRowKey(row);
-                                      const customerRowLabel = activeAdminReportCustomer.rowLabels[rowKey]?.trim() || row.name;
-                                      return <option key={`${summary.id}-plan-${rowKey}`} value={rowKey}>{customerRowLabel}</option>;
-                                    })}
-                                  </select>
-                                </div>
-                                <div style={adminReportSummaryRowsHeaderStyle}>Выберите виды работ для суммирования: {selectedSummaryRows.length} из {summaryAreaRows.length}</div>
-                                <div style={adminReportSummaryRowsGridStyle}>
-                                {summaryAreaRows.length === 0 ? (
-                                  <div style={adminReportEmptyTextStyle}>В выбранном участке строк пока нет.</div>
-                                ) : (
-                                  summaryAreaRows.map((row) => {
-                                    const rowKey = reportRowKey(row);
-                                    const customerRowLabel = activeAdminReportCustomer.rowLabels[rowKey]?.trim() || row.name;
-                                    return (
-                                      <label key={`${summary.id}-${rowKey}`} style={adminReportSummaryRowOptionStyle}>
-                                        <input type="checkbox" checked={summary.rowKeys.includes(rowKey)} onChange={() => toggleReportSummaryRowKey(activeAdminReportCustomer.id, summary.id, rowKey)} />
-                                        <span style={adminReportSummaryRowNameStyle}>{customerRowLabel}</span>
-                                        <span style={adminReportSummaryRowUnitStyle}>{row.unit}</span>
-                                      </label>
-                                    );
-                                  })
-                                )}
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+              <AdminReportSettingsSection
+                customers={reportCustomers}
+                activeCustomer={activeAdminReportCustomer}
+                settingsTab={visibleAdminReportCustomerSettingsTab}
+                selectedCount={activeAdminReportSelectedCount}
+                usesSummaryRows={activeAdminReportUsesSummaryRows}
+                areaOptions={activeAdminReportAreaOptions}
+                summaryAreaOptions={activeAdminReportSummaryAreaOptions}
+                workOrderGroups={adminReportWorkOrderGroups}
+                baseRows={activeAdminReportBaseRows}
+                rowsByKey={activeAdminReportRowsByKey}
+                visibleRowKeys={activeAdminReportVisibleRowKeys}
+                derivedRowsByKey={derivedReportRowsByKey}
+                editingFactSourceRow={editingReportFactSourceRow}
+                editingFactSourceOptions={editingReportFactSourceOptions}
+                rowLabelEntries={activeAdminReportRowLabelEntries}
+                editingRowLabelKeys={editingReportRowLabelKeys}
+                expandedSummaryIds={expandedReportSummaryIds}
+                rowsForArea={reportRowsForSummaryArea}
+                onSelectCustomer={setAdminReportCustomerId}
+                onAddCustomer={addReportCustomer}
+                onDeleteCustomer={deleteReportCustomer}
+                onUpdateCustomer={updateReportCustomer}
+                onSetSettingsTab={setAdminReportCustomerSettingsTab}
+                onMoveArea={moveReportAreaOrder}
+                onMoveWork={moveReportWorkOrder}
+                onToggleCustomerRow={toggleReportCustomerRow}
+                onEditFactSource={setEditingReportFactSourceRowKey}
+                onSetFactSourceMode={setReportCustomerFactSourceMode}
+                onToggleFactSourceRow={toggleReportCustomerFactSourceRowKey}
+                onAddRowLabel={addReportCustomerRowLabel}
+                onChangeRowLabelSource={changeReportCustomerRowLabelSource}
+                onUpdateRowLabel={updateReportCustomerRowLabel}
+                onStartRowLabelEdit={startReportRowLabelEdit}
+                onFinishRowLabelEdit={finishReportRowLabelEdit}
+                onRemoveRowLabel={removeReportCustomerRowLabel}
+                onAddSummaryRow={addReportSummaryRow}
+                onUpdateSummaryRow={updateReportSummaryRow}
+                onToggleSummaryRow={toggleReportSummaryRowKey}
+                onStartSummaryEdit={startReportSummaryEdit}
+                onFinishSummaryEdit={finishReportSummaryEdit}
+                onRemoveSummaryRow={removeReportSummaryRow}
+              />
             )}
 
           </SectionCard>
@@ -8243,29 +7415,6 @@ export default function App() {
         )}
       </div>
     </div>
-  );
-}
-
-function AdminReportSettingsButton({ active, onClick, label, disabled = false }: { active: boolean; onClick: () => void; label: string; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      disabled={disabled}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={(event) => {
-        if (disabled) return;
-        onClick();
-        event.currentTarget.blur();
-      }}
-      style={{
-        ...adminReportCustomerSettingsTabStyle,
-        ...(active ? adminReportCustomerSettingsTabActiveStyle : null),
-        ...(disabled ? adminReportCustomerSettingsTabDisabledStyle : null),
-      }}
-    >
-      {label}
-    </button>
   );
 }
 
@@ -8342,511 +7491,6 @@ const saveStatusErrorStyle: React.CSSProperties = {
   background: "#fef2f2",
   borderColor: "#b91c1c",
   color: "#991b1b",
-};
-
-const adminReportSectionHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-start",
-  gap: 8,
-  flexWrap: "wrap",
-};
-
-const adminReportCompactPanelStyle: React.CSSProperties = {
-  ...blockStyle,
-  width: "100%",
-  maxWidth: "100%",
-  boxSizing: "border-box",
-  borderRadius: 8,
-  padding: 12,
-};
-
-const adminReportPanelTitleStyle: React.CSSProperties = {
-  fontWeight: 700,
-  marginBottom: 8,
-};
-
-const adminReportAreaOrderListStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 6,
-  justifyItems: "start",
-};
-
-const adminReportAreaOrderRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(170px, 260px) auto",
-  alignItems: "center",
-  gap: 8,
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  padding: "5px 6px 5px 8px",
-};
-
-const adminReportAreaOrderNameStyle: React.CSSProperties = {
-  minWidth: 0,
-  fontSize: 13,
-  fontWeight: 700,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const adminReportAreaOrderActionsStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 4,
-};
-
-const adminReportCustomerTabsStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-start",
-  gap: 6,
-  flexWrap: "wrap",
-  maxWidth: "100%",
-};
-
-const adminReportOrderPanelStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(280px, 360px) minmax(560px, 1fr)",
-  gap: 12,
-  alignItems: "start",
-  justifyItems: "stretch",
-  width: "100%",
-  maxWidth: "100%",
-  overflowX: "auto",
-};
-
-const adminReportOrderWorkPanelStyle: React.CSSProperties = {
-  ...blockStyle,
-  width: "100%",
-  maxWidth: "100%",
-  boxSizing: "border-box",
-  borderRadius: 8,
-  padding: 12,
-};
-
-const adminReportWorkGroupGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr)",
-  gap: 10,
-  maxWidth: "100%",
-};
-
-const adminReportWorkGroupStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  padding: 10,
-};
-
-const adminReportWorkGroupTitleStyle: React.CSSProperties = {
-  fontWeight: 800,
-  marginBottom: 8,
-};
-
-const adminReportWorkOrderRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(220px, 1fr) 44px auto",
-  alignItems: "center",
-  gap: 8,
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: "5px 6px 5px 8px",
-};
-
-const adminReportWorkOrderNameStyle: React.CSSProperties = {
-  minWidth: 0,
-  fontSize: 13,
-  fontWeight: 700,
-  lineHeight: 1.25,
-  overflowWrap: "normal",
-  wordBreak: "normal",
-};
-
-const adminReportWorkOrderUnitStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  fontWeight: 800,
-  textAlign: "center",
-};
-
-const adminReportDisabledCheckboxStyle: React.CSSProperties = {
-  cursor: "not-allowed",
-  opacity: 0.45,
-};
-
-const adminReportPtoStatusBadgeStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  minHeight: 24,
-  boxSizing: "border-box",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderRadius: 4,
-  fontSize: 12,
-  fontWeight: 800,
-  lineHeight: 1.15,
-  opacity: 1,
-  padding: "3px 6px",
-  whiteSpace: "normal",
-};
-
-const adminReportCustomerCardStyle: React.CSSProperties = {
-  ...blockStyle,
-  display: "grid",
-  gap: 0,
-  width: "fit-content",
-  maxWidth: "100%",
-  borderRadius: 8,
-  padding: 0,
-  overflow: "hidden",
-};
-
-const adminReportCustomerSummaryStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(180px, 300px) 72px auto auto auto",
-  alignItems: "center",
-  gap: 8,
-  padding: "8px 10px",
-  background: "#ffffff",
-};
-
-const adminReportCustomerNameInputStyle: React.CSSProperties = {
-  minWidth: 0,
-  width: "100%",
-  boxSizing: "border-box",
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 14,
-  fontWeight: 800,
-  lineHeight: 1.25,
-  outline: "none",
-  padding: "7px 9px",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const adminReportCustomerMetaStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  whiteSpace: "nowrap",
-};
-
-const adminReportVisibleToggleStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 6,
-  alignItems: "center",
-  fontSize: 12,
-  fontWeight: 700,
-  whiteSpace: "nowrap",
-};
-
-const adminReportCustomerSettingsTabsStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  flexWrap: "wrap",
-  width: "100%",
-  maxWidth: "100%",
-};
-
-const adminReportCustomerSettingsTabStyle: React.CSSProperties = {
-  appearance: "none",
-  WebkitAppearance: "none",
-  WebkitTapHighlightColor: "transparent",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#0f172a",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
-  lineHeight: 1.2,
-  outline: "none",
-  padding: "6px 9px",
-  userSelect: "none",
-};
-
-const adminReportCustomerSettingsTabActiveStyle: React.CSSProperties = {
-  borderColor: "#0f172a",
-  background: "#0f172a",
-  color: "#ffffff",
-};
-
-const adminReportCustomerSettingsTabDisabledStyle: React.CSSProperties = {
-  cursor: "not-allowed",
-  opacity: 0.45,
-};
-
-const adminReportCustomerBodyStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 10,
-  justifyItems: "start",
-  padding: 10,
-  borderTop: "1px solid #e2e8f0",
-  width: "100%",
-  boxSizing: "border-box",
-  overflowX: "auto",
-};
-
-const adminReportRowsColumnStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 10,
-  justifyItems: "start",
-};
-
-const adminReportRenamePanelStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 8,
-  width: "100%",
-  maxWidth: 720,
-  boxSizing: "border-box",
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  padding: 8,
-};
-
-const adminReportRenameListStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 6,
-};
-
-const adminReportRenameHeaderStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "112px minmax(180px, 1fr) minmax(190px, 1fr) 22px 22px",
-  gap: 6,
-  alignItems: "center",
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 800,
-  lineHeight: 1.15,
-  padding: "0 2px",
-};
-
-const adminReportRenameRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "112px minmax(180px, 1fr) minmax(190px, 1fr) 22px 22px",
-  gap: 6,
-  alignItems: "center",
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: 6,
-};
-
-const adminReportRenameInputStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  border: "1px solid #cbd5e1",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 12,
-  lineHeight: 1.2,
-  outline: "none",
-  padding: "5px 6px",
-};
-
-const adminReportSummaryColumnStyle: React.CSSProperties = {
-  display: "grid",
-  gap: 8,
-  alignContent: "start",
-  minWidth: 420,
-  maxWidth: 720,
-  width: "100%",
-  boxSizing: "border-box",
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  padding: 8,
-};
-
-const adminReportTableWrapStyle: React.CSSProperties = {
-  maxWidth: "100%",
-  overflowX: "auto",
-};
-
-const adminReportRowsTableStyle: React.CSSProperties = {
-  width: "max-content",
-  borderCollapse: "collapse",
-  tableLayout: "fixed",
-  fontSize: 13,
-  background: "#ffffff",
-};
-
-const adminReportThStyle: React.CSSProperties = {
-  padding: "7px 8px",
-  border: "1px solid #cbd5e1",
-  background: "#f1f5f9",
-  fontWeight: 800,
-  textAlign: "left",
-  whiteSpace: "normal",
-  overflowWrap: "normal",
-  wordBreak: "normal",
-};
-
-const adminReportTdStyle: React.CSSProperties = {
-  padding: "6px 8px",
-  border: "1px solid #e2e8f0",
-  verticalAlign: "middle",
-  whiteSpace: "normal",
-  overflowWrap: "normal",
-  wordBreak: "normal",
-};
-
-const adminReportNameTdStyle: React.CSSProperties = {
-  ...adminReportTdStyle,
-  lineHeight: 1.25,
-};
-
-const adminReportSummaryCardStyle: React.CSSProperties = {
-  background: "#f8fafc",
-  borderRadius: 8,
-  border: "1px solid #e2e8f0",
-  display: "grid",
-  gap: 6,
-  width: "100%",
-  boxSizing: "border-box",
-  maxWidth: "100%",
-  padding: 6,
-};
-
-const adminReportSummaryFormStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "118px minmax(170px, 1fr) fit-content(96px) 22px 22px",
-  gap: 6,
-  alignItems: "center",
-};
-
-const adminReportSummaryListHeaderStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "118px minmax(170px, 1fr) fit-content(96px) 22px 22px",
-  gap: 6,
-  alignItems: "center",
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 800,
-  lineHeight: 1.15,
-  padding: "0 7px",
-};
-
-const adminReportSummaryCompactInputStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  border: "1px solid #cbd5e1",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 12,
-  lineHeight: 1.2,
-  outline: "none",
-  padding: "5px 6px",
-};
-
-const adminReportSummaryValueStyle: React.CSSProperties = {
-  minWidth: 0,
-  color: "#0f172a",
-  fontSize: 12,
-  fontWeight: 700,
-  lineHeight: 1.2,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const adminReportSummaryRowsGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr)",
-  gap: 6,
-  justifyContent: "start",
-  maxWidth: "100%",
-  maxHeight: 240,
-  overflowY: "auto",
-  paddingRight: 2,
-};
-
-const adminReportSummaryRowsHeaderStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  fontWeight: 700,
-};
-
-const adminReportSummaryNoteStyle: React.CSSProperties = {
-  minWidth: 0,
-  color: "#64748b",
-  fontSize: 11,
-  fontStyle: "italic",
-  lineHeight: 1.25,
-  overflowWrap: "normal",
-  wordBreak: "normal",
-  whiteSpace: "normal",
-};
-
-const adminReportSummarySelectionPanelStyle: React.CSSProperties = {
-  borderTop: "1px solid #e2e8f0",
-  display: "grid",
-  gap: 6,
-  paddingTop: 6,
-};
-
-const adminReportSummaryPlanPickerStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "110px minmax(220px, 1fr)",
-  gap: 6,
-  alignItems: "center",
-};
-
-const adminReportSummaryRowOptionStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr) max-content",
-  gap: 6,
-  alignItems: "center",
-  border: "1px solid #e2e8f0",
-  borderRadius: 6,
-  padding: "5px 6px",
-  background: "#f8fafc",
-  fontSize: 11,
-  fontWeight: 400,
-};
-
-const adminReportSummaryRowNameStyle: React.CSSProperties = {
-  minWidth: 0,
-  fontSize: 11,
-  fontWeight: 400,
-  lineHeight: 1.18,
-  overflowWrap: "normal",
-  wordBreak: "normal",
-};
-
-const adminReportSummaryRowUnitStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 400,
-  justifySelf: "end",
-  textAlign: "right",
-  whiteSpace: "nowrap",
-};
-
-const adminReportEmptyTextStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 13,
 };
 
 const reportSourceGridStyle: React.CSSProperties = {
@@ -9322,101 +7966,10 @@ const adminVehicleRenderedCountStyle: React.CSSProperties = {
   fontWeight: 700,
 };
 
-const adminLogSummaryGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: 10,
-  marginBottom: 12,
-};
-
-const adminLogSummaryCardStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: 12,
-};
-
-const adminLogSummaryLabelStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  fontWeight: 800,
-  marginBottom: 6,
-};
-
-const adminLogSummaryValueStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 16,
-  fontWeight: 800,
-};
-
-const adminLogSummaryMetaStyle: React.CSSProperties = {
-  color: "#475569",
-  fontSize: 12,
-  marginTop: 4,
-};
-
-const adminLogSummaryDetailsStyle: React.CSSProperties = {
-  color: "#0f172a",
-  fontSize: 13,
-  marginTop: 8,
-};
-
-const adminLogSummaryEmptyStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 13,
-};
-
-const adminLogTableScrollStyle: React.CSSProperties = {
-  overflow: "auto",
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-};
-
-const adminLogTableStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 980,
-  borderCollapse: "collapse",
-  fontSize: 13,
-};
-
-const adminLogEmptyCellStyle: React.CSSProperties = {
-  padding: "14px 10px",
-  color: "#64748b",
-  textAlign: "center",
-};
-
 const adminDetailCellStyle: React.CSSProperties = {
   padding: "10px 12px 14px",
   borderBottom: "1px solid #e2e8f0",
   background: "#f8fafc",
-};
-
-const adminTabNameWithDeleteStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  marginBottom: 6,
-  maxWidth: "100%",
-};
-
-const adminInlineTrashButtonStyle: React.CSSProperties = {
-  appearance: "none",
-  WebkitAppearance: "none",
-  WebkitTapHighlightColor: "transparent",
-  width: 22,
-  height: 22,
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#991b1b",
-  cursor: "pointer",
-  display: "inline-grid",
-  flex: "0 0 auto",
-  placeItems: "center",
-  padding: 0,
 };
 
 const compactRowStyle: React.CSSProperties = {
