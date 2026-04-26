@@ -57,6 +57,7 @@ import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEdito
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
+import { usePtoPendingFieldFocus } from "@/features/pto/usePtoPendingFieldFocus";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
@@ -90,7 +91,7 @@ import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type Di
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
-import { defaultPtoPlanMonth, emptyPtoDraftRowFields, normalizePtoPlanRow, normalizeStoredPtoYears, ptoRowFieldDomKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { defaultPtoPlanMonth, emptyPtoDraftRowFields, normalizePtoPlanRow, normalizeStoredPtoYears, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "@/lib/domain/navigation/tabs";
@@ -991,25 +992,13 @@ export default function App() {
     setPtoSelectedCellKeys,
   });
 
-  useEffect(() => {
-    if (!ptoPendingFieldFocus) return;
-
-    const frame = window.requestAnimationFrame(() => {
-      const element = document.querySelector<HTMLInputElement | HTMLSelectElement>(
-        `[data-pto-row-field="${ptoRowFieldDomKey(ptoPendingFieldFocus.rowId, ptoPendingFieldFocus.field)}"]`,
-      );
-
-      if (!element) return;
-      element.focus();
-      if (element instanceof HTMLInputElement) {
-        const valueLength = element.value.length;
-        element.setSelectionRange(valueLength, valueLength);
-      }
-      setPtoPendingFieldFocus(null);
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [ptoPendingFieldFocus, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
+  usePtoPendingFieldFocus({
+    pendingFieldFocus: ptoPendingFieldFocus,
+    setPendingFieldFocus: setPtoPendingFieldFocus,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+  });
 
   const deferredPtoPlanRows = useDeferredValue(ptoPlanRows);
   const deferredPtoSurveyRows = useDeferredValue(ptoSurveyRows);
