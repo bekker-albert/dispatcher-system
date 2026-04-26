@@ -5,14 +5,13 @@ import { buildInitialAdminStructureState } from "@/features/admin/structure/init
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
 import { buildInitialDispatchSummaryRows } from "@/features/dispatch/initialDispatchSummaryState";
 import { buildInitialNavigationState } from "@/features/navigation/initialNavigationState";
+import { applyInitialPtoState, type InitialPtoStateSetters } from "@/features/pto/applyInitialPtoState";
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { applyInitialReportState, type InitialReportStateSetters } from "@/features/reports/applyInitialReportState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
 import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
-import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
-import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
@@ -22,7 +21,7 @@ type MutableRef<T> = {
   current: T;
 };
 
-type InitialAppDataLoadOptions = InitialReportStateSetters & {
+type InitialAppDataLoadOptions = InitialReportStateSetters & InitialPtoStateSetters & {
   defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
   saveClientSnapshotToDatabase: (reason: string) => Promise<void>;
   restoreAdminLogs: (storedLogs: unknown) => void;
@@ -31,22 +30,12 @@ type InitialAppDataLoadOptions = InitialReportStateSetters & {
   appSettingsDatabaseSaveSnapshotRef: MutableRef<string>;
   vehiclesDatabaseLoadedRef: MutableRef<boolean>;
   vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
-  hasStoredPtoStateRef: MutableRef<boolean>;
   setAdminDataLoaded: Dispatch<SetStateAction<boolean>>;
   setCustomTabs: Dispatch<SetStateAction<CustomTab[]>>;
   setTopTabs: Dispatch<SetStateAction<TopTabDefinition[]>>;
   setSubTabs: Dispatch<SetStateAction<Record<EditableSubtabGroup, SubTabConfig[]>>>;
   setVehicleRows: Dispatch<SetStateAction<VehicleRow[]>>;
   setDispatchSummaryRows: Dispatch<SetStateAction<DispatchSummaryRow[]>>;
-  setPtoManualYears: Dispatch<SetStateAction<string[]>>;
-  setPtoPlanRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
-  setPtoSurveyRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
-  setPtoOperRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
-  setPtoColumnWidths: Dispatch<SetStateAction<Record<string, number>>>;
-  setPtoRowHeights: Dispatch<SetStateAction<Record<string, number>>>;
-  setPtoHeaderLabels: Dispatch<SetStateAction<Record<string, string>>>;
-  setPtoBucketValues: Dispatch<SetStateAction<Record<string, number>>>;
-  setPtoBucketManualRows: Dispatch<SetStateAction<PtoBucketRow[]>>;
   setOrgMembers: Dispatch<SetStateAction<OrgMember[]>>;
   setDependencyNodes: Dispatch<SetStateAction<DependencyNode[]>>;
   setDependencyLinks: Dispatch<SetStateAction<DependencyLink[]>>;
@@ -124,7 +113,6 @@ export function useInitialAppDataLoad({
         if (!initialVehicleRows.completed) return;
 
         const initialPtoState = buildInitialPtoState(storedState);
-        hasStoredPtoStateRef.current = initialPtoState.hasSavedPtoState;
 
         const initialReportState = buildInitialReportState(storedState);
         applyInitialReportState(initialReportState, {
@@ -161,27 +149,18 @@ export function useInitialAppDataLoad({
           setDispatchSummaryRows(initialDispatchSummaryRows);
         }
 
-        if (initialPtoState.manualYears) {
-          setPtoManualYears(initialPtoState.manualYears);
-        }
-
-        if (initialPtoState.planRows) {
-          setPtoPlanRows(initialPtoState.planRows);
-        }
-
-        if (initialPtoState.surveyRows) {
-          setPtoSurveyRows(initialPtoState.surveyRows);
-        }
-
-        if (initialPtoState.operRows) {
-          setPtoOperRows(initialPtoState.operRows);
-        }
-
-        setPtoColumnWidths(initialPtoState.columnWidths);
-        setPtoRowHeights(initialPtoState.rowHeights);
-        setPtoHeaderLabels(initialPtoState.headerLabels);
-        setPtoBucketValues(initialPtoState.bucketValues);
-        setPtoBucketManualRows(initialPtoState.bucketRows);
+        applyInitialPtoState(initialPtoState, {
+          hasStoredPtoStateRef,
+          setPtoManualYears,
+          setPtoPlanRows,
+          setPtoSurveyRows,
+          setPtoOperRows,
+          setPtoColumnWidths,
+          setPtoRowHeights,
+          setPtoHeaderLabels,
+          setPtoBucketValues,
+          setPtoBucketManualRows,
+        });
 
         const initialAdminStructureState = buildInitialAdminStructureState(storedState);
         if (initialAdminStructureState.orgMembers) {

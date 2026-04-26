@@ -53,3 +53,5 @@ export function buildInitialPtoState(storedState: InitialPtoStateInput) {
     bucketRows: normalizePtoBucketManualRows(storedState.savedPtoBucketRows),
   };
 }
+
+export type InitialPtoState = ReturnType<typeof buildInitialPtoState>;
