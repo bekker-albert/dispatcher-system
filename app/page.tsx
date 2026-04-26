@@ -1,8 +1,8 @@
 "use client";
 
 import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
-import Image from "next/image";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import {
   AdminDatabaseSection,
@@ -53,7 +53,7 @@ import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSe
 import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
-import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
+import { structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
@@ -70,7 +70,7 @@ import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsF
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
-import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
+import { compactSubTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import { createPtoBucketColumns, createPtoBucketRows, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
@@ -89,7 +89,6 @@ import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
 import { IconButton, TopButton } from "@/shared/ui/buttons";
 import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
-import { HeaderSubButton } from "@/shared/ui/navigation";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
@@ -5331,107 +5330,30 @@ export default function App() {
       <style>{`${reportPrintCss}\n@media print { .app-save-status { display: none !important; } }`}</style>
       <SaveStatusIndicator status={saveStatus} onClose={hideSaveStatus} />
       <div className="app-print-shell" style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
-        <div className="app-print-header" style={{ background: "#ffffff", borderRadius: 18, padding: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.06)", marginBottom: 20 }}>
-          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-            <div style={{ width: 130, flex: "0 0 130px" }}>
-              <Image src="/mining-logo.png" alt="Логотип" width={112} height={72} style={logoImageStyle} priority />
-            </div>
-            <div ref={headerNavRef} style={{ ...headerNavStackStyle, ...(headerHasSubtabs ? headerNavStackPtoStyle : null) }}>
-              <div style={headerMainTabsStyle}>
-                {topTabs.filter((tab) => tab.visible).map((tab) => {
-                  if (tab.id === "reports" && topTab === "reports") {
-                    return (
-                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
-                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                      </div>
-                    );
-                  }
-
-                  if (tab.id === "dispatch" && topTab === "dispatch") {
-                    return (
-                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
-                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                      </div>
-                    );
-                  }
-
-                  if (tab.id === "pto" && topTab === "pto") {
-                    return (
-                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
-                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                      </div>
-                    );
-                  }
-
-                  if (tab.id === "admin" && topTab === "admin") {
-                    return (
-                      <div key={tab.id} ref={activeHeaderTabRef} style={headerActiveTabWithSubtabsStyle}>
-                        <TopButton active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <TopButton key={tab.id} active={topTab === tab.id} onClick={() => selectTopTab(tab.id)} label={compactTopTabLabel(tab)} />
-                  );
-                })}
-                {customTabs.filter((tab) => tab.visible !== false).map((tab) => (
-                  <TopButton
-                    key={tab.id}
-                    active={topTab === customTabKey(tab.id)}
-                    onClick={() => selectTopTab(customTabKey(tab.id))}
-                    label={tab.title}
-                    showDelete={topTab === customTabKey(tab.id)}
-                    deleteLabel={`Удалить вкладку ${tab.title}`}
-                    onDelete={() => deleteCustomTab(tab.id)}
-                  />
-                ))}
-              </div>
-              {headerHasSubtabs && (
-                <div ref={headerSubtabsRef} style={{ ...headerSubtabsStyle, marginLeft: headerSubtabsOffset }}>
-                  {topTab === "reports" && reportCustomers.filter((customer) => customer.visible).map((customer) => (
-                    <HeaderSubButton
-                      key={customer.id}
-                      active={reportCustomerId === customer.id}
-                      onClick={() => setReportCustomerId(customer.id)}
-                      label={customer.label}
-                    />
-                  ))}
-                  {topTab === "dispatch" && subTabs.dispatch.filter((subTab) => subTab.visible).map((subTab) => (
-                    <HeaderSubButton
-                      key={subTab.id}
-                      active={dispatchTab === subTab.value}
-                      onClick={() => setDispatchTab(subTab.value)}
-                      label={compactSubTabLabel("dispatch", subTab)}
-                    />
-                  ))}
-                  {topTab === "pto" && subTabs.pto.filter((subTab) => subTab.visible).map((subTab) => (
-                    <HeaderSubButton
-                      key={subTab.id}
-                      active={ptoTab === subTab.value}
-                      onClick={() => selectPtoTab(subTab.value)}
-                      label={compactSubTabLabel("pto", subTab)}
-                    />
-                  ))}
-                  {topTab === "admin" && adminSectionTabs.map((section) => (
-                    <HeaderSubButton
-                      key={section.value}
-                      active={adminSection === section.value}
-                      onClick={() => setAdminSection(section.value)}
-                      label={section.label}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={workDateStyle}>
-              <Field label="Рабочая дата">
-                <input type="date" value={reportDate} onChange={(e) => selectReportDate(e.target.value)} style={{ ...inputStyle, padding: "8px 10px" }} />
-              </Field>
-            </div>
-          </div>
-        </div>
-
+        <AppHeader
+          topTabs={topTabs}
+          customTabs={customTabs}
+          topTab={topTab}
+          subTabs={subTabs}
+          headerHasSubtabs={headerHasSubtabs}
+          headerSubtabsOffset={headerSubtabsOffset}
+          headerNavRef={headerNavRef}
+          activeHeaderTabRef={activeHeaderTabRef}
+          headerSubtabsRef={headerSubtabsRef}
+          reportCustomers={reportCustomers}
+          reportCustomerId={reportCustomerId}
+          dispatchTab={dispatchTab}
+          ptoTab={ptoTab}
+          adminSection={adminSection}
+          reportDate={reportDate}
+          onSelectTopTab={selectTopTab}
+          onDeleteCustomTab={deleteCustomTab}
+          onSelectReportCustomer={setReportCustomerId}
+          onSelectDispatchTab={setDispatchTab}
+          onSelectPtoTab={selectPtoTab}
+          onSelectAdminSection={setAdminSection}
+          onSelectReportDate={selectReportDate}
+        />
         {renderedTopTab === "reports" && (
           shouldGatePtoDatabase ? renderPtoDatabaseGate() : (
           <ReportsSection
@@ -6525,54 +6447,4 @@ const dependencyLinkCardStyle: React.CSSProperties = {
   borderRadius: 8,
   background: "#f8fafc",
   padding: 12,
-};
-
-const headerNavStackStyle: React.CSSProperties = {
-  flex: "1 1 720px",
-  display: "grid",
-  gap: 6,
-  minWidth: 280,
-  position: "relative",
-};
-
-const headerNavStackPtoStyle: React.CSSProperties = {
-  paddingBottom: 0,
-};
-
-const headerMainTabsStyle: React.CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 6,
-  alignItems: "center",
-};
-
-const headerActiveTabWithSubtabsStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: "0 0 auto",
-};
-
-const headerSubtabsStyle: React.CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 4,
-  alignItems: "center",
-  justifyContent: "flex-start",
-  width: "fit-content",
-  maxWidth: "100%",
-  borderTop: "1px solid #0f172a",
-  paddingTop: 6,
-};
-
-const logoImageStyle: React.CSSProperties = {
-  width: 112,
-  height: 72,
-  objectFit: "contain",
-  display: "block",
-};
-
-const workDateStyle: React.CSSProperties = {
-  width: 170,
-  flex: "0 0 170px",
 };
