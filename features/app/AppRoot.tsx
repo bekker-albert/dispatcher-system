@@ -25,7 +25,7 @@ import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementa
 import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
 import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionProps";
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
-import { useAppSharedPersistence } from "@/features/app/useAppSharedPersistence";
+import { useAppSharedPersistenceController } from "@/features/app/useAppSharedPersistenceController";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoController } from "@/features/app/useAppUndoController";
@@ -107,9 +107,6 @@ export default function App() {
     vehicleRowsRef,
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
-    appSettingsDatabaseLoadedRef,
-    appSettingsDatabaseSaveSnapshotRef,
-    adminDataLoaded,
     draggedPtoRowId,
     setDraggedPtoRowId,
     ptoDropTarget,
@@ -239,7 +236,6 @@ export default function App() {
     clientSnapshots,
     databasePanelMessage,
     databasePanelLoading,
-    requestClientSnapshotSave,
     refreshClientSnapshots,
     createClientSnapshotNow,
     restoreClientSnapshot,
@@ -273,33 +269,7 @@ export default function App() {
     resetUndoHistoryForExternalRestore,
   });
 
-  useAppSharedPersistence({
-    adminDataLoaded,
-    appSettingsDatabaseLoadedRef,
-    appSettingsDatabaseSaveSnapshotRef,
-    vehiclesDatabaseLoadedRef,
-    vehiclesDatabaseSaveSnapshotRef,
-    requestClientSnapshotSave,
-    showSaveStatus,
-    databaseConfigured,
-    reportCustomers,
-    reportAreaOrder,
-    reportWorkOrder,
-    reportHeaderLabels,
-    reportColumnWidths,
-    reportReasons,
-    areaShiftCutoffs,
-    customTabs,
-    topTabs,
-    subTabs,
-    dispatchSummaryRows,
-    orgMembers,
-    dependencyNodes,
-    dependencyLinks,
-    adminLogs,
-    vehicleRows,
-    vehicleRowsRef,
-  });
+  useAppSharedPersistenceController({ appState, databaseConfigured });
 
   const {
     commitReportDayReason,
