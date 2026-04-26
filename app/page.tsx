@@ -48,6 +48,7 @@ import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMes
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
+import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -100,7 +101,7 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-import { defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, yearMonths, type PtoDateTableKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { defaultPtoPlanMonth, emptyPtoDraftRowFields, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, yearMonths, type PtoDateTableKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -2325,66 +2326,24 @@ export default function App() {
     addAdminLog,
   });
 
-  function updatePtoDateRow(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, field: keyof Omit<PtoPlanRow, "id" | "dailyPlans">, value: string) {
-    const numericFields: Array<keyof PtoPlanRow> = ["carryover"];
-    const sharedFields: Array<keyof Omit<PtoPlanRow, "id" | "dailyPlans">> = ["area", "location", "structure", "unit"];
-    const updatedValue = numericFields.includes(field) ? parseDecimalValue(value) : value;
-    const linkedRow = [...ptoPlanRows, ...ptoOperRows, ...ptoSurveyRows].find((row) => row.id === id);
-    const linkedSignature = linkedRow ? ptoLinkedRowSignature(linkedRow) : "";
-
-    if (field === "carryover") {
-      setRows((current) =>
-        current.map((row) => {
-          if (row.id !== id) return row;
-
-          return {
-            ...row,
-            carryover: Number(updatedValue),
-            carryovers: {
-              ...(row.carryovers ?? {}),
-              [ptoPlanYear]: Number(updatedValue),
-            },
-            carryoverManualYears: uniqueSorted([...(row.carryoverManualYears ?? []), ptoPlanYear]),
-            years: uniqueSorted([...(row.years ?? []), ptoPlanYear]),
-          };
-        }),
-      );
-      addAdminLog({
-        action: "Редактирование",
-        section: "ПТО",
-        details: `Изменено поле "${ptoFieldLogLabel(field)}" в ${currentPtoTableLabel()}.`,
-      });
-      return;
-    }
-
-    if (sharedFields.includes(field)) {
-      const updateLinkedRows = (current: PtoPlanRow[]) =>
-        current.map((row) =>
-          ptoLinkedRowMatches(row, id, linkedSignature)
-            ? { ...row, [field]: updatedValue }
-            : row,
-        );
-
-      setPtoPlanRows(updateLinkedRows);
-      setPtoOperRows(updateLinkedRows);
-      setPtoSurveyRows(updateLinkedRows);
-      addAdminLog({
-        action: "Редактирование",
-        section: "ПТО",
-        details: `Изменено поле "${ptoFieldLogLabel(field)}" в связанных строках ПТО.`,
-      });
-      return;
-    }
-
-    setRows((current) =>
-      current.map((row) => (row.id === id ? { ...row, [field]: updatedValue } : row)),
-    );
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО",
-      details: `Изменено поле "${ptoFieldLogLabel(field)}" в ${currentPtoTableLabel()}.`,
-    });
-  }
+  const {
+    updatePtoDateRow,
+    clearPtoCarryoverOverride,
+    updatePtoDateDay,
+    updatePtoMonthTotal,
+  } = usePtoDateRowValueEditor({
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+    ptoPlanYear,
+    currentPtoTableLabel,
+    setPtoPlanRows,
+    setPtoOperRows,
+    setPtoSurveyRows,
+    saveDayPatch: savePtoDayPatchToDatabase,
+    saveDayPatches: savePtoDayPatchesToDatabase,
+    addAdminLog,
+  });
 
   const {
     getPtoRowTextDraft,
@@ -2398,95 +2357,6 @@ export default function App() {
     commitValue: (setRows, row, field, value) => updatePtoDateRow(setRows, row.id, field, value),
     requestSave: requestPtoDatabaseSave,
   });
-
-  function clearPtoCarryoverOverride(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, year: string) {
-    setRows((current) =>
-      current.map((row) => {
-        if (row.id !== id) return row;
-
-        const carryovers = { ...(row.carryovers ?? {}) };
-        delete carryovers[year];
-
-        return {
-          ...row,
-          carryover: year === defaultPtoPlanMonth.slice(0, 4) ? 0 : row.carryover,
-          carryovers,
-          carryoverManualYears: (row.carryoverManualYears ?? []).filter((rowYear) => rowYear !== year),
-        };
-      }),
-    );
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО",
-      details: `Очищены остатки за ${year} год в ${currentPtoTableLabel()}.`,
-    });
-  }
-
-  function updatePtoDateDay(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, day: string, value: string) {
-    const trimmedValue = value.trim();
-    const parsedValue = trimmedValue === "" ? null : parseDecimalValue(value);
-
-    setRows((current) =>
-      current.map((row) => {
-        if (row.id !== id) return row;
-
-        const dailyPlans = { ...row.dailyPlans };
-        const year = day.slice(0, 4);
-        if (parsedValue === null) {
-          delete dailyPlans[day];
-        } else {
-          dailyPlans[day] = parsedValue;
-        }
-
-        return {
-          ...row,
-          dailyPlans,
-          years: uniqueSorted([...(row.years ?? []), year]),
-        };
-      }),
-    );
-    savePtoDayPatchToDatabase(id, day, parsedValue);
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО",
-      details: `Изменено значение за день ${day} в ${currentPtoTableLabel()}.`,
-    });
-  }
-
-  function updatePtoMonthTotal(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, days: string[], value: string) {
-    const distributedValues = value.trim() ? distributeMonthlyTotal(parseDecimalValue(value), days) : {};
-
-    setRows((current) =>
-      current.map((row) => {
-        if (row.id !== id) return row;
-
-        const nextDailyPlans = { ...row.dailyPlans };
-        days.forEach((day) => {
-          delete nextDailyPlans[day];
-        });
-
-        if (value.trim()) {
-          Object.assign(nextDailyPlans, distributedValues);
-        }
-
-        return {
-          ...row,
-          dailyPlans: nextDailyPlans,
-          years: days[0] ? uniqueSorted([...(row.years ?? []), days[0].slice(0, 4)]) : row.years,
-        };
-      }),
-    );
-    savePtoDayPatchesToDatabase(days.map((day) => ({
-      rowId: id,
-      day,
-      value: distributedValues[day] ?? null,
-    })));
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО",
-      details: `Распределен итог месяца в ${currentPtoTableLabel()}.`,
-    });
-  }
 
   function startAdminVehiclesEditing() {
     setAdminVehiclesEditing(true);
