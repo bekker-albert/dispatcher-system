@@ -4,6 +4,7 @@ import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } f
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
@@ -60,7 +61,7 @@ import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtual
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import { createPtoBucketColumns, createPtoBucketRows, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "@/lib/domain/reference/defaults";
-import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow, type VehicleSeedRow } from "@/lib/domain/vehicles/defaults";
+import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
 import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
@@ -104,17 +105,6 @@ const emptyPtoDraftRowFields = {
 };
 
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
-
-async function loadDefaultVehicleSeed() {
-  const seedModule = await import("@/data/default-vehicles.json");
-  const seedRows = seedModule.default as VehicleSeedRow[];
-
-  return {
-    rows: seedRows,
-    version: createVehicleSeedVersion(seedRows),
-    vehicles: createDefaultVehicles(seedRows),
-  };
-}
 
 const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
   column.key === "visible" ? { ...column, icon: <Eye size={14} aria-hidden /> } : column
