@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
+import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoReadonlyTextCell, PtoVirtualSpacerRow, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
@@ -5282,123 +5283,51 @@ export default function App() {
                           </button>
                           </div>
                         ) : null}
-                        {ptoDateEditing ? (
-                          <input
-                            data-pto-row-field={ptoRowFieldDomKey(row.id, "area")}
-                            list="pto-area-options"
-                            value={getPtoRowTextDraft(row, "area")}
-                            onFocus={() => beginPtoRowTextDraft(row, "area")}
-                            onChange={(event) => updatePtoRowTextDraft(row.id, "area", event.target.value)}
-                            onBlur={(event) => {
-                              if (event.currentTarget.dataset.skipPtoTextCommit === "true") {
-                                delete event.currentTarget.dataset.skipPtoTextCommit;
-                                return;
-                              }
-                              commitPtoRowTextDraft(setRows, row, "area");
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                commitPtoRowTextDraft(setRows, row, "area");
-                                event.currentTarget.dataset.skipPtoTextCommit = "true";
-                                event.currentTarget.blur();
-                              }
-                              if (event.key === "Escape") {
-                                event.preventDefault();
-                                cancelPtoRowTextDraft(row.id, "area");
-                                event.currentTarget.dataset.skipPtoTextCommit = "true";
-                                event.currentTarget.blur();
-                              }
-                            }}
-                            placeholder="Уч_Аксу"
-                            style={ptoPlanInputStyle}
-                          />
-                        ) : <PtoReadonlyTextCell value={row.area} />}
+                        <PtoDateEditableTextCell
+                          editing={ptoDateEditing}
+                          value={row.area}
+                          draftValue={getPtoRowTextDraft(row, "area")}
+                          dataFieldKey={ptoRowFieldDomKey(row.id, "area")}
+                          listId="pto-area-options"
+                          placeholder="Уч_Аксу"
+                          onBeginDraft={() => beginPtoRowTextDraft(row, "area")}
+                          onUpdateDraft={(value) => updatePtoRowTextDraft(row.id, "area", value)}
+                          onCommitDraft={() => commitPtoRowTextDraft(setRows, row, "area")}
+                          onCancelDraft={() => cancelPtoRowTextDraft(row.id, "area")}
+                        />
                       </div>
                     </PtoPlanTd>
                     {showLocation ? (
                       <PtoPlanTd>
-                        {ptoDateEditing ? (
-                          <>
-                            <input
-                              data-pto-row-field={ptoRowFieldDomKey(row.id, "location")}
-                              list={locationListId}
-                              value={getPtoRowTextDraft(row, "location")}
-                              onFocus={() => beginPtoRowTextDraft(row, "location")}
-                              onChange={(event) => updatePtoRowTextDraft(row.id, "location", event.target.value)}
-                              onBlur={(event) => {
-                                if (event.currentTarget.dataset.skipPtoTextCommit === "true") {
-                                  delete event.currentTarget.dataset.skipPtoTextCommit;
-                                  return;
-                                }
-                                commitPtoRowTextDraft(setRows, row, "location");
-                              }}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter") {
-                                  event.preventDefault();
-                                  commitPtoRowTextDraft(setRows, row, "location");
-                                  event.currentTarget.dataset.skipPtoTextCommit = "true";
-                                  event.currentTarget.blur();
-                                }
-                                if (event.key === "Escape") {
-                                  event.preventDefault();
-                                  cancelPtoRowTextDraft(row.id, "location");
-                                  event.currentTarget.dataset.skipPtoTextCommit = "true";
-                                  event.currentTarget.blur();
-                                }
-                              }}
-                              placeholder="Карьер"
-                              style={ptoPlanInputStyle}
-                            />
-                            <datalist id={locationListId}>
-                              {locationOptions.map((location) => (
-                                <option key={location} value={location} />
-                              ))}
-                            </datalist>
-                          </>
-                        ) : <PtoReadonlyTextCell value={row.location} />}
+                        <PtoDateEditableTextCell
+                          editing={ptoDateEditing}
+                          value={row.location}
+                          draftValue={getPtoRowTextDraft(row, "location")}
+                          dataFieldKey={ptoRowFieldDomKey(row.id, "location")}
+                          listId={locationListId}
+                          options={locationOptions}
+                          placeholder="Карьер"
+                          onBeginDraft={() => beginPtoRowTextDraft(row, "location")}
+                          onUpdateDraft={(value) => updatePtoRowTextDraft(row.id, "location", value)}
+                          onCommitDraft={() => commitPtoRowTextDraft(setRows, row, "location")}
+                          onCancelDraft={() => cancelPtoRowTextDraft(row.id, "location")}
+                        />
                       </PtoPlanTd>
                     ) : null}
                     <PtoPlanTd>
-                      {ptoDateEditing ? (
-                        <>
-                          <input
-                            data-pto-row-field={ptoRowFieldDomKey(row.id, "structure")}
-                            list={structureListId}
-                            value={getPtoRowTextDraft(row, "structure")}
-                            onFocus={() => beginPtoRowTextDraft(row, "structure")}
-                            onChange={(event) => updatePtoRowTextDraft(row.id, "structure", event.target.value)}
-                            onBlur={(event) => {
-                              if (event.currentTarget.dataset.skipPtoTextCommit === "true") {
-                                delete event.currentTarget.dataset.skipPtoTextCommit;
-                                return;
-                              }
-                              commitPtoRowTextDraft(setRows, row, "structure");
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                commitPtoRowTextDraft(setRows, row, "structure");
-                                event.currentTarget.dataset.skipPtoTextCommit = "true";
-                                event.currentTarget.blur();
-                              }
-                              if (event.key === "Escape") {
-                                event.preventDefault();
-                                cancelPtoRowTextDraft(row.id, "structure");
-                                event.currentTarget.dataset.skipPtoTextCommit = "true";
-                                event.currentTarget.blur();
-                              }
-                            }}
-                            placeholder="Вид работ"
-                            style={ptoPlanInputStyle}
-                          />
-                          <datalist id={structureListId}>
-                            {structureOptions.map((structure) => (
-                              <option key={structure} value={structure} />
-                            ))}
-                          </datalist>
-                        </>
-                      ) : <PtoReadonlyTextCell value={row.structure} />}
+                      <PtoDateEditableTextCell
+                        editing={ptoDateEditing}
+                        value={row.structure}
+                        draftValue={getPtoRowTextDraft(row, "structure")}
+                        dataFieldKey={ptoRowFieldDomKey(row.id, "structure")}
+                        listId={structureListId}
+                        options={structureOptions}
+                        placeholder="Вид работ"
+                        onBeginDraft={() => beginPtoRowTextDraft(row, "structure")}
+                        onUpdateDraft={(value) => updatePtoRowTextDraft(row.id, "structure", value)}
+                        onCommitDraft={() => commitPtoRowTextDraft(setRows, row, "structure")}
+                        onCancelDraft={() => cancelPtoRowTextDraft(row.id, "structure")}
+                      />
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       {ptoDateEditing ? (
