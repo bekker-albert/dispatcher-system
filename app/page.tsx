@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
@@ -10,6 +10,7 @@ import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { AdminStructureElements } from "@/features/admin/structure/AdminStructureElements";
 import { AdminStructureLinks } from "@/features/admin/structure/AdminStructureLinks";
+import { AdminStructureRoles } from "@/features/admin/structure/AdminStructureRoles";
 import { AdminStructureScheme } from "@/features/admin/structure/AdminStructureScheme";
 import {
   AdminDatabaseSection,
@@ -65,7 +66,7 @@ import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
-import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, orgMemberLabel, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
+import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
@@ -98,8 +99,8 @@ import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, no
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
-import { IconButton, TopButton } from "@/shared/ui/buttons";
-import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
+import { TopButton } from "@/shared/ui/buttons";
+import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
@@ -5502,132 +5503,16 @@ export default function App() {
                 )}
 
                 {structureSection === "roles" && (
-                <>
-                <div style={{ fontWeight: 700, marginBottom: 12 }}>Сотрудники и роли</div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", minWidth: 1120, borderCollapse: "collapse", fontSize: 14 }}>
-                    <thead>
-                      <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                        <CompactTh>Сотрудник / роль</CompactTh>
-                        <CompactTh>Подразделение</CompactTh>
-                        <CompactTh>Линейный руководитель</CompactTh>
-                        <CompactTh>Функциональный руководитель</CompactTh>
-                        <CompactTh>Статус</CompactTh>
-                        <CompactTh>Действия</CompactTh>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orgMembers.map((member) => {
-                        const isEditing = editingOrgMemberId === member.id;
-                        const managerOptions = orgMembers.filter((candidate) => candidate.id !== member.id);
-                        const linearManager = orgMembers.find((candidate) => candidate.id === member.linearManagerId);
-                        const functionalManager = orgMembers.find((candidate) => candidate.id === member.functionalManagerId);
-
-                        return (
-                          <Fragment key={member.id}>
-                            <tr>
-                              <CompactTd>
-                                <div style={vehicleNameStyle}>{member.name || "Без названия"}</div>
-                                <VehicleMeta label="Должность" value={member.position} />
-                              </CompactTd>
-                              <CompactTd>
-                                <VehicleMeta label="Отдел" value={member.department} />
-                                <VehicleMeta label="Участок" value={member.area} />
-                              </CompactTd>
-                              <CompactTd>{orgMemberLabel(linearManager)}</CompactTd>
-                              <CompactTd>{orgMemberLabel(functionalManager)}</CompactTd>
-                              <CompactTd>{member.active ? "Активен" : "Скрыт"}</CompactTd>
-                              <CompactTd>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                  <IconButton label={isEditing ? "Завершить редактирование" : "Редактировать связь"} onClick={() => setEditingOrgMemberId(isEditing ? null : member.id)}>
-                                    {isEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                                  </IconButton>
-                                  <IconButton label={member.active ? "Скрыть из структуры" : "Вернуть в структуру"} onClick={() => updateOrgMember(member.id, "active", !member.active)}>
-                                    {member.active ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                                  </IconButton>
-                                  <IconButton label="Удалить связь" onClick={() => deleteOrgMember(member.id)}>
-                                    <Trash2 size={16} aria-hidden />
-                                  </IconButton>
-                                </div>
-                              </CompactTd>
-                            </tr>
-                            {isEditing && (
-                              <tr>
-                                <td colSpan={6} style={adminDetailCellStyle}>
-                                  <div style={adminInlineEditStyle}>
-                                    <Field label="Сотрудник / роль">
-                                      <input value={member.name} onChange={(e) => updateOrgMember(member.id, "name", e.target.value)} placeholder="Например: Диспетчер смены" style={inputStyle} />
-                                    </Field>
-                                    <Field label="Должность">
-                                      <input value={member.position} onChange={(e) => updateOrgMember(member.id, "position", e.target.value)} placeholder="Например: Диспетчер" style={inputStyle} />
-                                    </Field>
-                                    <Field label="Подразделение">
-                                      <input value={member.department} onChange={(e) => updateOrgMember(member.id, "department", e.target.value)} placeholder="Например: ПТО" style={inputStyle} />
-                                    </Field>
-                                    <Field label="Участок">
-                                      <input value={member.area} onChange={(e) => updateOrgMember(member.id, "area", e.target.value)} placeholder="Например: Аксу" style={inputStyle} />
-                                    </Field>
-                                    <Field label="Линейный руководитель">
-                                      <select value={member.linearManagerId} onChange={(e) => updateOrgMember(member.id, "linearManagerId", e.target.value)} style={inputStyle}>
-                                        <option value="">Не назначен</option>
-                                        {managerOptions.map((candidate) => (
-                                          <option key={candidate.id} value={candidate.id}>{orgMemberLabel(candidate)}</option>
-                                        ))}
-                                      </select>
-                                    </Field>
-                                    <Field label="Функциональный руководитель">
-                                      <select value={member.functionalManagerId} onChange={(e) => updateOrgMember(member.id, "functionalManagerId", e.target.value)} style={inputStyle}>
-                                        <option value="">Не назначен</option>
-                                        {managerOptions.map((candidate) => (
-                                          <option key={candidate.id} value={candidate.id}>{orgMemberLabel(candidate)}</option>
-                                        ))}
-                                      </select>
-                                    </Field>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr)) auto", gap: 10, alignItems: "end" }}>
-                  <Field label="Сотрудник / роль">
-                    <input value={orgMemberForm.name} onChange={(e) => updateOrgMemberForm("name", e.target.value)} placeholder="Например: Геолог" style={inputStyle} />
-                  </Field>
-                  <Field label="Должность">
-                    <input value={orgMemberForm.position} onChange={(e) => updateOrgMemberForm("position", e.target.value)} placeholder="Должность" style={inputStyle} />
-                  </Field>
-                  <Field label="Подразделение">
-                    <input value={orgMemberForm.department} onChange={(e) => updateOrgMemberForm("department", e.target.value)} placeholder="Отдел" style={inputStyle} />
-                  </Field>
-                  <Field label="Участок">
-                    <input value={orgMemberForm.area} onChange={(e) => updateOrgMemberForm("area", e.target.value)} placeholder="Участок" style={inputStyle} />
-                  </Field>
-                  <Field label="Линейный руководитель">
-                    <select value={orgMemberForm.linearManagerId} onChange={(e) => updateOrgMemberForm("linearManagerId", e.target.value)} style={inputStyle}>
-                      <option value="">Не назначен</option>
-                      {orgMembers.map((member) => (
-                        <option key={member.id} value={member.id}>{orgMemberLabel(member)}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Функциональный руководитель">
-                    <select value={orgMemberForm.functionalManagerId} onChange={(e) => updateOrgMemberForm("functionalManagerId", e.target.value)} style={inputStyle}>
-                      <option value="">Не назначен</option>
-                      {orgMembers.map((member) => (
-                        <option key={member.id} value={member.id}>{orgMemberLabel(member)}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <IconButton label="Добавить связь" onClick={addOrgMember}>
-                    <Plus size={16} aria-hidden />
-                  </IconButton>
-                </div>
-                </>
+                  <AdminStructureRoles
+                    orgMembers={orgMembers}
+                    orgMemberForm={orgMemberForm}
+                    editingOrgMemberId={editingOrgMemberId}
+                    onEditOrgMember={setEditingOrgMemberId}
+                    onUpdateOrgMember={updateOrgMember}
+                    onUpdateOrgMemberForm={updateOrgMemberForm}
+                    onAddOrgMember={addOrgMember}
+                    onDeleteOrgMember={deleteOrgMember}
+                  />
                 )}
 
                 {structureSection === "schedule" && (
@@ -6017,12 +5902,6 @@ const adminVehicleRenderedCountStyle: React.CSSProperties = {
   fontWeight: 700,
 };
 
-const adminDetailCellStyle: React.CSSProperties = {
-  padding: "10px 12px 14px",
-  borderBottom: "1px solid #e2e8f0",
-  background: "#f8fafc",
-};
-
 const compactRowStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr auto",
@@ -6032,11 +5911,4 @@ const compactRowStyle: React.CSSProperties = {
   borderRadius: 8,
   padding: 10,
   background: "#ffffff",
-};
-
-const adminInlineEditStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: 10,
-  alignItems: "end",
 };
