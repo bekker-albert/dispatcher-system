@@ -47,7 +47,6 @@ import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEd
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
-import { PtoDateTableContainer } from "@/features/pto/PtoDateTableContainer";
 import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
 import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
@@ -69,6 +68,7 @@ import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
+import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
 import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
@@ -87,7 +87,6 @@ import { useReportSelectionGuards } from "@/features/reports/useReportSelectionG
 import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
-import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { createDefaultSubTabs, customTabKey } from "@/lib/domain/navigation/tabs";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
@@ -1251,97 +1250,86 @@ export default function App() {
     requestSave: requestPtoDatabaseSave,
     addAdminLog,
   });
-  function renderPtoDateTable(
-    rows: PtoPlanRow[],
-    setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>,
-    options: { showLocation?: boolean; editableMonthTotal?: boolean } = {},
-  ) {
-    return (
-      <PtoDateTableContainer
-        rows={rows}
-        setRows={setRows}
-        options={options}
-        ptoTab={ptoTab}
-        ptoAreaFilter={ptoAreaFilter}
-        ptoPlanYear={ptoPlanYear}
-        reportDate={reportDate}
-        ptoYearMonths={ptoYearMonths}
-        ptoMonthGroups={ptoMonthGroups}
-        ptoAreaTabs={ptoAreaTabs}
-        ptoYearTabs={ptoYearTabs}
-        ptoYearDialogOpen={ptoYearDialogOpen}
-        ptoYearInput={ptoYearInput}
-        ptoDateEditing={ptoDateEditing}
-        ptoColumnWidths={ptoColumnWidths}
-        ptoRowHeights={ptoRowHeights}
-        ptoDateViewport={ptoDateViewport}
-        ptoDateOptionMaps={ptoDateOptionMaps}
-        ptoDateTableScrollRef={ptoDateTableScrollRef}
-        ptoPlanImportInputRef={ptoPlanImportInputRef}
-        draggedPtoRowId={draggedPtoRowId}
-        ptoDropTarget={ptoDropTarget}
-        hoveredPtoAddRowId={hoveredPtoAddRowId}
-        ptoFormulaCell={ptoFormulaCell}
-        ptoFormulaDraft={ptoFormulaDraft}
-        ptoInlineEditCell={ptoInlineEditCell}
-        ptoInlineEditInitialDraft={ptoInlineEditInitialDraft}
-        ptoSelectionAnchorCell={ptoSelectionAnchorCell}
-        ptoSelectedCellKeys={ptoSelectedCellKeys}
-        ptoSelectionDraggingRef={ptoSelectionDraggingRef}
-        ptoDraftRowFields={ptoDraftRowFields}
-        editingPtoHeaderKey={editingPtoHeaderKey}
-        ptoHeaderDraft={ptoHeaderDraft}
-        setPtoDateEditing={setPtoDateEditing}
-        setDraggedPtoRowId={setDraggedPtoRowId}
-        setPtoDropTarget={setPtoDropTarget}
-        setPtoFormulaCell={setPtoFormulaCell}
-        setPtoFormulaDraft={setPtoFormulaDraft}
-        setPtoInlineEditCell={setPtoInlineEditCell}
-        setPtoInlineEditInitialDraft={setPtoInlineEditInitialDraft}
-        setPtoSelectionAnchorCell={setPtoSelectionAnchorCell}
-        setPtoSelectedCellKeys={setPtoSelectedCellKeys}
-        setPtoYearInput={setPtoYearInput}
-        setPtoYearDialogOpen={setPtoYearDialogOpen}
-        setExpandedPtoMonths={setExpandedPtoMonths}
-        setHoveredPtoAddRowId={setHoveredPtoAddRowId}
-        setPtoDraftRowFields={setPtoDraftRowFields}
-        setPtoPendingFieldFocus={setPtoPendingFieldFocus}
-        setPtoHeaderDraft={setPtoHeaderDraft}
-        savePtoLocalState={savePtoLocalState}
-        requestPtoDatabaseSave={requestPtoDatabaseSave}
-        savePtoDatabaseChanges={savePtoDatabaseChanges}
-        selectPtoArea={selectPtoArea}
-        currentPtoDateExcelMeta={currentPtoDateExcelMeta}
-        exportPtoDateTableToExcel={exportPtoDateTableToExcel}
-        openPtoDateImportFilePicker={openPtoDateImportFilePicker}
-        importPtoDateTableFromExcel={importPtoDateTableFromExcel}
-        selectPtoPlanYear={selectPtoPlanYear}
-        deletePtoYear={deletePtoYear}
-        addPtoYear={addPtoYear}
-        updatePtoDateViewportFromElement={updatePtoDateViewportFromElement}
-        handlePtoDateTableScroll={handlePtoDateTableScroll}
-        startPtoColumnResize={startPtoColumnResize}
-        startPtoRowResize={startPtoRowResize}
-        addLinkedPtoDateRow={addLinkedPtoDateRow}
-        removeLinkedPtoDateRow={removeLinkedPtoDateRow}
-        getPtoDropPosition={getPtoDropPosition}
-        moveLinkedPtoDateRow={moveLinkedPtoDateRow}
-        updatePtoDateRow={updatePtoDateRow}
-        clearPtoCarryoverOverride={clearPtoCarryoverOverride}
-        updatePtoDateDay={updatePtoDateDay}
-        updatePtoMonthTotal={updatePtoMonthTotal}
-        beginPtoRowTextDraft={beginPtoRowTextDraft}
-        getPtoRowTextDraft={getPtoRowTextDraft}
-        updatePtoRowTextDraft={updatePtoRowTextDraft}
-        commitPtoRowTextDraft={commitPtoRowTextDraft}
-        cancelPtoRowTextDraft={cancelPtoRowTextDraft}
-        ptoHeaderLabel={ptoHeaderLabel}
-        startPtoHeaderEdit={startPtoHeaderEdit}
-        commitPtoHeaderEdit={commitPtoHeaderEdit}
-        cancelPtoHeaderEdit={cancelPtoHeaderEdit}
-      />
-    );
-  }
+  const renderPtoDateTable = usePtoDateTableRenderer({
+    ptoTab,
+    ptoAreaFilter,
+    ptoPlanYear,
+    reportDate,
+    ptoYearMonths,
+    ptoMonthGroups,
+    ptoAreaTabs,
+    ptoYearTabs,
+    ptoYearDialogOpen,
+    ptoYearInput,
+    ptoDateEditing,
+    ptoColumnWidths,
+    ptoRowHeights,
+    ptoDateViewport,
+    ptoDateOptionMaps,
+    ptoDateTableScrollRef,
+    ptoPlanImportInputRef,
+    draggedPtoRowId,
+    ptoDropTarget,
+    hoveredPtoAddRowId,
+    ptoFormulaCell,
+    ptoFormulaDraft,
+    ptoInlineEditCell,
+    ptoInlineEditInitialDraft,
+    ptoSelectionAnchorCell,
+    ptoSelectedCellKeys,
+    ptoSelectionDraggingRef,
+    ptoDraftRowFields,
+    editingPtoHeaderKey,
+    ptoHeaderDraft,
+    setPtoDateEditing,
+    setDraggedPtoRowId,
+    setPtoDropTarget,
+    setPtoFormulaCell,
+    setPtoFormulaDraft,
+    setPtoInlineEditCell,
+    setPtoInlineEditInitialDraft,
+    setPtoSelectionAnchorCell,
+    setPtoSelectedCellKeys,
+    setPtoYearInput,
+    setPtoYearDialogOpen,
+    setExpandedPtoMonths,
+    setHoveredPtoAddRowId,
+    setPtoDraftRowFields,
+    setPtoPendingFieldFocus,
+    setPtoHeaderDraft,
+    savePtoLocalState,
+    requestPtoDatabaseSave,
+    savePtoDatabaseChanges,
+    selectPtoArea,
+    currentPtoDateExcelMeta,
+    exportPtoDateTableToExcel,
+    openPtoDateImportFilePicker,
+    importPtoDateTableFromExcel,
+    selectPtoPlanYear,
+    deletePtoYear,
+    addPtoYear,
+    updatePtoDateViewportFromElement,
+    handlePtoDateTableScroll,
+    startPtoColumnResize,
+    startPtoRowResize,
+    addLinkedPtoDateRow,
+    removeLinkedPtoDateRow,
+    getPtoDropPosition,
+    moveLinkedPtoDateRow,
+    updatePtoDateRow,
+    clearPtoCarryoverOverride,
+    updatePtoDateDay,
+    updatePtoMonthTotal,
+    beginPtoRowTextDraft,
+    getPtoRowTextDraft,
+    updatePtoRowTextDraft,
+    commitPtoRowTextDraft,
+    cancelPtoRowTextDraft,
+    ptoHeaderLabel,
+    startPtoHeaderEdit,
+    commitPtoHeaderEdit,
+    cancelPtoHeaderEdit,
+  });
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
