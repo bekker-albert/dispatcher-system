@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
@@ -12,6 +12,7 @@ import { useGlobalCellSelectionEffects } from "@/features/app/useGlobalCellSelec
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
+import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
@@ -306,7 +307,7 @@ export default function App() {
       ptoHeaderLabels,
     },
   }), [expandedPtoMonths, ptoAreaFilter, ptoBucketManualRows, ptoBucketValues, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportColumnWidths, reportReasons]);
-  const ptoDatabaseStateRef = useRef(ptoDatabaseState);
+  const ptoDatabaseStateRef = useSyncedRef(ptoDatabaseState);
   const {
     ptoDatabaseSaveSnapshotRef,
     savePtoDatabaseChanges,
@@ -392,10 +393,6 @@ export default function App() {
     setReportHeaderDraft,
     setOpenVehicleFilter,
   });
-
-  useEffect(() => {
-    ptoDatabaseStateRef.current = ptoDatabaseState;
-  }, [ptoDatabaseState]);
 
   useVehiclePendingFocus({
     pendingVehicleFocus,
