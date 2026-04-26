@@ -17,6 +17,7 @@ import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
 import { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
+import { useAppHeaderProps } from "@/features/app/useAppHeaderProps";
 import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
@@ -1259,34 +1260,35 @@ export default function App() {
     lastUploadLog,
     clearAdminLogs,
   });
+  const appHeaderProps = useAppHeaderProps({
+    topTabs,
+    customTabs,
+    topTab,
+    subTabs,
+    headerHasSubtabs,
+    headerSubtabsOffset,
+    headerNavRef,
+    activeHeaderTabRef,
+    headerSubtabsRef,
+    reportCustomers,
+    reportCustomerId,
+    dispatchTab,
+    ptoTab,
+    adminSection,
+    reportDate,
+    selectTopTab,
+    deleteCustomTab,
+    setReportCustomerId,
+    setDispatchTab,
+    selectPtoTab,
+    setAdminSection,
+    selectReportDate,
+  });
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
     <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
-        <AppHeader
-          topTabs={topTabs}
-          customTabs={customTabs}
-          topTab={topTab}
-          subTabs={subTabs}
-          headerHasSubtabs={headerHasSubtabs}
-          headerSubtabsOffset={headerSubtabsOffset}
-          headerNavRef={headerNavRef}
-          activeHeaderTabRef={activeHeaderTabRef}
-          headerSubtabsRef={headerSubtabsRef}
-          reportCustomers={reportCustomers}
-          reportCustomerId={reportCustomerId}
-          dispatchTab={dispatchTab}
-          ptoTab={ptoTab}
-          adminSection={adminSection}
-          reportDate={reportDate}
-          onSelectTopTab={selectTopTab}
-          onDeleteCustomTab={deleteCustomTab}
-          onSelectReportCustomer={setReportCustomerId}
-          onSelectDispatchTab={setDispatchTab}
-          onSelectPtoTab={selectPtoTab}
-          onSelectAdminSection={setAdminSection}
-          onSelectReportDate={selectReportDate}
-        />
+        <AppHeader {...appHeaderProps} />
         <AppPrimaryContent
           renderedTopTab={renderedTopTab}
           shouldGatePtoDatabase={shouldGatePtoDatabase}

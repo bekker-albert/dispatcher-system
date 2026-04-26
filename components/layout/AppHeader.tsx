@@ -19,7 +19,7 @@ import { TopButton } from "../../shared/ui/buttons";
 import { Field } from "../../shared/ui/layout";
 import { HeaderSubButton } from "../../shared/ui/navigation";
 
-type AppHeaderProps = {
+export type AppHeaderProps = {
   topTabs: TopTabDefinition[];
   customTabs: CustomTab[];
   topTab: TopTab;
