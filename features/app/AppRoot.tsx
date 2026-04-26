@@ -10,6 +10,7 @@ import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
+import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
@@ -49,8 +50,6 @@ import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
-import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
-import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
@@ -63,9 +62,6 @@ import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
-import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
-import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
-import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
@@ -1006,88 +1002,45 @@ export default function App() {
   });
 
   const {
-    currentPtoTableLabel,
-    currentPtoDateTableKey,
-    savePtoDayPatchToDatabase,
-    savePtoDayPatchesToDatabase,
-  } = usePtoDateTableContext({
-    ptoTab,
-    ptoSubTabs: subTabs.pto,
-    databaseConfigured,
-    databaseLoadedRef: ptoDatabaseLoadedRef,
-  });
-
-  const {
     addLinkedPtoDateRow,
-    removeLinkedPtoDateRow,
-    getPtoDropPosition,
-    moveLinkedPtoDateRow,
-  } = usePtoLinkedRowsEditor({
-    ptoTab,
-    ptoAreaFilter,
-    ptoPlanYear,
-    databaseConfigured,
-    databaseLoadedRef: ptoDatabaseLoadedRef,
-    currentPtoTableLabel,
-    currentPtoDateTableKey,
-    setPtoPlanRows,
-    setPtoOperRows,
-    setPtoSurveyRows,
-    requestSave: requestPtoDatabaseSave,
-    addAdminLog,
-  });
-
-  const {
     addPtoYear,
-    deletePtoYear,
-  } = usePtoYearEditor({
-    ptoYearInput,
-    ptoPlanYear,
-    ptoYearTabs,
-    databaseConfigured,
-    databaseLoadedRef: ptoDatabaseLoadedRef,
-    setPtoPlanYear,
-    setPtoYearInput,
-    setPtoYearDialogOpen,
-    setPtoManualYears,
-    setExpandedPtoMonths,
-    setPtoPlanRows,
-    setPtoOperRows,
-    setPtoSurveyRows,
-    requestSave: requestPtoDatabaseSave,
-    addAdminLog,
-  });
-
-  const {
-    updatePtoDateRow,
-    clearPtoCarryoverOverride,
-    updatePtoDateDay,
-    updatePtoMonthTotal,
-  } = usePtoDateRowValueEditor({
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    ptoPlanYear,
-    currentPtoTableLabel,
-    setPtoPlanRows,
-    setPtoOperRows,
-    setPtoSurveyRows,
-    saveDayPatch: savePtoDayPatchToDatabase,
-    saveDayPatches: savePtoDayPatchesToDatabase,
-    addAdminLog,
-  });
-
-  const {
-    getPtoRowTextDraft,
     beginPtoRowTextDraft,
-    updatePtoRowTextDraft,
-    commitPtoRowTextDraft,
     cancelPtoRowTextDraft,
-  } = usePtoRowTextDrafts({
-    drafts: ptoRowFieldDrafts,
-    setDrafts: setPtoRowFieldDrafts,
-    commitValue: (setRows, row, field, value) => updatePtoDateRow(setRows, row.id, field, value),
-    requestSave: requestPtoDatabaseSave,
+    clearPtoCarryoverOverride,
+    commitPtoRowTextDraft,
+    deletePtoYear,
+    getPtoDropPosition,
+    getPtoRowTextDraft,
+    moveLinkedPtoDateRow,
+    removeLinkedPtoDateRow,
+    updatePtoDateDay,
+    updatePtoDateRow,
+    updatePtoMonthTotal,
+    updatePtoRowTextDraft,
+  } = useAppPtoDateEditing({
+    addAdminLog,
+    databaseConfigured,
+    ptoAreaFilter,
+    ptoDatabaseLoadedRef,
+    ptoOperRows,
+    ptoPlanRows,
+    ptoPlanYear,
+    ptoRowFieldDrafts,
+    ptoSubTabs: subTabs.pto,
+    ptoSurveyRows,
+    ptoTab,
+    ptoYearInput,
+    ptoYearTabs,
+    requestPtoDatabaseSave,
+    setExpandedPtoMonths,
+    setPtoManualYears,
+    setPtoOperRows,
+    setPtoPlanRows,
+    setPtoPlanYear,
+    setPtoRowFieldDrafts,
+    setPtoSurveyRows,
+    setPtoYearDialogOpen,
+    setPtoYearInput,
   });
 
   const {
