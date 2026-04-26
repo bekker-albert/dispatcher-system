@@ -6,6 +6,7 @@ import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnap
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
+import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
@@ -65,10 +66,6 @@ import { useSectionSelectionState } from "@/features/navigation/useSectionSelect
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
-import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
-import { useAdminReportFactSourceEditor } from "@/features/reports/useAdminReportFactSourceEditor";
-import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportRowLabelEditor";
-import { useAdminReportSummaryRowsEditor } from "@/features/reports/useAdminReportSummaryRowsEditor";
 import { useAreaShiftCutoffEditor } from "@/features/reports/useAreaShiftCutoffEditor";
 import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
 import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
@@ -947,44 +944,14 @@ export default function App() {
     moveReportAreaOrder,
     moveReportWorkOrder,
     toggleReportCustomerRow,
-  } = useAdminReportCustomerEditor({
-    reportCustomers,
-    activeCustomer: activeAdminReportCustomer,
-    areaOptions: activeAdminReportAreaOptions,
-    orderRows: activeAdminReportOrderRows,
-    setReportCustomers,
-    setAdminReportCustomerId,
-    setReportCustomerId,
-    reportAutoRowKeysForCustomer,
-    addAdminLog,
-  });
-
-  const {
     updateReportCustomerRowLabel,
     addReportCustomerRowLabel,
     changeReportCustomerRowLabelSource,
     removeReportCustomerRowLabel,
     startReportRowLabelEdit,
     finishReportRowLabelEdit,
-  } = useAdminReportRowLabelEditor({
-    reportCustomers,
-    baseRows: adminReportBaseRows,
-    rowsByKey: activeAdminReportRowsByKey,
-    setReportCustomers,
-    setEditingRowLabelKeys: setEditingReportRowLabelKeys,
-    reportAutoRowKeysForCustomer,
-    addAdminLog,
-  });
-
-  const {
     setReportCustomerFactSourceMode,
     toggleReportCustomerFactSourceRowKey,
-  } = useAdminReportFactSourceEditor({
-    setReportCustomers,
-    addAdminLog,
-  });
-
-  const {
     reportRowsForSummaryArea,
     addReportSummaryRow,
     startReportSummaryEdit,
@@ -992,13 +959,22 @@ export default function App() {
     updateReportSummaryRow,
     toggleReportSummaryRowKey,
     removeReportSummaryRow,
-  } = useAdminReportSummaryRowsEditor({
-    reportCustomers,
-    baseRows: activeAdminReportBaseRows,
-    summaryAreaOptions: activeAdminReportSummaryAreaOptions,
-    setReportCustomers,
-    setExpandedSummaryIds: setExpandedReportSummaryIds,
+  } = useAppAdminReportEditors({
+    activeAdminReportAreaOptions,
+    activeAdminReportBaseRows,
+    activeAdminReportCustomer,
+    activeAdminReportOrderRows,
+    activeAdminReportRowsByKey,
+    activeAdminReportSummaryAreaOptions,
     addAdminLog,
+    adminReportBaseRows,
+    reportAutoRowKeysForCustomer,
+    reportCustomers,
+    setAdminReportCustomerId,
+    setEditingReportRowLabelKeys,
+    setExpandedReportSummaryIds,
+    setReportCustomerId,
+    setReportCustomers,
   });
 
   const {
