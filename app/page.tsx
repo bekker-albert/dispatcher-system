@@ -6,6 +6,7 @@ import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffs
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
 import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandlers";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
+import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
@@ -72,7 +73,6 @@ import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
 import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
-import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
@@ -92,7 +92,6 @@ import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { clientSnapshotRestoreFlagKey, clientSnapshotStats, collectLocalStorageBackup, getOrCreateClientId, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
-import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { normalizeLookupValue } from "@/lib/utils/text";
 import { SectionCard } from "@/shared/ui/layout";
@@ -253,7 +252,14 @@ export default function App() {
   const [clientSnapshots, setClientSnapshots] = useState<DataClientSnapshot[]>([]);
   const [databasePanelMessage, setDatabasePanelMessage] = useState("");
   const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
-  const [adminLogs, setAdminLogs] = useState<AdminLogEntry[]>([]);
+  const {
+    adminLogs,
+    addAdminLog,
+    restoreAdminLogs,
+    clearAdminLogs,
+    lastChangeLog,
+    lastUploadLog,
+  } = useAdminLogsState();
   const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(databaseConfigured ? "База данных подключается..." : "База данных не настроена.");
   const { saveStatus, showSaveStatus, hideSaveStatus } = useSaveStatus();
   const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!databaseConfigured);
@@ -335,32 +341,6 @@ export default function App() {
     subTabs,
     topTabs,
   ]);
-
-  const addAdminLog = useCallback((entry: Omit<AdminLogEntry, "id" | "at" | "user">) => {
-    const nextEntry: AdminLogEntry = {
-      id: createId(),
-      at: new Date().toISOString(),
-      user: defaultUserCard.fullName || "Пользователь",
-      ...entry,
-    };
-
-    setAdminLogs((current) => {
-      const previousEntry = current[0];
-      const previousDate = previousEntry ? new Date(previousEntry.at).getTime() : 0;
-      const shouldMerge = previousEntry
-        && previousEntry.action === nextEntry.action
-        && previousEntry.section === nextEntry.section
-        && previousEntry.details === nextEntry.details
-        && Date.now() - previousDate < 10000;
-      const nextLogs = shouldMerge
-        ? [{ ...previousEntry, ...nextEntry }, ...current.slice(1)]
-        : [nextEntry, ...current].slice(0, adminLogLimit);
-
-      window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(nextLogs));
-      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-      return nextLogs;
-    });
-  }, []);
 
   const saveClientSnapshotToDatabase = useCallback(async (reason: string) => {
     if (!databaseConfigured || clientSnapshotSaveDisabledRef.current) return;
@@ -962,12 +942,7 @@ export default function App() {
           setDependencyLinks(normalizedDependencyLinks);
         }
 
-        if (Array.isArray(savedAdminLogs)) {
-          setAdminLogs(savedAdminLogs.flatMap((entry) => {
-            const normalizedEntry = normalizeAdminLogEntry(entry);
-            return normalizedEntry ? [normalizedEntry] : [];
-          }).slice(0, adminLogLimit));
-        }
+        restoreAdminLogs(savedAdminLogs);
       } finally {
         if (cancelled) return;
         setAdminDataLoaded(true);
@@ -977,7 +952,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [saveClientSnapshotToDatabase, setCustomTabs, setDependencyLinkForm, setDependencyLinks, setDependencyNodes, setOrgMembers, setSubTabs, setTopTabs]);
+  }, [restoreAdminLogs, saveClientSnapshotToDatabase, setCustomTabs, setDependencyLinkForm, setDependencyLinks, setDependencyNodes, setOrgMembers, setSubTabs, setTopTabs]);
 
   useEffect(() => {
     if (!adminDataLoaded) return;
@@ -1727,8 +1702,6 @@ export default function App() {
   const activeCustomTab = customTabs.find((tab) => tab.visible !== false && customTabKey(tab.id) === renderedTopTab);
   const activeDispatchSubtab = subTabs.dispatch.find((tab) => tab.value === dispatchTab);
   const activePtoSubtab = subTabs.pto.find((tab) => tab.value === ptoTab);
-  const lastChangeLog = adminLogs.find((log) => ["Редактирование", "Добавление", "Удаление"].includes(log.action));
-  const lastUploadLog = adminLogs.find((log) => log.action === "Загрузка");
   const headerHasSubtabs = topTab === "reports" || topTab === "dispatch" || topTab === "pto" || topTab === "admin";
   const {
     headerNavRef,
@@ -1806,13 +1779,6 @@ export default function App() {
       ...current,
       [area]: value,
     }));
-  }
-
-  function clearAdminLogs() {
-    if (!window.confirm("Очистить журнал логов?")) return;
-
-    setAdminLogs([]);
-    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify([]));
   }
 
   const {
