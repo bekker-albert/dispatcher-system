@@ -17,6 +17,22 @@ export type PtoDatabaseState = DataPtoState & {
   uiState: NonNullable<DataPtoState["uiState"]>;
 };
 
+export type PtoDatabaseSaveMode = "auto" | "manual";
+
+export const ptoDatabaseMessages = {
+  notConfigured: "База данных не настроена.",
+  loadingSaveDeferred: "База данных еще загружается. Сохранение ПТО отложено.",
+  loadingSaveDeferredStatus: "База еще загружается, сохранение ПТО отложено.",
+  alreadySaved: "ПТО сохранено в базе данных.",
+  queued: "Есть изменения. Автосохраняю после завершенного действия...",
+  saving: "Сохраняю ПТО...",
+  savedStatus: "ПТО сохранено.",
+  savingState: (mode: PtoDatabaseSaveMode) => mode === "auto" ? "Автосохраняю ПТО в базе данных..." : "Сохраняю ПТО в базе данных...",
+  savedState: (mode: PtoDatabaseSaveMode) => mode === "auto" ? "ПТО автосохранено в базе данных." : "ПТО сохранено в базе данных.",
+  saveError: (message: string) => `Не удалось сохранить в базе данных: ${message}`,
+  saveErrorStatus: (message: string) => `ПТО не сохранено: ${message}`,
+};
+
 export function createPtoDatabaseState({
   manualYears,
   planRows,
@@ -62,4 +78,13 @@ export function serializePtoDatabaseState(state: DataPtoState) {
 
 export function ptoDatabaseStateChanged(state: DataPtoState, savedSnapshot: string) {
   return serializePtoDatabaseState(state) !== savedSnapshot;
+}
+
+export function ptoDatabaseSaveShouldSkip(mode: PtoDatabaseSaveMode, snapshotToSave: string, savedSnapshot: string) {
+  return mode === "auto" && snapshotToSave === savedSnapshot;
+}
+
+export async function savePtoDatabaseSnapshot(state: DataPtoState) {
+  const { savePtoStateToDatabase } = await import("@/lib/data/pto");
+  await savePtoStateToDatabase(state);
 }

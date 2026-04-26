@@ -7,7 +7,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
-import { createPtoDatabaseState, ptoDatabaseStateChanged, savePtoStateToBrowserStorage, serializePtoDatabaseState } from "@/features/pto/ptoPersistenceModel";
+import { createPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -1533,22 +1533,22 @@ export default function App() {
     return () => window.removeEventListener("pagehide", flushPtoRows);
   }, [adminDataLoaded, savePtoLocalState]);
 
-  const savePtoDatabaseChanges = useCallback(async (mode: "auto" | "manual" = "manual") => {
+  const savePtoDatabaseChanges = useCallback(async (mode: PtoDatabaseSaveMode = "manual") => {
     if (!databaseConfigured) {
-      setPtoDatabaseMessage("База данных не настроена.");
-      showSaveStatus("error", "База данных не настроена.");
+      setPtoDatabaseMessage(ptoDatabaseMessages.notConfigured);
+      showSaveStatus("error", ptoDatabaseMessages.notConfigured);
       return;
     }
 
     if (!ptoDatabaseLoadedRef.current) {
-      setPtoDatabaseMessage("База данных еще загружается. Сохранение ПТО отложено.");
-      showSaveStatus("saving", "База еще загружается, сохранение ПТО отложено.");
+      setPtoDatabaseMessage(ptoDatabaseMessages.loadingSaveDeferred);
+      showSaveStatus("saving", ptoDatabaseMessages.loadingSaveDeferredStatus);
       return;
     }
 
     const snapshotToSave = serializePtoDatabaseState(ptoDatabaseStateRef.current);
-    if (mode === "auto" && snapshotToSave === ptoDatabaseSaveSnapshotRef.current) {
-      setPtoDatabaseMessage("ПТО сохранено в базе данных.");
+    if (ptoDatabaseSaveShouldSkip(mode, snapshotToSave, ptoDatabaseSaveSnapshotRef.current)) {
+      setPtoDatabaseMessage(ptoDatabaseMessages.alreadySaved);
       return;
     }
 
@@ -1558,18 +1558,18 @@ export default function App() {
     }
 
     ptoDatabaseSavingRef.current = true;
-    setPtoDatabaseMessage(mode === "auto" ? "Автосохраняю ПТО в базе данных..." : "Сохраняю ПТО в базе данных...");
-    showSaveStatus("saving", mode === "auto" ? "Сохраняю ПТО..." : "Сохраняю ПТО...");
+    setPtoDatabaseMessage(ptoDatabaseMessages.savingState(mode));
+    showSaveStatus("saving", ptoDatabaseMessages.saving);
 
     try {
-      const { savePtoStateToDatabase } = await import("@/lib/data/pto");
-      await savePtoStateToDatabase(ptoDatabaseStateRef.current);
+      await savePtoDatabaseSnapshot(ptoDatabaseStateRef.current);
       ptoDatabaseSaveSnapshotRef.current = snapshotToSave;
-      setPtoDatabaseMessage(mode === "auto" ? "ПТО автосохранено в базе данных." : "ПТО сохранено в базе данных.");
-      showSaveStatus("saved", "ПТО сохранено.");
+      setPtoDatabaseMessage(ptoDatabaseMessages.savedState(mode));
+      showSaveStatus("saved", ptoDatabaseMessages.savedStatus);
     } catch (error) {
-      setPtoDatabaseMessage(`Не удалось сохранить в базе данных: ${errorToMessage(error)}`);
-      showSaveStatus("error", `ПТО не сохранено: ${errorToMessage(error)}`);
+      const message = errorToMessage(error);
+      setPtoDatabaseMessage(ptoDatabaseMessages.saveError(message));
+      showSaveStatus("error", ptoDatabaseMessages.saveErrorStatus(message));
     } finally {
       ptoDatabaseSavingRef.current = false;
       if (ptoDatabaseSaveQueuedRef.current) {
@@ -1583,7 +1583,7 @@ export default function App() {
 
   const requestPtoDatabaseSave = useCallback(() => {
     if (!databaseConfigured || !ptoDatabaseLoadedRef.current) return;
-    setPtoDatabaseMessage("Есть изменения. Автосохраняю после завершенного действия...");
+    setPtoDatabaseMessage(ptoDatabaseMessages.queued);
     setPtoSaveRevision((current) => current + 1);
   }, []);
 
