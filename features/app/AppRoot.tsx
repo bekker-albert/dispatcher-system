@@ -15,6 +15,7 @@ import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
+import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
@@ -62,7 +63,6 @@ import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigat
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { reportPrintCss } from "@/features/reports/printCss";
-import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
@@ -591,10 +591,10 @@ export default function App() {
     commitReportYearReason,
     cancelReportYearReasonDraft,
     updateReportYearReasonDraft,
-  } = useReportReasonDrafts({
+  } = useAppReportReasonEditing({
     reportDate,
     setReportReasons,
-    requestSave: requestPtoDatabaseSave,
+    requestPtoDatabaseSave,
   });
 
   const {
