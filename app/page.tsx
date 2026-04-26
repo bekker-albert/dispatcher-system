@@ -41,7 +41,6 @@ import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExc
 import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
@@ -57,10 +56,10 @@ import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { usePtoPendingFieldFocus } from "@/features/pto/usePtoPendingFieldFocus";
 import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
+import { usePtoUiState } from "@/features/pto/usePtoUiState";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
-import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
 import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
@@ -85,7 +84,7 @@ import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { createDefaultDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
-import { emptyPtoDraftRowFields, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultReportDate } from "@/lib/domain/pto/defaults";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { createDefaultSubTabs, customTabKey } from "@/lib/domain/navigation/tabs";
@@ -162,6 +161,7 @@ export default function App() {
     vehicleCellSkipBlurCommitRef,
     vehicleSelectionDraggingRef,
     vehicleSelectionAnchorRef,
+    vehicleImportInputRef,
     adminVehicleTableScrollRef,
     vehicleRowsRef,
     vehiclesDatabaseLoadedRef,
@@ -170,24 +170,38 @@ export default function App() {
   const appDatabaseSaveSnapshotRef = useRef("");
   const appSettingsDatabaseLoadedRef = useRef(false);
   const appSettingsDatabaseSaveSnapshotRef = useRef("");
-  const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
-  const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
-  const [ptoFormulaCell, setPtoFormulaCell] = useState<PtoFormulaCell | null>(null);
-  const [ptoFormulaDraft, setPtoFormulaDraft] = useState("");
-  const [ptoInlineEditCell, setPtoInlineEditCell] = useState<PtoFormulaCell | null>(null);
-  const [ptoInlineEditInitialDraft, setPtoInlineEditInitialDraft] = useState("");
-  const [ptoSelectionAnchorCell, setPtoSelectionAnchorCell] = useState<PtoFormulaCell | null>(null);
-  const [ptoSelectedCellKeys, setPtoSelectedCellKeys] = useState<string[]>([]);
-  const [ptoDateEditing, setPtoDateEditing] = useState(false);
-  const [hoveredPtoAddRowId, setHoveredPtoAddRowId] = useState<string | null>(null);
-  const [ptoPendingFieldFocus, setPtoPendingFieldFocus] = useState<{ rowId: string; field: string } | null>(null);
-  const [ptoRowFieldDrafts, setPtoRowFieldDrafts] = useState<Record<string, string>>({});
-  const [ptoDraftRowFields, setPtoDraftRowFields] = useState(() => ({ ...emptyPtoDraftRowFields }));
-  const ptoSelectionDraggingRef = useRef(false);
-  const vehicleImportInputRef = useRef<HTMLInputElement | null>(null);
-  const ptoPlanImportInputRef = useRef<HTMLInputElement | null>(null);
-  const hasStoredPtoStateRef = useRef(false);
-  const ptoDatabaseLoadedRef = useRef(false);
+  const {
+    draggedPtoRowId,
+    setDraggedPtoRowId,
+    ptoDropTarget,
+    setPtoDropTarget,
+    ptoFormulaCell,
+    setPtoFormulaCell,
+    ptoFormulaDraft,
+    setPtoFormulaDraft,
+    ptoInlineEditCell,
+    setPtoInlineEditCell,
+    ptoInlineEditInitialDraft,
+    setPtoInlineEditInitialDraft,
+    ptoSelectionAnchorCell,
+    setPtoSelectionAnchorCell,
+    ptoSelectedCellKeys,
+    setPtoSelectedCellKeys,
+    ptoDateEditing,
+    setPtoDateEditing,
+    hoveredPtoAddRowId,
+    setHoveredPtoAddRowId,
+    ptoPendingFieldFocus,
+    setPtoPendingFieldFocus,
+    ptoRowFieldDrafts,
+    setPtoRowFieldDrafts,
+    ptoDraftRowFields,
+    setPtoDraftRowFields,
+    ptoSelectionDraggingRef,
+    ptoPlanImportInputRef,
+    hasStoredPtoStateRef,
+    ptoDatabaseLoadedRef,
+  } = usePtoUiState();
   const {
     reportArea,
     setReportArea,

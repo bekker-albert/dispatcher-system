@@ -25,6 +25,7 @@ export function useVehicleUiState(defaultRows: VehicleRow[]) {
   const vehicleCellSkipBlurCommitRef = useRef(false);
   const vehicleSelectionDraggingRef = useRef(false);
   const vehicleSelectionAnchorRef = useRef<{ id: number; field: VehicleInlineField } | null>(null);
+  const vehicleImportInputRef = useRef<HTMLInputElement | null>(null);
   const adminVehicleTableScrollRef = useRef<HTMLDivElement | null>(null);
   const vehicleRowsRef = useRef(vehicleRows);
   const vehiclesDatabaseLoadedRef = useRef(false);
@@ -64,6 +65,7 @@ export function useVehicleUiState(defaultRows: VehicleRow[]) {
     vehicleCellSkipBlurCommitRef,
     vehicleSelectionDraggingRef,
     vehicleSelectionAnchorRef,
+    vehicleImportInputRef,
     adminVehicleTableScrollRef,
     vehicleRowsRef,
     vehiclesDatabaseLoadedRef,
