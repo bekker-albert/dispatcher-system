@@ -12,6 +12,7 @@ import { AdminStructureElements } from "@/features/admin/structure/AdminStructur
 import { AdminStructureLinks } from "@/features/admin/structure/AdminStructureLinks";
 import { AdminStructureRoles } from "@/features/admin/structure/AdminStructureRoles";
 import { AdminStructureScheme } from "@/features/admin/structure/AdminStructureScheme";
+import { AdminStructureSchedule } from "@/features/admin/structure/AdminStructureSchedule";
 import {
   AdminDatabaseSection,
   AdminLogsSection,
@@ -63,7 +64,7 @@ import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
 import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
-import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
+import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
@@ -5516,59 +5517,11 @@ export default function App() {
                 )}
 
                 {structureSection === "schedule" && (
-                  <div style={{ ...blockStyle, background: "#ffffff", marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 4 }}>Распорядок участков</div>
-                    <div style={{ color: "#64748b", marginBottom: 12 }}>
-                      Здесь задается время закрытия рабочих суток. Если текущее время меньше границы участка, Рабочая дата автоматически считается предыдущим календарным днем.
-                    </div>
-                    <div style={{ overflowX: "auto" }}>
-                      <table style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", fontSize: 14 }}>
-                        <thead>
-                          <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                            <CompactTh>Участок</CompactTh>
-                            <CompactTh>Граница суток</CompactTh>
-                            <CompactTh>Правило расчета</CompactTh>
-                            <CompactTh>Источник</CompactTh>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {areaShiftScheduleAreas.map((area) => {
-                            const cutoffTime = resolveAreaShiftCutoffTime(areaShiftCutoffs, area);
-                            const hasOwnCutoff = Object.prototype.hasOwnProperty.call(areaShiftCutoffs, area);
-                            const isDefaultArea = normalizeLookupValue(area) === normalizeLookupValue(defaultAreaShiftScheduleArea);
-
-                            return (
-                              <tr key={area}>
-                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top" }}>
-                                  <div style={vehicleNameStyle}>{area}</div>
-                                  {!isDefaultArea ? (
-                                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                                      Если время не задано отдельно, используется общее правило.
-                                    </div>
-                                  ) : null}
-                                </td>
-                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top", width: 180 }}>
-                                  <input
-                                    type="time"
-                                    step={60}
-                                    value={cutoffTime}
-                                    onChange={(e) => updateAreaShiftCutoff(area, e.target.value)}
-                                    style={{ ...inputStyle, minWidth: 120, padding: "8px 10px" }}
-                                  />
-                                </td>
-                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top" }}>
-                                  С {cutoffTime} предыдущего календарного дня до {cutoffTime} текущего календарного дня.
-                                </td>
-                                <td style={{ padding: 12, borderBottom: "1px solid #e2e8f0", verticalAlign: "top", color: "#475569" }}>
-                                  {isDefaultArea ? "Общее правило" : hasOwnCutoff ? "Индивидуально" : "Общее правило"}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                  <AdminStructureSchedule
+                    areas={areaShiftScheduleAreas}
+                    areaShiftCutoffs={areaShiftCutoffs}
+                    onUpdateAreaShiftCutoff={updateAreaShiftCutoff}
+                  />
                 )}
               </div>
             )}
@@ -5883,17 +5836,6 @@ const inputStyle: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 1.35,
   background: "#ffffff",
-};
-
-const vehicleNameStyle: React.CSSProperties = {
-  fontSize: 14,
-  fontWeight: 700,
-  lineHeight: 1.4,
-  marginBottom: 6,
-  whiteSpace: "normal",
-  overflowWrap: "normal",
-  wordBreak: "normal",
-  hyphens: "none",
 };
 
 const adminVehicleRenderedCountStyle: React.CSSProperties = {
