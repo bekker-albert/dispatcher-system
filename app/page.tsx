@@ -6,13 +6,13 @@ import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
   dragHandleStyle,
-  monthToggleStyle,
   ptoAreaCellStyle,
   ptoCompactNumberInputStyle,
   ptoDateTableLayoutStyle,
@@ -4606,128 +4606,62 @@ export default function App() {
         }, 0);
       }
     };
+    const ptoDateToolbar = (
+      <PtoDateToolbar
+        areaTabs={ptoAreaTabs}
+        areaFilter={ptoAreaFilter}
+        onSelectArea={selectPtoArea}
+        showExcelControls={["plan", "oper", "survey"].includes(ptoTab)}
+        excelLabel={currentPtoDateExcelMeta().label}
+        editing={ptoDateEditing}
+        onExport={exportPtoDateTableToExcel}
+        onOpenImport={openPtoDateImportFilePicker}
+        onImportChange={importPtoDateTableFromExcel}
+        importInputRef={ptoPlanImportInputRef}
+        onToggleEditing={togglePtoDateEditing}
+        yearTabs={ptoYearTabs}
+        selectedYear={ptoPlanYear}
+        onSelectYear={selectPtoPlanYear}
+        onDeleteYear={deletePtoYear}
+        onOpenYearDialog={() => {
+          setPtoYearInput("");
+          setPtoYearDialogOpen(true);
+        }}
+        yearDialogOpen={ptoYearDialogOpen}
+        yearInput={ptoYearInput}
+        onYearInputChange={setPtoYearInput}
+        onAddYear={addPtoYear}
+        onCloseYearDialog={() => {
+          setPtoYearDialogOpen(false);
+          setPtoYearInput("");
+        }}
+      />
+    );
     if (!ptoDateEditing) {
       return (
-        <div style={ptoDateTableLayoutStyle}>
-          <PtoDateToolbar
-            areaTabs={ptoAreaTabs}
-            areaFilter={ptoAreaFilter}
-            onSelectArea={selectPtoArea}
-            showExcelControls={["plan", "oper", "survey"].includes(ptoTab)}
-            excelLabel={currentPtoDateExcelMeta().label}
-            editing={ptoDateEditing}
-            onExport={exportPtoDateTableToExcel}
-            onOpenImport={openPtoDateImportFilePicker}
-            onImportChange={importPtoDateTableFromExcel}
-            importInputRef={ptoPlanImportInputRef}
-            onToggleEditing={togglePtoDateEditing}
-            yearTabs={ptoYearTabs}
-            selectedYear={ptoPlanYear}
-            onSelectYear={selectPtoPlanYear}
-            onDeleteYear={deletePtoYear}
-            onOpenYearDialog={() => {
-              setPtoYearInput("");
-              setPtoYearDialogOpen(true);
-            }}
-            yearDialogOpen={ptoYearDialogOpen}
-            yearInput={ptoYearInput}
-            onYearInputChange={setPtoYearInput}
-            onAddYear={addPtoYear}
-            onCloseYearDialog={() => {
-              setPtoYearDialogOpen(false);
-              setPtoYearInput("");
-            }}
-          />
-
-          <div ref={ptoDateTableScrollRef} style={ptoDateTableScrollStyle}>
-            <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth, marginRight: 40 }}>
-              <colgroup>
-                {tableColumns.map((column) => (
-                  <col key={column.key} style={{ width: column.width }} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  {showCustomerCode ? <PtoPlanTh rowSpan={2} align="center" columnKey="customerCode" width={columnWidthByKey.get("customerCode")}>{ptoHeaderLabel("customerCode", "Заказчик")}</PtoPlanTh> : null}
-                  <PtoPlanTh rowSpan={2} columnKey="area" width={columnWidthByKey.get("area")}>{ptoHeaderLabel("area", "Участок")}</PtoPlanTh>
-                  {showLocation ? <PtoPlanTh rowSpan={2} columnKey="location" width={columnWidthByKey.get("location")}>{ptoHeaderLabel("location", "Местонахождение")}</PtoPlanTh> : null}
-                  <PtoPlanTh rowSpan={2} columnKey="structure" width={columnWidthByKey.get("structure")}>{ptoHeaderLabel("structure", "Структура")}</PtoPlanTh>
-                  <PtoPlanTh rowSpan={2} align="center" columnKey="unit" width={columnWidthByKey.get("unit")}>{ptoHeaderLabel("unit", "Ед.")}</PtoPlanTh>
-                  <PtoPlanTh rowSpan={2} align="center" columnKey="status" width={columnWidthByKey.get("status")}>{ptoHeaderLabel("status", "Статус")}</PtoPlanTh>
-                  <PtoPlanTh rowSpan={2} align="center" columnKey={`carryover:${ptoPlanYear}`} width={columnWidthByKey.get(`carryover:${ptoPlanYear}`)}>{ptoHeaderLabel(`carryover:${ptoPlanYear}`, carryoverHeader)}</PtoPlanTh>
-                  <PtoPlanTh rowSpan={2} align="center" columnKey="year-total" width={columnWidthByKey.get("year-total")}>{ptoHeaderLabel("year-total", "Итого год")}</PtoPlanTh>
-                  {displayPtoMonthGroups.map((group) => (
-                    <PtoPlanTh key={group.month} colSpan={1 + (group.expanded ? group.days.length : 0)}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExpandedPtoMonths((current) => ({ ...current, [group.month]: !current[group.month] }));
-                          requestPtoDatabaseSave();
-                        }}
-                        style={monthToggleStyle}
-                        title="Клик — свернуть/развернуть"
-                      >
-                        {group.expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
-                        {ptoHeaderLabel(`month-group:${group.month}`, group.label)}
-                      </button>
-                    </PtoPlanTh>
-                  ))}
-                </tr>
-                <tr>
-                  {displayPtoMonthGroups.map((group) => (
-                    <Fragment key={`${group.month}-days-readonly`}>
-                      <PtoPlanTh align="center" columnKey={`month-total:${group.month}`} width={columnWidthByKey.get(`month-total:${group.month}`)}>Итого</PtoPlanTh>
-                      {group.expanded && group.days.map((day) => (
-                        <PtoPlanTh key={day} align="center" columnKey={`day:${day}`} width={columnWidthByKey.get(`day:${day}`)}>{day.slice(8, 10)}</PtoPlanTh>
-                      ))}
-                    </Fragment>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row) => {
-                  const rowStatus = ptoAutomatedStatus(row, reportDate);
-                  const effectiveCarryover = getEffectiveCarryover(row);
-                  const rowDateTotals = getRowDateTotals(row);
-                  const rowHeightKey = `${ptoTab}:${row.id}`;
-                  const rowHeight = ptoRowHeights[rowHeightKey];
-                  const rowYearTotalWithCarryover = Math.round(((rowDateTotals.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
-
-                  return (
-                    <tr key={row.id} style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}>
-                      {showCustomerCode ? <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoCustomerCode(row.customerCode)} align="center" /></PtoPlanTd> : null}
-                      <PtoPlanTd><PtoReadonlyTextCell value={row.area} /></PtoPlanTd>
-                      {showLocation ? <PtoPlanTd><PtoReadonlyTextCell value={row.location} /></PtoPlanTd> : null}
-                      <PtoPlanTd><PtoReadonlyTextCell value={row.structure} /></PtoPlanTd>
-                      <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoUnit(row.unit)} align="center" /></PtoPlanTd>
-                      <PtoPlanTd align="center">
-                        <span
-                          title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
-                          style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}
-                        >
-                          {rowStatus}
-                        </span>
-                      </PtoPlanTd>
-                      <PtoPlanTd align="center"><PtoReadonlyNumberCell value={effectiveCarryover} /></PtoPlanTd>
-                      <PtoPlanTd align="center"><PtoReadonlyNumberCell value={rowYearTotalWithCarryover} bold /></PtoPlanTd>
-                      {displayPtoMonthGroups.map((group) => {
-                        const monthValue = rowDateTotals.monthTotals.get(group.month)?.value;
-                        return (
-                          <Fragment key={`${row.id}-${group.month}-readonly`}>
-                            <PtoPlanTd align="center"><PtoReadonlyNumberCell value={monthValue} bold /></PtoPlanTd>
-                            {group.expanded && group.days.map((day) => (
-                              <PtoPlanTd key={`${row.id}-${day}-readonly`} align="center"><PtoReadonlyNumberCell value={row.dailyPlans[day]} /></PtoPlanTd>
-                            ))}
-                          </Fragment>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <PtoDateReadonlyTable
+          rows={filteredRows}
+          showCustomerCode={showCustomerCode}
+          showLocation={showLocation}
+          ptoPlanYear={ptoPlanYear}
+          ptoTab={ptoTab}
+          reportDate={reportDate}
+          carryoverHeader={carryoverHeader}
+          displayMonthGroups={displayPtoMonthGroups}
+          tableColumns={tableColumns}
+          tableMinWidth={tableMinWidth}
+          columnWidthByKey={columnWidthByKey}
+          rowHeights={ptoRowHeights}
+          scrollRef={ptoDateTableScrollRef}
+          getEffectiveCarryover={getEffectiveCarryover}
+          getRowDateTotals={getRowDateTotals}
+          headerLabel={ptoHeaderLabel}
+          onToggleMonth={(month) => {
+            setExpandedPtoMonths((current) => ({ ...current, [month]: !current[month] }));
+            requestPtoDatabaseSave();
+          }}
+          toolbar={ptoDateToolbar}
+        />
       );
     }
 
@@ -5162,35 +5096,7 @@ export default function App() {
 
     return (
       <div style={ptoDateTableLayoutStyle}>
-        <PtoDateToolbar
-          areaTabs={ptoAreaTabs}
-          areaFilter={ptoAreaFilter}
-          onSelectArea={selectPtoArea}
-          showExcelControls={["plan", "oper", "survey"].includes(ptoTab)}
-          excelLabel={currentPtoDateExcelMeta().label}
-          editing={ptoDateEditing}
-          onExport={exportPtoDateTableToExcel}
-          onOpenImport={openPtoDateImportFilePicker}
-          onImportChange={importPtoDateTableFromExcel}
-          importInputRef={ptoPlanImportInputRef}
-          onToggleEditing={togglePtoDateEditing}
-          yearTabs={ptoYearTabs}
-          selectedYear={ptoPlanYear}
-          onSelectYear={selectPtoPlanYear}
-          onDeleteYear={deletePtoYear}
-          onOpenYearDialog={() => {
-            setPtoYearInput("");
-            setPtoYearDialogOpen(true);
-          }}
-          yearDialogOpen={ptoYearDialogOpen}
-          yearInput={ptoYearInput}
-          onYearInputChange={setPtoYearInput}
-          onAddYear={addPtoYear}
-          onCloseYearDialog={() => {
-            setPtoYearDialogOpen(false);
-            setPtoYearInput("");
-          }}
-        />
+        {ptoDateToolbar}
 
         {ptoDateEditing ? (
           <PtoFormulaBar
