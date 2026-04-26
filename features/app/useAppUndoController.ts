@@ -1,0 +1,86 @@
+"use client";
+
+import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
+import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+
+type AppStateBundle = ReturnType<typeof useAppStateBundle>;
+
+type UseAppUndoControllerOptions = {
+  appState: AppStateBundle;
+  databaseConfigured: boolean;
+};
+
+export function useAppUndoController({
+  appState,
+  databaseConfigured,
+}: UseAppUndoControllerOptions) {
+  return useAppUndoHistory({
+    adminDataLoaded: appState.adminDataLoaded,
+    topTab: appState.topTab,
+    adminSection: appState.adminSection,
+    databaseConfigured,
+    ptoDatabaseLoadedRef: appState.ptoDatabaseLoadedRef,
+    vehicleRows: appState.vehicleRows,
+    vehicleRowsRef: appState.vehicleRowsRef,
+    setPtoSaveRevision: appState.setPtoSaveRevision,
+    addAdminLog: appState.addAdminLog,
+    reportCustomers: appState.reportCustomers,
+    reportAreaOrder: appState.reportAreaOrder,
+    reportWorkOrder: appState.reportWorkOrder,
+    reportHeaderLabels: appState.reportHeaderLabels,
+    reportColumnWidths: appState.reportColumnWidths,
+    reportReasons: appState.reportReasons,
+    areaShiftCutoffs: appState.areaShiftCutoffs,
+    customTabs: appState.customTabs,
+    topTabs: appState.topTabs,
+    subTabs: appState.subTabs,
+    ptoManualYears: appState.ptoManualYears,
+    expandedPtoMonths: appState.expandedPtoMonths,
+    ptoPlanRows: appState.ptoPlanRows,
+    ptoSurveyRows: appState.ptoSurveyRows,
+    ptoOperRows: appState.ptoOperRows,
+    ptoColumnWidths: appState.ptoColumnWidths,
+    ptoRowHeights: appState.ptoRowHeights,
+    ptoHeaderLabels: appState.ptoHeaderLabels,
+    ptoBucketValues: appState.ptoBucketValues,
+    ptoBucketManualRows: appState.ptoBucketManualRows,
+    orgMembers: appState.orgMembers,
+    dependencyNodes: appState.dependencyNodes,
+    dependencyLinks: appState.dependencyLinks,
+    setReportCustomers: appState.setReportCustomers,
+    setReportAreaOrder: appState.setReportAreaOrder,
+    setReportWorkOrder: appState.setReportWorkOrder,
+    setReportHeaderLabels: appState.setReportHeaderLabels,
+    setReportColumnWidths: appState.setReportColumnWidths,
+    setReportReasons: appState.setReportReasons,
+    setAreaShiftCutoffs: appState.setAreaShiftCutoffs,
+    setCustomTabs: appState.setCustomTabs,
+    setTopTabs: appState.setTopTabs,
+    setSubTabs: appState.setSubTabs,
+    setVehicleRows: appState.setVehicleRows,
+    setPtoManualYears: appState.setPtoManualYears,
+    setExpandedPtoMonths: appState.setExpandedPtoMonths,
+    setPtoPlanRows: appState.setPtoPlanRows,
+    setPtoSurveyRows: appState.setPtoSurveyRows,
+    setPtoOperRows: appState.setPtoOperRows,
+    setPtoColumnWidths: appState.setPtoColumnWidths,
+    setPtoRowHeights: appState.setPtoRowHeights,
+    setPtoHeaderLabels: appState.setPtoHeaderLabels,
+    setPtoBucketValues: appState.setPtoBucketValues,
+    setPtoBucketManualRows: appState.setPtoBucketManualRows,
+    setOrgMembers: appState.setOrgMembers,
+    setDependencyNodes: appState.setDependencyNodes,
+    setDependencyLinks: appState.setDependencyLinks,
+    setEditingVehicleCell: appState.setEditingVehicleCell,
+    setVehicleCellDraft: appState.setVehicleCellDraft,
+    setVehicleCellInitialDraft: appState.setVehicleCellInitialDraft,
+    setPtoInlineEditCell: appState.setPtoInlineEditCell,
+    setPtoInlineEditInitialDraft: appState.setPtoInlineEditInitialDraft,
+    setPtoFormulaDraft: appState.setPtoFormulaDraft,
+    setEditingPtoHeaderKey: appState.setEditingPtoHeaderKey,
+    setPtoHeaderDraft: appState.setPtoHeaderDraft,
+    setEditingReportHeaderKey: appState.setEditingReportHeaderKey,
+    setReportHeaderDraft: appState.setReportHeaderDraft,
+    setOpenVehicleFilter: appState.setOpenVehicleFilter,
+  });
+}

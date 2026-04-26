@@ -28,7 +28,7 @@ import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppSharedPersistence } from "@/features/app/useAppSharedPersistence";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
-import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
+import { useAppUndoController } from "@/features/app/useAppUndoController";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
 import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
@@ -39,6 +39,7 @@ import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { databaseConfigured } from "@/lib/data/config";
 
 export default function App() {
+  const appState = useAppStateBundle();
   const {
     topTab,
     topTabs,
@@ -273,78 +274,13 @@ export default function App() {
     selectPtoTab,
     selectPtoPlanYear,
     selectPtoArea,
-  } = useAppStateBundle();
+  } = appState;
   const {
     pushVehicleUndoSnapshot,
     resetUndoHistoryForExternalRestore,
-  } = useAppUndoHistory({
-    adminDataLoaded,
-    topTab,
-    adminSection,
+  } = useAppUndoController({
+    appState,
     databaseConfigured,
-    ptoDatabaseLoadedRef,
-    vehicleRows,
-    vehicleRowsRef,
-    setPtoSaveRevision,
-    addAdminLog,
-    reportCustomers,
-    reportAreaOrder,
-    reportWorkOrder,
-    reportHeaderLabels,
-    reportColumnWidths,
-    reportReasons,
-    areaShiftCutoffs,
-    customTabs,
-    topTabs,
-    subTabs,
-    ptoManualYears,
-    expandedPtoMonths,
-    ptoPlanRows,
-    ptoSurveyRows,
-    ptoOperRows,
-    ptoColumnWidths,
-    ptoRowHeights,
-    ptoHeaderLabels,
-    ptoBucketValues,
-    ptoBucketManualRows,
-    orgMembers,
-    dependencyNodes,
-    dependencyLinks,
-    setReportCustomers,
-    setReportAreaOrder,
-    setReportWorkOrder,
-    setReportHeaderLabels,
-    setReportColumnWidths,
-    setReportReasons,
-    setAreaShiftCutoffs,
-    setCustomTabs,
-    setTopTabs,
-    setSubTabs,
-    setVehicleRows,
-    setPtoManualYears,
-    setExpandedPtoMonths,
-    setPtoPlanRows,
-    setPtoSurveyRows,
-    setPtoOperRows,
-    setPtoColumnWidths,
-    setPtoRowHeights,
-    setPtoHeaderLabels,
-    setPtoBucketValues,
-    setPtoBucketManualRows,
-    setOrgMembers,
-    setDependencyNodes,
-    setDependencyLinks,
-    setEditingVehicleCell,
-    setVehicleCellDraft,
-    setVehicleCellInitialDraft,
-    setPtoInlineEditCell,
-    setPtoInlineEditInitialDraft,
-    setPtoFormulaDraft,
-    setEditingPtoHeaderKey,
-    setPtoHeaderDraft,
-    setEditingReportHeaderKey,
-    setReportHeaderDraft,
-    setOpenVehicleFilter,
   });
 
   useVehiclePendingFocus({
