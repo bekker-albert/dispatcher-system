@@ -5,6 +5,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
+import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandlers";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
@@ -63,13 +64,12 @@ import {
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
-import type { PtoDropTarget, PtoResizeState } from "@/features/pto/ptoDateInteractionTypes";
+import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
-import type { ReportResizeState } from "@/features/reports/lib/reportResizeState";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
@@ -191,8 +191,6 @@ export default function App() {
   const [ptoRowFieldDrafts, setPtoRowFieldDrafts] = useState<Record<string, string>>({});
   const [ptoDraftRowFields, setPtoDraftRowFields] = useState(() => ({ ...emptyPtoDraftRowFields }));
   const ptoSelectionDraggingRef = useRef(false);
-  const ptoResizeStateRef = useRef<PtoResizeState | null>(null);
-  const reportResizeStateRef = useRef<ReportResizeState | null>(null);
   const vehicleImportInputRef = useRef<HTMLInputElement | null>(null);
   const ptoPlanImportInputRef = useRef<HTMLInputElement | null>(null);
   const hasStoredPtoStateRef = useRef(false);
@@ -1430,65 +1428,23 @@ export default function App() {
     },
   });
 
+  const {
+    startPtoColumnResize,
+    startReportColumnResize,
+    startPtoRowResize,
+  } = useTableResizeHandlers({
+    ptoRowHeights,
+    setPtoColumnWidths,
+    setPtoRowHeights,
+    setReportColumnWidths,
+    requestSave: requestPtoDatabaseSave,
+    addAdminLog,
+  });
+
   useEffect(() => {
     if (!adminDataLoaded || !databaseConfigured || !ptoDatabaseLoadedRef.current || ptoSaveRevision === 0) return;
     void savePtoDatabaseChanges("auto");
   }, [adminDataLoaded, ptoSaveRevision, savePtoDatabaseChanges]);
-
-  useEffect(() => {
-    const clearResizeCursor = () => {
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    const handleResizeMove = (event: MouseEvent) => {
-      const resizeState = ptoResizeStateRef.current;
-      if (resizeState) {
-        if (resizeState.type === "column") {
-          const nextWidth = Math.min(800, Math.max(44, Math.round(resizeState.startWidth + event.clientX - resizeState.startX)));
-          setPtoColumnWidths((current) => (current[resizeState.key] === nextWidth ? current : { ...current, [resizeState.key]: nextWidth }));
-          return;
-        }
-
-        const nextHeight = Math.min(180, Math.max(28, Math.round(resizeState.startHeight + event.clientY - resizeState.startY)));
-        setPtoRowHeights((current) => (current[resizeState.key] === nextHeight ? current : { ...current, [resizeState.key]: nextHeight }));
-        return;
-      }
-
-      const reportResizeState = reportResizeStateRef.current;
-      if (!reportResizeState) return;
-
-      const nextWidth = Math.min(520, Math.max(42, Math.round(reportResizeState.startWidth + event.clientX - reportResizeState.startX)));
-      setReportColumnWidths((current) => (current[reportResizeState.key] === nextWidth ? current : { ...current, [reportResizeState.key]: nextWidth }));
-    };
-
-    const handleResizeEnd = () => {
-      const resizeState = ptoResizeStateRef.current;
-      const reportResizeState = reportResizeStateRef.current;
-      if (!resizeState && !reportResizeState) return;
-
-      ptoResizeStateRef.current = null;
-      reportResizeStateRef.current = null;
-      clearResizeCursor();
-      requestPtoDatabaseSave();
-      addAdminLog({
-        action: "Редактирование",
-        section: reportResizeState ? "Отчетность" : "ПТО",
-        details: reportResizeState
-          ? "Изменена ширина столбца отчетности."
-          : resizeState?.type === "column" ? "Изменена ширина столбца." : "Изменена высота строки.",
-      });
-    };
-
-    window.addEventListener("mousemove", handleResizeMove);
-    window.addEventListener("mouseup", handleResizeEnd);
-
-    return () => {
-      window.removeEventListener("mousemove", handleResizeMove);
-      window.removeEventListener("mouseup", handleResizeEnd);
-      clearResizeCursor();
-    };
-  }, [addAdminLog, requestPtoDatabaseSave]);
 
   useEffect(() => {
     const stopPtoSelectionDrag = () => {
@@ -2403,33 +2359,6 @@ export default function App() {
       ...current,
       [area]: value,
     }));
-  }
-
-  function startPtoColumnResize(event: React.MouseEvent<HTMLElement>, key: string, width: number) {
-    event.preventDefault();
-    event.stopPropagation();
-    ptoResizeStateRef.current = { type: "column", key, startX: event.clientX, startWidth: width };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }
-
-  function startReportColumnResize(event: React.MouseEvent<HTMLElement>, key: string, width: number) {
-    event.preventDefault();
-    event.stopPropagation();
-    reportResizeStateRef.current = { key, startX: event.clientX, startWidth: width };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }
-
-  function startPtoRowResize(event: React.MouseEvent<HTMLElement>, key: string) {
-    event.preventDefault();
-    event.stopPropagation();
-    const rowElement = event.currentTarget.closest("tr");
-    const startHeight = rowElement?.getBoundingClientRect().height ?? ptoRowHeights[key] ?? 34;
-
-    ptoResizeStateRef.current = { type: "row", key, startY: event.clientY, startHeight };
-    document.body.style.cursor = "row-resize";
-    document.body.style.userSelect = "none";
   }
 
   function clearAdminLogs() {
