@@ -16,6 +16,7 @@ type ClientSnapshotStats = {
 
 type AdminDatabaseSectionProps = {
   databaseConfigured: boolean;
+  databaseProviderLabel: string;
   ptoMemoryTotal: number;
   vehicleCount: number;
   snapshots: DataClientSnapshot[];
@@ -29,6 +30,7 @@ type AdminDatabaseSectionProps = {
 
 export default function AdminDatabaseSection({
   databaseConfigured,
+  databaseProviderLabel,
   ptoMemoryTotal,
   vehicleCount,
   snapshots,
@@ -63,6 +65,7 @@ export default function AdminDatabaseSection({
           <div>
             <div style={summaryLabelStyle}>База данных</div>
             <div style={summaryValueStyle}>{databaseConfigured ? "Подключен" : "Не настроен"}</div>
+            <div style={summaryNoteStyle}>{databaseProviderLabel}</div>
           </div>
           <div>
             <div style={summaryLabelStyle}>ПТО в памяти</div>
@@ -167,6 +170,12 @@ const summaryValueStyle: CSSProperties = {
   color: "#0f172a",
   fontSize: 16,
   fontWeight: 800,
+};
+
+const summaryNoteStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  marginTop: 4,
 };
 
 const tableScrollStyle: CSSProperties = {

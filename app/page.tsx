@@ -63,7 +63,7 @@ import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFil
 import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
-import { databaseConfigured } from "@/lib/data/config";
+import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { clientSnapshotRestoreFlagKey, clientSnapshotStats, collectLocalStorageBackup, getOrCreateClientId, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
@@ -6893,6 +6893,7 @@ export default function App() {
             {adminSection === "database" && (
               <AdminDatabaseSection
                 databaseConfigured={databaseConfigured}
+                databaseProviderLabel={dataProviderLabel}
                 ptoMemoryTotal={countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total}
                 vehicleCount={vehicleRows.length}
                 snapshots={clientSnapshots}
