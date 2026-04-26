@@ -7,6 +7,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
+import { PtoDateFormulaInput } from "@/features/pto/PtoDateFormulaInput";
 import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoStatusCell, PtoUnitCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
@@ -5336,31 +5337,22 @@ export default function App() {
                     </PtoPlanTd>
                     <PtoPlanTd active={carryoverCellActive} selected={carryoverCellSelected} editing={carryoverCellEditing} align="center">
                       {ptoDateEditing ? (
-                        <input
-                          readOnly={!carryoverCellEditing}
-                          data-pto-cell-key={formulaCellDomKey(carryoverCell)}
-                          type="text"
-                          inputMode="decimal"
-                          value={carryoverCellEditing ? ptoFormulaDraft : formatPtoCellNumber(effectiveCarryover)}
-                          onFocus={() => {
-                            if (!ptoSelectionDraggingRef.current) selectFormulaCell(carryoverCell, effectiveCarryover);
-                          }}
-                          onMouseDown={(event) => handleFormulaCellMouseDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
-                          onMouseEnter={(event) => handleFormulaCellMouseEnter(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
-                          onClick={(event) => {
-                            if (event.shiftKey && !carryoverCellEditing) selectFormulaRange(carryoverCell, effectiveCarryover);
-                          }}
-                          onDoubleClick={(event) => {
-                            startInlineFormulaEdit(carryoverCell, effectiveCarryover);
-                            event.currentTarget.select();
-                          }}
-                          onChange={(event) => updateFormulaValue(event.target.value)}
-                          onBlur={() => {
-                            if (carryoverCellEditing) commitInlineFormulaEdit();
-                          }}
-                          onKeyDown={(event) => handleFormulaCellKeyDown(event, carryoverCell, effectiveCarryover, carryoverCellEditing)}
-                          title={formatPtoFormulaNumber(effectiveCarryover)}
+                        <PtoDateFormulaInput
+                          cell={carryoverCell}
+                          value={effectiveCarryover}
+                          editing={carryoverCellEditing}
+                          draft={ptoFormulaDraft}
+                          dataCellKey={formulaCellDomKey(carryoverCell)}
                           style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
+                          shouldSkipFocusSelection={() => ptoSelectionDraggingRef.current}
+                          onSelectCell={selectFormulaCell}
+                          onSelectRange={selectFormulaRange}
+                          onStartEdit={startInlineFormulaEdit}
+                          onDraftChange={updateFormulaValue}
+                          onCommitEdit={commitInlineFormulaEdit}
+                          onMouseDown={handleFormulaCellMouseDown}
+                          onMouseEnter={handleFormulaCellMouseEnter}
+                          onKeyDown={handleFormulaCellKeyDown}
                         />
                       ) : <PtoReadonlyNumberCell value={effectiveCarryover} />}
                     </PtoPlanTd>
@@ -5386,32 +5378,23 @@ export default function App() {
                         <Fragment key={`${row.id}-${group.month}`}>
                           <PtoPlanTd active={monthCellActive} selected={monthCellSelected} editing={monthCellEditing} align="center">
                             {ptoDateEditing && editableMonthTotal ? (
-                              <input
-                                readOnly={!monthCellEditing}
-                                data-pto-cell-key={formulaCellDomKey(monthCell)}
-                                type="text"
-                                inputMode="decimal"
-                                value={monthCellEditing ? ptoFormulaDraft : formatPtoCellNumber(monthValue)}
-                                onFocus={() => {
-                                  if (!ptoSelectionDraggingRef.current) selectFormulaCell(monthCell, monthValue);
-                                }}
-                                onMouseDown={(event) => handleFormulaCellMouseDown(event, monthCell, monthValue, monthCellEditing)}
-                                onMouseEnter={(event) => handleFormulaCellMouseEnter(event, monthCell, monthValue, monthCellEditing)}
-                                onClick={(event) => {
-                                  if (event.shiftKey && !monthCellEditing) selectFormulaRange(monthCell, monthValue);
-                                }}
-                                onDoubleClick={(event) => {
-                                  startInlineFormulaEdit(monthCell, monthValue);
-                                  event.currentTarget.select();
-                                }}
-                                onChange={(event) => updateFormulaValue(event.target.value)}
-                                onBlur={() => {
-                                  if (monthCellEditing) commitInlineFormulaEdit();
-                                }}
-                                onKeyDown={(event) => handleFormulaCellKeyDown(event, monthCell, monthValue, monthCellEditing)}
+                              <PtoDateFormulaInput
+                                cell={monthCell}
+                                value={monthValue}
+                                editing={monthCellEditing}
+                                draft={ptoFormulaDraft}
+                                dataCellKey={formulaCellDomKey(monthCell)}
                                 placeholder="Месяц"
-                                title={formatPtoFormulaNumber(monthValue)}
                                 style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle, fontWeight: 800 }}
+                                shouldSkipFocusSelection={() => ptoSelectionDraggingRef.current}
+                                onSelectCell={selectFormulaCell}
+                                onSelectRange={selectFormulaRange}
+                                onStartEdit={startInlineFormulaEdit}
+                                onDraftChange={updateFormulaValue}
+                                onCommitEdit={commitInlineFormulaEdit}
+                                onMouseDown={handleFormulaCellMouseDown}
+                                onMouseEnter={handleFormulaCellMouseEnter}
+                                onKeyDown={handleFormulaCellKeyDown}
                               />
                             ) : ptoDateEditing ? (
                               <button
@@ -5452,31 +5435,22 @@ export default function App() {
                             return (
                               <PtoPlanTd key={day} active={dayCellActive} selected={dayCellSelected} editing={dayCellEditing} align="center">
                                 {ptoDateEditing ? (
-                                  <input
-                                    readOnly={!dayCellEditing}
-                                    data-pto-cell-key={formulaCellDomKey(dayCell)}
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={dayCellEditing ? ptoFormulaDraft : formatPtoCellNumber(dayValue)}
-                                    onFocus={() => {
-                                      if (!ptoSelectionDraggingRef.current) selectFormulaCell(dayCell, dayValue);
-                                    }}
-                                    onMouseDown={(event) => handleFormulaCellMouseDown(event, dayCell, dayValue, dayCellEditing)}
-                                    onMouseEnter={(event) => handleFormulaCellMouseEnter(event, dayCell, dayValue, dayCellEditing)}
-                                    onClick={(event) => {
-                                      if (event.shiftKey && !dayCellEditing) selectFormulaRange(dayCell, dayValue);
-                                    }}
-                                    onDoubleClick={(event) => {
-                                      startInlineFormulaEdit(dayCell, dayValue);
-                                      event.currentTarget.select();
-                                    }}
-                                    onChange={(event) => updateFormulaValue(event.target.value)}
-                                    onBlur={() => {
-                                      if (dayCellEditing) commitInlineFormulaEdit();
-                                    }}
-                                    onKeyDown={(event) => handleFormulaCellKeyDown(event, dayCell, dayValue, dayCellEditing)}
-                                    title={formatPtoFormulaNumber(dayValue)}
+                                  <PtoDateFormulaInput
+                                    cell={dayCell}
+                                    value={dayValue}
+                                    editing={dayCellEditing}
+                                    draft={ptoFormulaDraft}
+                                    dataCellKey={formulaCellDomKey(dayCell)}
                                     style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle }}
+                                    shouldSkipFocusSelection={() => ptoSelectionDraggingRef.current}
+                                    onSelectCell={selectFormulaCell}
+                                    onSelectRange={selectFormulaRange}
+                                    onStartEdit={startInlineFormulaEdit}
+                                    onDraftChange={updateFormulaValue}
+                                    onCommitEdit={commitInlineFormulaEdit}
+                                    onMouseDown={handleFormulaCellMouseDown}
+                                    onMouseEnter={handleFormulaCellMouseEnter}
+                                    onKeyDown={handleFormulaCellKeyDown}
                                   />
                                 ) : <PtoReadonlyNumberCell value={dayValue} />}
                               </PtoPlanTd>
