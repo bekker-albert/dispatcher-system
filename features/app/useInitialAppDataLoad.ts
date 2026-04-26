@@ -3,12 +3,13 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { buildInitialAdminStructureState } from "@/features/admin/structure/initialAdminStructureState";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
+import { buildInitialNavigationState } from "@/features/navigation/initialNavigationState";
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
 import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
-import { createDefaultSubTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
+import { createDefaultSubTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
@@ -141,15 +142,16 @@ export function useInitialAppDataLoad({
         setReportReasons(initialReportState.reportReasons);
         setAreaShiftCutoffs(initialReportState.areaShiftCutoffs);
 
-        setCustomTabs(normalizeStoredCustomTabs(storedState.savedCustomTabs));
+        const initialNavigationState = buildInitialNavigationState({
+          savedCustomTabs: storedState.savedCustomTabs,
+          savedTopTabs: storedState.savedTopTabs,
+          savedSubTabs: storedState.savedSubTabs,
+          defaultSubTabs,
+        });
 
-        if (storedState.savedTopTabs) {
-          setTopTabs(normalizeStoredTopTabs(storedState.savedTopTabs));
-        }
-
-        if (storedState.savedSubTabs) {
-          setSubTabs(normalizeStoredSubTabs(storedState.savedSubTabs, defaultSubTabs));
-        }
+        setCustomTabs(initialNavigationState.customTabs);
+        if (initialNavigationState.topTabs) setTopTabs(initialNavigationState.topTabs);
+        if (initialNavigationState.subTabs) setSubTabs(initialNavigationState.subTabs);
 
         if (initialVehicleRows.rows) {
           setVehicleRows(initialVehicleRows.rows);
