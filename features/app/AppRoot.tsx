@@ -48,10 +48,10 @@ import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
-import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
+import { usePtoDateViewportReset } from "@/features/pto/usePtoDateViewportReset";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
@@ -66,7 +66,6 @@ import { useSectionSelectionState } from "@/features/navigation/useSectionSelect
 import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
-import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
@@ -935,14 +934,12 @@ export default function App() {
     scrollRef: ptoDateTableScrollRef,
     updateViewportFromElement: updatePtoDateViewportFromElement,
     handleScroll: handlePtoDateTableScroll,
-  } = usePtoDateViewport({
-    active: renderedTopTab === "pto" && isPtoDateTab && ptoDateEditing,
+  } = usePtoDateViewportReset({
+    renderedTopTab,
+    isPtoDateTab,
+    ptoDateEditing,
     resetKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}`,
     measureKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}:${expandedPtoMonthsKey}`,
-  });
-
-  usePtoDateEditingReset({
-    active: renderedTopTab === "pto" && isPtoDateTab,
     setPtoDateEditing,
     setDraggedPtoRowId,
     setPtoDropTarget,
