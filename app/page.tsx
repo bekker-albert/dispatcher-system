@@ -76,6 +76,7 @@ import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
 import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
+import { useAdminReportFactSourceEditor } from "@/features/reports/useAdminReportFactSourceEditor";
 import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportRowLabelEditor";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
@@ -2242,52 +2243,13 @@ export default function App() {
     addAdminLog,
   });
 
-  function setReportCustomerFactSourceMode(customerId: string, targetRowKey: string, enabled: boolean) {
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      const nextFactSourceRowKeys = { ...customer.factSourceRowKeys };
-      if (enabled) {
-        nextFactSourceRowKeys[targetRowKey] = nextFactSourceRowKeys[targetRowKey]?.length
-          ? nextFactSourceRowKeys[targetRowKey]
-          : [targetRowKey];
-      } else {
-        delete nextFactSourceRowKeys[targetRowKey];
-      }
-
-      return { ...customer, factSourceRowKeys: nextFactSourceRowKeys };
-    }));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменен источник факта для строки отчета.",
-    });
-  }
-
-  function toggleReportCustomerFactSourceRowKey(customerId: string, targetRowKey: string, sourceRowKey: string) {
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      const currentSourceRowKeys = customer.factSourceRowKeys[targetRowKey] ?? [];
-      const nextSourceRowKeys = currentSourceRowKeys.includes(sourceRowKey)
-        ? currentSourceRowKeys.filter((key) => key !== sourceRowKey)
-        : [...currentSourceRowKeys, sourceRowKey];
-      const nextFactSourceRowKeys = { ...customer.factSourceRowKeys };
-
-      if (nextSourceRowKeys.length > 0) {
-        nextFactSourceRowKeys[targetRowKey] = Array.from(new Set(nextSourceRowKeys));
-      } else {
-        delete nextFactSourceRowKeys[targetRowKey];
-      }
-
-      return { ...customer, factSourceRowKeys: nextFactSourceRowKeys };
-    }));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменен состав строк для суммы факта.",
-    });
-  }
+  const {
+    setReportCustomerFactSourceMode,
+    toggleReportCustomerFactSourceRowKey,
+  } = useAdminReportFactSourceEditor({
+    setReportCustomers,
+    addAdminLog,
+  });
 
   function reportRowsForSummaryArea(area: string) {
     const areaKey = normalizeLookupValue(area);
