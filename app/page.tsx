@@ -51,6 +51,7 @@ import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRo
 import type { PtoDropTarget, PtoResizeState } from "@/features/pto/ptoDateInteractionTypes";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
+import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
 import type { ReportResizeState } from "@/features/reports/lib/reportResizeState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
@@ -5271,48 +5272,18 @@ export default function App() {
   }
 
   function renderReportHeaderText(key: string, fallback: string) {
-    const isEditing = editingReportHeaderKey === key;
-
-    if (isEditing) {
-      return (
-        <input
-          autoFocus
-          value={reportHeaderDraft}
-          onChange={(event) => setReportHeaderDraft(event.target.value)}
-          onBlur={(event) => {
-            if (event.currentTarget.dataset.cancelReportHeaderEdit === "true") return;
-            commitReportHeaderEdit(key, fallback);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commitReportHeaderEdit(key, fallback);
-            }
-
-            if (event.key === "Escape") {
-              event.preventDefault();
-              event.currentTarget.dataset.cancelReportHeaderEdit = "true";
-              cancelReportHeaderEdit();
-            }
-          }}
-          onClick={(event) => event.stopPropagation()}
-          style={reportHeaderInputStyle}
-        />
-      );
-    }
-
     return (
-      <button
-        type="button"
-        onDoubleClick={(event) => {
-          event.stopPropagation();
-          startReportHeaderEdit(key, fallback);
-        }}
-        style={reportHeaderLabelButtonStyle}
-        title="Двойной клик — переименовать заголовок"
-      >
-        {reportHeaderLabel(key, fallback)}
-      </button>
+      <ReportEditableHeaderText
+        columnKey={key}
+        fallback={fallback}
+        label={reportHeaderLabel(key, fallback)}
+        isEditing={editingReportHeaderKey === key}
+        draft={reportHeaderDraft}
+        onDraftChange={setReportHeaderDraft}
+        onCommit={commitReportHeaderEdit}
+        onCancel={cancelReportHeaderEdit}
+        onStartEdit={startReportHeaderEdit}
+      />
     );
   }
 
@@ -6241,41 +6212,6 @@ const reportSourceGridStyle: React.CSSProperties = {
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   gap: 10,
   marginBottom: 14,
-};
-
-const reportHeaderLabelButtonStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  border: "none",
-  background: "transparent",
-  color: "inherit",
-  cursor: "text",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
-  lineHeight: 1.2,
-  padding: 0,
-  textAlign: "center",
-  whiteSpace: "normal",
-  overflowWrap: "normal",
-  wordBreak: "normal",
-  hyphens: "none",
-};
-
-const reportHeaderInputStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  border: "1px solid #60a5fa",
-  borderRadius: 4,
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
-  outline: "none",
-  padding: "2px 4px",
-  textAlign: "center",
 };
 
 const inputStyle: React.CSSProperties = {
