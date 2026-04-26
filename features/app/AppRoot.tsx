@@ -8,6 +8,7 @@ import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandle
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
+import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useGlobalCellSelectionEffects } from "@/features/app/useGlobalCellSelectionEffects";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
@@ -88,18 +89,13 @@ import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
-import { createDefaultSubTabs, customTabKey } from "@/lib/domain/navigation/tabs";
-import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
-import { createDefaultVehicles } from "@/lib/domain/vehicles/defaults";
+import { customTabKey } from "@/lib/domain/navigation/tabs";
+import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import { clientSnapshotStats } from "@/lib/storage/client-snapshots";
 import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
-
-const defaultVehicles = createDefaultVehicles([]);
-
-const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
 
 export default function App() {
   const {
