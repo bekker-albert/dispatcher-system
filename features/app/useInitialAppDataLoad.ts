@@ -8,18 +8,17 @@ import {
   normalizeStoredOrgMembers,
 } from "@/features/admin/structure/adminStructurePersistence";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
+import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
 import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
-import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
-import { normalizePtoPlanRow, normalizeStoredPtoYears, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
+import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
-import { adminStorageKeys } from "@/lib/storage/keys";
-import { isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
 import { hasInitialLocalAppState, readInitialStoredAppState } from "@/features/app/initialAppStorage";
 
@@ -135,21 +134,8 @@ export function useInitialAppDataLoad({
         });
         if (!initialVehicleRows.completed) return;
 
-        const hasSavedPtoState = Boolean(
-          storedState.savedPtoYears
-          || Array.isArray(storedState.savedPtoPlanRows)
-          || Array.isArray(storedState.savedPtoSurveyRows)
-          || Array.isArray(storedState.savedPtoOperRows)
-          || storedState.savedPtoColumnWidths
-          || storedState.savedPtoRowHeights
-          || storedState.savedPtoHeaderLabels
-          || storedState.savedPtoBucketValues
-          || storedState.savedPtoBucketRows,
-        );
-        hasStoredPtoStateRef.current = hasSavedPtoState;
-        if (hasSavedPtoState && !window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt)) {
-          window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
-        }
+        const initialPtoState = buildInitialPtoState(storedState);
+        hasStoredPtoStateRef.current = initialPtoState.hasSavedPtoState;
 
         const initialReportState = buildInitialReportState(storedState);
         setReportCustomers(initialReportState.reportCustomers);
@@ -184,27 +170,27 @@ export function useInitialAppDataLoad({
           setDispatchSummaryRows(createDefaultDispatchSummaryRows(initialVehicleRows.rows, initialReportState.preferredReportDate));
         }
 
-        if (storedState.savedPtoYears) {
-          setPtoManualYears(normalizeStoredPtoYears(storedState.savedPtoYears));
+        if (initialPtoState.manualYears) {
+          setPtoManualYears(initialPtoState.manualYears);
         }
 
-        if (Array.isArray(storedState.savedPtoPlanRows)) {
-          setPtoPlanRows(storedState.savedPtoPlanRows.map((row) => normalizePtoPlanRow(isRecord(row) ? row : {})));
+        if (initialPtoState.planRows) {
+          setPtoPlanRows(initialPtoState.planRows);
         }
 
-        if (Array.isArray(storedState.savedPtoSurveyRows)) {
-          setPtoSurveyRows(storedState.savedPtoSurveyRows.map((row) => normalizePtoPlanRow(isRecord(row) ? row : {})));
+        if (initialPtoState.surveyRows) {
+          setPtoSurveyRows(initialPtoState.surveyRows);
         }
 
-        if (Array.isArray(storedState.savedPtoOperRows)) {
-          setPtoOperRows(storedState.savedPtoOperRows.map((row) => normalizePtoPlanRow(isRecord(row) ? row : {})));
+        if (initialPtoState.operRows) {
+          setPtoOperRows(initialPtoState.operRows);
         }
 
-        setPtoColumnWidths(normalizeNumberRecord(storedState.savedPtoColumnWidths, 44, 800));
-        setPtoRowHeights(normalizeNumberRecord(storedState.savedPtoRowHeights, 28, 180));
-        setPtoHeaderLabels(normalizeStringRecord(storedState.savedPtoHeaderLabels));
-        setPtoBucketValues(normalizeDecimalRecord(storedState.savedPtoBucketValues, 0, 100000));
-        setPtoBucketManualRows(normalizePtoBucketManualRows(storedState.savedPtoBucketRows));
+        setPtoColumnWidths(initialPtoState.columnWidths);
+        setPtoRowHeights(initialPtoState.rowHeights);
+        setPtoHeaderLabels(initialPtoState.headerLabels);
+        setPtoBucketValues(initialPtoState.bucketValues);
+        setPtoBucketManualRows(initialPtoState.bucketRows);
 
         const normalizedOrgMembers = normalizeStoredOrgMembers(storedState.savedOrgMembers);
         if (normalizedOrgMembers) {
