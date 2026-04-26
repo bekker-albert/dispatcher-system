@@ -1,8 +1,9 @@
 ﻿"use client";
 
-import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import { PtoDateAreaCell } from "@/features/pto/PtoDateAreaCell";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
 import { PtoDateFormulaCells } from "@/features/pto/PtoDateFormulaCells";
@@ -17,19 +18,10 @@ import { createPtoDateVirtualRowsViewModel } from "@/features/pto/ptoDateVirtual
 import { usePtoDateEditingToggle } from "@/features/pto/usePtoDateEditingToggle";
 import { usePtoDraftRowController } from "@/features/pto/usePtoDraftRowController";
 import {
-  dragHandleDotStyle,
-  dragHandleDotsStyle,
-  dragHandleStyle,
-  ptoAreaCellStyle,
   ptoDateTableLayoutStyle,
   ptoDateTableScrollStyle,
   ptoDropIndicatorStyle,
-  ptoInlineAddRowButtonHoverStyle,
-  ptoInlineAddRowButtonStyle,
   ptoPlanTableStyle,
-  ptoRowDeleteButtonStyle,
-  ptoRowResizeHandleStyle,
-  ptoRowToolsStyle,
 } from "@/features/pto/ptoDateTableStyles";
 import { ptoAutomatedStatus, ptoRowFieldDomKey, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
 import { formatPtoFormulaNumber } from "@/lib/domain/pto/formatting";
@@ -472,83 +464,27 @@ export function PtoDateTableContainer({
                         />
                       </PtoPlanTd>
                     ) : null}
-                    <PtoPlanTd>
-                      {dropLineStyle ? <span style={dropLineStyle} /> : null}
-                      {ptoDateEditing ? (
-                        <button
-                        type="button"
-                        onClick={() => removeLinkedPtoDateRow(row)}
-                        style={{ ...ptoRowDeleteButtonStyle, left: tableMinWidth + 8 }}
-                        title={`Удалить строку: ${row.structure || "ПТО"}`}
-                        aria-label={`Удалить строку: ${row.structure || "ПТО"}`}
-                        >
-                          <Trash2 size={14} aria-hidden />
-                        </button>
-                      ) : null}
-                      {ptoDateEditing ? (
-                        <span
-                          onMouseDown={(event) => startPtoRowResize(event, rowHeightKey)}
-                          style={ptoRowResizeHandleStyle}
-                          title="Потяни вниз или вверх, чтобы изменить высоту строки"
-                          aria-hidden
-                        />
-                      ) : null}
-                      {showInlineAddRowButton ? (
-                        <button
-                          type="button"
-                          onClick={() => addPtoRowAfter(row)}
-                          onMouseEnter={() => setHoveredPtoAddRowId(row.id)}
-                          onMouseLeave={() => setHoveredPtoAddRowId((current) => (current === row.id ? null : current))}
-                          style={{
-                            ...ptoInlineAddRowButtonStyle,
-                            ...(hoveredPtoAddRowId === row.id ? ptoInlineAddRowButtonHoverStyle : null),
-                          }}
-                          title="Добавить строку ниже"
-                          aria-label="Добавить строку ниже"
-                        >
-                          +
-                        </button>
-                      ) : null}
-                      <div style={ptoAreaCellStyle}>
-                        {ptoDateEditing ? (
-                          <div style={ptoRowToolsStyle}>
-                          <button
-                            type="button"
-                            draggable
-                            onDragStart={() => {
-                              setDraggedPtoRowId(row.id);
-                              setPtoDropTarget(null);
-                            }}
-                            onDragEnd={() => {
-                              setDraggedPtoRowId(null);
-                              setPtoDropTarget(null);
-                            }}
-                            style={dragHandleStyle}
-                            title="Перетащи строку"
-                            aria-label="Перетащи строку"
-                          >
-                            <span style={dragHandleDotsStyle} aria-hidden>
-                              <span style={dragHandleDotStyle} />
-                              <span style={dragHandleDotStyle} />
-                              <span style={dragHandleDotStyle} />
-                            </span>
-                          </button>
-                          </div>
-                        ) : null}
-                        <PtoDateEditableTextCell
-                          editing={ptoDateEditing}
-                          value={row.area}
-                          draftValue={getPtoRowTextDraft(row, "area")}
-                          dataFieldKey={ptoRowFieldDomKey(row.id, "area")}
-                          listId="pto-area-options"
-                          placeholder="Уч_Аксу"
-                          onBeginDraft={() => beginPtoRowTextDraft(row, "area")}
-                          onUpdateDraft={(value) => updatePtoRowTextDraft(row.id, "area", value)}
-                          onCommitDraft={() => commitPtoRowTextDraft(setRows, row, "area")}
-                          onCancelDraft={() => cancelPtoRowTextDraft(row.id, "area")}
-                        />
-                      </div>
-                    </PtoPlanTd>
+                    <PtoDateAreaCell
+                      row={row}
+                      ptoDateEditing={ptoDateEditing}
+                      dropLineStyle={dropLineStyle}
+                      tableMinWidth={tableMinWidth}
+                      rowHeightKey={rowHeightKey}
+                      showInlineAddRowButton={showInlineAddRowButton}
+                      hoveredPtoAddRowId={hoveredPtoAddRowId}
+                      setRows={setRows}
+                      setDraggedPtoRowId={setDraggedPtoRowId}
+                      setHoveredPtoAddRowId={setHoveredPtoAddRowId}
+                      setPtoDropTarget={setPtoDropTarget}
+                      removeLinkedPtoDateRow={removeLinkedPtoDateRow}
+                      startPtoRowResize={startPtoRowResize}
+                      addPtoRowAfter={addPtoRowAfter}
+                      beginPtoRowTextDraft={beginPtoRowTextDraft}
+                      getPtoRowTextDraft={getPtoRowTextDraft}
+                      updatePtoRowTextDraft={updatePtoRowTextDraft}
+                      commitPtoRowTextDraft={commitPtoRowTextDraft}
+                      cancelPtoRowTextDraft={cancelPtoRowTextDraft}
+                    />
                     {showLocation ? (
                       <PtoPlanTd>
                         <PtoDateEditableTextCell
