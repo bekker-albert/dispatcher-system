@@ -19,3 +19,5 @@ export function buildInitialNavigationState({
     subTabs: savedSubTabs ? normalizeStoredSubTabs(savedSubTabs, defaultSubTabs) : null,
   };
 }
+
+export type InitialNavigationState = ReturnType<typeof buildInitialNavigationState>;

@@ -5,13 +5,14 @@ import { applyInitialAdminStructureState, type InitialAdminStructureStateSetters
 import { buildInitialAdminStructureState } from "@/features/admin/structure/initialAdminStructureState";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
 import { buildInitialDispatchSummaryRows } from "@/features/dispatch/initialDispatchSummaryState";
+import { applyInitialNavigationState, type InitialNavigationStateSetters } from "@/features/navigation/applyInitialNavigationState";
 import { buildInitialNavigationState } from "@/features/navigation/initialNavigationState";
 import { applyInitialPtoState, type InitialPtoStateSetters } from "@/features/pto/applyInitialPtoState";
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { applyInitialReportState, type InitialReportStateSetters } from "@/features/reports/applyInitialReportState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
-import { createDefaultSubTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
+import { createDefaultSubTabs } from "@/lib/domain/navigation/tabs";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
@@ -21,7 +22,11 @@ type MutableRef<T> = {
   current: T;
 };
 
-type InitialAppDataLoadOptions = InitialReportStateSetters & InitialPtoStateSetters & InitialAdminStructureStateSetters & {
+type InitialAppDataLoadOptions = InitialReportStateSetters
+  & InitialPtoStateSetters
+  & InitialAdminStructureStateSetters
+  & InitialNavigationStateSetters
+  & {
   defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
   saveClientSnapshotToDatabase: (reason: string) => Promise<void>;
   restoreAdminLogs: (storedLogs: unknown) => void;
@@ -31,9 +36,6 @@ type InitialAppDataLoadOptions = InitialReportStateSetters & InitialPtoStateSett
   vehiclesDatabaseLoadedRef: MutableRef<boolean>;
   vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
   setAdminDataLoaded: Dispatch<SetStateAction<boolean>>;
-  setCustomTabs: Dispatch<SetStateAction<CustomTab[]>>;
-  setTopTabs: Dispatch<SetStateAction<TopTabDefinition[]>>;
-  setSubTabs: Dispatch<SetStateAction<Record<EditableSubtabGroup, SubTabConfig[]>>>;
   setVehicleRows: Dispatch<SetStateAction<VehicleRow[]>>;
   setDispatchSummaryRows: Dispatch<SetStateAction<DispatchSummaryRow[]>>;
 };
@@ -128,9 +130,11 @@ export function useInitialAppDataLoad({
           defaultSubTabs,
         });
 
-        setCustomTabs(initialNavigationState.customTabs);
-        if (initialNavigationState.topTabs) setTopTabs(initialNavigationState.topTabs);
-        if (initialNavigationState.subTabs) setSubTabs(initialNavigationState.subTabs);
+        applyInitialNavigationState(initialNavigationState, {
+          setCustomTabs,
+          setTopTabs,
+          setSubTabs,
+        });
 
         if (initialVehicleRows.rows) {
           setVehicleRows(initialVehicleRows.rows);
