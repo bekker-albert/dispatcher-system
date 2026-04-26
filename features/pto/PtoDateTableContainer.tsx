@@ -9,7 +9,7 @@ import { PtoDateFormulaInput } from "@/features/pto/PtoDateFormulaInput";
 import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoStatusCell, PtoUnitCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
-import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
+import { PtoDateToolbarPanel } from "@/features/pto/PtoDateToolbarPanel";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 import { createPtoDateTableViewModel } from "@/features/pto/ptoDateTableViewModel";
 import { usePtoDateEditingToggle } from "@/features/pto/usePtoDateEditingToggle";
@@ -163,34 +163,27 @@ export function PtoDateTableContainer({
       savePtoDatabaseChanges,
     });
     const ptoDateToolbar = (
-      <PtoDateToolbar
-        areaTabs={ptoAreaTabs}
-        areaFilter={ptoAreaFilter}
-        onSelectArea={selectPtoArea}
-        showExcelControls={["plan", "oper", "survey"].includes(ptoTab)}
+      <PtoDateToolbarPanel
+        ptoAreaTabs={ptoAreaTabs}
+        ptoAreaFilter={ptoAreaFilter}
+        selectPtoArea={selectPtoArea}
+        ptoTab={ptoTab}
+        ptoDateEditing={ptoDateEditing}
+        exportPtoDateTableToExcel={exportPtoDateTableToExcel}
+        openPtoDateImportFilePicker={openPtoDateImportFilePicker}
+        importPtoDateTableFromExcel={importPtoDateTableFromExcel}
+        ptoPlanImportInputRef={ptoPlanImportInputRef}
+        ptoYearTabs={ptoYearTabs}
+        ptoPlanYear={ptoPlanYear}
+        selectPtoPlanYear={selectPtoPlanYear}
+        deletePtoYear={deletePtoYear}
+        ptoYearDialogOpen={ptoYearDialogOpen}
+        ptoYearInput={ptoYearInput}
+        setPtoYearInput={setPtoYearInput}
+        setPtoYearDialogOpen={setPtoYearDialogOpen}
+        addPtoYear={addPtoYear}
         excelLabel={currentPtoDateExcelMeta().label}
-        editing={ptoDateEditing}
-        onExport={exportPtoDateTableToExcel}
-        onOpenImport={openPtoDateImportFilePicker}
-        onImportChange={importPtoDateTableFromExcel}
-        importInputRef={ptoPlanImportInputRef}
         onToggleEditing={togglePtoDateEditing}
-        yearTabs={ptoYearTabs}
-        selectedYear={ptoPlanYear}
-        onSelectYear={selectPtoPlanYear}
-        onDeleteYear={deletePtoYear}
-        onOpenYearDialog={() => {
-          setPtoYearInput("");
-          setPtoYearDialogOpen(true);
-        }}
-        yearDialogOpen={ptoYearDialogOpen}
-        yearInput={ptoYearInput}
-        onYearInputChange={setPtoYearInput}
-        onAddYear={addPtoYear}
-        onCloseYearDialog={() => {
-          setPtoYearDialogOpen(false);
-          setPtoYearInput("");
-        }}
       />
     );
     const {
