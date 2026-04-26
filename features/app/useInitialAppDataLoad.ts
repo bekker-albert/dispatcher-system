@@ -12,7 +12,6 @@ import { readClientReportDateSelection } from "@/features/reports/lib/reportDate
 import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { defaultAreaShiftScheduleArea, normalizeAreaShiftCutoffs } from "@/lib/domain/admin/area-schedule";
 import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
-import { sharedAppSettingKeys } from "@/lib/domain/app/settings";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
@@ -25,7 +24,8 @@ import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
-import { hasInitialLocalAppState, initialAppStorageKeys, readInitialStoredAppState } from "@/features/app/initialAppStorage";
+import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
+import { hasInitialLocalAppState, readInitialStoredAppState } from "@/features/app/initialAppStorage";
 
 type MutableRef<T> = {
   current: T;
@@ -120,78 +120,14 @@ export function useInitialAppDataLoad({
         }
 
         if (databaseConfigured) {
-          try {
-            const { loadAppStateFromDatabase } = await import("@/lib/data/app-state");
-            const databaseAppState = await loadAppStateFromDatabase();
-
-            if (cancelled) return;
-
-            const databaseStorage = databaseAppState?.storage ?? {};
-            const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
-            const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
-            const databaseUpdatedTime = databaseAppState?.updatedAt ? Date.parse(databaseAppState.updatedAt) : 0;
-            const shouldUseDatabaseAppState = Object.keys(databaseStorage).length > 0
-              && (
-                !hasLocalAppState
-                || (localUpdatedTime > 0 && databaseUpdatedTime > localUpdatedTime)
-              );
-
-            if (shouldUseDatabaseAppState) {
-              initialAppStorageKeys.forEach((key) => {
-                const value = databaseStorage[key];
-                if (typeof value === "string") {
-                  window.localStorage.setItem(key, value);
-                }
-              });
-              if (databaseAppState?.updatedAt) {
-                window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseAppState.updatedAt);
-              }
-              appDatabaseSaveSnapshotRef.current = JSON.stringify(databaseStorage);
-            } else if (hasLocalAppState && !localUpdatedAt) {
-              window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-            }
-          } catch (error) {
-            console.warn("Legacy app_state is not ready:", error);
-          }
-
-          try {
-            const { loadAppSettingsFromDatabase } = await import("@/lib/data/settings");
-            const databaseSettings = await loadAppSettingsFromDatabase([...sharedAppSettingKeys]);
-            appSettingsDatabaseLoadedRef.current = true;
-
-            if (cancelled) return;
-
-            const databaseSettingsObject = Object.fromEntries(
-              databaseSettings.map((setting) => [setting.key, setting.value]),
-            );
-            const databaseSettingsUpdatedTime = Math.max(
-              0,
-              ...databaseSettings.map((setting) => (
-                setting.updated_at ? Date.parse(setting.updated_at) || 0 : 0
-              )),
-            );
-            const currentLocalUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
-            const currentLocalUpdatedTime = currentLocalUpdatedAt ? Date.parse(currentLocalUpdatedAt) : 0;
-            const shouldUseDatabaseSettings = databaseSettings.length > 0
-              && (
-                !hasLocalAppState
-                || (currentLocalUpdatedTime > 0 && databaseSettingsUpdatedTime > currentLocalUpdatedTime)
-              );
-
-            if (shouldUseDatabaseSettings) {
-              databaseSettings.forEach((setting) => {
-                window.localStorage.setItem(setting.key, JSON.stringify(setting.value));
-              });
-              if (databaseSettingsUpdatedTime > 0) {
-                window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date(databaseSettingsUpdatedTime).toISOString());
-              }
-            }
-
-            appSettingsDatabaseSaveSnapshotRef.current = JSON.stringify(databaseSettingsObject);
-          } catch (error) {
-            appSettingsDatabaseLoadedRef.current = false;
-            console.warn("App settings table is not ready:", error);
-          }
+          const databaseBootstrapCompleted = await loadInitialAppDatabaseBootstrap({
+            hasLocalAppState,
+            isCancelled: () => cancelled,
+            appDatabaseSaveSnapshotRef,
+            appSettingsDatabaseLoadedRef,
+            appSettingsDatabaseSaveSnapshotRef,
+          });
+          if (!databaseBootstrapCompleted) return;
         }
 
         const storedState = readInitialStoredAppState();
