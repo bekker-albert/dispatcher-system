@@ -74,7 +74,8 @@ import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys
 import { IconButton, TopButton } from "@/shared/ui/buttons";
 import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
 import { HeaderSubButton } from "@/shared/ui/navigation";
-import { SaveStatusIndicator, type SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
+import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
+import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
 type PtoDropTarget = {
   rowId: string;
@@ -129,8 +130,6 @@ const emptyPtoDraftRowFields = {
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
 const clientSnapshotSaveDelayMs = 1500;
 const clientSnapshotAutoMinIntervalMs = 120000;
-const saveStatusSavedHideMs = 2600;
-const saveStatusAttentionHideMs = 30000;
 const sharedAppSettingKeys = [
   adminStorageKeys.reportCustomers,
   adminStorageKeys.reportAreaOrder,
@@ -293,7 +292,6 @@ export default function App() {
   const clientSnapshotSaveSnapshotRef = useRef("");
   const clientSnapshotSaveDisabledRef = useRef(false);
   const clientSnapshotLastAutoQueuedAtRef = useRef(0);
-  const saveStatusTimerRef = useRef<number | null>(null);
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
@@ -374,7 +372,7 @@ export default function App() {
   const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
   const [adminLogs, setAdminLogs] = useState<AdminLogEntry[]>([]);
   const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(databaseConfigured ? "База данных подключается..." : "База данных не настроена.");
-  const [saveStatus, setSaveStatus] = useState<SaveStatusState>({ kind: "idle", message: "" });
+  const { saveStatus, showSaveStatus, hideSaveStatus } = useSaveStatus();
   const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!databaseConfigured);
   const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
@@ -479,37 +477,6 @@ export default function App() {
       window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
       return nextLogs;
     });
-  }, []);
-
-  const showSaveStatus = useCallback((kind: SaveStatusState["kind"], message: string) => {
-    if (saveStatusTimerRef.current !== null) {
-      window.clearTimeout(saveStatusTimerRef.current);
-      saveStatusTimerRef.current = null;
-    }
-
-    setSaveStatus({ kind, message });
-
-    if (kind === "saved" || kind === "error") {
-      saveStatusTimerRef.current = window.setTimeout(() => {
-        setSaveStatus({ kind: "idle", message: "" });
-        saveStatusTimerRef.current = null;
-      }, kind === "saved" ? saveStatusSavedHideMs : saveStatusAttentionHideMs);
-    }
-  }, []);
-
-  const hideSaveStatus = useCallback(() => {
-    if (saveStatusTimerRef.current !== null) {
-      window.clearTimeout(saveStatusTimerRef.current);
-      saveStatusTimerRef.current = null;
-    }
-    setSaveStatus({ kind: "idle", message: "" });
-  }, []);
-
-  useEffect(() => () => {
-    if (saveStatusTimerRef.current !== null) {
-      window.clearTimeout(saveStatusTimerRef.current);
-      saveStatusTimerRef.current = null;
-    }
   }, []);
 
   const saveClientSnapshotToDatabase = useCallback(async (reason: string) => {
