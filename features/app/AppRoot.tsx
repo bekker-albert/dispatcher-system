@@ -13,6 +13,7 @@ import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
+import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
@@ -45,9 +46,6 @@ import {
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
-import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
-import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
-import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
@@ -794,17 +792,6 @@ export default function App() {
   });
 
   const {
-    ptoBucketRows,
-    ptoBucketColumns,
-  } = usePtoBucketsViewModel({
-    active: isPtoBucketsSection,
-    allPtoDateRows,
-    manualRows: ptoBucketManualRows,
-    areaFilter: ptoAreaFilter,
-    vehicleRows: deferredVehicleRows,
-  });
-
-  const {
     vehicleAutocompleteOptions,
     activeVehicleFilterOptions,
     filteredVehicleRows,
@@ -1064,42 +1051,38 @@ export default function App() {
   });
 
   const {
+    ptoBucketRows,
+    ptoBucketColumns,
     openPtoDateImportFilePicker,
     currentPtoDateExcelMeta,
     exportPtoDateTableToExcel,
     importPtoDateTableFromExcel,
-  } = usePtoDateExcelTransfer({
+    commitPtoBucketValue,
+    clearPtoBucketCells,
+    addPtoBucketManualRow,
+    deletePtoBucketManualRow,
+  } = useAppPtoSupplementalTables({
+    isPtoBucketsSection,
+    allPtoDateRows,
+    deferredVehicleRows,
     ptoTab,
     ptoPlanYear,
     ptoAreaFilter,
     ptoPlanRows,
     ptoOperRows,
     ptoSurveyRows,
-    importInputRef: ptoPlanImportInputRef,
+    ptoBucketManualRows,
+    ptoPlanImportInputRef,
     setPtoPlanRows,
     setPtoOperRows,
     setPtoSurveyRows,
     setPtoManualYears,
     setExpandedPtoMonths,
-    requestSave: requestPtoDatabaseSave,
-    addAdminLog,
-  });
-
-  const {
-    commitPtoBucketValue,
-    clearPtoBucketCells,
-    addPtoBucketManualRow,
-    deletePtoBucketManualRow,
-  } = usePtoBucketsEditor({
-    ptoAreaFilter,
-    ptoBucketRows,
-    ptoBucketColumns,
-    ptoBucketManualRows,
     setPtoBucketValues,
     setPtoBucketManualRows,
     databaseConfigured,
     ptoDatabaseLoadedRef,
-    requestSave: requestPtoDatabaseSave,
+    requestPtoDatabaseSave,
     addAdminLog,
   });
   const renderPtoDateTable = usePtoDateTableRenderer({
