@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useDeferredValue, useRef, useState } from "react";
+import { useDeferredValue } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
@@ -9,6 +9,7 @@ import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { useGlobalCellSelectionEffects } from "@/features/app/useGlobalCellSelectionEffects";
+import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
@@ -184,9 +185,13 @@ export default function App() {
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
   } = useVehicleUiState(defaultVehicles);
-  const appDatabaseSaveSnapshotRef = useRef("");
-  const appSettingsDatabaseLoadedRef = useRef(false);
-  const appSettingsDatabaseSaveSnapshotRef = useRef("");
+  const {
+    appDatabaseSaveSnapshotRef,
+    appSettingsDatabaseLoadedRef,
+    appSettingsDatabaseSaveSnapshotRef,
+    adminDataLoaded,
+    setAdminDataLoaded,
+  } = useAppDataLoadState();
   const {
     draggedPtoRowId,
     setDraggedPtoRowId,
@@ -358,7 +363,6 @@ export default function App() {
     active: topTab === "admin" && adminSection === "database",
     showSaveStatus,
   });
-  const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const {
     areaFilter,
     setAreaFilter,
