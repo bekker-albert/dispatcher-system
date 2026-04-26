@@ -29,6 +29,7 @@ export type PtoDraftRowFields = {
 };
 
 export const defaultPtoPlanMonth = "2026-04";
+export const ptoDateTableKeys = ["plan", "oper", "survey"] as const;
 export const emptyPtoDraftRowFields: PtoDraftRowFields = {
   customerCode: "",
   area: "",
@@ -48,6 +49,14 @@ export const ptoColumnDefaults = {
   monthTotal: 104,
   day: 86,
 };
+
+export function isPtoDateTableKey(value: string): value is PtoDateTableKey {
+  return (ptoDateTableKeys as readonly string[]).includes(value);
+}
+
+export function ptoDateTableKeyFromTab(value: string): PtoDateTableKey | null {
+  return isPtoDateTableKey(value) ? value : null;
+}
 export const ptoUnitOptions = ["\u043c2", "\u043c3", "\u0442\u043d"] as const;
 export const ptoCustomerCodeOptions = [
   { code: "AAM", label: "\u0422\u041e\u041e AA Mining", customerId: "aa-mining" },

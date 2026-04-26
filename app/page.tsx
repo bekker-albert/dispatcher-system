@@ -54,7 +54,7 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
-import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoDateTableKeyFromTab, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -1919,7 +1919,7 @@ export default function App() {
   }, [reportArea, reportAreaTabs]);
 
   const isPtoSection = renderedTopTab === "pto";
-  const isPtoDateTab = isPtoSection && ["plan", "oper", "survey"].includes(ptoTab);
+  const isPtoDateTab = isPtoSection && isPtoDateTableKey(ptoTab);
   const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
   const activePtoDateRows = useMemo(() => {
     if (!isPtoSection) return [];
@@ -3192,7 +3192,7 @@ export default function App() {
   }
 
   function currentPtoDateTableKey(): PtoDateTableKey | null {
-    return ptoTab === "plan" || ptoTab === "oper" || ptoTab === "survey" ? ptoTab : null;
+    return ptoDateTableKeyFromTab(ptoTab);
   }
 
   function savePtoDayPatchToDatabase(rowId: string, day: string, value: number | null) {
