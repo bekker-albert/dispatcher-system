@@ -44,6 +44,7 @@ import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
+import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -97,7 +98,7 @@ import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDeci
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type TopTab } from "@/lib/domain/navigation/tabs";
-import { createPtoBucketColumns, createPtoBucketRows, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
+import { normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
@@ -2010,16 +2011,16 @@ export default function App() {
     };
   }, [activePtoDateRows, isPtoDateTab]);
 
-  const ptoBucketRows = useMemo<PtoBucketRow[]>(() => {
-    if (!isPtoBucketsSection) return [];
-
-    return createPtoBucketRows(allPtoDateRows, ptoBucketManualRows, ptoAreaFilter);
-  }, [allPtoDateRows, isPtoBucketsSection, ptoAreaFilter, ptoBucketManualRows]);
-  const ptoBucketColumns = useMemo<PtoBucketColumn[]>(() => {
-    if (!isPtoBucketsSection) return [];
-
-    return createPtoBucketColumns(deferredVehicleRows);
-  }, [deferredVehicleRows, isPtoBucketsSection]);
+  const {
+    ptoBucketRows,
+    ptoBucketColumns,
+  } = usePtoBucketsViewModel({
+    active: isPtoBucketsSection,
+    allPtoDateRows,
+    manualRows: ptoBucketManualRows,
+    areaFilter: ptoAreaFilter,
+    vehicleRows: deferredVehicleRows,
+  });
 
   const {
     vehicleAutocompleteOptions,
