@@ -17,6 +17,7 @@ import { defaultReportCustomerId, defaultReportCustomers, defaultReportRows } fr
 import { applyReportFactSourceRows, createReportSummaryRow, delta, formatReportTitleDate, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportRowAutoStatus, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer } from "../lib/domain/reports/display";
 import { reportYearFact } from "../lib/domain/reports/facts";
 import { aggregateReportReasons, reportReasonEntryKey, reportYearReasonValue } from "../lib/domain/reports/reasons";
+import { formatDateInputValue, isStoredReportDateValue, resolveReportDateAreaContext } from "../features/reports/lib/reportDateSelection";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "../lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleFallbackRows, defaultVehicleForm, normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, createVehiclesFromImportTable } from "../lib/domain/vehicles/import-export";
@@ -47,6 +48,10 @@ assert.equal(normalizeLookupValue("Уч_Аксу / Карьер"), "аксука
 assert.equal(cleanAreaName("Уч_Акбакай"), "Акбакай");
 assert.deepEqual(uniqueSorted(["Б", "А", "А", " "]), ["А", "Б"]);
 assert.equal(createId().includes("-"), true);
+assert.equal(formatDateInputValue(new Date(2026, 3, 5)), "2026-04-05");
+assert.equal(isStoredReportDateValue("2026-04-05"), true);
+assert.equal(isStoredReportDateValue("bad"), false);
+assert.equal(resolveReportDateAreaContext("pto", "vehicles", "Все участки", "Уч_Аксу"), "Аксу");
 assert.equal(adminStorageKeys.vehicles, "dispatcher:vehicles");
 assert.equal(ptoBucketRowKey("Уч_Аксу", "Подача"), "аксу:подача");
 assert.equal(ptoBucketCellKey("row", "equipment"), "row::equipment");

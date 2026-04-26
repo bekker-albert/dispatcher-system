@@ -35,7 +35,8 @@ import {
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
-import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, resolveAutomaticWorkingDate, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
+import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
+import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
@@ -164,7 +165,6 @@ const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
 ));
 
 const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
-const reportDateOverrideStorageKey = "dispatcher:report-date-override";
 
 const AdminVehiclesSection = dynamic(() => import("@/features/admin/vehicles/AdminVehiclesSection"), {
   ssr: false,
@@ -197,54 +197,6 @@ function cloneUndoSnapshot(snapshot: UndoSnapshot): UndoSnapshot {
   }
 
   return JSON.parse(JSON.stringify(snapshot)) as UndoSnapshot;
-}
-
-function formatDateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function isStoredReportDateValue(value: string | null): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-function normalizeReportDateArea(area: string) {
-  const normalizedArea = cleanAreaName(area);
-  return normalizedArea || defaultAreaShiftScheduleArea;
-}
-
-function resolveReportDateAreaContext(topTab: TopTab, adminSection: AdminSection, reportArea: string, ptoAreaFilter: string) {
-  if (topTab === "reports" || (topTab === "admin" && adminSection === "reports")) {
-    return normalizeReportDateArea(reportArea);
-  }
-
-  if (topTab === "pto") {
-    return normalizeReportDateArea(ptoAreaFilter);
-  }
-
-  return defaultAreaShiftScheduleArea;
-}
-
-function automaticReportDate(areaShiftCutoffs: AreaShiftCutoffMap, area: string, now = new Date()) {
-  return formatDateInputValue(resolveAutomaticWorkingDate(areaShiftCutoffs, area, now));
-}
-
-function readClientReportDateSelection(areaShiftCutoffs: AreaShiftCutoffMap, area: string) {
-  if (typeof window === "undefined") return defaultReportDate;
-
-  const storedOverride = window.localStorage.getItem(reportDateOverrideStorageKey);
-  return isStoredReportDateValue(storedOverride)
-    ? storedOverride
-    : automaticReportDate(areaShiftCutoffs, area);
-}
-
-function hasClientReportDateOverride() {
-  if (typeof window === "undefined") return false;
-
-  return isStoredReportDateValue(window.localStorage.getItem(reportDateOverrideStorageKey));
 }
 
 export default function App() {
