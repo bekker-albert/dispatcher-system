@@ -30,6 +30,11 @@ type PtoPlanTdProps = {
   align?: CSSProperties["textAlign"];
 };
 
+type PtoVirtualSpacerRowProps = {
+  height: number;
+  colSpan: number;
+};
+
 type PtoReadonlyTextCellProps = {
   value: string;
   align?: CSSProperties["textAlign"];
@@ -122,6 +127,16 @@ export function PtoPlanTd({
     >
       {children}
     </td>
+  );
+}
+
+export function PtoVirtualSpacerRow({ height, colSpan }: PtoVirtualSpacerRowProps) {
+  if (height <= 0) return null;
+
+  return (
+    <tr aria-hidden>
+      <td colSpan={colSpan} style={{ height, padding: 0, border: "none", background: "transparent" }} />
+    </tr>
   );
 }
 

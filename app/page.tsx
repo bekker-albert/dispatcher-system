@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
-import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoReadonlyTextCell, PtoVirtualSpacerRow, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
@@ -5126,11 +5126,7 @@ export default function App() {
               renderMonthHeader={renderPtoMonthHeader}
             />
             <tbody>
-              {topSpacerHeight > 0 ? (
-                <tr aria-hidden>
-                  <td colSpan={tableSpacerColSpan} style={{ height: topSpacerHeight, padding: 0, border: "none", background: "transparent" }} />
-                </tr>
-              ) : null}
+              <PtoVirtualSpacerRow height={topSpacerHeight} colSpan={tableSpacerColSpan} />
               {renderedRows.map((row, renderedRowIndex) => {
                 const rowIndex = virtualStartIndex + renderedRowIndex;
                 const rowAreaFilter = cleanAreaName(row.area) || "Все участки";
@@ -5578,11 +5574,7 @@ export default function App() {
                   </tr>
                 );
               })}
-              {bottomSpacerHeight > 0 ? (
-                <tr aria-hidden>
-                  <td colSpan={tableSpacerColSpan} style={{ height: bottomSpacerHeight, padding: 0, border: "none", background: "transparent" }} />
-                </tr>
-              ) : null}
+              <PtoVirtualSpacerRow height={bottomSpacerHeight} colSpan={tableSpacerColSpan} />
               {ptoDateEditing ? (
                 <PtoDateDraftRow
                   showCustomerCode={showCustomerCode}
