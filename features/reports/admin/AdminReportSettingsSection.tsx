@@ -20,20 +20,20 @@ const AdminReportSummarySettings = dynamic(() => import("./AdminReportSummarySet
   ssr: false,
 });
 
-type AdminReportWorkOrderGroup = {
+export type AdminReportWorkOrderGroup = {
   area: string;
   rows: ReportRow[];
 };
 
-type AdminReportRowLabelEntry = {
+export type AdminReportRowLabelEntry = {
   rowKey: string;
   label: string;
   row: ReportRow;
 };
 
-type SummaryUpdateField = Exclude<keyof ReportSummaryRowConfig, "id" | "rowKeys">;
+export type SummaryUpdateField = Exclude<keyof ReportSummaryRowConfig, "id" | "rowKeys">;
 
-type AdminReportSettingsSectionProps = {
+export type AdminReportSettingsSectionProps = {
   customers: ReportCustomerConfig[];
   activeCustomer: ReportCustomerConfig;
   settingsTab: AdminReportCustomerSettingsTab;

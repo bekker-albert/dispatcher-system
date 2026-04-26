@@ -9,6 +9,7 @@ import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProps";
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
+import { useAppAdminReportsProps } from "@/features/app/useAppAdminReportsProps";
 import { useAppAdminVehiclesProps } from "@/features/app/useAppAdminVehiclesProps";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
@@ -1166,6 +1167,49 @@ export default function App() {
     deleteVehicle,
     setShowAllVehicleRows,
   });
+  const adminReportsProps = useAppAdminReportsProps({
+    reportCustomers,
+    activeAdminReportCustomer,
+    visibleAdminReportCustomerSettingsTab,
+    activeAdminReportSelectedCount,
+    activeAdminReportUsesSummaryRows,
+    activeAdminReportAreaOptions,
+    activeAdminReportSummaryAreaOptions,
+    adminReportWorkOrderGroups,
+    activeAdminReportBaseRows,
+    activeAdminReportRowsByKey,
+    activeAdminReportVisibleRowKeys,
+    derivedReportRowsByKey,
+    editingReportFactSourceRow,
+    editingReportFactSourceOptions,
+    activeAdminReportRowLabelEntries,
+    editingReportRowLabelKeys,
+    expandedReportSummaryIds,
+    reportRowsForSummaryArea,
+    setAdminReportCustomerId,
+    addReportCustomer,
+    deleteReportCustomer,
+    updateReportCustomer,
+    setAdminReportCustomerSettingsTab,
+    moveReportAreaOrder,
+    moveReportWorkOrder,
+    toggleReportCustomerRow,
+    setEditingReportFactSourceRowKey,
+    setReportCustomerFactSourceMode,
+    toggleReportCustomerFactSourceRowKey,
+    addReportCustomerRowLabel,
+    changeReportCustomerRowLabelSource,
+    updateReportCustomerRowLabel,
+    startReportRowLabelEdit,
+    finishReportRowLabelEdit,
+    removeReportCustomerRowLabel,
+    addReportSummaryRow,
+    updateReportSummaryRow,
+    toggleReportSummaryRowKey,
+    startReportSummaryEdit,
+    finishReportSummaryEdit,
+    removeReportSummaryRow,
+  });
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
@@ -1276,49 +1320,7 @@ export default function App() {
                 lastUploadLog,
                 onClearLogs: clearAdminLogs,
               }}
-              reportsProps={{
-                customers: reportCustomers,
-                activeCustomer: activeAdminReportCustomer,
-                settingsTab: visibleAdminReportCustomerSettingsTab,
-                selectedCount: activeAdminReportSelectedCount,
-                usesSummaryRows: activeAdminReportUsesSummaryRows,
-                areaOptions: activeAdminReportAreaOptions,
-                summaryAreaOptions: activeAdminReportSummaryAreaOptions,
-                workOrderGroups: adminReportWorkOrderGroups,
-                baseRows: activeAdminReportBaseRows,
-                rowsByKey: activeAdminReportRowsByKey,
-                visibleRowKeys: activeAdminReportVisibleRowKeys,
-                derivedRowsByKey: derivedReportRowsByKey,
-                editingFactSourceRow: editingReportFactSourceRow,
-                editingFactSourceOptions: editingReportFactSourceOptions,
-                rowLabelEntries: activeAdminReportRowLabelEntries,
-                editingRowLabelKeys: editingReportRowLabelKeys,
-                expandedSummaryIds: expandedReportSummaryIds,
-                rowsForArea: reportRowsForSummaryArea,
-                onSelectCustomer: setAdminReportCustomerId,
-                onAddCustomer: addReportCustomer,
-                onDeleteCustomer: deleteReportCustomer,
-                onUpdateCustomer: updateReportCustomer,
-                onSetSettingsTab: setAdminReportCustomerSettingsTab,
-                onMoveArea: moveReportAreaOrder,
-                onMoveWork: moveReportWorkOrder,
-                onToggleCustomerRow: toggleReportCustomerRow,
-                onEditFactSource: setEditingReportFactSourceRowKey,
-                onSetFactSourceMode: setReportCustomerFactSourceMode,
-                onToggleFactSourceRow: toggleReportCustomerFactSourceRowKey,
-                onAddRowLabel: addReportCustomerRowLabel,
-                onChangeRowLabelSource: changeReportCustomerRowLabelSource,
-                onUpdateRowLabel: updateReportCustomerRowLabel,
-                onStartRowLabelEdit: startReportRowLabelEdit,
-                onFinishRowLabelEdit: finishReportRowLabelEdit,
-                onRemoveRowLabel: removeReportCustomerRowLabel,
-                onAddSummaryRow: addReportSummaryRow,
-                onUpdateSummaryRow: updateReportSummaryRow,
-                onToggleSummaryRow: toggleReportSummaryRowKey,
-                onStartSummaryEdit: startReportSummaryEdit,
-                onFinishSummaryEdit: finishReportSummaryEdit,
-                onRemoveSummaryRow: removeReportSummaryRow,
-              }}
+              reportsProps={adminReportsProps}
             />
           )}
           customTabProps={activeCustomTab ? { tab: activeCustomTab } : null}
