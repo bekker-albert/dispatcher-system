@@ -76,6 +76,7 @@ import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
 import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
+import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportRowLabelEditor";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
@@ -2224,122 +2225,22 @@ export default function App() {
     addAdminLog,
   });
 
-  function updateReportCustomerRowLabel(customerId: string, rowKey: string, value: string, fallback: string) {
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      const nextLabels = { ...customer.rowLabels };
-      const nextLabel = value.trim();
-      if (!nextLabel || nextLabel === fallback.trim()) {
-        delete nextLabels[rowKey];
-      } else {
-        nextLabels[rowKey] = value;
-      }
-
-      return { ...customer, rowLabels: nextLabels };
-    }));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменено название строки отчета для заказчика.",
-    });
-  }
-
-  function addReportCustomerRowLabel(customerId: string) {
-    const customer = reportCustomers.find((item) => item.id === customerId);
-    if (!customer) return;
-
-    const customerAutoRowKeys = reportAutoRowKeysForCustomer(customer);
-    const customerRows = reportRowsForCustomer(adminReportBaseRows, customer);
-    const customerVisibleRowKeys = reportCustomerEffectiveRowKeys(customer, customerAutoRowKeys);
-    const selectedRows = customerRows.filter((row) => customerVisibleRowKeys.has(reportRowKey(row)));
-    const sourceRows = selectedRows.length > 0 ? selectedRows : customerRows;
-    const targetRow = sourceRows.find((item) => !customer.rowLabels[reportRowKey(item)]) ?? sourceRows[0];
-    if (!targetRow) return;
-
-    const targetRowKey = reportRowKey(targetRow);
-
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      return {
-        ...customer,
-        rowKeys: customer.rowKeys.includes(targetRowKey) ? customer.rowKeys : [...customer.rowKeys, targetRowKey],
-        rowLabels: { ...customer.rowLabels, [targetRowKey]: customer.rowLabels[targetRowKey] ?? targetRow.name },
-      };
-    }));
-    startReportRowLabelEdit(targetRowKey);
-    addAdminLog({
-      action: "Добавление",
-      section: "Отчетность",
-      details: "Добавлено переименование строки для заказчика.",
-    });
-  }
-
-  function changeReportCustomerRowLabelSource(customerId: string, currentRowKey: string, nextRowKey: string) {
-    if (currentRowKey === nextRowKey) return;
-
-    const currentRow = activeAdminReportRowsByKey.get(currentRowKey);
-    const nextRow = activeAdminReportRowsByKey.get(nextRowKey);
-    if (!nextRow) return;
-
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      const nextLabels = { ...customer.rowLabels };
-      const currentLabel = nextLabels[currentRowKey];
-      const labelIsDefault = !currentLabel || currentLabel.trim() === currentRow?.name.trim();
-      delete nextLabels[currentRowKey];
-      nextLabels[nextRowKey] = labelIsDefault ? nextRow.name : currentLabel;
-
-      return {
-        ...customer,
-        rowKeys: customer.rowKeys.includes(nextRowKey) ? customer.rowKeys : [...customer.rowKeys, nextRowKey],
-        rowLabels: nextLabels,
-      };
-    }));
-    setEditingReportRowLabelKeys((current) => (
-      current.includes(currentRowKey)
-        ? Array.from(new Set([...current.filter((key) => key !== currentRowKey), nextRowKey]))
-        : current
-    ));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменена строка для переименования заказчика.",
-    });
-  }
-
-  function removeReportCustomerRowLabel(customerId: string, rowKey: string) {
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      const nextLabels = { ...customer.rowLabels };
-      delete nextLabels[rowKey];
-      return { ...customer, rowLabels: nextLabels };
-    }));
-    setEditingReportRowLabelKeys((current) => current.filter((key) => key !== rowKey));
-    addAdminLog({
-      action: "Удаление",
-      section: "Отчетность",
-      details: "Удалено переименование строки для заказчика.",
-    });
-  }
-
-  function startReportRowLabelEdit(rowKey: string) {
-    setEditingReportRowLabelKeys((current) => (
-      current.includes(rowKey) ? current : [...current, rowKey]
-    ));
-  }
-
-  function finishReportRowLabelEdit(rowKey: string) {
-    setEditingReportRowLabelKeys((current) => current.filter((key) => key !== rowKey));
-    addAdminLog({
-      action: "Сохранение",
-      section: "Отчетность",
-      details: "Завершено редактирование переименования строки.",
-    });
-  }
+  const {
+    updateReportCustomerRowLabel,
+    addReportCustomerRowLabel,
+    changeReportCustomerRowLabelSource,
+    removeReportCustomerRowLabel,
+    startReportRowLabelEdit,
+    finishReportRowLabelEdit,
+  } = useAdminReportRowLabelEditor({
+    reportCustomers,
+    baseRows: adminReportBaseRows,
+    rowsByKey: activeAdminReportRowsByKey,
+    setReportCustomers,
+    setEditingRowLabelKeys: setEditingReportRowLabelKeys,
+    reportAutoRowKeysForCustomer,
+    addAdminLog,
+  });
 
   function setReportCustomerFactSourceMode(customerId: string, targetRowKey: string, enabled: boolean) {
     setReportCustomers((current) => current.map((customer) => {
