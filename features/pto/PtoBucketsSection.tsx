@@ -52,6 +52,7 @@ export default function PtoBucketsSection({
   const [selectionAnchorCell, setSelectionAnchorCell] = useState<PtoBucketCell | null>(null);
   const [selectedCellKeys, setSelectedCellKeys] = useState<string[]>([]);
   const skipBlurCommitRef = useRef<string | null>(null);
+  const draftRef = useRef("");
   const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
 
   const rowKeys = useMemo(() => rows.map((row) => row.key), [rows]);
@@ -110,6 +111,7 @@ export default function PtoBucketsSection({
 
   const cancelEdit = useCallback(() => {
     setEditKey(null);
+    draftRef.current = "";
     setDraft("");
   }, []);
 
@@ -225,6 +227,7 @@ export default function PtoBucketsSection({
     if (!editingMode) return;
     onCommitValue(cellKey, draftValue);
     setEditKey((current) => (current === cellKey ? null : current));
+    draftRef.current = "";
     setDraft("");
   }, [editingMode, onCommitValue]);
 
@@ -258,9 +261,11 @@ export default function PtoBucketsSection({
   const startEdit = useCallback((cell: PtoBucketCell, value: number | undefined, initialDraft?: string) => {
     if (!editingMode) return;
     const cellKey = ptoBucketSelectionKey(cell);
+    const nextDraft = initialDraft ?? formatBucketNumber(value);
     selectCell(cell);
     setEditKey(cellKey);
-    setDraft(initialDraft ?? formatBucketNumber(value));
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
     focusCell(cell);
   }, [editingMode, focusCell, selectCell]);
 
@@ -300,7 +305,7 @@ export default function PtoBucketsSection({
       event.preventDefault();
       if (isEditing) {
         skipBlurCommitRef.current = cellKey;
-        finishEdit(cellKey, draft);
+        finishEdit(cellKey, draftRef.current);
       }
 
       const [rowOffset, columnOffset] = arrowMove[event.key];
@@ -312,7 +317,7 @@ export default function PtoBucketsSection({
       event.preventDefault();
       if (isEditing) {
         skipBlurCommitRef.current = cellKey;
-        finishEdit(cellKey, draft);
+        finishEdit(cellKey, draftRef.current);
       } else {
         startEdit(cell, value);
       }
@@ -341,7 +346,7 @@ export default function PtoBucketsSection({
       event.preventDefault();
       startEdit(cell, value, event.key);
     }
-  }, [cancelEdit, clearCells, clearSelection, draft, editingMode, finishEdit, moveCell, startEdit]);
+  }, [cancelEdit, clearCells, clearSelection, editingMode, finishEdit, moveCell, startEdit]);
 
   const addManualRow = useCallback(() => {
     if (!editingMode) return;
@@ -378,19 +383,22 @@ export default function PtoBucketsSection({
       <td key={column.key} style={ptoBucketsTdStyle}>
         {isEditing ? (
           <input
+            key={cellKey}
             id={`pto-bucket-cell-${cellKey}`}
             autoFocus
             data-pto-bucket-cell={cellKey}
             inputMode="decimal"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            defaultValue={draft}
+            onChange={(event) => {
+              draftRef.current = event.target.value;
+            }}
             onBlur={() => {
               if (skipBlurCommitRef.current === cellKey) {
                 skipBlurCommitRef.current = null;
                 return;
               }
 
-              finishEdit(cellKey, draft);
+              finishEdit(cellKey, draftRef.current);
             }}
             onKeyDown={(event) => handleCellKeyDown(event, cell, value, cellKey, true)}
             placeholder="0,00"
