@@ -5,9 +5,9 @@ import type { CSSProperties } from "react";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateAreaCell } from "@/features/pto/PtoDateAreaCell";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
-import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
 import { PtoDateFormulaCells } from "@/features/pto/PtoDateFormulaCells";
-import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoStatusCell, PtoUnitCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
+import { PtoDateTextCells } from "@/features/pto/PtoDateTextCells";
+import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbarPanel } from "@/features/pto/PtoDateToolbarPanel";
@@ -485,52 +485,24 @@ export function PtoDateTableContainer({
                       commitPtoRowTextDraft={commitPtoRowTextDraft}
                       cancelPtoRowTextDraft={cancelPtoRowTextDraft}
                     />
-                    {showLocation ? (
-                      <PtoPlanTd>
-                        <PtoDateEditableTextCell
-                          editing={ptoDateEditing}
-                          value={row.location}
-                          draftValue={getPtoRowTextDraft(row, "location")}
-                          dataFieldKey={ptoRowFieldDomKey(row.id, "location")}
-                          listId={locationListId}
-                          options={locationOptions}
-                          placeholder="Карьер"
-                          onBeginDraft={() => beginPtoRowTextDraft(row, "location")}
-                          onUpdateDraft={(value) => updatePtoRowTextDraft(row.id, "location", value)}
-                          onCommitDraft={() => commitPtoRowTextDraft(setRows, row, "location")}
-                          onCancelDraft={() => cancelPtoRowTextDraft(row.id, "location")}
-                        />
-                      </PtoPlanTd>
-                    ) : null}
-                    <PtoPlanTd>
-                      <PtoDateEditableTextCell
-                        editing={ptoDateEditing}
-                        value={row.structure}
-                        draftValue={getPtoRowTextDraft(row, "structure")}
-                        dataFieldKey={ptoRowFieldDomKey(row.id, "structure")}
-                        listId={structureListId}
-                        options={structureOptions}
-                        placeholder="Вид работ"
-                        onBeginDraft={() => beginPtoRowTextDraft(row, "structure")}
-                        onUpdateDraft={(value) => updatePtoRowTextDraft(row.id, "structure", value)}
-                        onCommitDraft={() => commitPtoRowTextDraft(setRows, row, "structure")}
-                        onCancelDraft={() => cancelPtoRowTextDraft(row.id, "structure")}
-                      />
-                    </PtoPlanTd>
-                    <PtoPlanTd align="center">
-                      <PtoUnitCell
-                        editing={ptoDateEditing}
-                        value={row.unit}
-                        dataFieldKey={ptoRowFieldDomKey(row.id, "unit")}
-                        onChange={(value) => {
-                          updatePtoDateRow(setRows, row.id, "unit", value);
-                          requestPtoDatabaseSave();
-                        }}
-                      />
-                    </PtoPlanTd>
-                    <PtoPlanTd align="center">
-                      <PtoStatusCell status={rowStatus} />
-                    </PtoPlanTd>
+                    <PtoDateTextCells
+                      row={row}
+                      ptoDateEditing={ptoDateEditing}
+                      showLocation={showLocation}
+                      locationListId={locationListId}
+                      structureListId={structureListId}
+                      locationOptions={locationOptions}
+                      structureOptions={structureOptions}
+                      rowStatus={rowStatus}
+                      setRows={setRows}
+                      requestPtoDatabaseSave={requestPtoDatabaseSave}
+                      updatePtoDateRow={updatePtoDateRow}
+                      beginPtoRowTextDraft={beginPtoRowTextDraft}
+                      getPtoRowTextDraft={getPtoRowTextDraft}
+                      updatePtoRowTextDraft={updatePtoRowTextDraft}
+                      commitPtoRowTextDraft={commitPtoRowTextDraft}
+                      cancelPtoRowTextDraft={cancelPtoRowTextDraft}
+                    />
                     <PtoDateFormulaCells
                       row={row}
                       carryoverHeader={carryoverHeader}
