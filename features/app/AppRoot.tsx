@@ -11,6 +11,7 @@ import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
+import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
@@ -62,7 +63,6 @@ import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
-import { reportPrintCss } from "@/features/reports/printCss";
 import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
@@ -71,7 +71,6 @@ import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import { clientSnapshotStats } from "@/lib/storage/client-snapshots";
 import { SectionCard } from "@/shared/ui/layout";
-import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
 export default function App() {
@@ -1128,10 +1127,7 @@ export default function App() {
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
-    <div className="app-print-root" style={{ minHeight: "100vh", background: "#f8fafc", padding: "24px", fontFamily: "var(--app-font)", color: "#0f172a", lineHeight: 1.35 }}>
-      <style>{`${reportPrintCss}\n@media print { .app-save-status { display: none !important; } }`}</style>
-      <SaveStatusIndicator status={saveStatus} onClose={hideSaveStatus} />
-      <div className="app-print-shell" style={{ width: "100%", maxWidth: "100%", margin: "0 auto" }}>
+    <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
         <AppHeader
           topTabs={topTabs}
           customTabs={customTabs}
@@ -1452,7 +1448,6 @@ export default function App() {
         )}
 
         {activeCustomTab && <CustomTabSection tab={activeCustomTab} />}
-      </div>
-    </div>
+    </AppPageShell>
   );
 }
