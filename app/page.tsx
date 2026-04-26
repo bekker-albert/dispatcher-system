@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
+import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { FleetSection } from "@/features/fleet/FleetSection";
@@ -1385,6 +1386,47 @@ export default function App() {
     requestSave: requestPtoDatabaseSave,
   });
 
+  const {
+    headerLabel: ptoHeaderLabel,
+    startHeaderEdit: startPtoHeaderEdit,
+    cancelHeaderEdit: cancelPtoHeaderEdit,
+    commitHeaderEdit: commitPtoHeaderEdit,
+  } = useEditableHeaderLabels({
+    labels: ptoHeaderLabels,
+    draft: ptoHeaderDraft,
+    setLabels: setPtoHeaderLabels,
+    setEditingKey: setEditingPtoHeaderKey,
+    setDraft: setPtoHeaderDraft,
+    onCommit: (_key, fallback) => {
+      requestPtoDatabaseSave();
+      addAdminLog({
+        action: "Редактирование",
+        section: "ПТО",
+        details: `Изменен заголовок таблицы: ${fallback}.`,
+      });
+    },
+  });
+
+  const {
+    headerLabel: reportHeaderLabel,
+    startHeaderEdit: startReportHeaderEdit,
+    cancelHeaderEdit: cancelReportHeaderEdit,
+    commitHeaderEdit: commitReportHeaderEdit,
+  } = useEditableHeaderLabels({
+    labels: reportHeaderLabels,
+    draft: reportHeaderDraft,
+    setLabels: setReportHeaderLabels,
+    setEditingKey: setEditingReportHeaderKey,
+    setDraft: setReportHeaderDraft,
+    onCommit: (_key, fallback) => {
+      addAdminLog({
+        action: "Редактирование",
+        section: "Отчетность",
+        details: `Изменен заголовок таблицы: ${fallback}.`,
+      });
+    },
+  });
+
   useEffect(() => {
     if (!adminDataLoaded || !databaseConfigured || !ptoDatabaseLoadedRef.current || ptoSaveRevision === 0) return;
     void savePtoDatabaseChanges("auto");
@@ -2554,77 +2596,6 @@ export default function App() {
     ptoResizeStateRef.current = { type: "row", key, startY: event.clientY, startHeight };
     document.body.style.cursor = "row-resize";
     document.body.style.userSelect = "none";
-  }
-
-  function ptoHeaderLabel(key: string, fallback: string) {
-    return ptoHeaderLabels[key]?.trim() || fallback;
-  }
-
-  function startPtoHeaderEdit(key: string, fallback: string) {
-    setEditingPtoHeaderKey(key);
-    setPtoHeaderDraft(ptoHeaderLabel(key, fallback));
-  }
-
-  function cancelPtoHeaderEdit() {
-    setEditingPtoHeaderKey(null);
-    setPtoHeaderDraft("");
-  }
-
-  function commitPtoHeaderEdit(key: string, fallback: string) {
-    const nextLabel = ptoHeaderDraft.trim();
-
-    setPtoHeaderLabels((current) => {
-      const next = { ...current };
-      if (!nextLabel || nextLabel === fallback) {
-        delete next[key];
-      } else {
-        next[key] = nextLabel;
-      }
-      return next;
-    });
-    setEditingPtoHeaderKey(null);
-    setPtoHeaderDraft("");
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО",
-      details: `Изменен заголовок таблицы: ${fallback}.`,
-    });
-  }
-
-  function reportHeaderLabel(key: string, fallback: string) {
-    return reportHeaderLabels[key]?.trim() || fallback;
-  }
-
-  function startReportHeaderEdit(key: string, fallback: string) {
-    setEditingReportHeaderKey(key);
-    setReportHeaderDraft(reportHeaderLabel(key, fallback));
-  }
-
-  function cancelReportHeaderEdit() {
-    setEditingReportHeaderKey(null);
-    setReportHeaderDraft("");
-  }
-
-  function commitReportHeaderEdit(key: string, fallback: string) {
-    const nextLabel = reportHeaderDraft.trim();
-
-    setReportHeaderLabels((current) => {
-      const next = { ...current };
-      if (!nextLabel || nextLabel === fallback) {
-        delete next[key];
-      } else {
-        next[key] = nextLabel;
-      }
-      return next;
-    });
-    setEditingReportHeaderKey(null);
-    setReportHeaderDraft("");
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: `Изменен заголовок таблицы: ${fallback}.`,
-    });
   }
 
   function clearAdminLogs() {
