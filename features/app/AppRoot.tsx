@@ -14,6 +14,7 @@ import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
+import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
@@ -48,7 +49,6 @@ import {
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
-import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
@@ -733,7 +733,7 @@ export default function App() {
     ptoMonthGroups,
     ptoAreaTabs,
     ptoDateOptionMaps,
-  } = usePtoDateViewModel({
+  } = useAppPtoDateModel({
     renderedTopTab,
     ptoTab,
     ptoPlanYear,
