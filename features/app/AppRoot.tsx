@@ -22,6 +22,7 @@ import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
+import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
@@ -31,8 +32,6 @@ import { FleetSection } from "@/features/fleet/FleetSection";
 import { useFleetRows } from "@/features/fleet/useFleetRows";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
-import { useAdminVehicleRowsViewModel } from "@/features/admin/vehicles/useAdminVehicleRowsViewModel";
-import { useVehicleFilterMenu } from "@/features/admin/vehicles/useVehicleFilterMenu";
 import { useVehicleUiState } from "@/features/admin/vehicles/useVehicleUiState";
 import { AdminStructureSection } from "@/features/admin/structure/AdminStructureSection";
 import { useAdminStructureState } from "@/features/admin/structure/useAdminStructureState";
@@ -756,7 +755,14 @@ export default function App() {
     visibleVehicleRows,
     hiddenVehicleRowsCount,
     activeVehicleFilterCount,
-  } = useAdminVehicleRowsViewModel({
+    openVehicleFilterMenu,
+    toggleVehicleFilterDraftValue,
+    selectAllVehicleFilterDraftValues,
+    deselectAllVehicleFilterDraftValues,
+    applyVehicleFilter,
+    clearAllVehicleFilters,
+    closeVehicleFilterMenu,
+  } = useAppVehicleViewModel({
     active: renderedTopTab === "admin" && adminSection === "vehicles",
     adminVehiclesEditing,
     showAllVehicleRows,
@@ -769,20 +775,7 @@ export default function App() {
     setAdminVehiclesEditing,
     setShowAllVehicleRows,
     setVehiclePreviewRowLimit,
-  });
-  const {
-    openVehicleFilterMenu,
-    toggleVehicleFilterDraftValue,
-    selectAllVehicleFilterDraftValues,
-    deselectAllVehicleFilterDraftValues,
-    applyVehicleFilter,
-    clearAllVehicleFilters,
-  } = useVehicleFilterMenu({
-    openVehicleFilter,
-    vehicleFilters,
     vehicleFilterDrafts,
-    vehicleRows,
-    activeVehicleFilterOptions,
     setOpenVehicleFilter,
     setVehicleFilters,
     setVehicleFilterDrafts,
@@ -1351,7 +1344,7 @@ export default function App() {
                 onSelectAllVehicleFilterDraftValues={selectAllVehicleFilterDraftValues}
                 onDeselectAllVehicleFilterDraftValues={deselectAllVehicleFilterDraftValues}
                 onApplyVehicleFilter={applyVehicleFilter}
-                onCloseVehicleFilterMenu={() => setOpenVehicleFilter(null)}
+                onCloseVehicleFilterMenu={closeVehicleFilterMenu}
                 onToggleVehicleVisibility={toggleVehicleVisibility}
                 vehicleCellInputProps={vehicleCellInputProps}
                 onVehicleCellChange={updateVehicleRow}
