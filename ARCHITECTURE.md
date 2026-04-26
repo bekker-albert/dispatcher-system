@@ -13,7 +13,7 @@ The repository already has the right high-level direction:
 - `shared/` contains reusable UI and editable-grid helpers.
 - `tests/domain-checks.ts` provides fast domain-level regression checks.
 
-The remaining main architectural problem is `features/app/AppRoot.tsx`: it owns too much orchestration and should keep shrinking as feature-level hooks and section renderers are extracted. New work must not move product logic back into `app/page.tsx`.
+The remaining main architectural problem is `features/app/AppRoot.tsx`: it still owns too much orchestration and render composition, but the largest table/editing wiring is now moving behind `features/app/useApp*` hooks. New work must not move product logic back into `app/page.tsx`.
 
 ## Target Structure
 
@@ -104,6 +104,7 @@ Each feature owns its UI, local hooks, feature-specific models, and feature-spec
 - `features/reports`: report view, report table, print CSS, report admin settings.
 - `features/admin/vehicles`: vehicle administration grid.
 - `features/dispatch`: shift summary and dispatch forms.
+- `features/app`: app-level composition hooks only. These hooks may wire feature hooks together, but they must not become a new home for domain calculations or table internals.
 
 ### `lib/domain/`
 
@@ -131,8 +132,9 @@ Avoid large rewrites that change data shape, persistence, UI, and calculations a
 
 ## Technical Debt Register
 
-- `features/app/AppRoot.tsx` remains too large and must be reduced progressively.
+- `features/app/AppRoot.tsx` remains too large and must be reduced progressively; recent extractions moved report, dispatch, PTO date/supplemental, vehicle editing/view, and page-shell wiring into named app hooks/components.
 - Persistence orchestration for app settings, vehicles, PTO, and browser snapshots should move into dedicated hooks.
 - Report header editing and admin report configuration should continue moving into `features/reports`.
-- PTO editable row rendering should be split further after the current extraction work.
+- Admin section rendering should move out of `AppRoot` into an app-level section composer.
+- PTO editable row rendering should be split further only when a change touches that table again.
 - Future heavy tabs such as bodies, performance, and cycle must follow the PTO/Buckets pattern: feature component, domain model, virtualization if table-like, view mode by default, edit mode behind an explicit action.

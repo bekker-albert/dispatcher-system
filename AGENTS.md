@@ -1,7 +1,7 @@
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes - APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
 # Dispatcher Project Rules
@@ -24,12 +24,13 @@ Folder ownership:
 - `lib/`: domain rules, calculations, formatting, validation, data adapters, server helpers.
 - `types/`: shared TypeScript contracts that do not belong to one feature.
 - `config/`: navigation, roles, section definitions, static application configuration.
-- `data/` or `mock/`: temporary seed/demo data only.
+- `data` or `mock`: temporary seed/demo data only.
 
 Hard rules:
 
 - Keep `app/page.tsx` thin. It should only route to the app root or compose route-level modules, not own product behavior.
 - Keep reducing `features/app/AppRoot.tsx`; it is an orchestration shell, not a place for new feature internals.
+- New wiring that coordinates existing feature hooks belongs in a named `features/app/useApp*` hook, not inline in `AppRoot`.
 - Do not mix UI, persistence, business calculations, mock data, and table editing logic in one file.
 - Extract repeated logic immediately.
 - Split large components into named parts with clear ownership.
@@ -41,7 +42,7 @@ Before finishing a task, report:
 
 1. Changed files.
 2. What changed in each file.
-3. What was moved out of `app/page.tsx`.
+3. What was moved out of `app/page.tsx` or `features/app/AppRoot.tsx`.
 4. Why the structure is better.
 5. `git diff --stat`.
 6. Checks that were run.

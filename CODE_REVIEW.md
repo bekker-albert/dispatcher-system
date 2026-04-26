@@ -6,6 +6,7 @@ Use this checklist before every commit.
 
 - `app/page.tsx` did not receive new business logic, table internals, mock data, or large UI blocks.
 - New functionality lives in the correct feature folder or domain module.
+- App-level orchestration moved into a named `features/app/useApp*` hook when it would otherwise bloat `AppRoot`.
 - Repeated code was extracted instead of copied.
 - Large components were split into named, reviewable pieces.
 - Types are close to their owner, or in `types/` when shared across features.
