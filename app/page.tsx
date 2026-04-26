@@ -14,6 +14,7 @@ import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
+import { useDispatchFilterState } from "@/features/dispatch/useDispatchFilterState";
 import { useDispatchSummaryState } from "@/features/dispatch/useDispatchSummaryState";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
@@ -358,8 +359,12 @@ export default function App() {
     showSaveStatus,
   });
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
-  const [areaFilter, setAreaFilter] = useState("Все участки");
-  const [search, setSearch] = useState("");
+  const {
+    areaFilter,
+    setAreaFilter,
+    search,
+    setSearch,
+  } = useDispatchFilterState();
   const {
     selectTopTab,
     selectPtoTab,
