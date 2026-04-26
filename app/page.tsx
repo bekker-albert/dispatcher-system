@@ -75,6 +75,7 @@ import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
+import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
@@ -89,7 +90,7 @@ import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKey
 import { createReportCompletionCards } from "@/lib/domain/reports/completion";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
+import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
@@ -2204,151 +2205,24 @@ export default function App() {
     window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify([]));
   }
 
-  function updateReportCustomer(customerId: string, patch: Partial<Pick<ReportCustomerConfig, "label" | "ptoCode" | "visible" | "autoShowRows">>) {
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      if (customer.autoShowRows && patch.autoShowRows === false) {
-        const customerAutoRowKeys = reportAutoRowKeysForCustomer(customer);
-
-        return {
-          ...customer,
-          ...patch,
-          rowKeys: Array.from(reportCustomerEffectiveRowKeys(customer, customerAutoRowKeys)),
-          hiddenRowKeys: [],
-        };
-      }
-
-      return { ...customer, ...patch, ptoCode: patch.ptoCode !== undefined ? normalizePtoCustomerCode(patch.ptoCode) : customer.ptoCode };
-    }));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменены настройки заказчика отчета.",
-    });
-  }
-
-  function addReportCustomer() {
-    const customerId = createId();
-    const customer: ReportCustomerConfig = {
-      id: customerId,
-      label: `Заказчик ${reportCustomers.length + 1}`,
-      ptoCode: `C${reportCustomers.length + 1}`,
-      visible: true,
-      autoShowRows: false,
-      rowKeys: [],
-      hiddenRowKeys: [],
-      rowLabels: {},
-      factSourceRowKeys: {},
-      summaryRows: [],
-      areaOrder: [],
-      workOrder: {},
-    };
-
-    setReportCustomers((current) => [...current, customer]);
-    setAdminReportCustomerId(customerId);
-    setReportCustomerId(customerId);
-    addAdminLog({
-      action: "Добавление",
-      section: "Отчетность",
-      details: "Добавлен заказчик отчета.",
-    });
-  }
-
-  function deleteReportCustomer(customerId: string) {
-    const customer = reportCustomers.find((item) => item.id === customerId);
-    if (!customer) return;
-
-    if (reportCustomers.length <= 1) {
-      window.alert("Нельзя удалить последнего заказчика.");
-      return;
-    }
-
-    if (!window.confirm(`Удалить заказчика "${customer.label}"?`)) return;
-
-    const customerIndex = reportCustomers.findIndex((item) => item.id === customerId);
-    const nextCustomers = reportCustomers.filter((item) => item.id !== customerId);
-    const nextCustomer = nextCustomers[Math.min(customerIndex, nextCustomers.length - 1)] ?? nextCustomers[0];
-    const nextCustomerId = nextCustomer?.id ?? defaultReportCustomerId;
-
-    setReportCustomers(nextCustomers);
-    setAdminReportCustomerId(nextCustomerId);
-    setReportCustomerId((current) => (current === customerId ? nextCustomerId : current));
-    addAdminLog({
-      action: "Удаление",
-      section: "Отчетность",
-      details: `Удален заказчик отчета: ${customer.label}.`,
-    });
-  }
-
-  function moveReportAreaOrder(area: string, direction: -1 | 1) {
-    const sourceIndex = activeAdminReportAreaOptions.findIndex((item) => normalizeLookupValue(item) === normalizeLookupValue(area));
-    const targetIndex = sourceIndex + direction;
-    if (sourceIndex === -1 || targetIndex < 0 || targetIndex >= activeAdminReportAreaOptions.length) return;
-
-    const nextOrder = [...activeAdminReportAreaOptions];
-    [nextOrder[sourceIndex], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[sourceIndex]];
-    setReportCustomers((current) => current.map((customer) => (
-      customer.id === activeAdminReportCustomer.id
-        ? { ...customer, areaOrder: nextOrder }
-        : customer
-    )));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: `Изменен порядок отображения участков для ${activeAdminReportCustomer.label}.`,
-    });
-  }
-
-  function moveReportWorkOrder(area: string, rowKey: string, direction: -1 | 1) {
-    const areaKey = normalizeLookupValue(area);
-    const areaRows = sortReportRowsByAreaOrder(
-      activeAdminReportOrderRows.filter((row) => normalizeLookupValue(row.area) === areaKey),
-      [area],
-      activeAdminReportCustomer.workOrder,
-    );
-    const rowKeys = areaRows.map(reportRowDisplayKey);
-    const sourceIndex = rowKeys.indexOf(rowKey);
-    const targetIndex = sourceIndex + direction;
-    if (sourceIndex === -1 || targetIndex < 0 || targetIndex >= rowKeys.length) return;
-
-    const nextRowKeys = [...rowKeys];
-    [nextRowKeys[sourceIndex], nextRowKeys[targetIndex]] = [nextRowKeys[targetIndex], nextRowKeys[sourceIndex]];
-    setReportCustomers((current) => current.map((customer) => (
-      customer.id === activeAdminReportCustomer.id
-        ? { ...customer, workOrder: { ...customer.workOrder, [areaKey]: nextRowKeys } }
-        : customer
-    )));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: `Изменен порядок видов работ внутри участка для ${activeAdminReportCustomer.label}.`,
-    });
-  }
-
-  function toggleReportCustomerRow(customerId: string, rowKey: string) {
-    setReportCustomers((current) => current.map((customer) => {
-      if (customer.id !== customerId) return customer;
-
-      const customerAutoRowKeys = reportAutoRowKeysForCustomer(customer);
-      const effectiveRowKeys = reportCustomerEffectiveRowKeys(customer, customerAutoRowKeys);
-      const currentlyVisible = effectiveRowKeys.has(rowKey);
-      const autoCanShow = customer.autoShowRows && customerAutoRowKeys.has(rowKey);
-      const nextRowKeys = currentlyVisible
-        ? customer.rowKeys.filter((key) => key !== rowKey)
-        : Array.from(new Set([...customer.rowKeys, rowKey]));
-      const nextHiddenRowKeys = currentlyVisible && autoCanShow
-        ? Array.from(new Set([...customer.hiddenRowKeys, rowKey]))
-        : customer.hiddenRowKeys.filter((key) => key !== rowKey);
-
-      return { ...customer, rowKeys: nextRowKeys, hiddenRowKeys: nextHiddenRowKeys };
-    }));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменен показ строки для заказчика.",
-    });
-  }
+  const {
+    updateReportCustomer,
+    addReportCustomer,
+    deleteReportCustomer,
+    moveReportAreaOrder,
+    moveReportWorkOrder,
+    toggleReportCustomerRow,
+  } = useAdminReportCustomerEditor({
+    reportCustomers,
+    activeCustomer: activeAdminReportCustomer,
+    areaOptions: activeAdminReportAreaOptions,
+    orderRows: activeAdminReportOrderRows,
+    setReportCustomers,
+    setAdminReportCustomerId,
+    setReportCustomerId,
+    reportAutoRowKeysForCustomer,
+    addAdminLog,
+  });
 
   function updateReportCustomerRowLabel(customerId: string, rowKey: string, value: string, fallback: string) {
     setReportCustomers((current) => current.map((customer) => {
