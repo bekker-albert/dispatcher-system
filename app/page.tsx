@@ -8,6 +8,7 @@ import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
+import { AdminStructureElements } from "@/features/admin/structure/AdminStructureElements";
 import { AdminStructureScheme } from "@/features/admin/structure/AdminStructureScheme";
 import {
   AdminDatabaseSection,
@@ -5473,85 +5474,16 @@ export default function App() {
                 )}
 
                 {structureSection === "elements" && (
-                <div style={{ ...blockStyle, background: "#ffffff", marginBottom: 16 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Связка данных и процессов</div>
-                  <div style={{ color: "#64748b", marginBottom: 12 }}>Здесь задается, откуда берутся данные и куда они дальше уходят: техника, участки, объемы, ПТО, оперучет, маркзамеры и отчетность.</div>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", minWidth: 960, borderCollapse: "collapse", fontSize: 14 }}>
-                      <thead>
-                        <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                          <CompactTh>Элемент</CompactTh>
-                          <CompactTh>Тип</CompactTh>
-                          <CompactTh>Ответственный</CompactTh>
-                          <CompactTh>Показ</CompactTh>
-                          <CompactTh>Действия</CompactTh>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dependencyNodes.map((node) => {
-                          const isEditing = editingDependencyNodeId === node.id;
-
-                          return (
-                            <Fragment key={node.id}>
-                              <tr>
-                                <CompactTd>
-                                  <div style={vehicleNameStyle}>{node.name || "Без названия"}</div>
-                                </CompactTd>
-                                <CompactTd>{node.kind || "—"}</CompactTd>
-                                <CompactTd>{node.owner || "—"}</CompactTd>
-                                <CompactTd>{node.visible ? "Показывается" : "Скрыт"}</CompactTd>
-                                <CompactTd>
-                                  <div style={{ display: "flex", gap: 6 }}>
-                                    <IconButton label={isEditing ? "Завершить редактирование" : "Редактировать элемент"} onClick={() => setEditingDependencyNodeId(isEditing ? null : node.id)}>
-                                      {isEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                                    </IconButton>
-                                    <IconButton label={node.visible ? "Скрыть элемент" : "Вернуть элемент"} onClick={() => updateDependencyNode(node.id, "visible", !node.visible)}>
-                                      {node.visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                                    </IconButton>
-                                    <IconButton label="Удалить элемент" onClick={() => deleteDependencyNode(node.id)}>
-                                      <Trash2 size={16} aria-hidden />
-                                    </IconButton>
-                                  </div>
-                                </CompactTd>
-                              </tr>
-                              {isEditing && (
-                                <tr>
-                                  <td colSpan={5} style={adminDetailCellStyle}>
-                                    <div style={adminInlineEditStyle}>
-                                      <Field label="Название элемента">
-                                        <input value={node.name} onChange={(e) => updateDependencyNode(node.id, "name", e.target.value)} placeholder="Например: Объемы" style={inputStyle} />
-                                      </Field>
-                                      <Field label="Тип элемента">
-                                        <input value={node.kind} onChange={(e) => updateDependencyNode(node.id, "kind", e.target.value)} placeholder="Справочник, расчет, факт" style={inputStyle} />
-                                      </Field>
-                                      <Field label="Ответственный">
-                                        <input value={node.owner} onChange={(e) => updateDependencyNode(node.id, "owner", e.target.value)} placeholder="Например: ПТО" style={inputStyle} />
-                                      </Field>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                            </Fragment>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr)) auto", gap: 10, alignItems: "end" }}>
-                    <Field label="Новый элемент">
-                      <input value={dependencyNodeForm.name} onChange={(e) => updateDependencyNodeForm("name", e.target.value)} placeholder="Например: Взвешивание" style={inputStyle} />
-                    </Field>
-                    <Field label="Тип">
-                      <input value={dependencyNodeForm.kind} onChange={(e) => updateDependencyNodeForm("kind", e.target.value)} placeholder="Справочник / расчет / факт" style={inputStyle} />
-                    </Field>
-                    <Field label="Ответственный">
-                      <input value={dependencyNodeForm.owner} onChange={(e) => updateDependencyNodeForm("owner", e.target.value)} placeholder="Ответственный" style={inputStyle} />
-                    </Field>
-                    <IconButton label="Добавить элемент" onClick={addDependencyNode}>
-                      <Plus size={16} aria-hidden />
-                    </IconButton>
-                  </div>
-                </div>
+                  <AdminStructureElements
+                    dependencyNodes={dependencyNodes}
+                    dependencyNodeForm={dependencyNodeForm}
+                    editingDependencyNodeId={editingDependencyNodeId}
+                    onEditDependencyNode={setEditingDependencyNodeId}
+                    onUpdateDependencyNode={updateDependencyNode}
+                    onUpdateDependencyNodeForm={updateDependencyNodeForm}
+                    onAddDependencyNode={addDependencyNode}
+                    onDeleteDependencyNode={deleteDependencyNode}
+                  />
                 )}
 
                 {structureSection === "links" && (
