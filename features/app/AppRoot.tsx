@@ -9,6 +9,7 @@ import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
+import { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { AppPageShell } from "@/features/app/AppPageShell";
@@ -26,8 +27,6 @@ import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchFilterState } from "@/features/dispatch/useDispatchFilterState";
 import { useDispatchSummaryState } from "@/features/dispatch/useDispatchSummaryState";
-import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
-import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { useFleetRows } from "@/features/fleet/useFleetRows";
 import { FuelSection } from "@/features/fuel/FuelSection";
@@ -790,7 +789,6 @@ export default function App() {
   });
 
   const {
-    filteredDispatch,
     currentDispatchShift,
     isDailyDispatchShift,
     dispatchAreaOptions,
@@ -798,11 +796,16 @@ export default function App() {
     dispatchLocationOptions,
     dispatchWorkTypeOptions,
     dispatchExcavatorOptions,
-    currentDispatchSummaryRows,
     filteredDispatchSummaryRows,
     dispatchSummaryTotals,
     dispatchAiSuggestion,
-  } = useDispatchSummaryViewModel({
+    addSelectedDispatchVehicle,
+    addFilteredVehiclesToDispatchSummary,
+    updateDispatchSummaryText,
+    updateDispatchSummaryNumber,
+    updateDispatchSummaryVehicle,
+    deleteDispatchSummaryRow,
+  } = useAppDispatchSummaryModel({
     active: renderedTopTab === "dispatch",
     areaFilter,
     search,
@@ -811,22 +814,6 @@ export default function App() {
     vehicleRows,
     dispatchSummaryRows,
     reportBaseRows,
-  });
-  const {
-    addSelectedDispatchVehicle,
-    addFilteredVehiclesToDispatchSummary,
-    updateDispatchSummaryText,
-    updateDispatchSummaryNumber,
-    updateDispatchSummaryVehicle,
-    deleteDispatchSummaryRow,
-  } = useDispatchSummaryEditor({
-    isDailyDispatchShift,
-    reportDate,
-    currentDispatchShift,
-    dispatchSummaryRows,
-    currentDispatchSummaryRows,
-    filteredDispatch,
-    dispatchVehicleOptions,
     dispatchVehicleToAddId,
     setDispatchSummaryRows,
     setDispatchVehicleToAddId,
