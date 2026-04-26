@@ -12,6 +12,7 @@ import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
+import { usePtoDraftRowController } from "@/features/pto/usePtoDraftRowController";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -31,7 +32,7 @@ import {
   ptoRowResizeHandleStyle,
   ptoRowToolsStyle,
 } from "@/features/pto/ptoDateTableStyles";
-import { emptyPtoDraftRowFields, normalizePtoCustomerCode, normalizePtoUnit, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
 import { formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { cleanAreaName, normalizeLookupValue } from "@/lib/utils/text";
@@ -193,6 +194,21 @@ export function PtoDateTableContainer({
         }}
       />
     );
+    const {
+      updateDraftField: updatePtoDraftField,
+      handleDraftKeyDown: handlePtoDraftKeyDown,
+      addRowAfter: addPtoRowAfter,
+      addRowFromDraft: addPtoRowFromDraft,
+    } = usePtoDraftRowController({
+      editing: ptoDateEditing,
+      areaFilter: ptoAreaFilter,
+      showCustomerCode,
+      draftFields: ptoDraftRowFields,
+      setDraftFields: setPtoDraftRowFields,
+      addLinkedRow: addLinkedPtoDateRow,
+      setPendingFieldFocus: setPtoPendingFieldFocus,
+    });
+
     if (!ptoDateEditing) {
       return (
         <PtoDateReadonlyTable
@@ -553,58 +569,6 @@ export function PtoDateTableContainer({
       if (!ptoDateEditing) return;
       if (!ptoSelectionDraggingRef.current || event.buttons !== 1 || event.ctrlKey || event.metaKey || isEditing) return;
       selectFormulaRange(cell, value);
-    };
-
-    const addPtoRowAfter = (row: PtoPlanRow) => {
-      if (!ptoDateEditing) return;
-
-      const nextRowId = addLinkedPtoDateRow({
-        area: row.area,
-        location: row.location,
-        customerCode: showCustomerCode ? row.customerCode : "",
-        unit: row.unit,
-      }, row);
-      setPtoPendingFieldFocus({ rowId: nextRowId, field: "structure" });
-    };
-
-    const ptoDraftHasValue = Object.values(ptoDraftRowFields).some((value) => value.trim());
-    const updatePtoDraftField = (field: "area" | "location" | "customerCode" | "structure" | "unit", value: string) => {
-      setPtoDraftRowFields((current) => ({ ...current, [field]: value }));
-    };
-    const clearPtoDraftRow = () => setPtoDraftRowFields({ ...emptyPtoDraftRowFields });
-    const commitPtoDraftRow = (focusField: "area" | "location" | "structure" = "structure") => {
-      if (!ptoDateEditing || !ptoDraftHasValue) return null;
-
-      const nextRowId = addLinkedPtoDateRow({
-        area: ptoDraftRowFields.area.trim(),
-        location: ptoDraftRowFields.location.trim(),
-        customerCode: showCustomerCode ? normalizePtoCustomerCode(ptoDraftRowFields.customerCode) : "",
-        structure: ptoDraftRowFields.structure.trim(),
-        unit: normalizePtoUnit(ptoDraftRowFields.unit),
-      });
-      clearPtoDraftRow();
-      setPtoPendingFieldFocus({ rowId: nextRowId, field: focusField });
-
-      return nextRowId;
-    };
-    const handlePtoDraftKeyDown = (event: KeyboardEvent<HTMLElement>, focusField: "area" | "location" | "structure" = "structure") => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        commitPtoDraftRow(focusField);
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        clearPtoDraftRow();
-      }
-    };
-
-    const addPtoRowFromDraft = () => {
-      if (!ptoDateEditing) return;
-      if (commitPtoDraftRow(ptoAreaFilter === "Все участки" ? "area" : "structure")) return;
-
-      const nextRowId = addLinkedPtoDateRow();
-      setPtoPendingFieldFocus({ rowId: nextRowId, field: ptoAreaFilter === "Все участки" ? "area" : "structure" });
     };
 
     const renderPtoHeaderText = (key: string, fallback: string, align: CSSProperties["textAlign"] = "left") => {
