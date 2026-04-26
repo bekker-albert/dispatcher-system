@@ -63,6 +63,7 @@ import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportR
 import { useAdminReportSummaryRowsEditor } from "@/features/reports/useAdminReportSummaryRowsEditor";
 import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
+import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
@@ -71,12 +72,9 @@ import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShift
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
-import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { applyReportFactSourceRows, createReportSummaryRow, delta, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
-import { reportYearFact } from "@/lib/domain/reports/facts";
-import { reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
+import { applyReportFactSourceRows, createReportSummaryRow, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
 import { defaultPtoPlanMonth, emptyPtoDraftRowFields, normalizePtoPlanRow, normalizeStoredPtoYears, ptoRowFieldDomKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
@@ -1508,72 +1506,19 @@ export default function App() {
   const needsReportIndexes = needsDerivedReportRows || needsAdminReportRows;
   const needsAutoReportRows = needsDerivedReportRows || needsAdminReportRows;
 
-  const reportBaseRows = useMemo(() => {
-    if (!needsReportRows) return [];
-
-    const rowsByKey = new Map<string, ReportRow>();
-    const plannedBaseKeys = new Set(
-      deferredPtoPlanRows
-        .filter((row) => row.structure.trim())
-        .map((row) => reportRowKey({ area: cleanAreaName(row.area), name: row.structure })),
-    );
-
-    deferredPtoPlanRows.forEach((row) => {
-      if (!row.structure.trim()) return;
-
-      const reportRow = createReportRowFromPtoPlan(row);
-      const key = reportRowKey(reportRow);
-      if (!rowsByKey.has(key)) rowsByKey.set(key, reportRow);
-    });
-
-    [...deferredPtoSurveyRows, ...deferredPtoOperRows].forEach((row) => {
-      if (!row.structure.trim()) return;
-
-      const baseKey = reportRowKey({ area: cleanAreaName(row.area), name: row.structure });
-      if (plannedBaseKeys.has(baseKey)) return;
-
-      const reportRow = createReportRowFromPtoPlan(row);
-      const key = reportRowKey(reportRow);
-      if (!rowsByKey.has(key)) rowsByKey.set(key, reportRow);
-    });
-
-    return Array.from(rowsByKey.values()).sort((a, b) => (
-      a.area.localeCompare(b.area, "ru") || a.name.localeCompare(b.name, "ru")
-    ));
-  }, [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, needsReportRows]);
-  const reportPtoIndexes = useMemo(() => (
-    needsReportIndexes
-      ? {
-        plan: buildReportPtoIndex(deferredPtoPlanRows, { includeCustomerCode: true }),
-        survey: buildReportPtoIndex(deferredPtoSurveyRows),
-        oper: buildReportPtoIndex(deferredPtoOperRows),
-      }
-      : null
-  ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, needsReportIndexes]);
-
-  const derivedReportRows = useMemo(() => (
-    needsAutoReportRows && reportPtoIndexes ? reportBaseRows.map((row) => {
-      const derivedRow = deriveReportRowFromPtoIndex(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper);
-      const rowKey = reportRowKey(row);
-      const dayReason = reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? derivedRow.dayReason;
-      const yearDelta = delta(derivedRow.yearPlan, reportYearFact(derivedRow));
-      const accumulationStartDate = yearDelta < 0
-        ? reportReasonAccumulationStartDateFromIndexes(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper)
-        : reportDate;
-      const fallbackYearReason = accumulationStartDate === `${reportDate.slice(0, 4)}-01-01`
-        ? derivedRow.yearReason
-        : "";
-      const yearReason = yearDelta < 0
-        ? reportYearReasonValue(reportReasons, rowKey, reportDate, fallbackYearReason, accumulationStartDate)
-        : "";
-
-      return {
-        ...derivedRow,
-        dayReason,
-        yearReason,
-      };
-    }) : []
-  ), [needsAutoReportRows, reportBaseRows, reportDate, reportPtoIndexes, reportReasons]);
+  const {
+    reportBaseRows,
+    derivedReportRows,
+  } = useReportRowsModel({
+    needsReportRows,
+    needsReportIndexes,
+    needsAutoReportRows,
+    deferredPtoPlanRows,
+    deferredPtoSurveyRows,
+    deferredPtoOperRows,
+    reportDate,
+    reportReasons,
+  });
 
   const activeReportCustomer = useMemo(() => (
     reportCustomers.find((customer) => customer.id === reportCustomerId)
