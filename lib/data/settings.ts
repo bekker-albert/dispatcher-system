@@ -1,15 +1,15 @@
 import {
-  loadAppSettingsFromSupabase,
-  saveAppSettingsToSupabase,
-  type SupabaseSettingRecord,
+  loadAppSettingsFromSupabase as loadAppSettingsFromBackend,
+  saveAppSettingsToSupabase as saveAppSettingsToBackend,
+  type SupabaseSettingRecord as BackendSettingRecord,
 } from "@/lib/supabase/settings";
 
-export type DataSettingRecord = SupabaseSettingRecord;
+export type DataSettingRecord = BackendSettingRecord;
 
 export function loadAppSettingsFromDatabase(keys: string[]) {
-  return loadAppSettingsFromSupabase(keys);
+  return loadAppSettingsFromBackend(keys);
 }
 
 export function saveAppSettingsToDatabase(settings: Record<string, unknown>) {
-  return saveAppSettingsToSupabase(settings);
+  return saveAppSettingsToBackend(settings);
 }

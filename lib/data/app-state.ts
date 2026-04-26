@@ -1,23 +1,23 @@
 import {
-  loadAppStateFromSupabase,
-  loadClientAppSnapshotsFromSupabase,
-  saveAppStateToSupabase,
-  saveClientAppSnapshotToSupabase,
-  type SupabaseAppState,
-  type SupabaseClientSnapshot,
-  type SupabaseClientSnapshotMeta,
+  loadAppStateFromSupabase as loadAppStateFromBackend,
+  loadClientAppSnapshotsFromSupabase as loadClientAppSnapshotsFromBackend,
+  saveAppStateToSupabase as saveAppStateToBackend,
+  saveClientAppSnapshotToSupabase as saveClientAppSnapshotToBackend,
+  type SupabaseAppState as BackendAppState,
+  type SupabaseClientSnapshot as BackendClientSnapshot,
+  type SupabaseClientSnapshotMeta as BackendClientSnapshotMeta,
 } from "@/lib/supabase/app-state";
 
-export type DataAppState = SupabaseAppState;
-export type DataClientSnapshot = SupabaseClientSnapshot;
-export type DataClientSnapshotMeta = SupabaseClientSnapshotMeta;
+export type DataAppState = BackendAppState;
+export type DataClientSnapshot = BackendClientSnapshot;
+export type DataClientSnapshotMeta = BackendClientSnapshotMeta;
 
 export function loadAppStateFromDatabase() {
-  return loadAppStateFromSupabase();
+  return loadAppStateFromBackend();
 }
 
 export function saveAppStateToDatabase(storage: Record<string, string>) {
-  return saveAppStateToSupabase(storage);
+  return saveAppStateToBackend(storage);
 }
 
 export function saveClientAppSnapshotToDatabase(
@@ -25,9 +25,9 @@ export function saveClientAppSnapshotToDatabase(
   storage: Record<string, string>,
   meta: DataClientSnapshotMeta,
 ) {
-  return saveClientAppSnapshotToSupabase(clientId, storage, meta);
+  return saveClientAppSnapshotToBackend(clientId, storage, meta);
 }
 
 export function loadClientAppSnapshotsFromDatabase() {
-  return loadClientAppSnapshotsFromSupabase();
+  return loadClientAppSnapshotsFromBackend();
 }
