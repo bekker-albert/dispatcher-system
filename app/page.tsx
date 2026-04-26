@@ -57,7 +57,7 @@ import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
-import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
+import { readClientReportDateSelection } from "@/features/reports/lib/reportDateSelection";
 import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
 import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
 import { useAdminReportFactSourceEditor } from "@/features/reports/useAdminReportFactSourceEditor";
@@ -65,6 +65,7 @@ import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportR
 import { useAdminReportSummaryRowsEditor } from "@/features/reports/useAdminReportSummaryRowsEditor";
 import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
 import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
+import { useReportDateSelectionState } from "@/features/reports/useReportDateSelectionState";
 import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
@@ -198,8 +199,6 @@ export default function App() {
   const [reportReasons, setReportReasons] = useState<Record<string, string>>({});
   const [editingReportHeaderKey, setEditingReportHeaderKey] = useState<string | null>(null);
   const [reportHeaderDraft, setReportHeaderDraft] = useState("");
-  const [reportDate, setReportDate] = useState(() => readClientReportDateSelection(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea));
-  const [hasManualReportDateOverride, setHasManualReportDateOverride] = useState(() => hasClientReportDateOverride());
   const [areaShiftCutoffs, setAreaShiftCutoffs] = useState<AreaShiftCutoffMap>(defaultAreaShiftCutoffs);
   const [ptoPlanYear, setPtoPlanYear] = useState(defaultPtoPlanMonth.slice(0, 4));
   const [ptoYearInput, setPtoYearInput] = useState("");
@@ -249,6 +248,16 @@ export default function App() {
   } = useAdminStructureState();
   const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
   const [adminSection, setAdminSection] = useState<AdminSection>("vehicles");
+  const {
+    reportDate,
+    selectReportDate,
+  } = useReportDateSelectionState({
+    topTab,
+    adminSection,
+    reportArea,
+    ptoAreaFilter,
+    areaShiftCutoffs,
+  });
   const [clientSnapshots, setClientSnapshots] = useState<DataClientSnapshot[]>([]);
   const [databasePanelMessage, setDatabasePanelMessage] = useState("");
   const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
@@ -589,28 +598,6 @@ export default function App() {
   useEffect(() => {
     ptoDatabaseStateRef.current = ptoDatabaseState;
   }, [ptoDatabaseState]);
-
-  useEffect(() => {
-    const nextReportDateAreaContext = resolveReportDateAreaContext(topTab, adminSection, reportArea, ptoAreaFilter);
-    const nextReportDate = readClientReportDateSelection(areaShiftCutoffs, nextReportDateAreaContext);
-    setHasManualReportDateOverride(hasClientReportDateOverride());
-    setReportDate((current) => (current === nextReportDate ? current : nextReportDate));
-  }, [adminSection, areaShiftCutoffs, ptoAreaFilter, reportArea, topTab]);
-
-  useEffect(() => {
-    if (hasManualReportDateOverride) return undefined;
-
-    const syncAutomaticReportDate = () => {
-      const nextReportDateAreaContext = resolveReportDateAreaContext(topTab, adminSection, reportArea, ptoAreaFilter);
-      const nextReportDate = automaticReportDate(areaShiftCutoffs, nextReportDateAreaContext);
-      setReportDate((current) => (current === nextReportDate ? current : nextReportDate));
-    };
-
-    syncAutomaticReportDate();
-    const intervalId = window.setInterval(syncAutomaticReportDate, 60000);
-
-    return () => window.clearInterval(intervalId);
-  }, [adminSection, areaShiftCutoffs, hasManualReportDateOverride, ptoAreaFilter, reportArea, topTab]);
 
   useEffect(() => {
     if (!openVehicleFilter) return undefined;
@@ -1760,14 +1747,6 @@ export default function App() {
 
   function selectPtoArea(area: string) {
     setPtoAreaFilter(area);
-  }
-
-  function selectReportDate(value: string) {
-    if (!isStoredReportDateValue(value)) return;
-
-    setReportDate(value);
-    setHasManualReportDateOverride(true);
-    window.localStorage.setItem(reportDateOverrideStorageKey, value);
   }
 
   function updateAreaShiftCutoff(area: string, value: string) {
