@@ -43,7 +43,7 @@ import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleR
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
-import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
+import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { PtoDateTableContainer } from "@/features/pto/PtoDateTableContainer";
@@ -52,6 +52,7 @@ import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
+import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
@@ -183,7 +184,6 @@ export default function App() {
   const ptoDatabaseSavingRef = useRef(false);
   const ptoDatabaseSaveQueuedRef = useRef(false);
   const ptoDatabaseSaveSnapshotRef = useRef("");
-  const ptoLocalSaveTimerRef = useRef<number | null>(null);
   const [reportArea, setReportArea] = useState("Все участки");
   const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
   const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
@@ -1102,63 +1102,22 @@ export default function App() {
     return () => window.removeEventListener("pagehide", flushAppLocalState);
   }, [adminDataLoaded, saveAppLocalState]);
 
-  const savePtoLocalState = useCallback(() => {
-    const state = ptoDatabaseStateRef.current;
-    const markLocalUpdatedAt = ptoDatabaseLoadedRef.current;
-
-    savePtoStateToBrowserStorage(state, markLocalUpdatedAt);
-    if (markLocalUpdatedAt) {
-      hasStoredPtoStateRef.current = true;
-    }
-    requestClientSnapshotSave("pto-local-save");
-  }, [requestClientSnapshotSave]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return undefined;
-
-    if (ptoLocalSaveTimerRef.current !== null) {
-      window.clearTimeout(ptoLocalSaveTimerRef.current);
-    }
-
-    ptoLocalSaveTimerRef.current = window.setTimeout(() => {
-      savePtoLocalState();
-      ptoLocalSaveTimerRef.current = null;
-    }, 600);
-
-    return () => {
-      if (ptoLocalSaveTimerRef.current !== null) {
-        window.clearTimeout(ptoLocalSaveTimerRef.current);
-        ptoLocalSaveTimerRef.current = null;
-      }
-    };
-  }, [
+  const { savePtoLocalState } = usePtoLocalPersistence({
     adminDataLoaded,
-    ptoBucketManualRows,
-    ptoBucketValues,
-    ptoColumnWidths,
-    ptoHeaderLabels,
+    ptoDatabaseStateRef,
+    ptoDatabaseLoadedRef,
+    hasStoredPtoStateRef,
+    requestClientSnapshotSave,
     ptoManualYears,
-    ptoOperRows,
     ptoPlanRows,
-    ptoRowHeights,
+    ptoOperRows,
     ptoSurveyRows,
-    savePtoLocalState,
-  ]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return undefined;
-
-    const flushPtoRows = () => {
-      if (ptoLocalSaveTimerRef.current !== null) {
-        window.clearTimeout(ptoLocalSaveTimerRef.current);
-        ptoLocalSaveTimerRef.current = null;
-      }
-      savePtoLocalState();
-    };
-
-    window.addEventListener("pagehide", flushPtoRows);
-    return () => window.removeEventListener("pagehide", flushPtoRows);
-  }, [adminDataLoaded, savePtoLocalState]);
+    ptoColumnWidths,
+    ptoRowHeights,
+    ptoHeaderLabels,
+    ptoBucketValues,
+    ptoBucketManualRows,
+  });
 
   const savePtoDatabaseChanges = useCallback(async (mode: PtoDatabaseSaveMode = "manual") => {
     if (!databaseConfigured) {
