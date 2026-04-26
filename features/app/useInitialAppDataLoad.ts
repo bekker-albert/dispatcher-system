@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, type Dispatch, type SetStateAction } from "react";
-import {
-  dependencyLinkFormNodePatch,
-  normalizeStoredDependencyLinks,
-  normalizeStoredDependencyNodes,
-  normalizeStoredOrgMembers,
-} from "@/features/admin/structure/adminStructurePersistence";
+import { buildInitialAdminStructureState } from "@/features/admin/structure/initialAdminStructureState";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
@@ -192,27 +187,23 @@ export function useInitialAppDataLoad({
         setPtoBucketValues(initialPtoState.bucketValues);
         setPtoBucketManualRows(initialPtoState.bucketRows);
 
-        const normalizedOrgMembers = normalizeStoredOrgMembers(storedState.savedOrgMembers);
-        if (normalizedOrgMembers) {
-          setOrgMembers(normalizedOrgMembers);
+        const initialAdminStructureState = buildInitialAdminStructureState(storedState);
+        if (initialAdminStructureState.orgMembers) {
+          setOrgMembers(initialAdminStructureState.orgMembers);
         }
 
-        const normalizedDependencyNodes = normalizeStoredDependencyNodes(storedState.savedDependencyNodes);
-        if (normalizedDependencyNodes) {
-          setDependencyNodes(normalizedDependencyNodes);
-
-          const dependencyLinkFormPatch = dependencyLinkFormNodePatch(normalizedDependencyNodes);
-          if (dependencyLinkFormPatch) {
+        if (initialAdminStructureState.dependencyNodes) {
+          setDependencyNodes(initialAdminStructureState.dependencyNodes);
+          if (initialAdminStructureState.dependencyLinkFormPatch) {
             setDependencyLinkForm((current) => ({
               ...current,
-              ...dependencyLinkFormPatch,
+              ...initialAdminStructureState.dependencyLinkFormPatch,
             }));
           }
         }
 
-        const normalizedDependencyLinks = normalizeStoredDependencyLinks(storedState.savedDependencyLinks);
-        if (normalizedDependencyLinks) {
-          setDependencyLinks(normalizedDependencyLinks);
+        if (initialAdminStructureState.dependencyLinks) {
+          setDependencyLinks(initialAdminStructureState.dependencyLinks);
         }
 
         restoreAdminLogs(storedState.savedAdminLogs);
