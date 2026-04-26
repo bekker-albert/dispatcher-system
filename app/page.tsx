@@ -62,6 +62,7 @@ import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportC
 import { useAdminReportFactSourceEditor } from "@/features/reports/useAdminReportFactSourceEditor";
 import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportRowLabelEditor";
 import { useAdminReportSummaryRowsEditor } from "@/features/reports/useAdminReportSummaryRowsEditor";
+import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
 import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
 import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
@@ -76,7 +77,6 @@ import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureS
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import { sortAreaNamesByOrder } from "@/lib/domain/reports/display";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import { defaultPtoPlanMonth, emptyPtoDraftRowFields, normalizePtoPlanRow, normalizeStoredPtoYears, ptoRowFieldDomKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
@@ -94,7 +94,7 @@ import { clientSnapshotRestoreFlagKey, clientSnapshotStats, collectLocalStorageB
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
-import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
+import { normalizeLookupValue } from "@/lib/utils/text";
 import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
@@ -1565,23 +1565,15 @@ export default function App() {
     reportArea,
   });
 
-  const areaShiftScheduleAreas = useMemo(() => {
-    const allAreas = uniqueSorted([
-      defaultAreaShiftScheduleArea,
-      ...Object.keys(areaShiftCutoffs),
-      ...reportBaseRows.map((row) => cleanAreaName(row.area)),
-      ...deferredPtoPlanRows.map((row) => cleanAreaName(row.area)),
-      ...deferredPtoOperRows.map((row) => cleanAreaName(row.area)),
-      ...deferredPtoSurveyRows.map((row) => cleanAreaName(row.area)),
-      ...deferredVehicleRows.map((row) => cleanAreaName(row.area)),
-    ].filter((area) => area && normalizeLookupValue(area) !== normalizeLookupValue("РС‚РѕРіРѕ")));
-    const customAreas = allAreas.filter((area) => normalizeLookupValue(area) !== normalizeLookupValue(defaultAreaShiftScheduleArea));
-
-    return [
-      defaultAreaShiftScheduleArea,
-      ...sortAreaNamesByOrder(customAreas, reportAreaOrder),
-    ];
-  }, [areaShiftCutoffs, deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, deferredVehicleRows, reportAreaOrder, reportBaseRows]);
+  const areaShiftScheduleAreas = useAreaShiftScheduleAreas({
+    areaShiftCutoffs,
+    reportBaseRows,
+    ptoPlanRows: deferredPtoPlanRows,
+    ptoOperRows: deferredPtoOperRows,
+    ptoSurveyRows: deferredPtoSurveyRows,
+    vehicleRows: deferredVehicleRows,
+    reportAreaOrder,
+  });
 
   const {
     visibleReportColumnKeys,
