@@ -9,6 +9,7 @@ import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { AdminStructureElements } from "@/features/admin/structure/AdminStructureElements";
+import { AdminStructureLinks } from "@/features/admin/structure/AdminStructureLinks";
 import { AdminStructureScheme } from "@/features/admin/structure/AdminStructureScheme";
 import {
   AdminDatabaseSection,
@@ -64,7 +65,7 @@ import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
-import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
+import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, orgMemberLabel, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
@@ -5487,120 +5488,17 @@ export default function App() {
                 )}
 
                 {structureSection === "links" && (
-                <div style={{ ...blockStyle, background: "#ffffff", marginBottom: 16 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 12 }}>Связи зависимостей</div>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", minWidth: 1180, borderCollapse: "collapse", fontSize: 14 }}>
-                      <thead>
-                        <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                          <CompactTh>Откуда</CompactTh>
-                          <CompactTh>Тип связи</CompactTh>
-                          <CompactTh>Куда</CompactTh>
-                          <CompactTh>Правило / что передает</CompactTh>
-                          <CompactTh>Ответственный</CompactTh>
-                          <CompactTh>Показ</CompactTh>
-                          <CompactTh>Действия</CompactTh>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dependencyLinks.map((link) => {
-                          const isEditing = editingDependencyLinkId === link.id;
-
-                          return (
-                            <Fragment key={link.id}>
-                              <tr>
-                                <CompactTd>{dependencyNodeLabel(dependencyNodes, link.fromNodeId)}</CompactTd>
-                                <CompactTd>{link.linkType}</CompactTd>
-                                <CompactTd>{dependencyNodeLabel(dependencyNodes, link.toNodeId)}</CompactTd>
-                                <CompactTd>{link.rule || "—"}</CompactTd>
-                                <CompactTd>{link.owner || "—"}</CompactTd>
-                                <CompactTd>{link.visible ? "Показывается" : "Скрыта"}</CompactTd>
-                                <CompactTd>
-                                  <div style={{ display: "flex", gap: 6 }}>
-                                    <IconButton label={isEditing ? "Завершить редактирование" : "Редактировать связь"} onClick={() => setEditingDependencyLinkId(isEditing ? null : link.id)}>
-                                      {isEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                                    </IconButton>
-                                    <IconButton label={link.visible ? "Скрыть связь" : "Вернуть связь"} onClick={() => updateDependencyLink(link.id, "visible", !link.visible)}>
-                                      {link.visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                                    </IconButton>
-                                    <IconButton label="Удалить связь" onClick={() => deleteDependencyLink(link.id)}>
-                                      <Trash2 size={16} aria-hidden />
-                                    </IconButton>
-                                  </div>
-                                </CompactTd>
-                              </tr>
-                              {isEditing && (
-                                <tr>
-                                  <td colSpan={7} style={adminDetailCellStyle}>
-                                    <div style={adminInlineEditStyle}>
-                                      <Field label="Откуда">
-                                        <select value={link.fromNodeId} onChange={(e) => updateDependencyLink(link.id, "fromNodeId", e.target.value)} style={inputStyle}>
-                                          {dependencyNodes.map((node) => (
-                                            <option key={node.id} value={node.id}>{node.name}</option>
-                                          ))}
-                                        </select>
-                                      </Field>
-                                      <Field label="Тип связи">
-                                        <select value={link.linkType} onChange={(e) => updateDependencyLink(link.id, "linkType", e.target.value as DependencyLinkType)} style={inputStyle}>
-                                          <option value="Линейная">Линейная</option>
-                                          <option value="Функциональная">Функциональная</option>
-                                        </select>
-                                      </Field>
-                                      <Field label="Куда">
-                                        <select value={link.toNodeId} onChange={(e) => updateDependencyLink(link.id, "toNodeId", e.target.value)} style={inputStyle}>
-                                          {dependencyNodes.map((node) => (
-                                            <option key={node.id} value={node.id}>{node.name}</option>
-                                          ))}
-                                        </select>
-                                      </Field>
-                                      <Field label="Правило / что передает">
-                                        <input value={link.rule} onChange={(e) => updateDependencyLink(link.id, "rule", e.target.value)} placeholder="Например: рейсы × объем кузова" style={inputStyle} />
-                                      </Field>
-                                      <Field label="Ответственный">
-                                        <input value={link.owner} onChange={(e) => updateDependencyLink(link.id, "owner", e.target.value)} placeholder="Например: ПТО" style={inputStyle} />
-                                      </Field>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                            </Fragment>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr)) auto", gap: 10, alignItems: "end" }}>
-                    <Field label="Откуда">
-                      <select value={dependencyLinkForm.fromNodeId} onChange={(e) => updateDependencyLinkForm("fromNodeId", e.target.value)} style={inputStyle}>
-                        {dependencyNodes.map((node) => (
-                          <option key={node.id} value={node.id}>{node.name}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Тип связи">
-                      <select value={dependencyLinkForm.linkType} onChange={(e) => updateDependencyLinkForm("linkType", e.target.value as DependencyLinkType)} style={inputStyle}>
-                        <option value="Линейная">Линейная</option>
-                        <option value="Функциональная">Функциональная</option>
-                      </select>
-                    </Field>
-                    <Field label="Куда">
-                      <select value={dependencyLinkForm.toNodeId} onChange={(e) => updateDependencyLinkForm("toNodeId", e.target.value)} style={inputStyle}>
-                        {dependencyNodes.map((node) => (
-                          <option key={node.id} value={node.id}>{node.name}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Правило">
-                      <input value={dependencyLinkForm.rule} onChange={(e) => updateDependencyLinkForm("rule", e.target.value)} placeholder="Что передает / как считается" style={inputStyle} />
-                    </Field>
-                    <Field label="Ответственный">
-                      <input value={dependencyLinkForm.owner} onChange={(e) => updateDependencyLinkForm("owner", e.target.value)} placeholder="Ответственный" style={inputStyle} />
-                    </Field>
-                    <IconButton label="Добавить связь" onClick={addDependencyLink}>
-                      <Plus size={16} aria-hidden />
-                    </IconButton>
-                  </div>
-                </div>
+                  <AdminStructureLinks
+                    dependencyNodes={dependencyNodes}
+                    dependencyLinks={dependencyLinks}
+                    dependencyLinkForm={dependencyLinkForm}
+                    editingDependencyLinkId={editingDependencyLinkId}
+                    onEditDependencyLink={setEditingDependencyLinkId}
+                    onUpdateDependencyLink={updateDependencyLink}
+                    onUpdateDependencyLinkForm={updateDependencyLinkForm}
+                    onAddDependencyLink={addDependencyLink}
+                    onDeleteDependencyLink={deleteDependencyLink}
+                  />
                 )}
 
                 {structureSection === "roles" && (
