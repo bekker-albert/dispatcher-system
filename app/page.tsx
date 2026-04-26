@@ -7,6 +7,7 @@ import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffs
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
+import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
@@ -75,7 +76,7 @@ import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
-import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
+import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
@@ -2257,6 +2258,27 @@ export default function App() {
     buildDispatchAiSuggestion(filteredDispatchSummaryRows)
   ), [filteredDispatchSummaryRows]);
 
+  const {
+    addSelectedDispatchVehicle,
+    addFilteredVehiclesToDispatchSummary,
+    updateDispatchSummaryText,
+    updateDispatchSummaryNumber,
+    updateDispatchSummaryVehicle,
+    deleteDispatchSummaryRow,
+  } = useDispatchSummaryEditor({
+    isDailyDispatchShift,
+    reportDate,
+    currentDispatchShift,
+    dispatchSummaryRows,
+    currentDispatchSummaryRows,
+    filteredDispatch,
+    dispatchVehicleOptions,
+    dispatchVehicleToAddId,
+    setDispatchSummaryRows,
+    setDispatchVehicleToAddId,
+    addAdminLog,
+  });
+
   const filteredFleet = useMemo(() => {
     if (renderedTopTab !== "fleet") return [];
 
@@ -2361,115 +2383,6 @@ export default function App() {
       ...current,
       [area]: value,
     }));
-  }
-
-  function addDispatchSummaryRow(vehicle?: VehicleRow) {
-    if (isDailyDispatchShift) return;
-
-    const nextRow = createDispatchSummaryRow(vehicle, reportDate, currentDispatchShift);
-    setDispatchSummaryRows((current) => [nextRow, ...current]);
-    setDispatchVehicleToAddId("");
-    addAdminLog({
-      action: "Добавление",
-      section: "Диспетчерская сводка",
-      details: vehicle
-        ? `Добавлена техника в сводку: ${buildVehicleDisplayName(vehicle)}.`
-        : "Добавлена пустая строка сводки.",
-    });
-  }
-
-  function addSelectedDispatchVehicle() {
-    const selectedVehicleId = Number(dispatchVehicleToAddId);
-    const selectedVehicle = dispatchVehicleOptions.find((vehicle) => vehicle.id === selectedVehicleId);
-    addDispatchSummaryRow(selectedVehicle);
-  }
-
-  function addFilteredVehiclesToDispatchSummary() {
-    if (isDailyDispatchShift) return;
-
-    const existingVehicleIds = new Set(
-      currentDispatchSummaryRows
-        .map((row) => row.vehicleId)
-        .filter((id): id is number => typeof id === "number"),
-    );
-    const rowsToAdd = filteredDispatch.filter((vehicle) => !existingVehicleIds.has(vehicle.id));
-
-    if (rowsToAdd.length === 0) {
-      window.alert("В выбранной дате и смене уже есть строки по текущему фильтру.");
-      return;
-    }
-
-    setDispatchSummaryRows((current) => [
-      ...rowsToAdd.map((vehicle) => createDispatchSummaryRow(vehicle, reportDate, currentDispatchShift)),
-      ...current,
-    ]);
-    addAdminLog({
-      action: "Добавление",
-      section: "Диспетчерская сводка",
-      details: `Добавлены строки из списка техники: ${rowsToAdd.length}.`,
-      rowsCount: rowsToAdd.length,
-    });
-  }
-
-  function updateDispatchSummaryText(id: string, field: DispatchSummaryTextField, value: string) {
-    if (isDailyDispatchShift) return;
-
-    setDispatchSummaryRows((current) => current.map((row) => (
-      row.id === id ? { ...row, [field]: value } : row
-    )));
-  }
-
-  function updateDispatchSummaryNumber(id: string, field: DispatchSummaryNumberField, value: string) {
-    if (isDailyDispatchShift) return;
-
-    setDispatchSummaryRows((current) => current.map((row) => (
-      row.id === id ? { ...row, [field]: parseDecimalValue(value) } : row
-    )));
-  }
-
-  function updateDispatchSummaryVehicle(id: string, vehicleIdValue: string) {
-    if (isDailyDispatchShift) return;
-
-    const vehicleId = Number(vehicleIdValue);
-    const vehicle = dispatchVehicleOptions.find((item) => item.id === vehicleId);
-
-    setDispatchSummaryRows((current) => current.map((row) => {
-      if (row.id !== id) return row;
-      if (!vehicle) return { ...row, vehicleId: null, vehicleName: "" };
-
-      const nextVehicleRow = createDispatchSummaryRow(vehicle, row.date, row.shift, row.id);
-      return {
-        ...row,
-        vehicleId: vehicle.id,
-        vehicleName: nextVehicleRow.vehicleName,
-        area: nextVehicleRow.area,
-        location: nextVehicleRow.location,
-        workType: nextVehicleRow.workType,
-        excavator: nextVehicleRow.excavator,
-        planVolume: nextVehicleRow.planVolume,
-        factVolume: nextVehicleRow.factVolume,
-        workHours: nextVehicleRow.workHours,
-        rentHours: nextVehicleRow.rentHours,
-        repairHours: nextVehicleRow.repairHours,
-        downtimeHours: nextVehicleRow.downtimeHours,
-        trips: nextVehicleRow.trips,
-      };
-    }));
-  }
-
-  function deleteDispatchSummaryRow(id: string) {
-    if (isDailyDispatchShift) return;
-
-    const row = dispatchSummaryRows.find((item) => item.id === id);
-    const label = row?.vehicleName || row?.workType || "строку";
-    if (!window.confirm(`Удалить ${label} из сводки?`)) return;
-
-    setDispatchSummaryRows((current) => current.filter((item) => item.id !== id));
-    addAdminLog({
-      action: "Удаление",
-      section: "Диспетчерская сводка",
-      details: `Удалена строка сводки: ${label}.`,
-    });
   }
 
   function openVehicleFilterMenu(key: VehicleFilterKey) {
