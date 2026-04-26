@@ -8,21 +8,18 @@ import {
   normalizeStoredOrgMembers,
 } from "@/features/admin/structure/adminStructurePersistence";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
-import { readClientReportDateSelection } from "@/features/reports/lib/reportDateSelection";
+import { buildInitialReportState } from "@/features/reports/initialReportState";
 import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
-import { defaultAreaShiftScheduleArea, normalizeAreaShiftCutoffs } from "@/lib/domain/admin/area-schedule";
 import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { normalizePtoPlanRow, normalizeStoredPtoYears, type PtoPlanRow } from "@/lib/domain/pto/date-table";
-import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
-import { defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import { adminStorageKeys } from "@/lib/storage/keys";
-import { isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
+import { isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
 import { hasInitialLocalAppState, readInitialStoredAppState } from "@/features/app/initialAppStorage";
 
@@ -154,30 +151,14 @@ export function useInitialAppDataLoad({
           window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
         }
 
-        const nextAreaShiftCutoffs = normalizeAreaShiftCutoffs(storedState.savedAreaShiftCutoffs);
-        const preferredReportDate = readClientReportDateSelection(nextAreaShiftCutoffs, defaultAreaShiftScheduleArea);
-
-        const nextReportAreaOrder = normalizeStringList(storedState.savedReportAreaOrder);
-        const nextReportWorkOrder = normalizeStringListRecord(storedState.savedReportWorkOrder);
-        const nextReportCustomers = normalizeStoredReportCustomers(storedState.savedReportCustomers, defaultReportCustomers).map((customer) => {
-          const hasCustomerWorkOrder = Object.values(customer.workOrder).some((rowKeys) => rowKeys.length > 0);
-
-          return {
-            ...customer,
-            areaOrder: customer.areaOrder.length > 0 ? customer.areaOrder : [...nextReportAreaOrder],
-            workOrder: hasCustomerWorkOrder
-              ? customer.workOrder
-              : Object.fromEntries(Object.entries(nextReportWorkOrder).map(([area, rowKeys]) => [area, [...rowKeys]])),
-          };
-        });
-
-        setReportCustomers(nextReportCustomers);
-        setReportAreaOrder(nextReportAreaOrder);
-        setReportWorkOrder(nextReportWorkOrder);
-        setReportHeaderLabels(normalizeStringRecord(storedState.savedReportHeaderLabels));
-        setReportColumnWidths(normalizeNumberRecord(storedState.savedReportColumnWidths, 42, 520));
-        setReportReasons(normalizeStringRecord(storedState.savedReportReasons));
-        setAreaShiftCutoffs(nextAreaShiftCutoffs);
+        const initialReportState = buildInitialReportState(storedState);
+        setReportCustomers(initialReportState.reportCustomers);
+        setReportAreaOrder(initialReportState.reportAreaOrder);
+        setReportWorkOrder(initialReportState.reportWorkOrder);
+        setReportHeaderLabels(initialReportState.reportHeaderLabels);
+        setReportColumnWidths(initialReportState.reportColumnWidths);
+        setReportReasons(initialReportState.reportReasons);
+        setAreaShiftCutoffs(initialReportState.areaShiftCutoffs);
 
         setCustomTabs(normalizeStoredCustomTabs(storedState.savedCustomTabs));
 
@@ -193,14 +174,14 @@ export function useInitialAppDataLoad({
           setVehicleRows(initialVehicleRows.rows);
         }
 
-        const parsedDispatchSummaryRows = normalizeDispatchSummaryRows(storedState.savedDispatchSummaryRows, preferredReportDate);
+        const parsedDispatchSummaryRows = normalizeDispatchSummaryRows(storedState.savedDispatchSummaryRows, initialReportState.preferredReportDate);
         if (parsedDispatchSummaryRows) {
           const hasEditableDispatchRows = parsedDispatchSummaryRows.some((row) => row.shift === "night" || row.shift === "day");
           setDispatchSummaryRows(hasEditableDispatchRows
             ? parsedDispatchSummaryRows
             : parsedDispatchSummaryRows.map((row) => (row.shift === "daily" ? { ...row, shift: "night" } : row)));
         } else if (initialVehicleRows.usedSeed && initialVehicleRows.rows) {
-          setDispatchSummaryRows(createDefaultDispatchSummaryRows(initialVehicleRows.rows, preferredReportDate));
+          setDispatchSummaryRows(createDefaultDispatchSummaryRows(initialVehicleRows.rows, initialReportState.preferredReportDate));
         }
 
         if (storedState.savedPtoYears) {
