@@ -5,7 +5,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
-import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import {
   dragHandleDotStyle,
@@ -22,8 +22,6 @@ import {
   ptoDraftRowStyle,
   ptoDraftStatusStyle,
   ptoDropIndicatorStyle,
-  ptoFormulaBarStyle,
-  ptoFormulaInputStyle,
   ptoInlineAddRowButtonHoverStyle,
   ptoInlineAddRowButtonStyle,
   ptoPlanDayInputStyle,
@@ -5299,21 +5297,15 @@ export default function App() {
         />
 
         {ptoDateEditing ? (
-          <div style={ptoFormulaBarStyle}>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={activeFormulaCell ? ptoFormulaDraft : ""}
-              onChange={(event) => updateFormulaValue(event.target.value)}
-              onBlur={() => {
-                if (activeFormulaCell) setPtoFormulaDraft(formatPtoFormulaNumber(activeFormulaValue));
-                requestPtoDatabaseSave();
-              }}
-              disabled={formulaInputDisabled}
-              placeholder="Выбери числовую ячейку"
-              style={ptoFormulaInputStyle}
-            />
-          </div>
+          <PtoFormulaBar
+            value={activeFormulaCell ? ptoFormulaDraft : ""}
+            disabled={formulaInputDisabled}
+            onValueChange={updateFormulaValue}
+            onBlur={() => {
+              if (activeFormulaCell) setPtoFormulaDraft(formatPtoFormulaNumber(activeFormulaValue));
+              requestPtoDatabaseSave();
+            }}
+          />
         ) : null}
 
         <div ref={ptoDateTableScrollRef} onScroll={ptoDateEditing ? handlePtoDateTableScroll : undefined} style={ptoDateTableScrollStyle}>

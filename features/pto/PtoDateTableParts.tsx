@@ -3,6 +3,8 @@ import type { PtoStatus } from "../../lib/domain/pto/date-table";
 import { formatPtoCellNumber, formatPtoFormulaNumber } from "../../lib/domain/pto/formatting";
 import {
   monthToggleStyle,
+  ptoFormulaBarStyle,
+  ptoFormulaInputStyle,
   ptoHeaderInputStyle,
   ptoHeaderLabelButtonStyle,
   ptoReadonlyCellNumberStyle,
@@ -56,6 +58,13 @@ type PtoEditableMonthHeaderProps = PtoEditableHeaderTextProps & {
   expanded: boolean;
   icon: ReactNode;
   onToggle: () => void;
+};
+
+type PtoFormulaBarProps = {
+  value: string;
+  disabled: boolean;
+  onValueChange: (value: string) => void;
+  onBlur: () => void;
 };
 
 export function PtoPlanTh({
@@ -243,6 +252,23 @@ export function PtoEditableMonthHeader({
       {icon}
       {label}
     </button>
+  );
+}
+
+export function PtoFormulaBar({ value, disabled, onValueChange, onBlur }: PtoFormulaBarProps) {
+  return (
+    <div style={ptoFormulaBarStyle}>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+        onBlur={onBlur}
+        disabled={disabled}
+        placeholder="Выбери числовую ячейку"
+        style={ptoFormulaInputStyle}
+      />
+    </div>
   );
 }
 
