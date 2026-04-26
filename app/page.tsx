@@ -8,6 +8,7 @@ import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
+import { AdminStructureScheme } from "@/features/admin/structure/AdminStructureScheme";
 import {
   AdminDatabaseSection,
   AdminLogsSection,
@@ -62,7 +63,7 @@ import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
-import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
+import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, dependencyNodeLabel, orgMemberLabel, type DependencyLink, type DependencyLinkType, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
@@ -5468,46 +5469,7 @@ export default function App() {
                 </SubTabs>
 
                 {structureSection === "scheme" && (
-                  <div style={{ ...blockStyle, background: "#ffffff", marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 10 }}>Поток данных</div>
-                    <div style={reportSourceGridStyle}>
-                      <SourceNote title="База смены" source="БД" text="дата, участок, техника, рейсы, часы, смена, диспетчер, состояние техники" />
-                      <SourceNote title="Справочник техники" source="СводТехники / Список техники" text="марка, модель, госномер, гаражный номер, статус, участок и местоположение" />
-                      <SourceNote title="ПТО" source="План, ПланС, График, Объемы кузова" text="план по датам, объем кузова и плановые показатели" />
-                      <SourceNote title="Итог" source="AAM" text="отчетность собирает план, маркзамер, оперучет, производительность и причины" />
-                    </div>
-                    <div style={dependencyStageGridStyle}>
-                      {dependencyStages.map((stage) => (
-                        <div key={stage.title} style={dependencyStageStyle}>
-                          <div style={{ color: "#475569", fontWeight: 700, marginBottom: 8 }}>{stage.title}</div>
-                          <div style={{ display: "grid", gap: 8 }}>
-                            {stage.nodeIds.map((nodeId) => {
-                              const node = dependencyNodes.find((item) => item.id === nodeId);
-                              if (!node) return null;
-
-                              return (
-                                <div key={node.id} style={dependencyNodeCardStyle}>
-                                  <div style={{ fontWeight: 700 }}>{node.name}</div>
-                                  <div style={{ color: "#64748b", fontSize: 13, marginTop: 3 }}>{node.kind} · {node.owner || "Ответственный не задан"}</div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
-                      {dependencyLinks.filter((link) => link.visible).map((link) => (
-                        <div key={link.id} style={dependencyLinkCardStyle}>
-                          <div style={{ fontWeight: 700 }}>
-                            {dependencyNodeLabel(dependencyNodes, link.fromNodeId)} → {dependencyNodeLabel(dependencyNodes, link.toNodeId)}
-                          </div>
-                          <div style={{ color: "#475569", marginTop: 4 }}>{link.linkType} связь</div>
-                          <div style={{ color: "#64748b", marginTop: 6 }}>{link.rule || "Правило не заполнено."}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <AdminStructureScheme dependencyNodes={dependencyNodes} dependencyLinks={dependencyLinks} />
                 )}
 
                 {structureSection === "elements" && (
@@ -6247,31 +6209,4 @@ const adminInlineEditStyle: React.CSSProperties = {
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   gap: 10,
   alignItems: "end",
-};
-
-const dependencyStageGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: 10,
-};
-
-const dependencyStageStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: 10,
-};
-
-const dependencyNodeCardStyle: React.CSSProperties = {
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  background: "#ffffff",
-  padding: 10,
-};
-
-const dependencyLinkCardStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: 12,
 };
