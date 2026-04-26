@@ -40,6 +40,7 @@ import {
 } from "@/features/app/lazySections";
 import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
 import { useAdminVehicleEditMode } from "@/features/admin/vehicles/useAdminVehicleEditMode";
+import { useVehiclePendingFocus, type PendingVehicleFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
 import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
 import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
@@ -98,7 +99,7 @@ import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normaliz
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
-import { adminVehicleFallbackPreviewRows, vehicleInlineFieldDomKey, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
+import { adminVehicleFallbackPreviewRows, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import { clientSnapshotRestoreFlagKey, clientSnapshotStats, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
@@ -147,7 +148,7 @@ export default function App() {
   const [vehicleFilterDrafts, setVehicleFilterDrafts] = useState<VehicleFilters>({});
   const [openVehicleFilter, setOpenVehicleFilter] = useState<VehicleFilterKey | null>(null);
   const [vehicleFilterSearch, setVehicleFilterSearch] = useState<Partial<Record<VehicleFilterKey, string>>>({});
-  const [pendingVehicleFocus, setPendingVehicleFocus] = useState<{ id: number; field: VehicleInlineField; edit?: boolean; selectContents?: boolean } | null>(null);
+  const [pendingVehicleFocus, setPendingVehicleFocus] = useState<PendingVehicleFocus | null>(null);
   const [activeVehicleCell, setActiveVehicleCell] = useState<string | null>(null);
   const [vehicleSelectionAnchorCell, setVehicleSelectionAnchorCell] = useState<{ id: number; field: VehicleInlineField } | null>(null);
   const [selectedVehicleCellKeys, setSelectedVehicleCellKeys] = useState<string[]>([]);
@@ -418,44 +419,15 @@ export default function App() {
     }
   }, [adminSection, refreshClientSnapshots, topTab]);
 
-  useEffect(() => {
-    if (!pendingVehicleFocus) return undefined;
-
-    const fieldKey = vehicleInlineFieldDomKey(pendingVehicleFocus.id, pendingVehicleFocus.field);
-    setActiveVehicleCell(fieldKey);
-    setEditingVehicleCell(pendingVehicleFocus.edit ? fieldKey : null);
-    vehicleSelectionAnchorRef.current = { id: pendingVehicleFocus.id, field: pendingVehicleFocus.field };
-    setVehicleSelectionAnchorCell({ id: pendingVehicleFocus.id, field: pendingVehicleFocus.field });
-    setSelectedVehicleCellKeys([fieldKey]);
-
-    const timeoutId = window.setTimeout(() => {
-      if (pendingVehicleFocus.edit) {
-        const input = document.querySelector<HTMLInputElement>(`[data-admin-vehicle-input="${fieldKey}"]`);
-        input?.focus();
-
-        if (pendingVehicleFocus.selectContents !== false) {
-          try {
-            input?.select();
-          } catch {
-            // Number inputs do not support text selection APIs in some browsers.
-          }
-        } else {
-          const cursorPosition = String(input?.value ?? "").length;
-          try {
-            input?.setSelectionRange(cursorPosition, cursorPosition);
-          } catch {
-            // Number inputs do not support text selection APIs in some browsers.
-          }
-        }
-      } else {
-        document.querySelector<HTMLElement>(`[data-admin-vehicle-cell="${fieldKey}"]`)?.focus();
-      }
-
-      setPendingVehicleFocus(null);
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [pendingVehicleFocus]);
+  useVehiclePendingFocus({
+    pendingVehicleFocus,
+    setPendingVehicleFocus,
+    vehicleSelectionAnchorRef,
+    setActiveVehicleCell,
+    setEditingVehicleCell,
+    setVehicleSelectionAnchorCell,
+    setSelectedVehicleCellKeys,
+  });
 
   useEffect(() => {
     let cancelled = false;
