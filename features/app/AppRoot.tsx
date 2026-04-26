@@ -15,6 +15,7 @@ import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
+import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
@@ -61,13 +62,7 @@ import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigat
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { reportPrintCss } from "@/features/reports/printCss";
-import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
-import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
-import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
-import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
-import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
-import { useReportSelectionGuards } from "@/features/reports/useReportSelectionGuards";
 import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
@@ -679,19 +674,6 @@ export default function App() {
 
   const {
     reportBaseRows,
-    derivedReportRows,
-  } = useReportRowsModel({
-    needsReportRows,
-    needsReportIndexes,
-    needsAutoReportRows,
-    deferredPtoPlanRows,
-    deferredPtoSurveyRows,
-    deferredPtoOperRows,
-    reportDate,
-    reportReasons,
-  });
-
-  const {
     activeAdminReportCustomer,
     adminReportBaseRows,
     derivedReportRowsByKey,
@@ -709,62 +691,40 @@ export default function App() {
     activeAdminReportRowLabelEntries,
     activeAdminReportUsesSummaryRows,
     visibleAdminReportCustomerSettingsTab,
-  } = useAdminReportSettingsViewModel({
-    needsAdminReportRows,
-    reportCustomers,
-    adminReportCustomerId,
-    adminReportCustomerSettingsTab,
-    reportBaseRows,
-    derivedReportRows,
-    reportAreaOrder,
-    reportWorkOrder,
-    editingReportFactSourceRowKey,
-  });
-
-  const {
     activeReportCustomer,
     reportAreaTabs,
     filteredReports,
     filteredReportAreaGroups,
-  } = useCustomerReportViewModel({
-    needsDerivedReportRows,
-    reportCustomers,
-    reportCustomerId,
-    derivedReportRows,
-    reportArea,
-  });
-
-  const areaShiftScheduleAreas = useAreaShiftScheduleAreas({
-    areaShiftCutoffs,
-    reportBaseRows,
-    ptoPlanRows: deferredPtoPlanRows,
-    ptoOperRows: deferredPtoOperRows,
-    ptoSurveyRows: deferredPtoSurveyRows,
-    vehicleRows: deferredVehicleRows,
-    reportAreaOrder,
-  });
-
-  const {
+    areaShiftScheduleAreas,
     visibleReportColumnKeys,
     reportTableColumnWidths,
     reportColumnWidthByKey,
     reportCompletionCards,
-  } = useReportColumnLayout({
-    filteredReports,
+  } = useAppReportsModel({
+    needsReportRows,
+    needsReportIndexes,
+    needsAutoReportRows,
+    needsAdminReportRows,
     needsDerivedReportRows,
-    reportArea,
+    deferredPtoPlanRows,
+    deferredPtoSurveyRows,
+    deferredPtoOperRows,
+    deferredVehicleRows,
     reportDate,
-    reportHeaderLabels,
-    reportColumnWidths,
-  });
-
-  useReportSelectionGuards({
+    reportReasons,
     reportCustomers,
     reportCustomerId,
     setReportCustomerId,
+    adminReportCustomerId,
+    adminReportCustomerSettingsTab,
     reportArea,
-    reportAreaTabs,
     setReportArea,
+    reportAreaOrder,
+    reportWorkOrder,
+    editingReportFactSourceRowKey,
+    areaShiftCutoffs,
+    reportHeaderLabels,
+    reportColumnWidths,
   });
 
   const {
