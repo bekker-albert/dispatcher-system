@@ -72,6 +72,7 @@ import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
+import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
@@ -98,7 +99,7 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -2308,51 +2309,26 @@ export default function App() {
     return id;
   }
 
-  function addPtoYear() {
-    const nextYear = normalizePtoYearValue(ptoYearInput);
-    if (!nextYear) return;
-
-    setPtoPlanYear(nextYear);
-    setPtoManualYears((current) => uniqueSorted([...current, nextYear]));
-    setExpandedPtoMonths((current) => ({ ...current, [`${nextYear}-01`]: true }));
-    setPtoYearDialogOpen(false);
-    setPtoYearInput("");
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Добавление",
-      section: "ПТО",
-      details: `Добавлен год ${nextYear}.`,
-    });
-  }
-
-  function deletePtoYear() {
-    const year = normalizePtoYearValue(ptoPlanYear);
-    if (!year) return;
-
-    const confirmed = window.confirm(`Вы точно хотите удалить ${year} год? Все данные ПТО за этот год в Плане, Оперучете и Замере будут удалены.`);
-    if (!confirmed) return;
-
-    const fallbackYear = ptoYearTabs.find((item) => item !== year) ?? String(Number(year) - 1);
-
-    setPtoPlanRows((current) => removeYearFromPtoRows(current, year));
-    setPtoOperRows((current) => removeYearFromPtoRows(current, year));
-    setPtoSurveyRows((current) => removeYearFromPtoRows(current, year));
-    setPtoManualYears((current) => uniqueSorted([...current.filter((item) => item !== year), fallbackYear]));
-    setPtoPlanYear(fallbackYear);
-    setPtoYearInput("");
-    setPtoYearDialogOpen(false);
-    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ deletePtoYearFromDatabase }) => deletePtoYearFromDatabase(year))
-        .catch((error) => console.warn("Database PTO year delete failed:", error));
-    }
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Удаление",
-      section: "ПТО",
-      details: `Удален год ${year}.`,
-    });
-  }
+  const {
+    addPtoYear,
+    deletePtoYear,
+  } = usePtoYearEditor({
+    ptoYearInput,
+    ptoPlanYear,
+    ptoYearTabs,
+    databaseConfigured,
+    databaseLoadedRef: ptoDatabaseLoadedRef,
+    setPtoPlanYear,
+    setPtoYearInput,
+    setPtoYearDialogOpen,
+    setPtoManualYears,
+    setExpandedPtoMonths,
+    setPtoPlanRows,
+    setPtoOperRows,
+    setPtoSurveyRows,
+    requestSave: requestPtoDatabaseSave,
+    addAdminLog,
+  });
 
   function updatePtoDateRow(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, field: keyof Omit<PtoPlanRow, "id" | "dailyPlans">, value: string) {
     const numericFields: Array<keyof PtoPlanRow> = ["carryover"];
