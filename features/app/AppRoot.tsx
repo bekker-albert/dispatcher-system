@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { useDeferredValue } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
@@ -11,6 +10,7 @@ import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useGlobalCellSelectionEffects } from "@/features/app/useGlobalCellSelectionEffects";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
+import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
@@ -709,17 +709,25 @@ export default function App() {
     ptoSurveyRows,
   });
 
-  const deferredPtoPlanRows = useDeferredValue(ptoPlanRows);
-  const deferredPtoSurveyRows = useDeferredValue(ptoSurveyRows);
-  const deferredPtoOperRows = useDeferredValue(ptoOperRows);
-  const deferredVehicleRows = useDeferredValue(vehicleRows);
-  const renderedTopTab = useDeferredValue(topTab);
-  const needsReportRows = renderedTopTab === "reports"
-    || (renderedTopTab === "admin" && adminSection === "reports");
-  const needsDerivedReportRows = renderedTopTab === "reports";
-  const needsAdminReportRows = renderedTopTab === "admin" && adminSection === "reports";
-  const needsReportIndexes = needsDerivedReportRows || needsAdminReportRows;
-  const needsAutoReportRows = needsDerivedReportRows || needsAdminReportRows;
+  const {
+    deferredPtoPlanRows,
+    deferredPtoSurveyRows,
+    deferredPtoOperRows,
+    deferredVehicleRows,
+    renderedTopTab,
+    needsReportRows,
+    needsDerivedReportRows,
+    needsAdminReportRows,
+    needsReportIndexes,
+    needsAutoReportRows,
+  } = useAppDeferredData({
+    ptoPlanRows,
+    ptoSurveyRows,
+    ptoOperRows,
+    vehicleRows,
+    topTab,
+    adminSection,
+  });
 
   const {
     reportBaseRows,
