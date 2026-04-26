@@ -11,6 +11,7 @@ import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProp
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
+import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
 import { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { AppPageShell } from "@/features/app/AppPageShell";
@@ -22,6 +23,7 @@ import { useAppPtoSectionProps } from "@/features/app/useAppPtoSectionProps";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
 import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
+import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionProps";
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppSharedPersistence } from "@/features/app/useAppSharedPersistence";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
@@ -1076,6 +1078,57 @@ export default function App() {
     refreshClientSnapshots,
     restoreClientSnapshot,
   });
+  const reportsSectionProps = useAppReportsSectionProps({
+    reportAreaTabs,
+    reportArea,
+    setReportArea,
+    printReport,
+    activeReportCustomer,
+    reportDate,
+    reportCompletionCards,
+    reportTableColumnWidths,
+    visibleReportColumnKeys,
+    reportColumnWidthByKey,
+    reportHeaderLabel,
+    renderReportHeaderText,
+    startReportColumnResize,
+    filteredReportAreaGroups,
+    filteredReports,
+    reportReasons,
+    commitReportDayReason,
+    cancelReportDayReasonDraft,
+    updateReportDayReasonDraft,
+    commitReportYearReason,
+    cancelReportYearReasonDraft,
+    updateReportYearReasonDraft,
+  });
+  const dispatchSectionProps = useAppDispatchSectionProps({
+    activeDispatchSubtab,
+    dispatchTab,
+    reportDate,
+    isDailyDispatchShift,
+    currentDispatchShift,
+    dispatchSummaryTotals,
+    search,
+    setSearch,
+    areaFilter,
+    setAreaFilter,
+    dispatchAreaOptions,
+    dispatchVehicleToAddId,
+    setDispatchVehicleToAddId,
+    dispatchVehicleOptions,
+    addSelectedDispatchVehicle,
+    addFilteredVehiclesToDispatchSummary,
+    dispatchAiSuggestion,
+    filteredDispatchSummaryRows,
+    updateDispatchSummaryVehicle,
+    updateDispatchSummaryText,
+    updateDispatchSummaryNumber,
+    deleteDispatchSummaryRow,
+    dispatchLocationOptions,
+    dispatchWorkTypeOptions,
+    dispatchExcavatorOptions,
+  });
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
@@ -1108,58 +1161,8 @@ export default function App() {
           renderedTopTab={renderedTopTab}
           shouldGatePtoDatabase={shouldGatePtoDatabase}
           ptoDatabaseMessage={ptoDatabaseMessage}
-          reportsProps={{
-            reportAreaTabs,
-            reportArea,
-            onSelectReportArea: setReportArea,
-            onPrintReport: printReport,
-            activeReportCustomerLabel: activeReportCustomer.label,
-            reportDate,
-            reportCompletionCards,
-            reportTableColumnWidths,
-            reportColumnKeys: visibleReportColumnKeys,
-            reportColumnWidthByKey,
-            reportHeaderLabel,
-            renderReportHeaderText,
-            onStartReportColumnResize: startReportColumnResize,
-            filteredReportAreaGroups,
-            filteredReportsCount: filteredReports.length,
-            reportReasons,
-            onCommitReportDayReason: commitReportDayReason,
-            onCancelReportDayReasonDraft: cancelReportDayReasonDraft,
-            onUpdateReportDayReasonDraft: updateReportDayReasonDraft,
-            onCommitReportYearReason: commitReportYearReason,
-            onCancelReportYearReasonDraft: cancelReportYearReasonDraft,
-            onUpdateReportYearReasonDraft: updateReportYearReasonDraft,
-          }}
-          dispatchProps={{
-            activeDispatchSubtabLabel: activeDispatchSubtab?.label ?? "Диспетчерская сводка",
-            dispatchTab,
-            activeDispatchSubtabContent: activeDispatchSubtab?.content || "",
-            reportDate,
-            isDailyDispatchShift,
-            currentDispatchShift,
-            dispatchSummaryTotals,
-            search,
-            onSearchChange: setSearch,
-            areaFilter,
-            onAreaFilterChange: setAreaFilter,
-            dispatchAreaOptions,
-            dispatchVehicleToAddId,
-            onDispatchVehicleToAddIdChange: setDispatchVehicleToAddId,
-            dispatchVehicleOptions,
-            onAddSelectedDispatchVehicle: addSelectedDispatchVehicle,
-            onAddFilteredVehiclesToDispatchSummary: addFilteredVehiclesToDispatchSummary,
-            dispatchAiSuggestion,
-            filteredDispatchSummaryRows,
-            onUpdateDispatchSummaryVehicle: updateDispatchSummaryVehicle,
-            onUpdateDispatchSummaryText: updateDispatchSummaryText,
-            onUpdateDispatchSummaryNumber: updateDispatchSummaryNumber,
-            onDeleteDispatchSummaryRow: deleteDispatchSummaryRow,
-            dispatchLocationOptions,
-            dispatchWorkTypeOptions,
-            dispatchExcavatorOptions,
-          }}
+          reportsProps={reportsSectionProps}
+          dispatchProps={dispatchSectionProps}
           fleetProps={{
             fleetTab,
             subTabs: subTabs.fleet,

@@ -36,7 +36,7 @@ import {
   inputStyle,
 } from "@/features/dispatch/dispatchSectionStyles";
 
-type DispatchTotals = {
+export type DispatchTotals = {
   plan: number;
   fact: number;
   workHours: number;
@@ -48,7 +48,7 @@ type DispatchTotals = {
   productivity: number;
 };
 
-type DispatchSectionProps = {
+export type DispatchSectionProps = {
   activeDispatchSubtabLabel: string;
   dispatchTab: string;
   activeDispatchSubtabContent: string;

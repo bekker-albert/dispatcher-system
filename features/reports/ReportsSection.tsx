@@ -27,7 +27,7 @@ import {
   reportWorkspaceStyle,
 } from "./reportSectionStyles";
 
-type ReportsSectionProps = {
+export type ReportsSectionProps = {
   reportAreaTabs: string[];
   reportArea: string;
   onSelectReportArea: (area: string) => void;
