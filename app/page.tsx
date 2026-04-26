@@ -4,6 +4,7 @@ import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, 
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { createPtoDateFormulaModel, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
@@ -52,18 +53,6 @@ import { HeaderSubButton } from "@/shared/ui/navigation";
 type PtoDropTarget = {
   rowId: string;
   position: PtoDropPosition;
-};
-
-type PtoFormulaCell = {
-  table: string;
-  year: string;
-  rowId: string;
-  kind: "carryover" | "month" | "day";
-  label: string;
-  day?: string;
-  month?: string;
-  days?: string[];
-  editable?: boolean;
 };
 
 type PtoResizeState =
@@ -4875,81 +4864,29 @@ export default function App() {
     const ptoColumnResizeHandler = ptoDateEditing ? startPtoColumnResize : undefined;
     const rowOffsetAt = (index: number) => rowOffsets[index] ?? virtualRowsTotalHeight;
     const tableSpacerColSpan = tableColumns.length;
-    const formulaCellRows = renderedRows.map((row) => {
-      const cells: Array<Omit<PtoFormulaCell, "table" | "year">> = [
-        { rowId: row.id, kind: "carryover", label: carryoverHeader },
-        ...displayPtoMonthGroups.flatMap((group) => [
-          ...(editableMonthTotal
-            ? [{
-                rowId: row.id,
-                kind: "month" as const,
-                month: group.month,
-                days: group.days,
-                label: group.label,
-                editable: true,
-              }]
-            : []),
-          ...(group.expanded
-            ? group.days.map((day) => ({
-                rowId: row.id,
-                kind: "day" as const,
-                day,
-                label: `${day.slice(8, 10)}.${day.slice(5, 7)}`,
-              }))
-            : []),
-        ]),
-      ];
-
-      return { row, cells };
+    const {
+      formulaCellKey,
+      formulaCellDomKey,
+      formulaSelectionKey,
+      formulaCellsByRowId,
+      selectedFormulaCellKeys,
+      formulaCellTemplates,
+      formulaTemplateKey,
+      formulaTemplateIndexByKey,
+      formulaRowIndexById,
+      formulaCellFromTemplate,
+      formulaCellFromSelectionKey,
+      formulaRangeKeys,
+    } = createPtoDateFormulaModel({
+      table: ptoTab,
+      year: ptoPlanYear,
+      renderedRows,
+      filteredRows,
+      displayMonthGroups: displayPtoMonthGroups,
+      editableMonthTotal,
+      carryoverHeader,
+      selectedCellKeys: ptoSelectedCellKeys,
     });
-
-    const formulaCellKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${cell.rowId}:${cell.kind}:${cell.month ?? cell.day ?? ""}`;
-    const formulaCellDomKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => `${ptoTab}:${ptoPlanYear}:${formulaCellKey(cell)}`;
-    const formulaSelectionKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => formulaCellDomKey(cell);
-    const formulaCellsByRowId = new Map(formulaCellRows.map((formulaRow) => [formulaRow.row.id, formulaRow.cells] as const));
-    const formulaSelectionScope = `${ptoTab}:${ptoPlanYear}:`;
-    const selectedFormulaCellKeys = new Set(ptoSelectedCellKeys.filter((key) => key.startsWith(formulaSelectionScope)));
-    const formulaCellTemplates: Array<Omit<PtoFormulaCell, "table" | "year" | "rowId">> = [
-      { kind: "carryover", label: carryoverHeader },
-      ...displayPtoMonthGroups.flatMap((group) => [
-        ...(editableMonthTotal
-          ? [{
-              kind: "month" as const,
-              month: group.month,
-              days: group.days,
-              label: group.label,
-              editable: true,
-            }]
-          : []),
-        ...(group.expanded
-          ? group.days.map((day) => ({
-              kind: "day" as const,
-              day,
-              label: `${day.slice(8, 10)}.${day.slice(5, 7)}`,
-            }))
-          : []),
-      ]),
-    ];
-    const formulaTemplateKey = (cell: Pick<PtoFormulaCell, "kind" | "day" | "month">) => `${cell.kind}:${cell.month ?? cell.day ?? ""}`;
-    const formulaTemplateIndexByKey = new Map(formulaCellTemplates.map((cell, index) => [formulaTemplateKey(cell), index] as const));
-    const formulaRowIndexById = new Map(filteredRows.map((row, index) => [row.id, index] as const));
-    const formulaCellFromTemplate = (
-      rowId: string,
-      template: Omit<PtoFormulaCell, "table" | "year" | "rowId">,
-    ): Omit<PtoFormulaCell, "table" | "year"> => ({ rowId, ...template });
-    const formulaCellFromSelectionKey = (key: string): Omit<PtoFormulaCell, "table" | "year"> | null => {
-      if (!key.startsWith(formulaSelectionScope)) return null;
-
-      const [rowId, kind, value = ""] = key.slice(formulaSelectionScope.length).split(":");
-      if (!rowId || !formulaRowIndexById.has(rowId)) return null;
-
-      const template = formulaCellTemplates.find((cell) => (
-        cell.kind === kind
-          && (kind === "month" ? cell.month === value : kind === "day" ? cell.day === value : value === "")
-      ));
-
-      return template ? formulaCellFromTemplate(rowId, template) : null;
-    };
     const getFormulaCellValue = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
       const row = rowById.get(cell.rowId);
       if (!row) return undefined;
@@ -4999,40 +4936,6 @@ export default function App() {
           window.requestAnimationFrame(focusTarget);
         });
       });
-    };
-
-    const formulaRangeKeys = (anchor: PtoFormulaCell, target: PtoFormulaCell) => {
-      const anchorRowIndex = formulaRowIndexById.get(anchor.rowId);
-      const targetRowIndex = formulaRowIndexById.get(target.rowId);
-      const anchorColumnIndex = formulaTemplateIndexByKey.get(formulaTemplateKey(anchor));
-      const targetColumnIndex = formulaTemplateIndexByKey.get(formulaTemplateKey(target));
-
-      if (
-        anchorRowIndex === undefined
-        || targetRowIndex === undefined
-        || anchorColumnIndex === undefined
-        || targetColumnIndex === undefined
-      ) {
-        return [formulaSelectionKey(target)];
-      }
-
-      const rowStart = Math.min(anchorRowIndex, targetRowIndex);
-      const rowEnd = Math.max(anchorRowIndex, targetRowIndex);
-      const columnStart = Math.min(anchorColumnIndex, targetColumnIndex);
-      const columnEnd = Math.max(anchorColumnIndex, targetColumnIndex);
-      const keys: string[] = [];
-
-      for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
-        const row = filteredRows[rowIndex];
-        if (!row) continue;
-
-        for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex += 1) {
-          const template = formulaCellTemplates[columnIndex];
-          if (template) keys.push(formulaSelectionKey(formulaCellFromTemplate(row.id, template)));
-        }
-      }
-
-      return keys.length ? keys : [formulaSelectionKey(target)];
     };
 
     const selectFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
