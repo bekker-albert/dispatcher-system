@@ -39,6 +39,7 @@ import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVeh
 import { useAdminVehicleEditMode } from "@/features/admin/vehicles/useAdminVehicleEditMode";
 import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
 import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
+import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
@@ -154,7 +155,6 @@ export default function App() {
   const vehicleSelectionAnchorRef = useRef<{ id: number; field: VehicleInlineField } | null>(null);
   const adminVehicleTableScrollRef = useRef<HTMLDivElement | null>(null);
   const vehicleRowsRef = useRef(vehicleRows);
-  const vehicleSaveTimerRef = useRef<number | null>(null);
   const vehiclesDatabaseLoadedRef = useRef(false);
   const vehiclesDatabaseSaveSnapshotRef = useRef("");
   const appStateSaveTimerRef = useRef<number | null>(null);
@@ -1076,59 +1076,16 @@ export default function App() {
   // The shared main app_state remains load-only. Per-browser snapshots are
   // written separately so one stale browser cannot overwrite another one.
 
-  useEffect(() => {
-    if (!adminDataLoaded) return undefined;
-
-    if (vehicleSaveTimerRef.current !== null) {
-      window.clearTimeout(vehicleSaveTimerRef.current);
-    }
-
-    vehicleSaveTimerRef.current = window.setTimeout(() => {
-      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
-      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-      if (databaseConfigured && vehiclesDatabaseLoadedRef.current) {
-        const snapshot = JSON.stringify(vehicleRowsRef.current);
-        if (snapshot !== vehiclesDatabaseSaveSnapshotRef.current) {
-          showSaveStatus("saving", "Сохраняю технику...");
-          void import("@/lib/data/vehicles")
-            .then(({ saveVehiclesToDatabase }) => saveVehiclesToDatabase(vehicleRowsRef.current))
-            .then(() => {
-              vehiclesDatabaseSaveSnapshotRef.current = snapshot;
-              showSaveStatus("saved", "Техника сохранена.");
-            })
-            .catch((error) => {
-              console.warn("Database vehicles save failed:", error);
-              showSaveStatus("error", `Техника не сохранена: ${errorToMessage(error)}`);
-            });
-        }
-      }
-      requestClientSnapshotSave("vehicles-save");
-      vehicleSaveTimerRef.current = null;
-    }, 700);
-
-    return () => {
-      if (vehicleSaveTimerRef.current !== null) {
-        window.clearTimeout(vehicleSaveTimerRef.current);
-        vehicleSaveTimerRef.current = null;
-      }
-    };
-  }, [adminDataLoaded, requestClientSnapshotSave, showSaveStatus, vehicleRows]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return undefined;
-
-    const flushVehicleRows = () => {
-      if (vehicleSaveTimerRef.current !== null) {
-        window.clearTimeout(vehicleSaveTimerRef.current);
-        vehicleSaveTimerRef.current = null;
-      }
-      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
-      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-    };
-
-    window.addEventListener("pagehide", flushVehicleRows);
-    return () => window.removeEventListener("pagehide", flushVehicleRows);
-  }, [adminDataLoaded]);
+  useVehicleRowsPersistence({
+    adminDataLoaded,
+    vehicleRows,
+    vehicleRowsRef,
+    databaseConfigured,
+    databaseLoadedRef: vehiclesDatabaseLoadedRef,
+    databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
+    requestClientSnapshotSave,
+    showSaveStatus,
+  });
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
