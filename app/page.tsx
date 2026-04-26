@@ -7,6 +7,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
+import { createPtoDatabaseState, savePtoStateToBrowserStorage } from "@/features/pto/ptoPersistenceModel";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -385,7 +386,7 @@ export default function App() {
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
   const [search, setSearch] = useState("");
-  const ptoDatabaseState = useMemo(() => ({
+  const ptoDatabaseState = useMemo(() => createPtoDatabaseState({
     manualYears: ptoManualYears,
     planRows: ptoPlanRows,
     operRows: ptoOperRows,
@@ -1476,23 +1477,12 @@ export default function App() {
 
   const savePtoLocalState = useCallback(() => {
     const state = ptoDatabaseStateRef.current;
-    const uiState = state.uiState ?? {};
+    const markLocalUpdatedAt = ptoDatabaseLoadedRef.current;
 
-    window.localStorage.setItem(adminStorageKeys.ptoYears, JSON.stringify(state.manualYears));
-    window.localStorage.setItem(adminStorageKeys.ptoPlanRows, JSON.stringify(state.planRows));
-    window.localStorage.setItem(adminStorageKeys.ptoSurveyRows, JSON.stringify(state.surveyRows));
-    window.localStorage.setItem(adminStorageKeys.ptoOperRows, JSON.stringify(state.operRows));
-    window.localStorage.setItem(adminStorageKeys.ptoColumnWidths, JSON.stringify(uiState.ptoColumnWidths ?? {}));
-    window.localStorage.setItem(adminStorageKeys.ptoRowHeights, JSON.stringify(uiState.ptoRowHeights ?? {}));
-    window.localStorage.setItem(adminStorageKeys.ptoHeaderLabels, JSON.stringify(uiState.ptoHeaderLabels ?? {}));
-    window.localStorage.setItem(adminStorageKeys.ptoBucketValues, JSON.stringify(state.bucketValues ?? {}));
-    window.localStorage.setItem(adminStorageKeys.ptoBucketRows, JSON.stringify(state.bucketRows ?? []));
-
-    if (ptoDatabaseLoadedRef.current) {
-      window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
+    savePtoStateToBrowserStorage(state, markLocalUpdatedAt);
+    if (markLocalUpdatedAt) {
       hasStoredPtoStateRef.current = true;
     }
-    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
     requestClientSnapshotSave("pto-local-save");
   }, [requestClientSnapshotSave]);
 
