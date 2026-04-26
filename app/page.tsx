@@ -22,6 +22,7 @@ import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { useAdminVehicleRowsViewModel } from "@/features/admin/vehicles/useAdminVehicleRowsViewModel";
 import { useVehicleFilterMenu } from "@/features/admin/vehicles/useVehicleFilterMenu";
+import { useVehicleUiState } from "@/features/admin/vehicles/useVehicleUiState";
 import { AdminStructureSection } from "@/features/admin/structure/AdminStructureSection";
 import { useAdminStructureState } from "@/features/admin/structure/useAdminStructureState";
 import {
@@ -35,7 +36,7 @@ import {
   ReportsSection,
 } from "@/features/app/lazySections";
 import { useAdminVehicleEditMode } from "@/features/admin/vehicles/useAdminVehicleEditMode";
-import { useVehiclePendingFocus, type PendingVehicleFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
+import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
 import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
 import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
@@ -90,15 +91,13 @@ import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { createDefaultSubTabs, customTabKey } from "@/lib/domain/navigation/tabs";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles } from "@/lib/domain/vehicles/defaults";
-import { adminVehicleFallbackPreviewRows, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
-import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import { clientSnapshotStats } from "@/lib/storage/client-snapshots";
 import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
-const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
+const defaultVehicles = createDefaultVehicles([]);
 
 const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
 
@@ -127,30 +126,47 @@ export default function App() {
   const [fuelTab, setFuelTab] = useState("general");
   const [ptoTab, setPtoTab] = useState("bodies");
   const [tbTab, setTbTab] = useState("list");
-  const [adminVehiclesEditing, setAdminVehiclesEditing] = useState(false);
-  const [showAllVehicleRows, setShowAllVehicleRows] = useState(false);
-  const [vehiclePreviewRowLimit, setVehiclePreviewRowLimit] = useState(adminVehicleFallbackPreviewRows);
-  const [vehicleRows, setVehicleRows] = useState<VehicleRow[]>(defaultVehicles);
   const [dispatchSummaryRows, setDispatchSummaryRows] = useState<DispatchSummaryRow[]>(() => createDefaultDispatchSummaryRows(defaultVehicles, defaultReportDate));
   const [dispatchVehicleToAddId, setDispatchVehicleToAddId] = useState("");
-  const [vehicleFilters, setVehicleFilters] = useState<VehicleFilters>({});
-  const [vehicleFilterDrafts, setVehicleFilterDrafts] = useState<VehicleFilters>({});
-  const [openVehicleFilter, setOpenVehicleFilter] = useState<VehicleFilterKey | null>(null);
-  const [vehicleFilterSearch, setVehicleFilterSearch] = useState<Partial<Record<VehicleFilterKey, string>>>({});
-  const [pendingVehicleFocus, setPendingVehicleFocus] = useState<PendingVehicleFocus | null>(null);
-  const [activeVehicleCell, setActiveVehicleCell] = useState<string | null>(null);
-  const [vehicleSelectionAnchorCell, setVehicleSelectionAnchorCell] = useState<{ id: number; field: VehicleInlineField } | null>(null);
-  const [selectedVehicleCellKeys, setSelectedVehicleCellKeys] = useState<string[]>([]);
-  const [editingVehicleCell, setEditingVehicleCell] = useState<string | null>(null);
-  const [vehicleCellDraft, setVehicleCellDraft] = useState("");
-  const [vehicleCellInitialDraft, setVehicleCellInitialDraft] = useState("");
-  const vehicleCellSkipBlurCommitRef = useRef(false);
-  const vehicleSelectionDraggingRef = useRef(false);
-  const vehicleSelectionAnchorRef = useRef<{ id: number; field: VehicleInlineField } | null>(null);
-  const adminVehicleTableScrollRef = useRef<HTMLDivElement | null>(null);
-  const vehicleRowsRef = useRef(vehicleRows);
-  const vehiclesDatabaseLoadedRef = useRef(false);
-  const vehiclesDatabaseSaveSnapshotRef = useRef("");
+  const {
+    adminVehiclesEditing,
+    setAdminVehiclesEditing,
+    showAllVehicleRows,
+    setShowAllVehicleRows,
+    vehiclePreviewRowLimit,
+    setVehiclePreviewRowLimit,
+    vehicleRows,
+    setVehicleRows,
+    vehicleFilters,
+    setVehicleFilters,
+    vehicleFilterDrafts,
+    setVehicleFilterDrafts,
+    openVehicleFilter,
+    setOpenVehicleFilter,
+    vehicleFilterSearch,
+    setVehicleFilterSearch,
+    pendingVehicleFocus,
+    setPendingVehicleFocus,
+    activeVehicleCell,
+    setActiveVehicleCell,
+    vehicleSelectionAnchorCell,
+    setVehicleSelectionAnchorCell,
+    selectedVehicleCellKeys,
+    setSelectedVehicleCellKeys,
+    editingVehicleCell,
+    setEditingVehicleCell,
+    vehicleCellDraft,
+    setVehicleCellDraft,
+    vehicleCellInitialDraft,
+    setVehicleCellInitialDraft,
+    vehicleCellSkipBlurCommitRef,
+    vehicleSelectionDraggingRef,
+    vehicleSelectionAnchorRef,
+    adminVehicleTableScrollRef,
+    vehicleRowsRef,
+    vehiclesDatabaseLoadedRef,
+    vehiclesDatabaseSaveSnapshotRef,
+  } = useVehicleUiState(defaultVehicles);
   const appDatabaseSaveSnapshotRef = useRef("");
   const appSettingsDatabaseLoadedRef = useRef(false);
   const appSettingsDatabaseSaveSnapshotRef = useRef("");
