@@ -50,6 +50,7 @@ import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
+import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import {
@@ -104,9 +105,8 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-import { defaultPtoPlanMonth, emptyPtoDraftRowFields, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, yearMonths, type PtoDateTableKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { defaultPtoPlanMonth, emptyPtoDraftRowFields, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, yearMonths, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
-import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
@@ -124,7 +124,6 @@ import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
-import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { isEditableGridArrowKey } from "@/shared/editable-grid/selection";
 import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
@@ -2450,103 +2449,27 @@ export default function App() {
     addAdminLog,
   });
 
-  function openPtoDateImportFilePicker() {
-    ptoPlanImportInputRef.current?.click();
-  }
-
-  function currentPtoDateExcelMeta(tab = ptoTab): { table: PtoDateTableKey; label: string; slug: string; section: string; rows: PtoPlanRow[] } {
-    const meta = ptoDateTableMeta(tab);
-    const rowsByTable: Record<PtoDateTableKey, PtoPlanRow[]> = {
-      plan: ptoPlanRows,
-      oper: ptoOperRows,
-      survey: ptoSurveyRows,
-    };
-
-    return { ...meta, rows: rowsByTable[meta.table] };
-  }
-
-  function exportPtoDateTableToExcel() {
-    const meta = currentPtoDateExcelMeta();
-    const rows = createPtoPlanExportRows(meta.rows, ptoPlanYear, ptoAreaFilter, meta.table);
-    const fileName = ptoDateExportFileName(meta, ptoPlanYear, ptoAreaFilter);
-    const blob = createXlsxBlob(rows, meta.label, {
-      columns: createPtoPlanExportColumns(ptoPlanYear, meta.table),
-      outlineSummaryRight: false,
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    addAdminLog({
-      action: "Выгрузка",
-      section: meta.section,
-      details: `Выгружена таблица "${meta.label}" за ${ptoPlanYear} год: ${Math.max(0, rows.length - 1)} строк.`,
-      fileName,
-      rowsCount: Math.max(0, rows.length - 1),
-    });
-  }
-
-  function mergeImportedRowsIntoPtoDateTable(table: PtoDateTableKey, importedRows: PtoPlanRow[]) {
-    if (table === "oper") {
-      setPtoOperRows((current) => mergeImportedPtoPlanRows(current, importedRows));
-      setPtoPlanRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-      setPtoSurveyRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-      return;
-    }
-
-    if (table === "survey") {
-      setPtoSurveyRows((current) => mergeImportedPtoPlanRows(current, importedRows));
-      setPtoPlanRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-      setPtoOperRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-      return;
-    }
-
-    setPtoPlanRows((current) => mergeImportedPtoPlanRows(current, importedRows, { includeCustomerCode: true }));
-    setPtoOperRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-    setPtoSurveyRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-  }
-
-  async function importPtoDateTableFromExcel(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    const meta = currentPtoDateExcelMeta();
-
-    try {
-      const importedRows = createPtoPlanRowsFromImportTable(await parseTableImportFile(file), ptoPlanYear, meta.rows, meta.table);
-      if (!importedRows.length) {
-        window.alert(`В выбранном файле не найдены строки таблицы "${meta.label}".`);
-        return;
-      }
-
-      if (!window.confirm(`Загрузить таблицу "${meta.label}" из файла? Будет обновлено или добавлено строк: ${importedRows.length}.`)) return;
-
-      const firstImportedMonth = importedRows
-        .flatMap((row) => Object.keys(row.dailyPlans))
-        .filter((date) => date.startsWith(`${ptoPlanYear}-`))
-        .sort()[0]?.slice(0, 7) ?? `${ptoPlanYear}-01`;
-
-      mergeImportedRowsIntoPtoDateTable(meta.table, importedRows);
-      setPtoManualYears((current) => uniqueSorted([...current, ptoPlanYear]));
-      setExpandedPtoMonths((current) => ({ ...current, [firstImportedMonth]: true }));
-      requestPtoDatabaseSave();
-      addAdminLog({
-        action: "Загрузка",
-        section: meta.section,
-        details: `Загружена таблица "${meta.label}" за ${ptoPlanYear} год: ${importedRows.length} строк.`,
-        fileName: file.name,
-        rowsCount: importedRows.length,
-      });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : `Не удалось прочитать Excel-файл таблицы "${meta.label}".`);
-    }
-  }
+  const {
+    openPtoDateImportFilePicker,
+    currentPtoDateExcelMeta,
+    exportPtoDateTableToExcel,
+    importPtoDateTableFromExcel,
+  } = usePtoDateExcelTransfer({
+    ptoTab,
+    ptoPlanYear,
+    ptoAreaFilter,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+    importInputRef: ptoPlanImportInputRef,
+    setPtoPlanRows,
+    setPtoOperRows,
+    setPtoSurveyRows,
+    setPtoManualYears,
+    setExpandedPtoMonths,
+    requestSave: requestPtoDatabaseSave,
+    addAdminLog,
+  });
 
   const {
     commitPtoBucketValue,
