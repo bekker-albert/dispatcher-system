@@ -19,7 +19,7 @@ import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
-import { useAppPtoPersistence } from "@/features/app/useAppPtoPersistence";
+import { useAppPtoPersistenceController } from "@/features/app/useAppPtoPersistenceController";
 import { useAppPtoSectionProps } from "@/features/app/useAppPtoSectionProps";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
@@ -60,7 +60,6 @@ export default function App() {
     fuelTab,
     setFuelTab,
     ptoTab,
-    setPtoTab,
     tbTab,
     setTbTab,
     structureSection,
@@ -139,7 +138,6 @@ export default function App() {
     setPtoDraftRowFields,
     ptoSelectionDraggingRef,
     ptoPlanImportInputRef,
-    hasStoredPtoStateRef,
     ptoDatabaseLoadedRef,
     reportArea,
     setReportArea,
@@ -179,7 +177,6 @@ export default function App() {
     ptoManualYears,
     setPtoManualYears,
     ptoAreaFilter,
-    setPtoAreaFilter,
     expandedPtoMonths,
     setExpandedPtoMonths,
     ptoPlanRows,
@@ -235,11 +232,7 @@ export default function App() {
     lastChangeLog,
     lastUploadLog,
     ptoDatabaseMessage,
-    setPtoDatabaseMessage,
     ptoDatabaseReady,
-    setPtoDatabaseReady,
-    ptoSaveRevision,
-    setPtoSaveRevision,
     saveStatus,
     showSaveStatus,
     hideSaveStatus,
@@ -275,47 +268,9 @@ export default function App() {
     savePtoDatabaseChanges,
     requestPtoDatabaseSave,
     savePtoLocalState,
-  } = useAppPtoPersistence({
-    adminDataLoaded,
-    ptoSaveRevision,
-    ptoManualYears,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    ptoBucketValues,
-    ptoBucketManualRows,
-    ptoTab,
-    ptoPlanYear,
-    ptoAreaFilter,
-    expandedPtoMonths,
-    reportColumnWidths,
-    reportReasons,
-    ptoColumnWidths,
-    ptoRowHeights,
-    ptoHeaderLabels,
-    ptoDatabaseLoadedRef,
-    hasStoredPtoStateRef,
-    requestClientSnapshotSave,
+  } = useAppPtoPersistenceController({
+    appState,
     resetUndoHistoryForExternalRestore,
-    showSaveStatus,
-    setPtoDatabaseReady,
-    setPtoDatabaseMessage,
-    setPtoSaveRevision,
-    setPtoManualYears,
-    setPtoPlanRows,
-    setPtoOperRows,
-    setPtoSurveyRows,
-    setPtoBucketValues,
-    setPtoBucketManualRows,
-    setPtoTab,
-    setPtoPlanYear,
-    setPtoAreaFilter,
-    setExpandedPtoMonths,
-    setReportColumnWidths,
-    setReportReasons,
-    setPtoColumnWidths,
-    setPtoRowHeights,
-    setPtoHeaderLabels,
   });
 
   useAppSharedPersistence({
