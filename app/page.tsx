@@ -46,6 +46,7 @@ import { PtoDateTableContainer } from "@/features/pto/PtoDateTableContainer";
 import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
+import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
@@ -78,9 +79,8 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-import { defaultPtoPlanMonth, emptyPtoDraftRowFields, isPtoDateTableKey, monthDays, normalizePtoPlanRow, normalizeStoredPtoYears, ptoRowFieldDomKey, ptoYearOptions, yearMonths, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { defaultPtoPlanMonth, emptyPtoDraftRowFields, normalizePtoPlanRow, normalizeStoredPtoYears, ptoRowFieldDomKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
-import { formatMonthName } from "@/lib/domain/pto/formatting";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type TopTab } from "@/lib/domain/navigation/tabs";
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
@@ -1908,90 +1908,29 @@ export default function App() {
     setReportArea("Все участки");
   }, [reportArea, reportAreaTabs]);
 
-  const isPtoSection = renderedTopTab === "pto";
-  const isPtoDateTab = isPtoSection && isPtoDateTableKey(ptoTab);
-  const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
-  const activePtoDateRows = useMemo(() => {
-    if (!isPtoSection) return [];
-    if (ptoTab === "plan") return ptoPlanRows;
-    if (ptoTab === "oper") return ptoOperRows;
-    if (ptoTab === "survey") return ptoSurveyRows;
-    return [];
-  }, [isPtoSection, ptoOperRows, ptoPlanRows, ptoSurveyRows, ptoTab]);
-  const allPtoDateRows = useMemo(() => (
-    isPtoBucketsSection ? [...deferredPtoPlanRows, ...deferredPtoSurveyRows, ...deferredPtoOperRows] : activePtoDateRows
-  ), [activePtoDateRows, deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
-  const ptoYearTabs = useMemo(() => (
-    isPtoDateTab ? ptoYearOptions(activePtoDateRows, ptoPlanYear, ptoManualYears) : [ptoPlanYear]
-  ), [activePtoDateRows, isPtoDateTab, ptoManualYears, ptoPlanYear]);
-  const ptoYearMonths = useMemo(() => yearMonths(ptoPlanYear), [ptoPlanYear]);
-  const ptoMonthGroups = useMemo(() => (
-    ptoYearMonths.map((month) => ({
-      month,
-      label: formatMonthName(month),
-      days: monthDays(month),
-      expanded: expandedPtoMonths[month] === true,
-    }))
-  ), [expandedPtoMonths, ptoYearMonths]);
-  const ptoAreaTabs = useMemo(() => (
-    isPtoSection
-      ? [
-    "Все участки",
-    ...uniqueSorted([
-      ...allPtoDateRows.map((row) => cleanAreaName(row.area)),
-      ...(isPtoBucketsSection ? ptoBucketManualRows.map((row) => cleanAreaName(row.area)) : []),
-    ]),
-      ]
-      : ["Все участки"]
-  ), [allPtoDateRows, isPtoBucketsSection, isPtoSection, ptoBucketManualRows]);
-  const ptoDateOptionMaps = useMemo(() => {
-    const allAreasKey = "__all__";
-    const locationsByArea = new Map<string, Set<string>>();
-    const structuresByArea = new Map<string, Set<string>>();
-    const structuresByAreaLocation = new Map<string, Set<string>>();
-    const addValue = (map: Map<string, Set<string>>, key: string, value: string) => {
-      const text = value.trim();
-      if (!text) return;
-
-      const values = map.get(key) ?? new Set<string>();
-      values.add(text);
-      map.set(key, values);
-    };
-
-    if (!isPtoDateTab) {
-      return {
-        allAreasKey,
-        locationsByArea: new Map<string, string[]>(),
-        structuresByArea: new Map<string, string[]>(),
-        structuresByAreaLocation: new Map<string, string[]>(),
-      };
-    }
-
-    activePtoDateRows.forEach((row) => {
-      const area = cleanAreaName(row.area).trim();
-      const areaKey = normalizeLookupValue(area);
-      const location = row.location.trim();
-      const structure = row.structure.trim();
-      const areaKeys = [allAreasKey, areaKey].filter(Boolean);
-
-      areaKeys.forEach((key) => {
-        addValue(locationsByArea, key, location);
-        addValue(structuresByArea, key, structure);
-        addValue(structuresByAreaLocation, `${key}:${normalizeLookupValue(location)}`, structure);
-      });
-    });
-
-    const normalizeMap = (map: Map<string, Set<string>>) => new Map(
-      Array.from(map.entries()).map(([key, values]) => [key, uniqueSorted(Array.from(values))] as const),
-    );
-
-    return {
-      allAreasKey,
-      locationsByArea: normalizeMap(locationsByArea),
-      structuresByArea: normalizeMap(structuresByArea),
-      structuresByAreaLocation: normalizeMap(structuresByAreaLocation),
-    };
-  }, [activePtoDateRows, isPtoDateTab]);
+  const {
+    isPtoDateTab,
+    isPtoBucketsSection,
+    allPtoDateRows,
+    ptoYearTabs,
+    ptoYearMonths,
+    ptoMonthGroups,
+    ptoAreaTabs,
+    ptoDateOptionMaps,
+  } = usePtoDateViewModel({
+    renderedTopTab,
+    ptoTab,
+    ptoPlanYear,
+    ptoManualYears,
+    expandedPtoMonths,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+    deferredPtoPlanRows,
+    deferredPtoOperRows,
+    deferredPtoSurveyRows,
+    ptoBucketManualRows,
+  });
 
   const {
     ptoBucketRows,
