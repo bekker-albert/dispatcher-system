@@ -8,7 +8,7 @@ import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, depe
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "../lib/domain/navigation/tabs";
 import { createPtoBucketColumns, createPtoBucketRows, isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketSelectionKey } from "../lib/domain/pto/buckets";
-import { createEmptyPtoDateRow, dateRange, distributeMonthlyTotal, insertPtoRowAfter, nextDate, normalizePtoCustomerCode, normalizePtoPlanRow, ptoAreaMatches, ptoColumnDefaults, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, reorderPtoRows } from "../lib/domain/pto/date-table";
+import { createEmptyPtoDateRow, dateRange, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, nextDate, normalizePtoCustomerCode, normalizePtoPlanRow, ptoAreaMatches, ptoColumnDefaults, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, reorderPtoRows } from "../lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "../lib/domain/pto/defaults";
 import { createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "../lib/domain/pto/excel";
 import { formatBucketNumber, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "../lib/domain/pto/formatting";
@@ -114,6 +114,7 @@ assert.deepEqual(dateRange("2026-04-01", "2026-04-03"), ["2026-04-01", "2026-04-
 assert.equal(nextDate("2026-04-30"), "2026-05-01");
 assert.deepEqual(distributeMonthlyTotal(10, ["2026-04-01", "2026-04-02", "2026-04-03"]), { "2026-04-01": 3.334, "2026-04-02": 3.333, "2026-04-03": 3.333 });
 assert.equal(ptoColumnDefaults.structure, 250);
+assert.deepEqual(emptyPtoDraftRowFields, { customerCode: "", area: "", location: "", structure: "", unit: "" });
 assert.equal(defaultReportDate, "2026-04-12");
 assert.equal(defaultPtoPlanRows.length, 5);
 assert.equal(defaultPtoSurveyRows.length, 5);

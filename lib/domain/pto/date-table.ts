@@ -20,8 +20,22 @@ export type PtoStatus = string;
 
 export type PtoDateTableKey = "plan" | "oper" | "survey";
 export type PtoDropPosition = "before" | "after";
+export type PtoDraftRowFields = {
+  customerCode: string;
+  area: string;
+  location: string;
+  structure: string;
+  unit: string;
+};
 
 export const defaultPtoPlanMonth = "2026-04";
+export const emptyPtoDraftRowFields: PtoDraftRowFields = {
+  customerCode: "",
+  area: "",
+  location: "",
+  structure: "",
+  unit: "",
+};
 export const ptoColumnDefaults = {
   area: 138,
   location: 150,
