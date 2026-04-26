@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } f
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { createPtoDateFormulaModel, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import {
@@ -4797,15 +4797,9 @@ export default function App() {
     const activeFormulaCell = ptoFormulaCell?.table === ptoTab && ptoFormulaCell.year === ptoPlanYear ? ptoFormulaCell : null;
     const activeInlineEditCell = ptoInlineEditCell?.table === ptoTab && ptoInlineEditCell.year === ptoPlanYear ? ptoInlineEditCell : null;
     const activeFormulaRow = activeFormulaCell ? rowById.get(activeFormulaCell.rowId) : undefined;
-    const activeFormulaRowTotals = activeFormulaRow ? getRowDateTotals(activeFormulaRow) : undefined;
-    const activeFormulaValue = activeFormulaRow && activeFormulaCell
-      ? activeFormulaCell.kind === "carryover"
-          ? getEffectiveCarryover(activeFormulaRow)
-          : activeFormulaCell.kind === "month" && activeFormulaCell.month
-            ? activeFormulaRowTotals?.monthTotals.get(activeFormulaCell.month)?.value
-            : activeFormulaCell.kind === "day" && activeFormulaCell.day
-              ? activeFormulaRow.dailyPlans[activeFormulaCell.day]
-              : undefined
+    const formulaValueContext = { rowById, getEffectiveCarryover, getRowDateTotals };
+    const activeFormulaValue = activeFormulaCell
+      ? getPtoFormulaCellValue(activeFormulaCell, formulaValueContext)
       : undefined;
     const formulaInputDisabled = !ptoDateEditing || !activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false;
     const virtualRows = ptoDateEditing
@@ -4844,16 +4838,6 @@ export default function App() {
       carryoverHeader,
       selectedCellKeys: ptoSelectedCellKeys,
     });
-    const getFormulaCellValue = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
-      const row = rowById.get(cell.rowId);
-      if (!row) return undefined;
-
-      if (cell.kind === "carryover") return getEffectiveCarryover(row);
-      if (cell.kind === "month" && cell.month) return getRowDateTotals(row).monthTotals.get(cell.month)?.value;
-      if (cell.kind === "day" && cell.day) return row.dailyPlans[cell.day];
-      return undefined;
-    };
-
     const scrollFormulaCellIntoView = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
       if (!ptoDateEditing) return;
 
@@ -4958,18 +4942,12 @@ export default function App() {
       setPtoInlineEditInitialDraft("");
     };
 
-    const formulaCellMatches = (cell: PtoFormulaCell | null, rowId: string, kind: PtoFormulaCell["kind"], key?: string) => {
-      if (!cell) return false;
-
-      return cell.rowId === rowId
-        && cell.kind === kind
-        && cell.table === ptoTab
-        && cell.year === ptoPlanYear
-        && (kind === "month" ? cell.month === key : kind === "day" ? cell.day === key : true);
-    };
-
-    const formulaCellActive = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => formulaCellMatches(activeFormulaCell, rowId, kind, key);
-    const formulaCellEditing = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => formulaCellMatches(activeInlineEditCell, rowId, kind, key);
+    const formulaCellActive = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
+      ptoFormulaCellMatches(activeFormulaCell, ptoTab, ptoPlanYear, rowId, kind, key)
+    );
+    const formulaCellEditing = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
+      ptoFormulaCellMatches(activeInlineEditCell, ptoTab, ptoPlanYear, rowId, kind, key)
+    );
     const formulaCellSelected = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => selectedFormulaCellKeys.has(formulaSelectionKey({
       rowId,
       kind,
@@ -5091,7 +5069,7 @@ export default function App() {
       const nextCell = nextRow && nextTemplate ? formulaCellFromTemplate(nextRow.id, nextTemplate) : null;
 
       if (!nextCell) return;
-      selectFormulaCell(nextCell, getFormulaCellValue(nextCell));
+      selectFormulaCell(nextCell, getPtoFormulaCellValue(nextCell, formulaValueContext));
       focusFormulaCell(nextCell);
     };
 

@@ -1,5 +1,5 @@
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-import type { PtoMonthGroupView } from "@/features/pto/ptoDateTableModel";
+import type { PtoMonthGroupView, PtoRowDateTotals } from "@/features/pto/ptoDateTableModel";
 
 export type PtoFormulaCell = {
   table: string;
@@ -25,6 +25,12 @@ type PtoDateFormulaModelOptions = {
   editableMonthTotal: boolean;
   carryoverHeader: string;
   selectedCellKeys: string[];
+};
+
+type PtoFormulaCellValueContext = {
+  rowById: Map<string, PtoPlanRow>;
+  getEffectiveCarryover: (row: PtoPlanRow) => number;
+  getRowDateTotals: (row: PtoPlanRow) => PtoRowDateTotals;
 };
 
 function createPtoFormulaCellTemplates(
@@ -154,4 +160,34 @@ export function createPtoDateFormulaModel({
     formulaCellFromSelectionKey,
     formulaRangeKeys,
   };
+}
+
+export function getPtoFormulaCellValue(
+  cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">,
+  { rowById, getEffectiveCarryover, getRowDateTotals }: PtoFormulaCellValueContext,
+) {
+  const row = rowById.get(cell.rowId);
+  if (!row) return undefined;
+
+  if (cell.kind === "carryover") return getEffectiveCarryover(row);
+  if (cell.kind === "month" && cell.month) return getRowDateTotals(row).monthTotals.get(cell.month)?.value;
+  if (cell.kind === "day" && cell.day) return row.dailyPlans[cell.day];
+  return undefined;
+}
+
+export function ptoFormulaCellMatches(
+  cell: PtoFormulaCell | null,
+  table: string,
+  year: string,
+  rowId: string,
+  kind: PtoFormulaCell["kind"],
+  key?: string,
+) {
+  if (!cell) return false;
+
+  return cell.rowId === rowId
+    && cell.kind === kind
+    && cell.table === table
+    && cell.year === year
+    && (kind === "month" ? cell.month === key : kind === "day" ? cell.day === key : true);
 }
