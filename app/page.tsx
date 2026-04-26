@@ -9,6 +9,7 @@ import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandle
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
+import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
@@ -78,7 +79,7 @@ import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
-import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
+import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { createReportCompletionCards } from "@/lib/domain/reports/completion";
@@ -2122,101 +2123,29 @@ export default function App() {
     setVehicleFilterDrafts,
   });
 
-  const filteredDispatch = useMemo(() => {
-    if (renderedTopTab !== "dispatch") return [];
-
-    return vehicleRows.filter((v) => {
-      if (v.visible === false) return false;
-      const areaOk = areaFilter === "Все участки" || v.area === areaFilter;
-      const q = search.trim().toLowerCase();
-      const textOk = q === "" || [buildVehicleDisplayName(v), v.area, v.location, v.workType, v.excavator].join(" ").toLowerCase().includes(q);
-      return areaOk && textOk;
-    });
-  }, [areaFilter, renderedTopTab, search, vehicleRows]);
-
-  const currentDispatchShift = dispatchShiftFromTab(dispatchTab);
-  const isDailyDispatchShift = currentDispatchShift === "daily";
-  const dispatchAreaOptions = useMemo(() => [
-    "Все участки",
-    ...(renderedTopTab === "dispatch"
-      ? uniqueSorted([
-          ...vehicleRows.map((vehicle) => vehicle.area),
-          ...dispatchSummaryRows.map((row) => row.area),
-          ...reportBaseRows.map((row) => row.area),
-        ]).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))
-      : []),
-  ], [dispatchSummaryRows, renderedTopTab, reportBaseRows, vehicleRows]);
-  const dispatchVehicleOptions = useMemo(() => (
-    renderedTopTab === "dispatch"
-      ? vehicleRows
-          .filter((vehicle) => vehicle.visible !== false)
-          .sort((left, right) => buildVehicleDisplayName(left).localeCompare(buildVehicleDisplayName(right), "ru"))
-      : []
-  ), [renderedTopTab, vehicleRows]);
-  const dispatchLocationOptions = useMemo(() => uniqueSorted([
-    ...(renderedTopTab === "dispatch" ? vehicleRows.map((vehicle) => vehicle.location) : []),
-    ...(renderedTopTab === "dispatch" ? dispatchSummaryRows.map((row) => row.location) : []),
-  ]), [dispatchSummaryRows, renderedTopTab, vehicleRows]);
-  const dispatchWorkTypeOptions = useMemo(() => uniqueSorted([
-    ...(renderedTopTab === "dispatch" ? vehicleRows.map((vehicle) => vehicle.workType) : []),
-    ...(renderedTopTab === "dispatch" ? dispatchSummaryRows.map((row) => row.workType) : []),
-    ...(renderedTopTab === "dispatch" ? reportBaseRows.map((row) => row.name) : []),
-  ]), [dispatchSummaryRows, renderedTopTab, reportBaseRows, vehicleRows]);
-  const dispatchExcavatorOptions = useMemo(() => uniqueSorted([
-    ...(renderedTopTab === "dispatch" ? vehicleRows.map((vehicle) => vehicle.excavator) : []),
-    ...(renderedTopTab === "dispatch" ? dispatchSummaryRows.map((row) => row.excavator) : []),
-  ]), [dispatchSummaryRows, renderedTopTab, vehicleRows]);
-  const currentDispatchSummaryRows = useMemo(() => (
-    renderedTopTab !== "dispatch"
-      ? []
-      : isDailyDispatchShift
-      ? consolidateDispatchSummaryRows(dispatchSummaryRows, reportDate)
-      : dispatchSummaryRows.filter((row) => row.date === reportDate && row.shift === currentDispatchShift)
-  ), [currentDispatchShift, dispatchSummaryRows, isDailyDispatchShift, renderedTopTab, reportDate]);
-  const filteredDispatchSummaryRows = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    return currentDispatchSummaryRows.filter((row) => {
-      const areaOk = areaFilter === "Все участки" || normalizeLookupValue(row.area) === normalizeLookupValue(areaFilter);
-      const textOk = normalizedSearch === "" || [
-        row.vehicleName,
-        row.area,
-        row.location,
-        row.workType,
-        row.excavator,
-        row.reason,
-        row.comment,
-      ].join(" ").toLowerCase().includes(normalizedSearch);
-
-      return areaOk && textOk;
-    });
-  }, [areaFilter, currentDispatchSummaryRows, search]);
-  const dispatchSummaryTotals = useMemo(() => {
-    const totals = filteredDispatchSummaryRows.reduce((result, row) => ({
-      plan: result.plan + row.planVolume,
-      fact: result.fact + row.factVolume,
-      workHours: result.workHours + row.workHours,
-      repairHours: result.repairHours + row.repairHours,
-      downtimeHours: result.downtimeHours + row.downtimeHours,
-      trips: result.trips + row.trips,
-    }), {
-      plan: 0,
-      fact: 0,
-      workHours: 0,
-      repairHours: 0,
-      downtimeHours: 0,
-      trips: 0,
-    });
-    const delta = totals.fact - totals.plan;
-    const percent = totals.plan > 0 ? Math.round((totals.fact / totals.plan) * 100) : totals.fact > 0 ? 100 : 0;
-    const productivity = totals.workHours > 0 ? totals.fact / totals.workHours : 0;
-
-    return { ...totals, delta, percent, productivity };
-  }, [filteredDispatchSummaryRows]);
-  const dispatchAiSuggestion = useMemo(() => (
-    buildDispatchAiSuggestion(filteredDispatchSummaryRows)
-  ), [filteredDispatchSummaryRows]);
-
+  const {
+    filteredDispatch,
+    currentDispatchShift,
+    isDailyDispatchShift,
+    dispatchAreaOptions,
+    dispatchVehicleOptions,
+    dispatchLocationOptions,
+    dispatchWorkTypeOptions,
+    dispatchExcavatorOptions,
+    currentDispatchSummaryRows,
+    filteredDispatchSummaryRows,
+    dispatchSummaryTotals,
+    dispatchAiSuggestion,
+  } = useDispatchSummaryViewModel({
+    active: renderedTopTab === "dispatch",
+    areaFilter,
+    search,
+    dispatchTab,
+    reportDate,
+    vehicleRows,
+    dispatchSummaryRows,
+    reportBaseRows,
+  });
   const {
     addSelectedDispatchVehicle,
     addFilteredVehiclesToDispatchSummary,
