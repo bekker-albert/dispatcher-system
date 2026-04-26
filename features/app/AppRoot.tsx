@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { AppAdminContent } from "@/features/app/AppAdminContent";
+import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
 import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
@@ -26,23 +27,14 @@ import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
 import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
-import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchFilterState } from "@/features/dispatch/useDispatchFilterState";
 import { useDispatchSummaryState } from "@/features/dispatch/useDispatchSummaryState";
-import { FleetSection } from "@/features/fleet/FleetSection";
 import { useFleetRows } from "@/features/fleet/useFleetRows";
-import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { useVehicleUiState } from "@/features/admin/vehicles/useVehicleUiState";
 import { useAdminStructureState } from "@/features/admin/structure/useAdminStructureState";
-import {
-  DispatchSection,
-  PtoSection,
-  ReportsSection,
-} from "@/features/app/lazySections";
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
-import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
@@ -50,14 +42,11 @@ import { usePtoDatabaseUiState } from "@/features/pto/usePtoDatabaseUiState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
 import { usePtoUiState } from "@/features/pto/usePtoUiState";
-import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { useReportUiState } from "@/features/reports/useReportUiState";
-import { SafetySection } from "@/features/safety-driving/SafetySection";
-import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
@@ -1125,281 +1114,262 @@ export default function App() {
           onSelectAdminSection={setAdminSection}
           onSelectReportDate={selectReportDate}
         />
-        {renderedTopTab === "reports" && (
-          shouldGatePtoDatabase ? <PtoDatabaseGate message={ptoDatabaseMessage} /> : (
-          <ReportsSection
-            reportAreaTabs={reportAreaTabs}
-            reportArea={reportArea}
-            onSelectReportArea={setReportArea}
-            onPrintReport={printReport}
-            activeReportCustomerLabel={activeReportCustomer.label}
-            reportDate={reportDate}
-            reportCompletionCards={reportCompletionCards}
-            reportTableColumnWidths={reportTableColumnWidths}
-            reportColumnKeys={visibleReportColumnKeys}
-            reportColumnWidthByKey={reportColumnWidthByKey}
-            reportHeaderLabel={reportHeaderLabel}
-            renderReportHeaderText={renderReportHeaderText}
-            onStartReportColumnResize={startReportColumnResize}
-            filteredReportAreaGroups={filteredReportAreaGroups}
-            filteredReportsCount={filteredReports.length}
-            reportReasons={reportReasons}
-            onCommitReportDayReason={commitReportDayReason}
-            onCancelReportDayReasonDraft={cancelReportDayReasonDraft}
-            onUpdateReportDayReasonDraft={updateReportDayReasonDraft}
-            onCommitReportYearReason={commitReportYearReason}
-            onCancelReportYearReasonDraft={cancelReportYearReasonDraft}
-            onUpdateReportYearReasonDraft={updateReportYearReasonDraft}
-          />
-          )
-        )}
-
-        {renderedTopTab === "dispatch" && (
-          <DispatchSection
-            activeDispatchSubtabLabel={activeDispatchSubtab?.label ?? "Диспетчерская сводка"}
-            dispatchTab={dispatchTab}
-            activeDispatchSubtabContent={activeDispatchSubtab?.content || ""}
-            reportDate={reportDate}
-            isDailyDispatchShift={isDailyDispatchShift}
-            currentDispatchShift={currentDispatchShift}
-            dispatchSummaryTotals={dispatchSummaryTotals}
-            search={search}
-            onSearchChange={setSearch}
-            areaFilter={areaFilter}
-            onAreaFilterChange={setAreaFilter}
-            dispatchAreaOptions={dispatchAreaOptions}
-            dispatchVehicleToAddId={dispatchVehicleToAddId}
-            onDispatchVehicleToAddIdChange={setDispatchVehicleToAddId}
-            dispatchVehicleOptions={dispatchVehicleOptions}
-            onAddSelectedDispatchVehicle={addSelectedDispatchVehicle}
-            onAddFilteredVehiclesToDispatchSummary={addFilteredVehiclesToDispatchSummary}
-            dispatchAiSuggestion={dispatchAiSuggestion}
-            filteredDispatchSummaryRows={filteredDispatchSummaryRows}
-            onUpdateDispatchSummaryVehicle={updateDispatchSummaryVehicle}
-            onUpdateDispatchSummaryText={updateDispatchSummaryText}
-            onUpdateDispatchSummaryNumber={updateDispatchSummaryNumber}
-            onDeleteDispatchSummaryRow={deleteDispatchSummaryRow}
-            dispatchLocationOptions={dispatchLocationOptions}
-            dispatchWorkTypeOptions={dispatchWorkTypeOptions}
-            dispatchExcavatorOptions={dispatchExcavatorOptions}
-          />
-        )}
-
-        {renderedTopTab === "fleet" && (
-          <FleetSection
-            fleetTab={fleetTab}
-            subTabs={subTabs.fleet}
-            rows={filteredFleet}
-            onSelectTab={setFleetTab}
-          />
-        )}
-        {renderedTopTab === "contractors" && (
-          <ContractorsSection
-            contractorTab={contractorTab}
-            subTabs={subTabs.contractors}
-            onSelectTab={setContractorTab}
-          />
-        )}
-        {renderedTopTab === "fuel" && (
-          <FuelSection
-            fuelTab={fuelTab}
-            subTabs={subTabs.fuel}
-            onSelectTab={setFuelTab}
-          />
-        )}
-        {renderedTopTab === "pto" && (
-          shouldGatePtoDatabase ? <PtoDatabaseGate message={ptoDatabaseMessage} /> : (
-          <PtoSection
-            ptoTab={ptoTab}
-            activePtoSubtabLabel={activePtoSubtab?.label ?? ptoTab}
-            activePtoSubtabContent={activePtoSubtab?.content || ""}
-            isPtoDateTab={isPtoDateTab}
-            ptoAreaTabs={ptoAreaTabs}
-            ptoAreaFilter={ptoAreaFilter}
-            onSelectArea={selectPtoArea}
-            ptoBucketRows={ptoBucketRows}
-            ptoBucketColumns={ptoBucketColumns}
-            ptoBucketValues={ptoBucketValues}
-            onCommitBucketValue={commitPtoBucketValue}
-            onClearBucketCells={clearPtoBucketCells}
-            onAddBucketManualRow={addPtoBucketManualRow}
-            onDeleteBucketManualRow={deletePtoBucketManualRow}
-            renderPlanTable={() => renderPtoDateTable(
+        <AppPrimaryContent
+          renderedTopTab={renderedTopTab}
+          shouldGatePtoDatabase={shouldGatePtoDatabase}
+          ptoDatabaseMessage={ptoDatabaseMessage}
+          reportsProps={{
+            reportAreaTabs,
+            reportArea,
+            onSelectReportArea: setReportArea,
+            onPrintReport: printReport,
+            activeReportCustomerLabel: activeReportCustomer.label,
+            reportDate,
+            reportCompletionCards,
+            reportTableColumnWidths,
+            reportColumnKeys: visibleReportColumnKeys,
+            reportColumnWidthByKey,
+            reportHeaderLabel,
+            renderReportHeaderText,
+            onStartReportColumnResize: startReportColumnResize,
+            filteredReportAreaGroups,
+            filteredReportsCount: filteredReports.length,
+            reportReasons,
+            onCommitReportDayReason: commitReportDayReason,
+            onCancelReportDayReasonDraft: cancelReportDayReasonDraft,
+            onUpdateReportDayReasonDraft: updateReportDayReasonDraft,
+            onCommitReportYearReason: commitReportYearReason,
+            onCancelReportYearReasonDraft: cancelReportYearReasonDraft,
+            onUpdateReportYearReasonDraft: updateReportYearReasonDraft,
+          }}
+          dispatchProps={{
+            activeDispatchSubtabLabel: activeDispatchSubtab?.label ?? "Диспетчерская сводка",
+            dispatchTab,
+            activeDispatchSubtabContent: activeDispatchSubtab?.content || "",
+            reportDate,
+            isDailyDispatchShift,
+            currentDispatchShift,
+            dispatchSummaryTotals,
+            search,
+            onSearchChange: setSearch,
+            areaFilter,
+            onAreaFilterChange: setAreaFilter,
+            dispatchAreaOptions,
+            dispatchVehicleToAddId,
+            onDispatchVehicleToAddIdChange: setDispatchVehicleToAddId,
+            dispatchVehicleOptions,
+            onAddSelectedDispatchVehicle: addSelectedDispatchVehicle,
+            onAddFilteredVehiclesToDispatchSummary: addFilteredVehiclesToDispatchSummary,
+            dispatchAiSuggestion,
+            filteredDispatchSummaryRows,
+            onUpdateDispatchSummaryVehicle: updateDispatchSummaryVehicle,
+            onUpdateDispatchSummaryText: updateDispatchSummaryText,
+            onUpdateDispatchSummaryNumber: updateDispatchSummaryNumber,
+            onDeleteDispatchSummaryRow: deleteDispatchSummaryRow,
+            dispatchLocationOptions,
+            dispatchWorkTypeOptions,
+            dispatchExcavatorOptions,
+          }}
+          fleetProps={{
+            fleetTab,
+            subTabs: subTabs.fleet,
+            rows: filteredFleet,
+            onSelectTab: setFleetTab,
+          }}
+          contractorsProps={{
+            contractorTab,
+            subTabs: subTabs.contractors,
+            onSelectTab: setContractorTab,
+          }}
+          fuelProps={{
+            fuelTab,
+            subTabs: subTabs.fuel,
+            onSelectTab: setFuelTab,
+          }}
+          ptoProps={{
+            ptoTab,
+            activePtoSubtabLabel: activePtoSubtab?.label ?? ptoTab,
+            activePtoSubtabContent: activePtoSubtab?.content || "",
+            isPtoDateTab,
+            ptoAreaTabs,
+            ptoAreaFilter,
+            onSelectArea: selectPtoArea,
+            ptoBucketRows,
+            ptoBucketColumns,
+            ptoBucketValues,
+            onCommitBucketValue: commitPtoBucketValue,
+            onClearBucketCells: clearPtoBucketCells,
+            onAddBucketManualRow: addPtoBucketManualRow,
+            onDeleteBucketManualRow: deletePtoBucketManualRow,
+            renderPlanTable: () => renderPtoDateTable(
               ptoPlanRows,
               setPtoPlanRows,
               { showLocation: false, editableMonthTotal: true },
-            )}
-            renderOperTable={() => renderPtoDateTable(
+            ),
+            renderOperTable: () => renderPtoDateTable(
               ptoOperRows,
               setPtoOperRows,
               { showLocation: false, editableMonthTotal: false },
-            )}
-            renderSurveyTable={() => renderPtoDateTable(
+            ),
+            renderSurveyTable: () => renderPtoDateTable(
               ptoSurveyRows,
               setPtoSurveyRows,
               { showLocation: false, editableMonthTotal: false },
-            )}
-          />
-          )
-        )}
-
-        {renderedTopTab === "tb" && (
-          <SafetySection
-            tbTab={tbTab}
-            subTabs={subTabs.tb}
-            onSelectTab={setTbTab}
-          />
-        )}
-        {renderedTopTab === "user" && (
-          <UserProfileSection userCard={defaultUserCard} />
-        )}
-        {renderedTopTab === "admin" && (
-          <AppAdminContent
-            adminSection={adminSection}
-            navigationProps={{
-              topTabs,
-              customTabs,
-              onAddCustomTab: addCustomTab,
-              onUpdateTopTabLabel: updateTopTabLabel,
-              onUpdateCustomTabTitle: updateCustomTabTitle,
-              onDeleteTopTab: deleteTopTab,
-              onShowTopTab: showTopTab,
-              onDeleteCustomTab: deleteCustomTab,
-              onShowCustomTab: showCustomTab,
-            }}
-            structureProps={{
-              structureSection,
-              onSelectStructureSection: setStructureSection,
-              dependencyNodes,
-              dependencyLinks,
-              dependencyNodeForm,
-              dependencyLinkForm,
-              editingDependencyNodeId,
-              editingDependencyLinkId,
-              onEditDependencyNode: setEditingDependencyNodeId,
-              onEditDependencyLink: setEditingDependencyLinkId,
-              onUpdateDependencyNode: updateDependencyNode,
-              onUpdateDependencyNodeForm: updateDependencyNodeForm,
-              onAddDependencyNode: addDependencyNode,
-              onDeleteDependencyNode: deleteDependencyNode,
-              onUpdateDependencyLink: updateDependencyLink,
-              onUpdateDependencyLinkForm: updateDependencyLinkForm,
-              onAddDependencyLink: addDependencyLink,
-              onDeleteDependencyLink: deleteDependencyLink,
-              orgMembers,
-              orgMemberForm,
-              editingOrgMemberId,
-              onEditOrgMember: setEditingOrgMemberId,
-              onUpdateOrgMember: updateOrgMember,
-              onUpdateOrgMemberForm: updateOrgMemberForm,
-              onAddOrgMember: addOrgMember,
-              onDeleteOrgMember: deleteOrgMember,
-              areaShiftScheduleAreas,
-              areaShiftCutoffs,
-              onUpdateAreaShiftCutoff: updateAreaShiftCutoff,
-            }}
-            vehiclesProps={{
-              activeVehicleFilterCount,
-              filteredVehicleRowsCount: filteredVehicleRows.length,
-              totalVehicleRowsCount: vehicleRows.length,
-              adminVehiclesEditing,
-              visibleVehicleRows,
-              hiddenVehicleRowsCount,
-              vehicleAutocompleteOptions,
-              vehicleFilterColumns,
-              openVehicleFilter,
-              activeVehicleFilterOptions,
-              vehicleFilters,
-              vehicleFilterDrafts,
-              vehicleFilterSearch,
-              adminVehicleTableScrollRef,
-              vehicleImportInputRef,
-              onClearAllVehicleFilters: clearAllVehicleFilters,
-              onStartEditing: startAdminVehiclesEditing,
-              onFinishEditing: finishAdminVehiclesEditing,
-              onAddVehicleRow: addVehicleRow,
-              onOpenVehicleImportFilePicker: openVehicleImportFilePicker,
-              onExportVehiclesToExcel: exportVehiclesToExcel,
-              onImportVehiclesFromExcel: importVehiclesFromExcel,
-              onOpenVehicleFilterMenu: openVehicleFilterMenu,
-              onVehicleFilterSearchChange: (key, value) => setVehicleFilterSearch((current) => ({ ...current, [key]: value })),
-              onToggleVehicleFilterDraftValue: toggleVehicleFilterDraftValue,
-              onSelectAllVehicleFilterDraftValues: selectAllVehicleFilterDraftValues,
-              onDeselectAllVehicleFilterDraftValues: deselectAllVehicleFilterDraftValues,
-              onApplyVehicleFilter: applyVehicleFilter,
-              onCloseVehicleFilterMenu: closeVehicleFilterMenu,
-              onToggleVehicleVisibility: toggleVehicleVisibility,
-              vehicleCellInputProps,
-              onVehicleCellChange: updateVehicleRow,
-              onDeleteVehicle: deleteVehicle,
-              onShowAllVehicleRows: () => setShowAllVehicleRows(true),
-            }}
-            databaseProps={{
-              databaseConfigured,
-              databaseProviderLabel: dataProviderLabel,
-              ptoMemoryTotal: countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total,
-              vehicleCount: vehicleRows.length,
-              snapshots: clientSnapshots,
-              message: databasePanelMessage,
-              loading: databasePanelLoading,
-              getSnapshotStats: clientSnapshotStats,
-              onCreateSnapshot: createClientSnapshotNow,
-              onRefreshSnapshots: refreshClientSnapshots,
-              onRestoreSnapshot: restoreClientSnapshot,
-            }}
-            logsProps={{
-              logs: adminLogs,
-              lastChangeLog,
-              lastUploadLog,
-              onClearLogs: clearAdminLogs,
-            }}
-            reportsProps={{
-              customers: reportCustomers,
-              activeCustomer: activeAdminReportCustomer,
-              settingsTab: visibleAdminReportCustomerSettingsTab,
-              selectedCount: activeAdminReportSelectedCount,
-              usesSummaryRows: activeAdminReportUsesSummaryRows,
-              areaOptions: activeAdminReportAreaOptions,
-              summaryAreaOptions: activeAdminReportSummaryAreaOptions,
-              workOrderGroups: adminReportWorkOrderGroups,
-              baseRows: activeAdminReportBaseRows,
-              rowsByKey: activeAdminReportRowsByKey,
-              visibleRowKeys: activeAdminReportVisibleRowKeys,
-              derivedRowsByKey: derivedReportRowsByKey,
-              editingFactSourceRow: editingReportFactSourceRow,
-              editingFactSourceOptions: editingReportFactSourceOptions,
-              rowLabelEntries: activeAdminReportRowLabelEntries,
-              editingRowLabelKeys: editingReportRowLabelKeys,
-              expandedSummaryIds: expandedReportSummaryIds,
-              rowsForArea: reportRowsForSummaryArea,
-              onSelectCustomer: setAdminReportCustomerId,
-              onAddCustomer: addReportCustomer,
-              onDeleteCustomer: deleteReportCustomer,
-              onUpdateCustomer: updateReportCustomer,
-              onSetSettingsTab: setAdminReportCustomerSettingsTab,
-              onMoveArea: moveReportAreaOrder,
-              onMoveWork: moveReportWorkOrder,
-              onToggleCustomerRow: toggleReportCustomerRow,
-              onEditFactSource: setEditingReportFactSourceRowKey,
-              onSetFactSourceMode: setReportCustomerFactSourceMode,
-              onToggleFactSourceRow: toggleReportCustomerFactSourceRowKey,
-              onAddRowLabel: addReportCustomerRowLabel,
-              onChangeRowLabelSource: changeReportCustomerRowLabelSource,
-              onUpdateRowLabel: updateReportCustomerRowLabel,
-              onStartRowLabelEdit: startReportRowLabelEdit,
-              onFinishRowLabelEdit: finishReportRowLabelEdit,
-              onRemoveRowLabel: removeReportCustomerRowLabel,
-              onAddSummaryRow: addReportSummaryRow,
-              onUpdateSummaryRow: updateReportSummaryRow,
-              onToggleSummaryRow: toggleReportSummaryRowKey,
-              onStartSummaryEdit: startReportSummaryEdit,
-              onFinishSummaryEdit: finishReportSummaryEdit,
-              onRemoveSummaryRow: removeReportSummaryRow,
-            }}
-          />
-        )}
-
-        {activeCustomTab && <CustomTabSection tab={activeCustomTab} />}
+            ),
+          }}
+          safetyProps={{
+            tbTab,
+            subTabs: subTabs.tb,
+            onSelectTab: setTbTab,
+          }}
+          userProfileProps={{ userCard: defaultUserCard }}
+          adminContent={(
+            <AppAdminContent
+              adminSection={adminSection}
+              navigationProps={{
+                topTabs,
+                customTabs,
+                onAddCustomTab: addCustomTab,
+                onUpdateTopTabLabel: updateTopTabLabel,
+                onUpdateCustomTabTitle: updateCustomTabTitle,
+                onDeleteTopTab: deleteTopTab,
+                onShowTopTab: showTopTab,
+                onDeleteCustomTab: deleteCustomTab,
+                onShowCustomTab: showCustomTab,
+              }}
+              structureProps={{
+                structureSection,
+                onSelectStructureSection: setStructureSection,
+                dependencyNodes,
+                dependencyLinks,
+                dependencyNodeForm,
+                dependencyLinkForm,
+                editingDependencyNodeId,
+                editingDependencyLinkId,
+                onEditDependencyNode: setEditingDependencyNodeId,
+                onEditDependencyLink: setEditingDependencyLinkId,
+                onUpdateDependencyNode: updateDependencyNode,
+                onUpdateDependencyNodeForm: updateDependencyNodeForm,
+                onAddDependencyNode: addDependencyNode,
+                onDeleteDependencyNode: deleteDependencyNode,
+                onUpdateDependencyLink: updateDependencyLink,
+                onUpdateDependencyLinkForm: updateDependencyLinkForm,
+                onAddDependencyLink: addDependencyLink,
+                onDeleteDependencyLink: deleteDependencyLink,
+                orgMembers,
+                orgMemberForm,
+                editingOrgMemberId,
+                onEditOrgMember: setEditingOrgMemberId,
+                onUpdateOrgMember: updateOrgMember,
+                onUpdateOrgMemberForm: updateOrgMemberForm,
+                onAddOrgMember: addOrgMember,
+                onDeleteOrgMember: deleteOrgMember,
+                areaShiftScheduleAreas,
+                areaShiftCutoffs,
+                onUpdateAreaShiftCutoff: updateAreaShiftCutoff,
+              }}
+              vehiclesProps={{
+                activeVehicleFilterCount,
+                filteredVehicleRowsCount: filteredVehicleRows.length,
+                totalVehicleRowsCount: vehicleRows.length,
+                adminVehiclesEditing,
+                visibleVehicleRows,
+                hiddenVehicleRowsCount,
+                vehicleAutocompleteOptions,
+                vehicleFilterColumns,
+                openVehicleFilter,
+                activeVehicleFilterOptions,
+                vehicleFilters,
+                vehicleFilterDrafts,
+                vehicleFilterSearch,
+                adminVehicleTableScrollRef,
+                vehicleImportInputRef,
+                onClearAllVehicleFilters: clearAllVehicleFilters,
+                onStartEditing: startAdminVehiclesEditing,
+                onFinishEditing: finishAdminVehiclesEditing,
+                onAddVehicleRow: addVehicleRow,
+                onOpenVehicleImportFilePicker: openVehicleImportFilePicker,
+                onExportVehiclesToExcel: exportVehiclesToExcel,
+                onImportVehiclesFromExcel: importVehiclesFromExcel,
+                onOpenVehicleFilterMenu: openVehicleFilterMenu,
+                onVehicleFilterSearchChange: (key, value) => setVehicleFilterSearch((current) => ({ ...current, [key]: value })),
+                onToggleVehicleFilterDraftValue: toggleVehicleFilterDraftValue,
+                onSelectAllVehicleFilterDraftValues: selectAllVehicleFilterDraftValues,
+                onDeselectAllVehicleFilterDraftValues: deselectAllVehicleFilterDraftValues,
+                onApplyVehicleFilter: applyVehicleFilter,
+                onCloseVehicleFilterMenu: closeVehicleFilterMenu,
+                onToggleVehicleVisibility: toggleVehicleVisibility,
+                vehicleCellInputProps,
+                onVehicleCellChange: updateVehicleRow,
+                onDeleteVehicle: deleteVehicle,
+                onShowAllVehicleRows: () => setShowAllVehicleRows(true),
+              }}
+              databaseProps={{
+                databaseConfigured,
+                databaseProviderLabel: dataProviderLabel,
+                ptoMemoryTotal: countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total,
+                vehicleCount: vehicleRows.length,
+                snapshots: clientSnapshots,
+                message: databasePanelMessage,
+                loading: databasePanelLoading,
+                getSnapshotStats: clientSnapshotStats,
+                onCreateSnapshot: createClientSnapshotNow,
+                onRefreshSnapshots: refreshClientSnapshots,
+                onRestoreSnapshot: restoreClientSnapshot,
+              }}
+              logsProps={{
+                logs: adminLogs,
+                lastChangeLog,
+                lastUploadLog,
+                onClearLogs: clearAdminLogs,
+              }}
+              reportsProps={{
+                customers: reportCustomers,
+                activeCustomer: activeAdminReportCustomer,
+                settingsTab: visibleAdminReportCustomerSettingsTab,
+                selectedCount: activeAdminReportSelectedCount,
+                usesSummaryRows: activeAdminReportUsesSummaryRows,
+                areaOptions: activeAdminReportAreaOptions,
+                summaryAreaOptions: activeAdminReportSummaryAreaOptions,
+                workOrderGroups: adminReportWorkOrderGroups,
+                baseRows: activeAdminReportBaseRows,
+                rowsByKey: activeAdminReportRowsByKey,
+                visibleRowKeys: activeAdminReportVisibleRowKeys,
+                derivedRowsByKey: derivedReportRowsByKey,
+                editingFactSourceRow: editingReportFactSourceRow,
+                editingFactSourceOptions: editingReportFactSourceOptions,
+                rowLabelEntries: activeAdminReportRowLabelEntries,
+                editingRowLabelKeys: editingReportRowLabelKeys,
+                expandedSummaryIds: expandedReportSummaryIds,
+                rowsForArea: reportRowsForSummaryArea,
+                onSelectCustomer: setAdminReportCustomerId,
+                onAddCustomer: addReportCustomer,
+                onDeleteCustomer: deleteReportCustomer,
+                onUpdateCustomer: updateReportCustomer,
+                onSetSettingsTab: setAdminReportCustomerSettingsTab,
+                onMoveArea: moveReportAreaOrder,
+                onMoveWork: moveReportWorkOrder,
+                onToggleCustomerRow: toggleReportCustomerRow,
+                onEditFactSource: setEditingReportFactSourceRowKey,
+                onSetFactSourceMode: setReportCustomerFactSourceMode,
+                onToggleFactSourceRow: toggleReportCustomerFactSourceRowKey,
+                onAddRowLabel: addReportCustomerRowLabel,
+                onChangeRowLabelSource: changeReportCustomerRowLabelSource,
+                onUpdateRowLabel: updateReportCustomerRowLabel,
+                onStartRowLabelEdit: startReportRowLabelEdit,
+                onFinishRowLabelEdit: finishReportRowLabelEdit,
+                onRemoveRowLabel: removeReportCustomerRowLabel,
+                onAddSummaryRow: addReportSummaryRow,
+                onUpdateSummaryRow: updateReportSummaryRow,
+                onToggleSummaryRow: toggleReportSummaryRowKey,
+                onStartSummaryEdit: startReportSummaryEdit,
+                onFinishSummaryEdit: finishReportSummaryEdit,
+                onRemoveSummaryRow: removeReportSummaryRow,
+              }}
+            />
+          )}
+          customTabProps={activeCustomTab ? { tab: activeCustomTab } : null}
+        />
     </AppPageShell>
   );
 }
