@@ -9,6 +9,12 @@ import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
+import {
+  dependencyLinkFormNodePatch,
+  normalizeStoredDependencyLinks,
+  normalizeStoredDependencyNodes,
+  normalizeStoredOrgMembers,
+} from "@/features/admin/structure/adminStructurePersistence";
 import { AdminStructureSection } from "@/features/admin/structure/AdminStructureSection";
 import { useAdminStructureState } from "@/features/admin/structure/useAdminStructureState";
 import {
@@ -65,7 +71,6 @@ import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
-import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
@@ -94,7 +99,7 @@ import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { clientSnapshotRestoreFlagKey, clientSnapshotStats, collectLocalStorageBackup, getOrCreateClientId, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
-import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
+import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
@@ -932,46 +937,27 @@ export default function App() {
         setPtoBucketValues(normalizeDecimalRecord(savedPtoBucketValues, 0, 100000));
         setPtoBucketManualRows(normalizePtoBucketManualRows(savedPtoBucketRows));
 
-        if (Array.isArray(savedOrgMembers)) {
-          setOrgMembers(
-            savedOrgMembers.map((member) => ({
-              ...defaultOrgMemberForm,
-              ...(isRecord(member) ? member : {}),
-              active: !isRecord(member) || member.active !== false,
-            } as OrgMember)),
-          );
+        const normalizedOrgMembers = normalizeStoredOrgMembers(savedOrgMembers);
+        if (normalizedOrgMembers) {
+          setOrgMembers(normalizedOrgMembers);
         }
 
-        if (Array.isArray(savedDependencyNodes)) {
-          const parsedNodes = savedDependencyNodes.map((node) => ({
-            ...defaultDependencyNodeForm,
-            ...(isRecord(node) ? node : {}),
-            visible: !isRecord(node) || node.visible !== false,
-          } as DependencyNode));
-          const mergedNodes = mergeDefaultsById(parsedNodes, defaultDependencyNodes);
+        const normalizedDependencyNodes = normalizeStoredDependencyNodes(savedDependencyNodes);
+        if (normalizedDependencyNodes) {
+          setDependencyNodes(normalizedDependencyNodes);
 
-          setDependencyNodes(mergedNodes);
-
-          if (mergedNodes[0]) {
+          const dependencyLinkFormPatch = dependencyLinkFormNodePatch(normalizedDependencyNodes);
+          if (dependencyLinkFormPatch) {
             setDependencyLinkForm((current) => ({
               ...current,
-              fromNodeId: mergedNodes[0].id,
-              toNodeId: mergedNodes[1]?.id ?? mergedNodes[0].id,
+              ...dependencyLinkFormPatch,
             }));
           }
         }
 
-        if (Array.isArray(savedDependencyLinks)) {
-          setDependencyLinks(
-            mergeDefaultsById(
-              savedDependencyLinks.map((link) => ({
-                ...defaultDependencyLinkForm,
-                ...(isRecord(link) ? link : {}),
-                visible: !isRecord(link) || link.visible !== false,
-              } as DependencyLink)),
-              defaultDependencyLinks,
-            ),
-          );
+        const normalizedDependencyLinks = normalizeStoredDependencyLinks(savedDependencyLinks);
+        if (normalizedDependencyLinks) {
+          setDependencyLinks(normalizedDependencyLinks);
         }
 
         if (Array.isArray(savedAdminLogs)) {
