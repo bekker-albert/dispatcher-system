@@ -35,6 +35,7 @@ import {
   ReportsSection,
 } from "@/features/app/lazySections";
 import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
+import { useAdminVehicleEditMode } from "@/features/admin/vehicles/useAdminVehicleEditMode";
 import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
 import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
@@ -91,7 +92,7 @@ import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pt
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { cloneVehicleRows } from "@/lib/domain/vehicles/filtering";
-import { adminVehicleFallbackPreviewRows, parseVehicleInlineFieldDomKey, vehicleInlineFieldDomKey, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
+import { adminVehicleFallbackPreviewRows, vehicleInlineFieldDomKey, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
@@ -1903,30 +1904,6 @@ export default function App() {
     requestSave: requestPtoDatabaseSave,
   });
 
-  function startAdminVehiclesEditing() {
-    setAdminVehiclesEditing(true);
-  }
-
-  function finishAdminVehiclesEditing() {
-    if (editingVehicleCell) {
-      const parsedCell = parseVehicleInlineFieldDomKey(editingVehicleCell);
-
-      if (parsedCell) {
-        commitVehicleInlineCellEdit(parsedCell.vehicleId, parsedCell.field);
-      }
-    }
-
-    setAdminVehiclesEditing(false);
-    setShowAllVehicleRows(false);
-    setActiveVehicleCell(null);
-    setVehicleSelectionAnchorCell(null);
-    setSelectedVehicleCellKeys([]);
-    setEditingVehicleCell(null);
-    window.setTimeout(() => {
-      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
-    }, 0);
-  }
-
   const {
     addVehicleRow,
     updateVehicleRow,
@@ -1972,6 +1949,20 @@ export default function App() {
     updateVehicleRow,
     pushVehicleUndoSnapshot,
     addAdminLog,
+  });
+  const {
+    startAdminVehiclesEditing,
+    finishAdminVehiclesEditing,
+  } = useAdminVehicleEditMode({
+    editingVehicleCell,
+    commitVehicleInlineCellEdit,
+    setAdminVehiclesEditing,
+    setShowAllVehicleRows,
+    setActiveVehicleCell,
+    setVehicleSelectionAnchorCell,
+    setSelectedVehicleCellKeys,
+    setEditingVehicleCell,
+    vehicleRowsRef,
   });
 
   const {
