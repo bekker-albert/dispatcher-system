@@ -78,6 +78,7 @@ import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateVal
 import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
 import { useAdminReportFactSourceEditor } from "@/features/reports/useAdminReportFactSourceEditor";
 import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportRowLabelEditor";
+import { useAdminReportSummaryRowsEditor } from "@/features/reports/useAdminReportSummaryRowsEditor";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
@@ -95,7 +96,7 @@ import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/re
 import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
-import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
+import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
 import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoDateTableKeyFromTab, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
@@ -2251,121 +2252,22 @@ export default function App() {
     addAdminLog,
   });
 
-  function reportRowsForSummaryArea(area: string) {
-    const areaKey = normalizeLookupValue(area);
-    return activeAdminReportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey);
-  }
-
-  function reportRowKeysForSummaryArea(area: string) {
-    return reportRowsForSummaryArea(area).map(reportRowKey);
-  }
-
-  function addReportSummaryRow(customerId: string) {
-    const customer = reportCustomers.find((item) => item.id === customerId);
-    if (!customer || !reportCustomerUsesSummaryRows(customer)) return;
-    const area = activeAdminReportSummaryAreaOptions[0] ?? activeAdminReportBaseRows[0]?.area ?? "";
-    const summaryId = createId();
-
-    setReportCustomers((current) => current.map((customer) => (
-      customer.id === customerId
-        ? {
-          ...customer,
-          summaryRows: [
-            ...customer.summaryRows,
-            { id: summaryId, label: "Итоговая строка", unit: "", area, planRowKey: "", rowKeys: reportRowKeysForSummaryArea(area) },
-          ],
-        }
-        : customer
-    )));
-    setExpandedReportSummaryIds((current) => Array.from(new Set([...current, summaryId])));
-    addAdminLog({
-      action: "Добавление",
-      section: "Отчетность",
-      details: "Добавлена итоговая строка для заказчика.",
-    });
-  }
-
-  function startReportSummaryEdit(summaryId: string) {
-    setExpandedReportSummaryIds((current) => (
-      current.includes(summaryId) ? current : [...current, summaryId]
-    ));
-  }
-
-  function finishReportSummaryEdit(summaryId: string) {
-    setExpandedReportSummaryIds((current) => current.filter((id) => id !== summaryId));
-    addAdminLog({
-      action: "Сохранение",
-      section: "Отчетность",
-      details: "Завершено редактирование состава итоговой строки.",
-    });
-  }
-
-  function updateReportSummaryRow(
-    customerId: string,
-    summaryId: string,
-    field: Exclude<keyof ReportSummaryRowConfig, "id" | "rowKeys">,
-    value: string,
-  ) {
-    setReportCustomers((current) => current.map((customer) => (
-      customer.id === customerId
-        ? {
-          ...customer,
-          summaryRows: customer.summaryRows.map((summary) => {
-            if (summary.id !== summaryId) return summary;
-
-            if (field === "area") {
-              return { ...summary, area: value, planRowKey: "", rowKeys: reportRowKeysForSummaryArea(value) };
-            }
-
-            return { ...summary, [field]: value };
-          }),
-        }
-        : customer
-    )));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменена итоговая строка заказчика.",
-    });
-  }
-
-  function toggleReportSummaryRowKey(customerId: string, summaryId: string, rowKey: string) {
-    setReportCustomers((current) => current.map((customer) => (
-      customer.id === customerId
-        ? {
-          ...customer,
-          summaryRows: customer.summaryRows.map((summary) => {
-            if (summary.id !== summaryId) return summary;
-            const rowKeys = summary.rowKeys.includes(rowKey)
-              ? summary.rowKeys.filter((key) => key !== rowKey)
-              : [...summary.rowKeys, rowKey];
-            return { ...summary, rowKeys };
-          }),
-        }
-        : customer
-    )));
-    addAdminLog({
-      action: "Редактирование",
-      section: "Отчетность",
-      details: "Изменен состав итоговой строки заказчика.",
-    });
-  }
-
-  function removeReportSummaryRow(customerId: string, summaryId: string) {
-    if (!window.confirm("Удалить итоговую строку из отчетности заказчика?")) return;
-
-    setExpandedReportSummaryIds((current) => current.filter((id) => id !== summaryId));
-    setReportCustomers((current) => current.map((customer) => (
-      customer.id === customerId
-        ? { ...customer, summaryRows: customer.summaryRows.filter((summary) => summary.id !== summaryId) }
-        : customer
-    )));
-    addAdminLog({
-      action: "Удаление",
-      section: "Отчетность",
-      details: "Удалена итоговая строка заказчика.",
-    });
-  }
+  const {
+    reportRowsForSummaryArea,
+    addReportSummaryRow,
+    startReportSummaryEdit,
+    finishReportSummaryEdit,
+    updateReportSummaryRow,
+    toggleReportSummaryRowKey,
+    removeReportSummaryRow,
+  } = useAdminReportSummaryRowsEditor({
+    reportCustomers,
+    baseRows: activeAdminReportBaseRows,
+    summaryAreaOptions: activeAdminReportSummaryAreaOptions,
+    setReportCustomers,
+    setExpandedSummaryIds: setExpandedReportSummaryIds,
+    addAdminLog,
+  });
 
   function currentPtoTableLabel() {
     return subTabs.pto.find((tab) => tab.value === ptoTab)?.label ?? ptoTab;
