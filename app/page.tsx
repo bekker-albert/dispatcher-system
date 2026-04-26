@@ -13,6 +13,7 @@ import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSumm
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
+import { useAdminVehicleRowsViewModel } from "@/features/admin/vehicles/useAdminVehicleRowsViewModel";
 import { useVehicleFilterMenu } from "@/features/admin/vehicles/useVehicleFilterMenu";
 import {
   dependencyLinkFormNodePatch,
@@ -100,8 +101,8 @@ import { createPtoBucketColumns, createPtoBucketRows, normalizePtoBucketManualRo
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
-import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
-import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
+import { cloneVehicleRows } from "@/lib/domain/vehicles/filtering";
+import { adminVehicleFallbackPreviewRows, parseVehicleInlineFieldDomKey, vehicleFieldIsNumeric, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
@@ -2020,91 +2021,27 @@ export default function App() {
     return createPtoBucketColumns(deferredVehicleRows);
   }, [deferredVehicleRows, isPtoBucketsSection]);
 
-  const isAdminVehiclesSection = renderedTopTab === "admin" && adminSection === "vehicles";
-
-  useEffect(() => {
-    if (!isAdminVehiclesSection && adminVehiclesEditing) {
-      setAdminVehiclesEditing(false);
-    }
-
-    if (!isAdminVehiclesSection && showAllVehicleRows) {
-      setShowAllVehicleRows(false);
-    }
-  }, [adminVehiclesEditing, isAdminVehiclesSection, showAllVehicleRows]);
-
-  useEffect(() => {
-    setShowAllVehicleRows(false);
-  }, [vehicleFilters]);
-
-  const vehicleAutocompleteOptions = useMemo(() => (
-    isAdminVehiclesSection && adminVehiclesEditing
-      ? Object.fromEntries(
-          vehicleFilterColumns
-            .filter((column) => vehicleAutocompleteFilterKeys.includes(column.key))
-            .map((column) => [column.key, createVehicleFilterOptions(deferredVehicleRows, column)]),
-        ) as Partial<Record<VehicleFilterKey, string[]>>
-      : {}
-  ), [adminVehiclesEditing, deferredVehicleRows, isAdminVehiclesSection]);
-
-  const activeVehicleFilterOptions = useMemo(() => {
-    if (!isAdminVehiclesSection || !openVehicleFilter) return [];
-
-    const column = vehicleFilterColumns.find((item) => item.key === openVehicleFilter);
-    if (!column) return [];
-
-      const rowsForColumn = deferredVehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns, column.key));
-    const options = createVehicleFilterOptions(rowsForColumn, column);
-    const selectedValues = vehicleFilters[column.key] ?? [];
-
-    return Array.from(new Set([...options, ...selectedValues]))
-      .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
-  }, [deferredVehicleRows, isAdminVehiclesSection, openVehicleFilter, vehicleFilters]);
-
-  const filteredVehicleRows = useMemo(() => (
-    isAdminVehiclesSection
-      ? vehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns))
-      : []
-  ), [isAdminVehiclesSection, vehicleFilters, vehicleRows]);
-
-  useEffect(() => {
-    if (!isAdminVehiclesSection || showAllVehicleRows) return undefined;
-
-    const updateVehiclePreviewLimit = () => {
-      const tableScroll = adminVehicleTableScrollRef.current;
-      if (!tableScroll) return;
-
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-      const tableTop = tableScroll.getBoundingClientRect().top;
-      const headerHeight = tableScroll.querySelector("thead")?.getBoundingClientRect().height ?? 30;
-      const firstRowHeight = tableScroll.querySelector("tbody tr")?.getBoundingClientRect().height ?? 28;
-      const availableRowsHeight = viewportHeight - tableTop - headerHeight - adminVehicleViewportBottomReserve;
-      const nextLimit = Math.max(adminVehicleMinPreviewRows, Math.floor(availableRowsHeight / Math.max(1, firstRowHeight)));
-      const boundedLimit = Math.max(
-        adminVehicleMinPreviewRows,
-        Math.min(filteredVehicleRows.length || adminVehicleFallbackPreviewRows, nextLimit),
-      );
-
-      setVehiclePreviewRowLimit((current) => (current === boundedLimit ? current : boundedLimit));
-    };
-
-    const frame = window.requestAnimationFrame(updateVehiclePreviewLimit);
-    window.addEventListener("resize", updateVehiclePreviewLimit);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", updateVehiclePreviewLimit);
-    };
-  }, [adminVehiclesEditing, filteredVehicleRows.length, isAdminVehiclesSection, showAllVehicleRows]);
-
-  const visibleVehicleRows = showAllVehicleRows
-    ? filteredVehicleRows
-    : filteredVehicleRows.slice(0, vehiclePreviewRowLimit);
-  const hiddenVehicleRowsCount = Math.max(filteredVehicleRows.length - visibleVehicleRows.length, 0);
-
-  const activeVehicleFilterCount = useMemo(() => (
-    Object.values(vehicleFilters).filter((values) => values !== undefined).length
-  ), [vehicleFilters]);
-
+  const {
+    vehicleAutocompleteOptions,
+    activeVehicleFilterOptions,
+    filteredVehicleRows,
+    visibleVehicleRows,
+    hiddenVehicleRowsCount,
+    activeVehicleFilterCount,
+  } = useAdminVehicleRowsViewModel({
+    active: renderedTopTab === "admin" && adminSection === "vehicles",
+    adminVehiclesEditing,
+    showAllVehicleRows,
+    vehiclePreviewRowLimit,
+    vehicleRows,
+    deferredVehicleRows,
+    vehicleFilters,
+    openVehicleFilter,
+    tableScrollRef: adminVehicleTableScrollRef,
+    setAdminVehiclesEditing,
+    setShowAllVehicleRows,
+    setVehiclePreviewRowLimit,
+  });
   const {
     openVehicleFilterMenu,
     toggleVehicleFilterDraftValue,
