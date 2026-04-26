@@ -1,7 +1,9 @@
 import type { DataPtoState } from "@/lib/data/pto";
-import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
-import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
+import { normalizePtoPlanRow, normalizeStoredPtoYears, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { adminStorageKeys } from "@/lib/storage/keys";
+import { isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 
 export type CreatePtoDatabaseStateOptions = {
   manualYears: string[];
@@ -19,8 +21,61 @@ export type PtoDatabaseState = DataPtoState & {
 
 export type PtoDatabaseSaveMode = "auto" | "manual";
 
+export type PtoDatabaseLoadResolution =
+  | {
+    kind: "empty-save-local";
+    message: string;
+  }
+  | {
+    kind: "empty-ready";
+    message: string;
+  }
+  | {
+    kind: "restore-local";
+    backupReason: string;
+    message: string;
+  }
+  | {
+    kind: "keep-local";
+    backupReason: string;
+    message: string;
+  }
+  | {
+    kind: "use-database";
+    backupReason?: string;
+  };
+
+export type NormalizedPtoDatabaseLoadState = {
+  manualYears: string[];
+  planRows: PtoPlanRow[];
+  operRows: PtoPlanRow[];
+  surveyRows: PtoPlanRow[];
+  bucketValues: Record<string, number>;
+  bucketRows: PtoBucketRow[];
+  uiState: {
+    ptoTab?: string;
+    ptoPlanYear?: string;
+    ptoAreaFilter?: string;
+    expandedPtoMonths: Record<string, boolean>;
+    reportColumnWidths: Record<string, number>;
+    reportReasons: Record<string, string>;
+    ptoColumnWidths: Record<string, number>;
+    ptoRowHeights: Record<string, number>;
+    ptoHeaderLabels: Record<string, string>;
+  };
+  snapshotState: PtoDatabaseState;
+};
+
 export const ptoDatabaseMessages = {
   notConfigured: "База данных не настроена.",
+  loading: "Загружаю ПТО из базы данных...",
+  invalidShape: "Сервер вернул не таблицу ПТО. Обнови страницу через Ctrl+F5 и повтори вход.",
+  emptySaveLocal: "В базе данных ПТО нет - оставил локальные данные и поставил сохранение в базу.",
+  emptyReady: "База подключена. Данных ПТО пока нет - внеси изменение, оно сохранится автоматически.",
+  restoredLocal: "Локальные данные ПТО восстановлены из снимка и поставлены на сохранение в базу данных.",
+  localNewer: "Локальные данные ПТО новее базы - оставил их и поставил сохранение на сервер.",
+  loaded: "ПТО загружено из базы данных.",
+  loadError: (message: string) => `Не удалось загрузить ПТО из базы данных: ${message}`,
   loadingSaveDeferred: "База данных еще загружается. Сохранение ПТО отложено.",
   loadingSaveDeferredStatus: "База еще загружается, сохранение ПТО отложено.",
   alreadySaved: "ПТО сохранено в базе данных.",
@@ -32,6 +87,71 @@ export const ptoDatabaseMessages = {
   saveError: (message: string) => `Не удалось сохранить в базе данных: ${message}`,
   saveErrorStatus: (message: string) => `ПТО не сохранено: ${message}`,
 };
+
+export function validatePtoDatabaseLoadState(state: DataPtoState | null) {
+  if (
+    state
+    && (
+      !Array.isArray(state.manualYears)
+      || !Array.isArray(state.planRows)
+      || !Array.isArray(state.operRows)
+      || !Array.isArray(state.surveyRows)
+    )
+  ) {
+    throw new Error(ptoDatabaseMessages.invalidShape);
+  }
+}
+
+export function resolvePtoDatabaseLoadResolution({
+  databaseState,
+  currentState,
+  hasStoredPtoState,
+  localUpdatedAt,
+  shouldRestoreClientSnapshot,
+}: {
+  databaseState: DataPtoState | null;
+  currentState: DataPtoState;
+  hasStoredPtoState: boolean;
+  localUpdatedAt: string | null;
+  shouldRestoreClientSnapshot: boolean;
+}): PtoDatabaseLoadResolution {
+  if (!databaseState) {
+    return hasStoredPtoState
+      ? { kind: "empty-save-local", message: ptoDatabaseMessages.emptySaveLocal }
+      : { kind: "empty-ready", message: ptoDatabaseMessages.emptyReady };
+  }
+
+  const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
+  const databaseUpdatedTime = databaseState.updatedAt ? Date.parse(databaseState.updatedAt) : 0;
+  const localPtoStats = countPtoStateData(currentState);
+  const databasePtoStats = countPtoStateData(databaseState);
+  const hasLocalData = hasStoredPtoState && localPtoStats.total > 0;
+
+  if (
+    shouldRestoreClientSnapshot
+    && hasLocalData
+    && (localPtoStats.total >= databasePtoStats.total || localUpdatedTime >= databaseUpdatedTime)
+  ) {
+    return {
+      kind: "restore-local",
+      backupReason: "restored-client-snapshot-to-database",
+      message: ptoDatabaseMessages.restoredLocal,
+    };
+  }
+
+  if (hasLocalData && localUpdatedTime > 0 && localUpdatedTime > databaseUpdatedTime) {
+    return {
+      kind: "keep-local",
+      backupReason: "local-pto-newer-than-database",
+      message: ptoDatabaseMessages.localNewer,
+    };
+  }
+
+  return {
+    kind: "use-database",
+    backupReason: hasLocalData ? "before-database-pto-load" : undefined,
+  };
+}
 
 export function createPtoDatabaseState({
   manualYears,
@@ -50,6 +170,56 @@ export function createPtoDatabaseState({
     bucketValues,
     bucketRows,
     uiState,
+  };
+}
+
+export function normalizeLoadedPtoDatabaseState(
+  databaseState: DataPtoState,
+  fallbackState: PtoDatabaseState,
+): NormalizedPtoDatabaseLoadState {
+  const nextUiState = databaseState.uiState ?? {};
+  const fallbackUiState = fallbackState.uiState;
+  const expandedPtoMonths = isRecord(nextUiState.expandedPtoMonths)
+    ? Object.fromEntries(
+      Object.entries(nextUiState.expandedPtoMonths).filter((entry): entry is [string, boolean] => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
+    )
+    : fallbackUiState.expandedPtoMonths ?? {};
+  const manualYears = normalizeStoredPtoYears(databaseState.manualYears);
+  const planRows = databaseState.planRows.map((row) => normalizePtoPlanRow(row));
+  const operRows = databaseState.operRows.map((row) => normalizePtoPlanRow(row));
+  const surveyRows = databaseState.surveyRows.map((row) => normalizePtoPlanRow(row));
+  const bucketValues = normalizeDecimalRecord(databaseState.bucketValues, 0, 100000);
+  const bucketRows = normalizePtoBucketManualRows(databaseState.bucketRows);
+  const uiState = {
+    ptoTab: typeof nextUiState.ptoTab === "string" ? nextUiState.ptoTab : fallbackUiState.ptoTab,
+    ptoPlanYear: typeof nextUiState.ptoPlanYear === "string" ? nextUiState.ptoPlanYear : fallbackUiState.ptoPlanYear,
+    ptoAreaFilter: typeof nextUiState.ptoAreaFilter === "string" ? nextUiState.ptoAreaFilter : fallbackUiState.ptoAreaFilter,
+    expandedPtoMonths,
+    reportColumnWidths: normalizeNumberRecord(nextUiState.reportColumnWidths ?? fallbackUiState.reportColumnWidths, 42, 520),
+    reportReasons: normalizeStringRecord(nextUiState.reportReasons ?? fallbackUiState.reportReasons),
+    ptoColumnWidths: normalizeNumberRecord(nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths, 44, 800),
+    ptoRowHeights: normalizeNumberRecord(nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights, 28, 180),
+    ptoHeaderLabels: normalizeStringRecord(nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels),
+  };
+  const snapshotState = createPtoDatabaseState({
+    manualYears,
+    planRows,
+    operRows,
+    surveyRows,
+    bucketValues,
+    bucketRows,
+    uiState,
+  });
+
+  return {
+    manualYears,
+    planRows,
+    operRows,
+    surveyRows,
+    bucketValues,
+    bucketRows,
+    uiState,
+    snapshotState,
   };
 }
 

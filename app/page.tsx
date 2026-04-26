@@ -7,7 +7,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
-import { createPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
+import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -1162,142 +1162,89 @@ export default function App() {
     async function loadPtoDatabase() {
       if (!databaseConfigured) {
         setPtoDatabaseReady(true);
-        setPtoDatabaseMessage("База данных не настроена.");
+        setPtoDatabaseMessage(ptoDatabaseMessages.notConfigured);
         return;
       }
 
       ptoDatabaseLoadedRef.current = false;
       setPtoDatabaseReady(false);
-      setPtoDatabaseMessage("Загружаю ПТО из базы данных...");
+      setPtoDatabaseMessage(ptoDatabaseMessages.loading);
 
       try {
         const { loadPtoStateFromDatabase } = await import("@/lib/data/pto");
         const databaseState = await loadPtoStateFromDatabase();
         if (cancelled) return;
 
-        if (
-          databaseState
-          && (
-            !Array.isArray(databaseState.manualYears)
-            || !Array.isArray(databaseState.planRows)
-            || !Array.isArray(databaseState.operRows)
-            || !Array.isArray(databaseState.surveyRows)
-          )
-        ) {
-          throw new Error("Сервер вернул не таблицу ПТО. Обнови страницу через Ctrl+F5 и повтори вход.");
-        }
+        validatePtoDatabaseLoadState(databaseState);
 
-        if (!databaseState) {
+        const resolution = resolvePtoDatabaseLoadResolution({
+          databaseState,
+          currentState: ptoDatabaseStateRef.current,
+          hasStoredPtoState: hasStoredPtoStateRef.current,
+          localUpdatedAt: window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt),
+          shouldRestoreClientSnapshot: window.sessionStorage.getItem(clientSnapshotRestoreFlagKey) === "1",
+        });
+
+        if (resolution.kind === "empty-save-local" || resolution.kind === "empty-ready") {
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
           setPtoDatabaseReady(true);
-          if (hasStoredPtoStateRef.current) {
+          if (resolution.kind === "empty-save-local") {
             setPtoSaveRevision((revision) => revision + 1);
-            setPtoDatabaseMessage("В базе данных ПТО нет — оставил локальные данные и поставил сохранение в базу.");
-          } else {
-            setPtoDatabaseMessage("База подключена. Данных ПТО пока нет — внеси изменение, оно сохранится автоматически.");
           }
+          setPtoDatabaseMessage(resolution.message);
           return;
         }
 
-        const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt);
-        const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
-        const databaseUpdatedTime = databaseState.updatedAt ? Date.parse(databaseState.updatedAt) : 0;
-        const localPtoStats = countPtoStateData(ptoDatabaseStateRef.current);
-        const databasePtoStats = countPtoStateData(databaseState);
-        const shouldRestoreLocalPto = window.sessionStorage.getItem(clientSnapshotRestoreFlagKey) === "1"
-          && hasStoredPtoStateRef.current
-          && localPtoStats.total > 0
-          && (localPtoStats.total >= databasePtoStats.total || localUpdatedTime >= databaseUpdatedTime);
-
-        if (shouldRestoreLocalPto) {
-          window.sessionStorage.removeItem(clientSnapshotRestoreFlagKey);
-          savePtoLocalRecoveryBackup("restored-client-snapshot-to-database", databaseState.updatedAt);
+        if (resolution.kind === "restore-local" || resolution.kind === "keep-local") {
+          if (resolution.kind === "restore-local") {
+            window.sessionStorage.removeItem(clientSnapshotRestoreFlagKey);
+          }
+          savePtoLocalRecoveryBackup(resolution.backupReason, databaseState?.updatedAt);
           ptoDatabaseLoadedRef.current = true;
           ptoDatabaseSaveSnapshotRef.current = "";
           setPtoDatabaseReady(true);
           setPtoSaveRevision((revision) => revision + 1);
-          setPtoDatabaseMessage("Локальные данные ПТО восстановлены из снимка и поставлены на сохранение в базу данных.");
+          setPtoDatabaseMessage(resolution.message);
           return;
         }
 
-        const shouldKeepLocalPtoState = hasStoredPtoStateRef.current
-          && localPtoStats.total > 0
-          && localUpdatedTime > 0
-          && localUpdatedTime > databaseUpdatedTime;
+        if (!databaseState) return;
 
-        if (shouldKeepLocalPtoState) {
-          savePtoLocalRecoveryBackup("local-pto-newer-than-database", databaseState.updatedAt);
-          ptoDatabaseLoadedRef.current = true;
-          ptoDatabaseSaveSnapshotRef.current = "";
-          setPtoDatabaseReady(true);
-          setPtoSaveRevision((revision) => revision + 1);
-          setPtoDatabaseMessage("Локальные данные ПТО новее базы — оставил их и поставил сохранение на сервер.");
-          return;
+        if (resolution.backupReason) {
+          savePtoLocalRecoveryBackup(resolution.backupReason, databaseState.updatedAt);
         }
 
-        if (hasStoredPtoStateRef.current && localPtoStats.total > 0) {
-          savePtoLocalRecoveryBackup("before-database-pto-load", databaseState.updatedAt);
-        }
-
-        const nextManualYears = normalizeStoredPtoYears(databaseState.manualYears);
-        const nextPlanRows = databaseState.planRows.map((row) => normalizePtoPlanRow(row));
-        const nextOperRows = databaseState.operRows.map((row) => normalizePtoPlanRow(row));
-        const nextSurveyRows = databaseState.surveyRows.map((row) => normalizePtoPlanRow(row));
-        const nextBucketValues = normalizeDecimalRecord(databaseState.bucketValues, 0, 100000);
-        const nextBucketRows = normalizePtoBucketManualRows(databaseState.bucketRows);
-        const nextUiState = databaseState.uiState ?? {};
-        const fallbackUiState = ptoDatabaseStateRef.current.uiState;
+        const loadedState = normalizeLoadedPtoDatabaseState(databaseState, ptoDatabaseStateRef.current);
 
         ptoDatabaseLoadedRef.current = true;
         undoHistoryRef.current = [];
         undoRestoringRef.current = true;
-        ptoDatabaseSaveSnapshotRef.current = serializePtoDatabaseState(createPtoDatabaseState({
-          manualYears: nextManualYears,
-          planRows: nextPlanRows,
-          operRows: nextOperRows,
-          surveyRows: nextSurveyRows,
-          bucketValues: nextBucketValues,
-          bucketRows: nextBucketRows,
-          uiState: {
-            ptoTab: nextUiState.ptoTab ?? fallbackUiState.ptoTab,
-            ptoPlanYear: nextUiState.ptoPlanYear ?? fallbackUiState.ptoPlanYear,
-            ptoAreaFilter: nextUiState.ptoAreaFilter ?? fallbackUiState.ptoAreaFilter,
-            expandedPtoMonths: nextUiState.expandedPtoMonths ?? fallbackUiState.expandedPtoMonths,
-            reportColumnWidths: nextUiState.reportColumnWidths ?? fallbackUiState.reportColumnWidths,
-            reportReasons: nextUiState.reportReasons ?? fallbackUiState.reportReasons,
-            ptoColumnWidths: nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths,
-            ptoRowHeights: nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights,
-            ptoHeaderLabels: nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels,
-          },
-        }));
-        setPtoManualYears(nextManualYears);
-        setPtoPlanRows(nextPlanRows);
-        setPtoOperRows(nextOperRows);
-        setPtoSurveyRows(nextSurveyRows);
-        setPtoBucketValues(nextBucketValues);
-        setPtoBucketManualRows(nextBucketRows);
-        if (typeof nextUiState.ptoTab === "string") setPtoTab(nextUiState.ptoTab);
-        if (typeof nextUiState.ptoPlanYear === "string") setPtoPlanYear(nextUiState.ptoPlanYear);
-        if (typeof nextUiState.ptoAreaFilter === "string") setPtoAreaFilter(nextUiState.ptoAreaFilter);
-        if (isRecord(nextUiState.expandedPtoMonths)) {
-          setExpandedPtoMonths(Object.fromEntries(
-            Object.entries(nextUiState.expandedPtoMonths).filter((entry): entry is [string, boolean] => typeof entry[0] === "string" && typeof entry[1] === "boolean"),
-          ));
-        }
-        setReportColumnWidths(normalizeNumberRecord(nextUiState.reportColumnWidths ?? fallbackUiState.reportColumnWidths, 42, 520));
-        setReportReasons(normalizeStringRecord(nextUiState.reportReasons ?? fallbackUiState.reportReasons));
-        setPtoColumnWidths(normalizeNumberRecord(nextUiState.ptoColumnWidths ?? fallbackUiState.ptoColumnWidths, 44, 800));
-        setPtoRowHeights(normalizeNumberRecord(nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights, 28, 180));
-        setPtoHeaderLabels(normalizeStringRecord(nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels));
+        ptoDatabaseSaveSnapshotRef.current = serializePtoDatabaseState(loadedState.snapshotState);
+        setPtoManualYears(loadedState.manualYears);
+        setPtoPlanRows(loadedState.planRows);
+        setPtoOperRows(loadedState.operRows);
+        setPtoSurveyRows(loadedState.surveyRows);
+        setPtoBucketValues(loadedState.bucketValues);
+        setPtoBucketManualRows(loadedState.bucketRows);
+        if (loadedState.uiState.ptoTab) setPtoTab(loadedState.uiState.ptoTab);
+        if (loadedState.uiState.ptoPlanYear) setPtoPlanYear(loadedState.uiState.ptoPlanYear);
+        if (loadedState.uiState.ptoAreaFilter) setPtoAreaFilter(loadedState.uiState.ptoAreaFilter);
+        setExpandedPtoMonths(loadedState.uiState.expandedPtoMonths);
+        setReportColumnWidths(loadedState.uiState.reportColumnWidths);
+        setReportReasons(loadedState.uiState.reportReasons);
+        setPtoColumnWidths(loadedState.uiState.ptoColumnWidths);
+        setPtoRowHeights(loadedState.uiState.ptoRowHeights);
+        setPtoHeaderLabels(loadedState.uiState.ptoHeaderLabels);
         setPtoDatabaseReady(true);
-        setPtoDatabaseMessage("ПТО загружено из базы данных.");
+        setPtoDatabaseMessage(ptoDatabaseMessages.loaded);
       } catch (error) {
         if (!cancelled) {
           ptoDatabaseLoadedRef.current = false;
           setPtoDatabaseReady(true);
-          setPtoDatabaseMessage("Не удалось загрузить ПТО из базы данных: " + errorToMessage(error));
-          showSaveStatus("error", "Не удалось загрузить ПТО из базы данных: " + errorToMessage(error));
+          const message = ptoDatabaseMessages.loadError(errorToMessage(error));
+          setPtoDatabaseMessage(message);
+          showSaveStatus("error", message);
         }
       }
     }
