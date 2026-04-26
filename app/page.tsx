@@ -23,6 +23,7 @@ import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
 import { PtoDateFormulaInput } from "@/features/pto/PtoDateFormulaInput";
 import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoStatusCell, PtoUnitCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
+import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
@@ -5319,11 +5320,6 @@ export default function App() {
     window.print();
   }, []);
 
-  const renderPtoDatabaseGate = () => (
-    <SectionCard title="">
-      <div style={blockStyle}>{ptoDatabaseMessage}</div>
-    </SectionCard>
-  );
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
@@ -5356,7 +5352,7 @@ export default function App() {
           onSelectReportDate={selectReportDate}
         />
         {renderedTopTab === "reports" && (
-          shouldGatePtoDatabase ? renderPtoDatabaseGate() : (
+          shouldGatePtoDatabase ? <PtoDatabaseGate message={ptoDatabaseMessage} /> : (
           <ReportsSection
             reportAreaTabs={reportAreaTabs}
             reportArea={reportArea}
@@ -5438,7 +5434,7 @@ export default function App() {
           />
         )}
         {renderedTopTab === "pto" && (
-          shouldGatePtoDatabase ? renderPtoDatabaseGate() : (
+          shouldGatePtoDatabase ? <PtoDatabaseGate message={ptoDatabaseMessage} /> : (
           <PtoSection
             ptoTab={ptoTab}
             activePtoSubtabLabel={activePtoSubtab?.label ?? ptoTab}
