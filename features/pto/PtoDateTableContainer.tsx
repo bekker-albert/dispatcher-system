@@ -12,6 +12,7 @@ import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbarPanel } from "@/features/pto/PtoDateToolbarPanel";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 import { createPtoDateTableViewModel } from "@/features/pto/ptoDateTableViewModel";
+import { createPtoDateVirtualRowsViewModel } from "@/features/pto/ptoDateVirtualRowsViewModel";
 import { usePtoDateEditingToggle } from "@/features/pto/usePtoDateEditingToggle";
 import { usePtoDraftRowController } from "@/features/pto/usePtoDraftRowController";
 import {
@@ -35,7 +36,7 @@ import {
 } from "@/features/pto/ptoDateTableStyles";
 import { ptoAutomatedStatus, ptoRowFieldDomKey, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
 import { formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
-import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
+import { ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { cleanAreaName, normalizeLookupValue } from "@/lib/utils/text";
 import { isEditableGridArrowKey } from "@/shared/editable-grid/selection";
 
@@ -237,18 +238,21 @@ export function PtoDateTableContainer({
       ? getPtoFormulaCellValue(activeFormulaCell, formulaValueContext)
       : undefined;
     const formulaInputDisabled = !ptoDateEditing || !activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false;
-    const virtualRows = ptoDateEditing
-      ? calculatePtoVirtualRows(filteredRows, ptoRowHeights, ptoTab, ptoDateViewport)
-      : null;
-    const renderedRows = virtualRows?.renderedRows ?? filteredRows;
-    const filteredRowHeights = virtualRows?.rowHeights ?? [];
-    const rowOffsets = virtualRows?.rowOffsets ?? [];
-    const virtualStartIndex = virtualRows?.startIndex ?? 0;
-    const topSpacerHeight = virtualRows?.topSpacerHeight ?? 0;
-    const bottomSpacerHeight = virtualRows?.bottomSpacerHeight ?? 0;
-    const virtualRowsTotalHeight = virtualRows?.totalHeight ?? 0;
+    const {
+      renderedRows,
+      filteredRowHeights,
+      rowOffsetAt,
+      virtualStartIndex,
+      topSpacerHeight,
+      bottomSpacerHeight,
+    } = createPtoDateVirtualRowsViewModel({
+      editing: ptoDateEditing,
+      rows: filteredRows,
+      rowHeights: ptoRowHeights,
+      table: ptoTab,
+      viewport: ptoDateViewport,
+    });
     const ptoColumnResizeHandler = ptoDateEditing ? startPtoColumnResize : undefined;
-    const rowOffsetAt = (index: number) => rowOffsets[index] ?? virtualRowsTotalHeight;
     const tableSpacerColSpan = tableColumns.length;
     const {
       formulaCellDomKey,
