@@ -44,6 +44,7 @@ import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
+import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import {
   dragHandleDotStyle,
@@ -98,7 +99,7 @@ import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDeci
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type TopTab } from "@/lib/domain/navigation/tabs";
-import { normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketRow } from "@/lib/domain/pto/buckets";
+import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
@@ -3462,113 +3463,23 @@ export default function App() {
     }
   }
 
-  const commitPtoBucketValue = useCallback((cellKey: string, draft: string) => {
-    const parsed = parseDecimalInput(draft);
-    const [rowKey, equipmentKey] = cellKey.split("::");
-    const bucketRow = ptoBucketRows.find((row) => row.key === rowKey);
-    const bucketColumn = ptoBucketColumns.find((column) => column.key === equipmentKey);
-
-    setPtoBucketValues((current) => {
-      const next = { ...current };
-
-      if (parsed === null) {
-        delete next[cellKey];
-      } else {
-        next[cellKey] = Math.round(parsed * 100) / 100;
-      }
-
-      return next;
-    });
-    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ savePtoBucketValueToDatabase }) => savePtoBucketValueToDatabase(
-          cellKey,
-          parsed === null ? null : Math.round(parsed * 100) / 100,
-        ))
-        .catch((error) => console.warn("Database PTO bucket value save failed:", error));
-    }
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО: Ковши",
-      details: `Изменена ячейка${bucketRow ? ` ${bucketRow.area} / ${bucketRow.structure}` : ""}${bucketColumn ? `, ${bucketColumn.label}` : ""}.`,
-    });
-  }, [addAdminLog, ptoBucketColumns, ptoBucketRows, requestPtoDatabaseSave]);
-
-  const clearPtoBucketCells = useCallback((cellKeys: string[]) => {
-    if (cellKeys.length === 0) return;
-
-    setPtoBucketValues((current) => {
-      const next = { ...current };
-      cellKeys.forEach((key) => {
-        delete next[key];
-      });
-      return next;
-    });
-    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ deletePtoBucketValuesFromDatabase }) => deletePtoBucketValuesFromDatabase(cellKeys))
-        .catch((error) => console.warn("Database PTO bucket values delete failed:", error));
-    }
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО: Ковши",
-      details: `Очищены выбранные ячейки ковшей: ${cellKeys.length}.`,
-    });
-  }, [addAdminLog, requestPtoDatabaseSave]);
-
-  const addPtoBucketManualRow = useCallback((areaValue: string, structureValue: string) => {
-    const fallbackArea = ptoAreaFilter === "Все участки" ? "" : ptoAreaFilter;
-    const area = cleanAreaName(areaValue.trim() || fallbackArea).trim();
-    const structure = structureValue.trim();
-
-    if (!area || !structure) return false;
-
-    const key = ptoBucketRowKey(area, structure);
-    if (ptoBucketManualRows.some((row) => row.key === key) || ptoBucketRows.some((row) => row.key === key)) {
-      return false;
-    }
-
-    setPtoBucketManualRows((current) => [...current, { key, area, structure, source: "manual" }]);
-    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ savePtoBucketRowToDatabase }) => savePtoBucketRowToDatabase({ key, area, structure, source: "manual" }, ptoBucketManualRows.length))
-        .catch((error) => console.warn("Database PTO bucket row save failed:", error));
-    }
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Добавление",
-      section: "ПТО: Ковши",
-      details: `Добавлена строка ковшей: ${area} / ${structure}.`,
-    });
-    return true;
-  }, [addAdminLog, ptoAreaFilter, ptoBucketManualRows, ptoBucketRows, requestPtoDatabaseSave]);
-
-  const deletePtoBucketManualRow = useCallback((row: PtoBucketRow) => {
-    if (!window.confirm(`Удалить временную строку "${row.area} / ${row.structure}" из ковшей?`)) return;
-
-    setPtoBucketManualRows((current) => current.filter((item) => item.key !== row.key));
-    setPtoBucketValues((current) => {
-      const next = { ...current };
-      Object.keys(next).forEach((key) => {
-        if (key.startsWith(`${row.key}::`)) delete next[key];
-      });
-      return next;
-    });
-    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ deletePtoBucketRowFromDatabase }) => deletePtoBucketRowFromDatabase(row.key))
-        .catch((error) => console.warn("Database PTO bucket row delete failed:", error));
-    }
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Удаление",
-      section: "ПТО: Ковши",
-      details: `Удалена строка ковшей: ${row.area} / ${row.structure}.`,
-    });
-  }, [addAdminLog, requestPtoDatabaseSave]);
-
+  const {
+    commitPtoBucketValue,
+    clearPtoBucketCells,
+    addPtoBucketManualRow,
+    deletePtoBucketManualRow,
+  } = usePtoBucketsEditor({
+    ptoAreaFilter,
+    ptoBucketRows,
+    ptoBucketColumns,
+    ptoBucketManualRows,
+    setPtoBucketValues,
+    setPtoBucketManualRows,
+    databaseConfigured,
+    ptoDatabaseLoadedRef,
+    requestSave: requestPtoDatabaseSave,
+    addAdminLog,
+  });
   function renderPtoDateTable(
     rows: PtoPlanRow[],
     setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>,
