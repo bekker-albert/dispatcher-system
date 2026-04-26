@@ -4,6 +4,7 @@ import { Check, Pencil, Trash2 } from "lucide-react";
 import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
+import { usePtoGridViewport } from "@/features/pto/usePtoGridViewport";
 import { ptoBucketCellKey, ptoBucketSelectionKey, type PtoBucketCell, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { formatBucketNumber } from "@/lib/domain/pto/formatting";
 import { toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
@@ -50,10 +51,8 @@ export default function PtoBucketsSection({
   const [activeCell, setActiveCell] = useState<PtoBucketCell | null>(null);
   const [selectionAnchorCell, setSelectionAnchorCell] = useState<PtoBucketCell | null>(null);
   const [selectedCellKeys, setSelectedCellKeys] = useState<string[]>([]);
-  const [viewport, setViewport] = useState({ scrollTop: 0, scrollLeft: 0, height: 520, width: 900 });
   const skipBlurCommitRef = useRef<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const scrollFrameRef = useRef<number | null>(null);
+  const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
 
   const rowKeys = useMemo(() => rows.map((row) => row.key), [rows]);
   const columnKeys = useMemo(() => columns.map((column) => column.key), [columns]);
@@ -119,48 +118,6 @@ export default function PtoBucketsSection({
     clearSelection();
   }, [cancelEdit, clearSelection]);
 
-  const updateViewport = useCallback(() => {
-    const element = scrollRef.current;
-    if (!element) return;
-
-    const next = {
-      scrollTop: element.scrollTop,
-      scrollLeft: element.scrollLeft,
-      height: element.clientHeight || 520,
-      width: element.clientWidth || 900,
-    };
-
-    setViewport((current) => (
-      current.scrollTop === next.scrollTop
-      && current.scrollLeft === next.scrollLeft
-      && current.height === next.height
-      && current.width === next.width
-        ? current
-        : next
-    ));
-  }, []);
-
-  const scheduleViewportUpdate = useCallback(() => {
-    if (scrollFrameRef.current !== null) return;
-
-    scrollFrameRef.current = window.requestAnimationFrame(() => {
-      scrollFrameRef.current = null;
-      updateViewport();
-    });
-  }, [updateViewport]);
-
-  useEffect(() => {
-    updateViewport();
-    window.addEventListener("resize", updateViewport);
-    return () => {
-      window.removeEventListener("resize", updateViewport);
-      if (scrollFrameRef.current !== null) {
-        window.cancelAnimationFrame(scrollFrameRef.current);
-        scrollFrameRef.current = null;
-      }
-    };
-  }, [updateViewport]);
-
   useEffect(() => {
     if (!editingMode) return undefined;
 
@@ -211,7 +168,7 @@ export default function PtoBucketsSection({
     }
 
     updateViewport();
-  }, [updateViewport]);
+  }, [scrollRef, updateViewport]);
 
   const selectCell = useCallback((cell: PtoBucketCell) => {
     if (!editingMode) return;
