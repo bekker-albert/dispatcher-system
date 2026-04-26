@@ -5,7 +5,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
-import { PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -23,8 +23,6 @@ import {
   ptoDropIndicatorStyle,
   ptoFormulaBarStyle,
   ptoFormulaInputStyle,
-  ptoHeaderInputStyle,
-  ptoHeaderLabelButtonStyle,
   ptoInlineAddRowButtonHoverStyle,
   ptoInlineAddRowButtonStyle,
   ptoPlanDayInputStyle,
@@ -5283,78 +5281,45 @@ export default function App() {
     };
 
     const renderPtoHeaderText = (key: string, fallback: string, align: React.CSSProperties["textAlign"] = "left") => {
-      const isEditing = editingPtoHeaderKey === key;
-
-      if (isEditing) {
-        return (
-          <input
-            autoFocus
-            value={ptoHeaderDraft}
-            onChange={(event) => setPtoHeaderDraft(event.target.value)}
-            onBlur={(event) => {
-              if (event.currentTarget.dataset.cancelHeaderEdit === "true") return;
-              commitPtoHeaderEdit(key, fallback);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                commitPtoHeaderEdit(key, fallback);
-              }
-
-              if (event.key === "Escape") {
-                event.preventDefault();
-                event.currentTarget.dataset.cancelHeaderEdit = "true";
-                cancelPtoHeaderEdit();
-              }
-            }}
-            onClick={(event) => event.stopPropagation()}
-            style={{ ...ptoHeaderInputStyle, textAlign: align }}
-          />
-        );
-      }
-
       return (
-        <button
-          type="button"
-          onDoubleClick={(event) => {
-            if (!ptoDateEditing) return;
-            event.stopPropagation();
-            startPtoHeaderEdit(key, fallback);
-          }}
-          style={{ ...ptoHeaderLabelButtonStyle, textAlign: align }}
-          title={ptoDateEditing ? "Двойной клик — переименовать заголовок" : undefined}
-        >
-          {ptoHeaderLabel(key, fallback)}
-        </button>
+        <PtoEditableHeaderText
+          columnKey={key}
+          fallback={fallback}
+          label={ptoHeaderLabel(key, fallback)}
+          align={align}
+          editing={editingPtoHeaderKey === key}
+          editingEnabled={ptoDateEditing}
+          draft={ptoHeaderDraft}
+          onDraftChange={setPtoHeaderDraft}
+          onStartEdit={startPtoHeaderEdit}
+          onCommit={commitPtoHeaderEdit}
+          onCancel={cancelPtoHeaderEdit}
+        />
       );
     };
 
     const renderPtoMonthHeader = (month: string, fallback: string, expanded: boolean) => {
       const key = `month-group:${month}`;
-      const isEditing = editingPtoHeaderKey === key;
-
-      if (isEditing) {
-        return renderPtoHeaderText(key, fallback);
-      }
 
       return (
-        <button
-          type="button"
-          onClick={() => {
+        <PtoEditableMonthHeader
+          columnKey={key}
+          fallback={fallback}
+          label={ptoHeaderLabel(key, fallback)}
+          editing={editingPtoHeaderKey === key}
+          editingEnabled={ptoDateEditing}
+          draft={ptoHeaderDraft}
+          expanded={expanded}
+          icon={expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+          onDraftChange={setPtoHeaderDraft}
+          onStartEdit={startPtoHeaderEdit}
+          onCommit={commitPtoHeaderEdit}
+          onCancel={cancelPtoHeaderEdit}
+          onToggle={() => {
             setExpandedPtoMonths((current) => ({ ...current, [month]: !current[month] }));
             requestPtoDatabaseSave();
           }}
-          onDoubleClick={(event) => {
-            if (!ptoDateEditing) return;
-            event.stopPropagation();
-            startPtoHeaderEdit(key, fallback);
-          }}
-          style={monthToggleStyle}
-          title="Клик — свернуть/развернуть, двойной клик — переименовать"
-        >
-          {expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
-          {ptoHeaderLabel(key, fallback)}
-        </button>
+        />
       );
     };
 
