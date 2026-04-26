@@ -36,6 +36,7 @@ import {
 } from "@/features/app/lazySections";
 import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
 import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
+import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
@@ -111,7 +112,7 @@ import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtual
 import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type TopTab } from "@/lib/domain/navigation/tabs";
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
-import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
+import { createDefaultVehicles, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import { cloneVehicleRows } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, parseVehicleInlineFieldDomKey, vehicleFieldIsNumeric, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
@@ -2383,46 +2384,24 @@ export default function App() {
     }, 0);
   }
 
-  function addVehicleRow() {
-    const nextId = Math.max(0, ...vehicleRows.map((vehicle) => vehicle.id)) + 1;
-    const nextVehicle: VehicleRow = {
-      ...defaultVehicleForm,
-      id: nextId,
-      area: "",
-      excavator: "",
-      visible: true,
-    };
-    nextVehicle.name = buildVehicleDisplayName(nextVehicle);
-
-    pushVehicleUndoSnapshot();
-    clearAllVehicleFilters();
-    setVehicleRows((current) => [nextVehicle, ...current]);
-    setPendingVehicleFocus({ id: nextId, field: "vehicleType", edit: true });
-    addAdminLog({
-      action: "Добавление",
-      section: "Техника",
-      details: "Добавлена новая строка техники.",
-    });
-  }
-
-  function updateVehicleRow(id: number, field: VehicleInlineField, value: string) {
-    pushVehicleUndoSnapshot();
-    setVehicleRows((current) =>
-      current.map((vehicle) => {
-        if (vehicle.id !== id) return vehicle;
-
-        const nextVehicle = {
-          ...vehicle,
-          [field]: value,
-        } as VehicleRow;
-
-        if (field === "owner") nextVehicle.contractor = value.trim();
-        nextVehicle.name = buildVehicleDisplayName(nextVehicle);
-
-        return nextVehicle;
-      }),
-    );
-  }
+  const {
+    addVehicleRow,
+    updateVehicleRow,
+    toggleVehicleVisibility,
+    deleteVehicle,
+  } = useVehicleRowsEditor({
+    vehicleRows,
+    vehicleRowsRef,
+    databaseConfigured,
+    databaseLoadedRef: vehiclesDatabaseLoadedRef,
+    databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
+    setVehicleRows,
+    setPendingVehicleFocus,
+    pushVehicleUndoSnapshot,
+    clearAllVehicleFilters,
+    showSaveStatus,
+    addAdminLog,
+  });
 
   function vehicleCellValue(id: number, field: VehicleInlineField) {
     const vehicle = vehicleRows.find((item) => item.id === id);
@@ -2653,45 +2632,6 @@ export default function App() {
       },
       onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => handleVehicleCellKeyDown(event, id, field, editingVehicleCell === fieldKey),
     };
-  }
-
-  function toggleVehicleVisibility(id: number) {
-    const vehicle = vehicleRows.find((item) => item.id === id);
-    pushVehicleUndoSnapshot();
-    setVehicleRows((current) =>
-      current.map((vehicle) =>
-        vehicle.id === id ? { ...vehicle, visible: vehicle.visible === false } : vehicle,
-      ),
-    );
-    addAdminLog({
-      action: "Редактирование",
-      section: "Техника",
-      details: `Изменен показ техники${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
-    });
-  }
-
-  function deleteVehicle(id: number) {
-    const vehicle = vehicleRows.find((item) => item.id === id);
-    pushVehicleUndoSnapshot();
-    setVehicleRows((current) => current.filter((vehicle) => vehicle.id !== id));
-    if (databaseConfigured && vehiclesDatabaseLoadedRef.current) {
-      showSaveStatus("saving", "Удаляю технику из базы...");
-      void import("@/lib/data/vehicles")
-        .then(({ deleteVehicleFromDatabase }) => deleteVehicleFromDatabase(id))
-        .then(() => {
-          vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(vehicleRowsRef.current.filter((vehicle) => vehicle.id !== id));
-          showSaveStatus("saved", "Техника удалена из базы.");
-        })
-        .catch((error) => {
-          console.warn("Database vehicle delete failed:", error);
-          showSaveStatus("error", `Техника не удалена из базы: ${errorToMessage(error)}`);
-        });
-    }
-    addAdminLog({
-      action: "Удаление",
-      section: "Техника",
-      details: `Удалена техника${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
-    });
   }
 
   const {
