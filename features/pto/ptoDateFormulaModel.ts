@@ -82,6 +82,18 @@ export function ptoFormulaTemplateKey(cell: Pick<PtoFormulaCell, "kind" | "day" 
   return `${cell.kind}:${cell.month ?? cell.day ?? ""}`;
 }
 
+function ptoFormulaCellFromParts(
+  rowId: string,
+  kind: PtoFormulaCell["kind"],
+  key?: string,
+): Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month"> {
+  return {
+    rowId,
+    kind,
+    ...(kind === "month" ? { month: key } : kind === "day" ? { day: key } : {}),
+  };
+}
+
 export function createPtoDateFormulaModel({
   table,
   year,
@@ -156,6 +168,9 @@ export function createPtoDateFormulaModel({
 
     return keys.length ? keys : [formulaSelectionKey(target)];
   };
+  const formulaCellSelected = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
+    selectedFormulaCellKeys.has(formulaSelectionKey(ptoFormulaCellFromParts(rowId, kind, key)))
+  );
 
   return {
     formulaCellRows,
@@ -172,6 +187,7 @@ export function createPtoDateFormulaModel({
     formulaCellFromTemplate,
     formulaCellFromSelectionKey,
     formulaRangeKeys,
+    formulaCellSelected,
   };
 }
 

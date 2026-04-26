@@ -4819,6 +4819,7 @@ export default function App() {
       formulaCellDomKey,
       formulaSelectionKey,
       formulaCellsByRowId,
+      formulaSelectionScope,
       selectedFormulaCellKeys,
       formulaCellTemplates,
       formulaTemplateIndexByKey,
@@ -4826,6 +4827,7 @@ export default function App() {
       formulaCellFromTemplate,
       formulaCellFromSelectionKey,
       formulaRangeKeys,
+      formulaCellSelected,
     } = createPtoDateFormulaModel({
       table: ptoTab,
       year: ptoPlanYear,
@@ -4908,14 +4910,13 @@ export default function App() {
 
       const targetCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
       const targetKey = formulaSelectionKey(targetCell);
-      const selectionScope = `${ptoTab}:${ptoPlanYear}:`;
 
       setPtoFormulaCell(targetCell);
       setPtoFormulaDraft(formatPtoFormulaNumber(value));
       setPtoInlineEditCell(null);
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(targetCell);
-      setPtoSelectedCellKeys((currentKeys) => togglePtoFormulaSelectionKeys(currentKeys, selectionScope, targetKey));
+      setPtoSelectedCellKeys((currentKeys) => togglePtoFormulaSelectionKeys(currentKeys, formulaSelectionScope, targetKey));
     };
 
     const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
@@ -4941,12 +4942,6 @@ export default function App() {
     const formulaCellEditing = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
       ptoFormulaCellMatches(activeInlineEditCell, ptoTab, ptoPlanYear, rowId, kind, key)
     );
-    const formulaCellSelected = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => selectedFormulaCellKeys.has(formulaSelectionKey({
-      rowId,
-      kind,
-      ...(kind === "month" ? { month: key } : kind === "day" ? { day: key } : {}),
-    }));
-
     const commitFormulaCellValue = (cell: PtoFormulaCell, value: string) => {
       if (!ptoDateEditing) return false;
       if (cell.editable === false) return false;
