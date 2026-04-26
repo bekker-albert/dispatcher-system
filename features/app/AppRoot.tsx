@@ -9,6 +9,7 @@ import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProps";
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
+import { useAppAdminVehiclesProps } from "@/features/app/useAppAdminVehiclesProps";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
@@ -1129,6 +1130,42 @@ export default function App() {
     dispatchWorkTypeOptions,
     dispatchExcavatorOptions,
   });
+  const adminVehiclesProps = useAppAdminVehiclesProps({
+    activeVehicleFilterCount,
+    filteredVehicleRows,
+    vehicleRows,
+    adminVehiclesEditing,
+    visibleVehicleRows,
+    hiddenVehicleRowsCount,
+    vehicleAutocompleteOptions,
+    vehicleFilterColumns,
+    openVehicleFilter,
+    activeVehicleFilterOptions,
+    vehicleFilters,
+    vehicleFilterDrafts,
+    vehicleFilterSearch,
+    setVehicleFilterSearch,
+    adminVehicleTableScrollRef,
+    vehicleImportInputRef,
+    clearAllVehicleFilters,
+    startAdminVehiclesEditing,
+    finishAdminVehiclesEditing,
+    addVehicleRow,
+    openVehicleImportFilePicker,
+    exportVehiclesToExcel,
+    importVehiclesFromExcel,
+    openVehicleFilterMenu,
+    toggleVehicleFilterDraftValue,
+    selectAllVehicleFilterDraftValues,
+    deselectAllVehicleFilterDraftValues,
+    applyVehicleFilter,
+    closeVehicleFilterMenu,
+    toggleVehicleVisibility,
+    vehicleCellInputProps,
+    updateVehicleRow,
+    deleteVehicle,
+    setShowAllVehicleRows,
+  });
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
@@ -1231,42 +1268,7 @@ export default function App() {
                 areaShiftCutoffs,
                 onUpdateAreaShiftCutoff: updateAreaShiftCutoff,
               }}
-              vehiclesProps={{
-                activeVehicleFilterCount,
-                filteredVehicleRowsCount: filteredVehicleRows.length,
-                totalVehicleRowsCount: vehicleRows.length,
-                adminVehiclesEditing,
-                visibleVehicleRows,
-                hiddenVehicleRowsCount,
-                vehicleAutocompleteOptions,
-                vehicleFilterColumns,
-                openVehicleFilter,
-                activeVehicleFilterOptions,
-                vehicleFilters,
-                vehicleFilterDrafts,
-                vehicleFilterSearch,
-                adminVehicleTableScrollRef,
-                vehicleImportInputRef,
-                onClearAllVehicleFilters: clearAllVehicleFilters,
-                onStartEditing: startAdminVehiclesEditing,
-                onFinishEditing: finishAdminVehiclesEditing,
-                onAddVehicleRow: addVehicleRow,
-                onOpenVehicleImportFilePicker: openVehicleImportFilePicker,
-                onExportVehiclesToExcel: exportVehiclesToExcel,
-                onImportVehiclesFromExcel: importVehiclesFromExcel,
-                onOpenVehicleFilterMenu: openVehicleFilterMenu,
-                onVehicleFilterSearchChange: (key, value) => setVehicleFilterSearch((current) => ({ ...current, [key]: value })),
-                onToggleVehicleFilterDraftValue: toggleVehicleFilterDraftValue,
-                onSelectAllVehicleFilterDraftValues: selectAllVehicleFilterDraftValues,
-                onDeselectAllVehicleFilterDraftValues: deselectAllVehicleFilterDraftValues,
-                onApplyVehicleFilter: applyVehicleFilter,
-                onCloseVehicleFilterMenu: closeVehicleFilterMenu,
-                onToggleVehicleVisibility: toggleVehicleVisibility,
-                vehicleCellInputProps,
-                onVehicleCellChange: updateVehicleRow,
-                onDeleteVehicle: deleteVehicle,
-                onShowAllVehicleRows: () => setShowAllVehicleRows(true),
-              }}
+              vehiclesProps={adminVehiclesProps}
               databaseProps={adminDatabaseProps}
               logsProps={{
                 logs: adminLogs,

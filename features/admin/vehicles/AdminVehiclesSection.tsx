@@ -8,7 +8,7 @@ import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { IconButton, MiniIconButton } from "@/shared/ui/buttons";
 import { AdminVehicleCellInput, AdminVehicleReadOnlyCell, VehicleFilterHeader } from "./AdminVehicleGridCells";
 
-type VehicleFilterColumnWithIcon = {
+export type VehicleFilterColumnWithIcon = {
   key: VehicleFilterKey;
   label: string;
   icon?: ReactNode;
@@ -29,7 +29,7 @@ type VehicleCellShellProps = Pick<
   | "onKeyDown"
 >;
 
-type AdminVehiclesSectionProps = {
+export type AdminVehiclesSectionProps = {
   activeVehicleFilterCount: number;
   filteredVehicleRowsCount: number;
   totalVehicleRowsCount: number;
