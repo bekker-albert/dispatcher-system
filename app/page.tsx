@@ -25,6 +25,7 @@ import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, ins
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
+import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import { isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
@@ -36,6 +37,7 @@ import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehic
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
+import { clientSnapshotRestoreFlagKey, clientSnapshotStats, collectLocalStorageBackup, getOrCreateClientId, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
@@ -119,25 +121,10 @@ const emptyPtoDraftRowFields = {
 };
 
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
-const clientIdStorageKey = "dispatcher:client-id";
-const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
-const clientSnapshotRestoreFlagKey = "dispatcher:restore-client-snapshot";
 const clientSnapshotSaveDelayMs = 1500;
 const clientSnapshotAutoMinIntervalMs = 120000;
 const saveStatusSavedHideMs = 2600;
 const saveStatusAttentionHideMs = 30000;
-const ptoLocalStateKeys = [
-  adminStorageKeys.ptoYears,
-  adminStorageKeys.ptoPlanRows,
-  adminStorageKeys.ptoSurveyRows,
-  adminStorageKeys.ptoOperRows,
-  adminStorageKeys.ptoColumnWidths,
-  adminStorageKeys.ptoRowHeights,
-  adminStorageKeys.ptoHeaderLabels,
-  adminStorageKeys.ptoBucketValues,
-  adminStorageKeys.ptoBucketRows,
-  adminStorageKeys.ptoLocalUpdatedAt,
-] as const;
 const sharedAppSettingKeys = [
   adminStorageKeys.reportCustomers,
   adminStorageKeys.reportAreaOrder,
@@ -164,104 +151,6 @@ async function loadDefaultVehicleSeed() {
     rows: seedRows,
     version: createVehicleSeedVersion(seedRows),
     vehicles: createDefaultVehicles(seedRows),
-  };
-}
-
-function countFilledPtoDayValues(rows: PtoPlanRow[] = []) {
-  return rows.reduce((sum, row) => (
-    sum + Object.values(row.dailyPlans ?? {}).filter((value) => Number.isFinite(Number(value))).length
-  ), 0);
-}
-
-function countPtoStateData(state: {
-  planRows?: PtoPlanRow[];
-  operRows?: PtoPlanRow[];
-  surveyRows?: PtoPlanRow[];
-  bucketRows?: unknown[];
-  bucketValues?: Record<string, unknown>;
-}) {
-  const rows = (state.planRows?.length ?? 0) + (state.operRows?.length ?? 0) + (state.surveyRows?.length ?? 0);
-  const dayValues = countFilledPtoDayValues(state.planRows)
-    + countFilledPtoDayValues(state.operRows)
-    + countFilledPtoDayValues(state.surveyRows);
-  const bucketRows = state.bucketRows?.length ?? 0;
-  const bucketValues = Object.values(state.bucketValues ?? {}).filter((value) => Number.isFinite(Number(value))).length;
-
-  return {
-    rows,
-    dayValues,
-    bucketRows,
-    bucketValues,
-    total: rows + dayValues + bucketRows + bucketValues,
-  };
-}
-
-function savePtoLocalRecoveryBackup(reason: string, databaseUpdatedAt?: string | null) {
-  const entries = Object.fromEntries(
-    ptoLocalStateKeys.flatMap((key) => {
-      const value = window.localStorage.getItem(key);
-      return value === null ? [] : [[key, value] as const];
-    }),
-  );
-
-  if (Object.keys(entries).length === 0) return;
-
-  window.localStorage.setItem(ptoLocalRecoveryBackupKey, JSON.stringify({
-    savedAt: new Date().toISOString(),
-    reason,
-    databaseUpdatedAt: databaseUpdatedAt ?? null,
-    entries,
-  }));
-}
-
-function getOrCreateClientId() {
-  const currentId = window.localStorage.getItem(clientIdStorageKey);
-  if (currentId) return currentId;
-
-  const nextId = `client-${createId()}`;
-  window.localStorage.setItem(clientIdStorageKey, nextId);
-  return nextId;
-}
-
-function collectLocalStorageBackup() {
-  const backupKeys = [
-    ...Object.values(adminStorageKeys),
-    clientIdStorageKey,
-    ptoLocalRecoveryBackupKey,
-  ];
-
-  return Object.fromEntries(
-    backupKeys.flatMap((key) => {
-      const value = window.localStorage.getItem(key);
-      return value === null ? [] : [[key, value] as const];
-    }),
-  );
-}
-
-function readSnapshotJson<T>(storage: Record<string, string>, key: string, fallback: T): T {
-  const rawValue = storage[key];
-  if (!rawValue) return fallback;
-
-  try {
-    return JSON.parse(rawValue) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function clientSnapshotStats(snapshot: DataClientSnapshot) {
-  const planRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoPlanRows, []);
-  const operRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoOperRows, []);
-  const surveyRows = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.ptoSurveyRows, []);
-  const vehicles = readSnapshotJson<unknown[]>(snapshot.storage, adminStorageKeys.vehicles, []);
-  const bucketValues = readSnapshotJson<Record<string, unknown>>(snapshot.storage, adminStorageKeys.ptoBucketValues, {});
-  const appKeys = Object.keys(snapshot.storage).length;
-
-  return {
-    appKeys,
-    ptoRows: planRows.length + operRows.length + surveyRows.length,
-    vehicles: vehicles.length,
-    bucketValues: Object.keys(bucketValues).length,
   };
 }
 
