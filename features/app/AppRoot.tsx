@@ -15,6 +15,7 @@ import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
+import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
@@ -41,12 +42,8 @@ import {
   PtoSection,
   ReportsSection,
 } from "@/features/app/lazySections";
-import { useAdminVehicleEditMode } from "@/features/admin/vehicles/useAdminVehicleEditMode";
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
-import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
-import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
-import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
@@ -1024,26 +1021,20 @@ export default function App() {
     updateVehicleRow,
     toggleVehicleVisibility,
     deleteVehicle,
-  } = useVehicleRowsEditor({
-    vehicleRows,
-    vehicleRowsRef,
-    databaseConfigured,
-    databaseLoadedRef: vehiclesDatabaseLoadedRef,
-    databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
-    setVehicleRows,
-    setPendingVehicleFocus,
-    pushVehicleUndoSnapshot,
-    clearAllVehicleFilters,
-    showSaveStatus,
-    addAdminLog,
-  });
-
-  const {
-    commitVehicleInlineCellEdit,
     vehicleCellInputProps,
-  } = useVehicleInlineGridEditor({
+    startAdminVehiclesEditing,
+    finishAdminVehiclesEditing,
+    openVehicleImportFilePicker,
+    importVehiclesFromExcel,
+    exportVehiclesToExcel,
+  } = useAppVehicleEditing({
     vehicleRows,
     visibleVehicleRows,
+    vehicleRowsRef,
+    vehicleImportInputRef,
+    vehiclesDatabaseLoadedRef,
+    vehiclesDatabaseSaveSnapshotRef,
+    databaseConfigured,
     activeVehicleCell,
     selectedVehicleCellKeys,
     editingVehicleCell,
@@ -1054,47 +1045,20 @@ export default function App() {
     vehicleSelectionDraggingRef,
     vehicleSelectionAnchorRef,
     setVehicleRows,
+    setVehicleFilters,
+    setVehicleFilterDrafts,
+    setOpenVehicleFilter,
+    setPendingVehicleFocus,
     setActiveVehicleCell,
     setVehicleSelectionAnchorCell,
     setSelectedVehicleCellKeys,
     setEditingVehicleCell,
     setVehicleCellDraft,
     setVehicleCellInitialDraft,
-    setPendingVehicleFocus,
-    updateVehicleRow,
-    pushVehicleUndoSnapshot,
-    addAdminLog,
-  });
-  const {
-    startAdminVehiclesEditing,
-    finishAdminVehiclesEditing,
-  } = useAdminVehicleEditMode({
-    editingVehicleCell,
-    commitVehicleInlineCellEdit,
     setAdminVehiclesEditing,
     setShowAllVehicleRows,
-    setActiveVehicleCell,
-    setVehicleSelectionAnchorCell,
-    setSelectedVehicleCellKeys,
-    setEditingVehicleCell,
-    vehicleRowsRef,
-  });
-
-  const {
-    openVehicleImportFilePicker,
-    importVehiclesFromExcel,
-    exportVehiclesToExcel,
-  } = useVehicleExcelTransfer({
-    vehicleRows,
-    vehicleImportInputRef,
-    databaseConfigured,
-    databaseLoadedRef: vehiclesDatabaseLoadedRef,
-    databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
-    setVehicleRows,
-    setVehicleFilters,
-    setVehicleFilterDrafts,
-    setOpenVehicleFilter,
     pushVehicleUndoSnapshot,
+    clearAllVehicleFilters,
     showSaveStatus,
     addAdminLog,
   });
