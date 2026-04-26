@@ -30,10 +30,10 @@ import { useAppStateBundle } from "@/features/app/useAppStateBundle";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoController } from "@/features/app/useAppUndoController";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
+import { useAppVehicleFocusController } from "@/features/app/useAppVehicleFocusController";
 import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
 import { useFleetRows } from "@/features/fleet/useFleetRows";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
-import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { databaseConfigured } from "@/lib/data/config";
 
@@ -87,7 +87,6 @@ export default function App() {
     setOpenVehicleFilter,
     vehicleFilterSearch,
     setVehicleFilterSearch,
-    pendingVehicleFocus,
     setPendingVehicleFocus,
     activeVehicleCell,
     setActiveVehicleCell,
@@ -268,15 +267,7 @@ export default function App() {
     databaseConfigured,
   });
 
-  useVehiclePendingFocus({
-    pendingVehicleFocus,
-    setPendingVehicleFocus,
-    vehicleSelectionAnchorRef,
-    setActiveVehicleCell,
-    setEditingVehicleCell,
-    setVehicleSelectionAnchorCell,
-    setSelectedVehicleCellKeys,
-  });
+  useAppVehicleFocusController({ appState });
 
   useAppInitialDataLoadController({ appState });
 
