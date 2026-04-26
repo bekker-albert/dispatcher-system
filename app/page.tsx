@@ -35,6 +35,7 @@ import {
   ReportsSection,
 } from "@/features/app/lazySections";
 import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
+import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
@@ -111,7 +112,7 @@ import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normaliz
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
-import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
+import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import { cloneVehicleRows } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, parseVehicleInlineFieldDomKey, vehicleFieldIsNumeric, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
@@ -2693,75 +2694,24 @@ export default function App() {
     });
   }
 
-  function openVehicleImportFilePicker() {
-    vehicleImportInputRef.current?.click();
-  }
-
-  async function importVehiclesFromExcel(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    try {
-      const importedVehicles = await parseVehicleImportFile(file, defaultVehicleForm);
-      if (!importedVehicles.length) {
-        window.alert("В выбранном файле не найден список техники.");
-        return;
-      }
-
-      if (!window.confirm(`Заменить текущий список техники данными из файла? Будет загружено строк: ${importedVehicles.length}.`)) return;
-
-      pushVehicleUndoSnapshot();
-      setVehicleRows(importedVehicles);
-      setVehicleFilters({});
-      setVehicleFilterDrafts({});
-      setOpenVehicleFilter(null);
-      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
-      window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
-      if (databaseConfigured && vehiclesDatabaseLoadedRef.current) {
-        showSaveStatus("saving", "Сохраняю загруженную технику...");
-        void import("@/lib/data/vehicles")
-          .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles))
-          .then(() => {
-            vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(importedVehicles);
-            showSaveStatus("saved", "Загруженная техника сохранена.");
-          })
-          .catch((error) => {
-            console.warn("Database vehicles import save failed:", error);
-            showSaveStatus("error", `Загруженная техника не сохранена: ${errorToMessage(error)}`);
-          });
-      }
-      addAdminLog({
-        action: "Загрузка",
-        section: "Техника",
-        details: `Загружен список техники: ${importedVehicles.length} строк.`,
-        fileName: file.name,
-        rowsCount: importedVehicles.length,
-      });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось прочитать Excel-файл.");
-    }
-  }
-
-  function exportVehiclesToExcel() {
-    const blob = createXlsxBlob(createVehicleExportRows(vehicleRows));
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = "spisok-tehniki.xlsx";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    addAdminLog({
-      action: "Выгрузка",
-      section: "Техника",
-      details: `Выгружен список техники: ${vehicleRows.length} строк.`,
-      fileName: "spisok-tehniki.xlsx",
-      rowsCount: vehicleRows.length,
-    });
-  }
+  const {
+    openVehicleImportFilePicker,
+    importVehiclesFromExcel,
+    exportVehiclesToExcel,
+  } = useVehicleExcelTransfer({
+    vehicleRows,
+    vehicleImportInputRef,
+    databaseConfigured,
+    databaseLoadedRef: vehiclesDatabaseLoadedRef,
+    databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
+    setVehicleRows,
+    setVehicleFilters,
+    setVehicleFilterDrafts,
+    setOpenVehicleFilter,
+    pushVehicleUndoSnapshot,
+    showSaveStatus,
+    addAdminLog,
+  });
 
   function openPtoDateImportFilePicker() {
     ptoPlanImportInputRef.current?.click();

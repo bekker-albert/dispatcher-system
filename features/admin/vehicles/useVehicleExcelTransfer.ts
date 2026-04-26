@@ -1,0 +1,129 @@
+import { useCallback, type ChangeEvent, type Dispatch, type RefObject, type SetStateAction } from "react";
+import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import { defaultVehicleForm } from "@/lib/domain/vehicles/defaults";
+import { createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
+import type { VehicleFilterKey, VehicleFilters } from "@/lib/domain/vehicles/grid";
+import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import { adminStorageKeys } from "@/lib/storage/keys";
+import { errorToMessage } from "@/lib/utils/normalizers";
+import { createXlsxBlob } from "@/lib/utils/xlsx";
+import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
+
+type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
+
+type UseVehicleExcelTransferOptions = {
+  vehicleRows: VehicleRow[];
+  vehicleImportInputRef: RefObject<HTMLInputElement | null>;
+  databaseConfigured: boolean;
+  databaseLoadedRef: RefObject<boolean>;
+  databaseSaveSnapshotRef: RefObject<string>;
+  setVehicleRows: Dispatch<SetStateAction<VehicleRow[]>>;
+  setVehicleFilters: Dispatch<SetStateAction<VehicleFilters>>;
+  setVehicleFilterDrafts: Dispatch<SetStateAction<VehicleFilters>>;
+  setOpenVehicleFilter: Dispatch<SetStateAction<VehicleFilterKey | null>>;
+  pushVehicleUndoSnapshot: () => void;
+  showSaveStatus: (kind: SaveStatusState["kind"], message: string) => void;
+  addAdminLog: (entry: AdminLogInput) => void;
+};
+
+export function useVehicleExcelTransfer({
+  vehicleRows,
+  vehicleImportInputRef,
+  databaseConfigured,
+  databaseLoadedRef,
+  databaseSaveSnapshotRef,
+  setVehicleRows,
+  setVehicleFilters,
+  setVehicleFilterDrafts,
+  setOpenVehicleFilter,
+  pushVehicleUndoSnapshot,
+  showSaveStatus,
+  addAdminLog,
+}: UseVehicleExcelTransferOptions) {
+  const openVehicleImportFilePicker = useCallback(() => {
+    vehicleImportInputRef.current?.click();
+  }, [vehicleImportInputRef]);
+
+  const importVehiclesFromExcel = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      const importedVehicles = await parseVehicleImportFile(file, defaultVehicleForm);
+      if (!importedVehicles.length) {
+        window.alert("В выбранном файле не найден список техники.");
+        return;
+      }
+
+      if (!window.confirm(`Заменить текущий список техники данными из файла? Будет загружено строк: ${importedVehicles.length}.`)) return;
+
+      pushVehicleUndoSnapshot();
+      setVehicleRows(importedVehicles);
+      setVehicleFilters({});
+      setVehicleFilterDrafts({});
+      setOpenVehicleFilter(null);
+      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
+      window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
+      if (databaseConfigured && databaseLoadedRef.current) {
+        showSaveStatus("saving", "Сохраняю загруженную технику...");
+        void import("@/lib/data/vehicles")
+          .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles))
+          .then(() => {
+            databaseSaveSnapshotRef.current = JSON.stringify(importedVehicles);
+            showSaveStatus("saved", "Загруженная техника сохранена.");
+          })
+          .catch((error) => {
+            console.warn("Database vehicles import save failed:", error);
+            showSaveStatus("error", `Загруженная техника не сохранена: ${errorToMessage(error)}`);
+          });
+      }
+      addAdminLog({
+        action: "Загрузка",
+        section: "Техника",
+        details: `Загружен список техники: ${importedVehicles.length} строк.`,
+        fileName: file.name,
+        rowsCount: importedVehicles.length,
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Не удалось прочитать Excel-файл.");
+    }
+  }, [
+    addAdminLog,
+    databaseConfigured,
+    databaseLoadedRef,
+    databaseSaveSnapshotRef,
+    pushVehicleUndoSnapshot,
+    setOpenVehicleFilter,
+    setVehicleFilterDrafts,
+    setVehicleFilters,
+    setVehicleRows,
+    showSaveStatus,
+  ]);
+
+  const exportVehiclesToExcel = useCallback(() => {
+    const blob = createXlsxBlob(createVehicleExportRows(vehicleRows));
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "spisok-tehniki.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    addAdminLog({
+      action: "Выгрузка",
+      section: "Техника",
+      details: `Выгружен список техники: ${vehicleRows.length} строк.`,
+      fileName: "spisok-tehniki.xlsx",
+      rowsCount: vehicleRows.length,
+    });
+  }, [addAdminLog, vehicleRows]);
+
+  return {
+    openVehicleImportFilePicker,
+    importVehiclesFromExcel,
+    exportVehiclesToExcel,
+  };
+}
