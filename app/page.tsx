@@ -81,6 +81,7 @@ import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureS
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
+import { createReportCompletionCards } from "@/lib/domain/reports/completion";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
@@ -1904,30 +1905,12 @@ export default function App() {
   const reportColumnWidthByKey = useMemo(() => (
     new Map(visibleReportColumnKeys.map((key, index) => [key, reportTableColumnWidths[index]]))
   ), [reportTableColumnWidths, visibleReportColumnKeys]);
-  const reportMonthEnd = `${reportDate.slice(0, 8)}${new Date(Number(reportDate.slice(0, 4)), Number(reportDate.slice(5, 7)), 0).getDate()}`;
-  const reportCompletionCards = useMemo(() => {
-    if (!needsDerivedReportRows) return [];
-    if (reportArea === "Все участки") return [];
-
-    const plan = filteredReports.reduce((sum, row) => sum + row.monthPlan, 0);
-    const monthPlan = filteredReports.reduce((sum, row) => sum + row.monthTotalPlan, 0);
-    const fact = filteredReports.reduce((sum, row) => sum + reportMonthFact(row), 0);
-    const percent = plan ? Math.round((fact / plan) * 100) : fact ? 100 : 0;
-    const lag = Math.max(plan - fact, 0);
-    const remainingDays = Math.max(Number(reportMonthEnd.slice(8, 10)) - Number(reportDate.slice(8, 10)), 0);
-    const overPlanPerDay = remainingDays ? Math.ceil(lag / remainingDays) : lag;
-
-    return [{
-      fact,
-      lag,
-      monthPlan,
-      overPlanPerDay,
-      percent,
-      plan,
-      remainingDays,
-      title: reportArea,
-    }];
-  }, [filteredReports, needsDerivedReportRows, reportArea, reportDate, reportMonthEnd]);
+  const reportCompletionCards = useMemo(() => createReportCompletionCards({
+    rows: filteredReports,
+    needsDerivedReportRows,
+    reportArea,
+    reportDate,
+  }), [filteredReports, needsDerivedReportRows, reportArea, reportDate]);
 
   useEffect(() => {
     const visibleCustomers = reportCustomers.filter((customer) => customer.visible);

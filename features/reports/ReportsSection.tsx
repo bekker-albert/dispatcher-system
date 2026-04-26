@@ -5,6 +5,7 @@ import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { reportFlexibleColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
 import { reportReasonEntryKey, reportYearReasonOverrideKey } from "@/lib/domain/reports/reasons";
 import type { ReportRow } from "@/lib/domain/reports/types";
+import type { ReportCompletionCard } from "@/lib/domain/reports/completion";
 import { delta, formatNumber, formatPercent, formatReportTitleDate, formatReportWorkName } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportRowDisplayKey } from "@/lib/domain/reports/display";
@@ -12,17 +13,6 @@ import { IconButton, TopButton } from "@/shared/ui/buttons";
 import { SectionCard } from "@/shared/ui/layout";
 import { ReportReasonTextarea } from "./ReportReasonTextarea";
 import { ReportCompletionGauge, ReportMetric, ReportTd, ReportTh } from "./ReportTableParts";
-
-type ReportCompletionCard = {
-  title: string;
-  percent: number;
-  fact: number;
-  plan: number;
-  monthPlan: number;
-  lag: number;
-  overPlanPerDay: number;
-  remainingDays: number;
-};
 
 type ReportsSectionProps = {
   reportAreaTabs: string[];
