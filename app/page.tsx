@@ -10,6 +10,7 @@ import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { AdminStructureSection } from "@/features/admin/structure/AdminStructureSection";
+import { useAdminStructureState } from "@/features/admin/structure/useAdminStructureState";
 import {
   AdminDatabaseSection,
   AdminLogsSection,
@@ -64,7 +65,7 @@ import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
-import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
+import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
 import { defaultReportColumnWidths, reportColumnHeaderFallbacks, reportColumnKeys, reportCompactColumnKeys, type ReportColumnKey } from "@/lib/domain/reports/columns";
@@ -210,15 +211,36 @@ export default function App() {
   const [ptoBucketValues, setPtoBucketValues] = useState<Record<string, number>>({});
   const [ptoBucketManualRows, setPtoBucketManualRows] = useState<PtoBucketRow[]>([]);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
-  const [orgMembers, setOrgMembers] = useState<OrgMember[]>(defaultOrgMembers);
-  const [orgMemberForm, setOrgMemberForm] = useState<OrgMember>(defaultOrgMemberForm);
-  const [editingOrgMemberId, setEditingOrgMemberId] = useState<string | null>(null);
-  const [dependencyNodes, setDependencyNodes] = useState<DependencyNode[]>(defaultDependencyNodes);
-  const [dependencyLinks, setDependencyLinks] = useState<DependencyLink[]>(defaultDependencyLinks);
-  const [dependencyNodeForm, setDependencyNodeForm] = useState<DependencyNode>(defaultDependencyNodeForm);
-  const [dependencyLinkForm, setDependencyLinkForm] = useState<DependencyLink>(defaultDependencyLinkForm);
-  const [editingDependencyNodeId, setEditingDependencyNodeId] = useState<string | null>(null);
-  const [editingDependencyLinkId, setEditingDependencyLinkId] = useState<string | null>(null);
+  const {
+    orgMembers,
+    setOrgMembers,
+    orgMemberForm,
+    editingOrgMemberId,
+    setEditingOrgMemberId,
+    updateOrgMember,
+    updateOrgMemberForm,
+    addOrgMember,
+    deleteOrgMember,
+    dependencyNodes,
+    setDependencyNodes,
+    dependencyLinks,
+    setDependencyLinks,
+    dependencyNodeForm,
+    dependencyLinkForm,
+    setDependencyLinkForm,
+    editingDependencyNodeId,
+    setEditingDependencyNodeId,
+    editingDependencyLinkId,
+    setEditingDependencyLinkId,
+    updateDependencyNode,
+    updateDependencyNodeForm,
+    addDependencyNode,
+    deleteDependencyNode,
+    updateDependencyLink,
+    updateDependencyLinkForm,
+    addDependencyLink,
+    deleteDependencyLink,
+  } = useAdminStructureState();
   const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
   const [adminSection, setAdminSection] = useState<AdminSection>("vehicles");
   const [clientSnapshots, setClientSnapshots] = useState<DataClientSnapshot[]>([]);
@@ -470,7 +492,7 @@ export default function App() {
       section: "Система",
       details: "Выполнен возврат на шаг назад через Ctrl+Z.",
     });
-  }, [addAdminLog]);
+  }, [addAdminLog, setDependencyLinks, setDependencyNodes, setOrgMembers]);
 
   const restoreVehicleUndoSnapshot = useCallback(() => {
     const previousVehicleRows = vehicleUndoHistoryRef.current.pop();
@@ -967,7 +989,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [saveClientSnapshotToDatabase]);
+  }, [saveClientSnapshotToDatabase, setDependencyLinkForm, setDependencyLinks, setDependencyNodes, setOrgMembers]);
 
   useEffect(() => {
     if (!adminDataLoaded) return;
@@ -3574,145 +3596,6 @@ export default function App() {
     if (topTab === customTabKey(id)) {
       setTopTab("admin");
     }
-  }
-
-  function updateOrgMember(id: string, field: keyof OrgMember, value: string | boolean) {
-    setOrgMembers((current) =>
-      current.map((member) =>
-        member.id === id
-          ? {
-              ...member,
-              [field]: value,
-            }
-          : member,
-      ),
-    );
-  }
-
-  function updateOrgMemberForm(field: keyof OrgMember, value: string | boolean) {
-    setOrgMemberForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  function addOrgMember() {
-    const name = orgMemberForm.name.trim();
-    const position = orgMemberForm.position.trim();
-    if (!name && !position) return;
-
-    const nextMember: OrgMember = {
-      ...orgMemberForm,
-      id: createId(),
-      name: name || position,
-      position,
-      department: orgMemberForm.department.trim(),
-      area: orgMemberForm.area.trim(),
-    };
-
-    setOrgMembers((current) => [...current, nextMember]);
-    setOrgMemberForm(defaultOrgMemberForm);
-    setEditingOrgMemberId(nextMember.id);
-  }
-
-  function deleteOrgMember(id: string) {
-    setOrgMembers((current) =>
-      current
-        .filter((member) => member.id !== id)
-        .map((member) => ({
-          ...member,
-          linearManagerId: member.linearManagerId === id ? "" : member.linearManagerId,
-          functionalManagerId: member.functionalManagerId === id ? "" : member.functionalManagerId,
-        })),
-    );
-    setEditingOrgMemberId((current) => (current === id ? null : current));
-  }
-
-  function updateDependencyNode(id: string, field: keyof DependencyNode, value: string | boolean) {
-    setDependencyNodes((current) =>
-      current.map((node) => (node.id === id ? { ...node, [field]: value } : node)),
-    );
-  }
-
-  function updateDependencyNodeForm(field: keyof DependencyNode, value: string | boolean) {
-    setDependencyNodeForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  function addDependencyNode() {
-    const name = dependencyNodeForm.name.trim();
-    if (!name) return;
-
-    const nextNode: DependencyNode = {
-      ...dependencyNodeForm,
-      id: createId(),
-      name,
-      kind: dependencyNodeForm.kind.trim(),
-      owner: dependencyNodeForm.owner.trim(),
-      visible: true,
-    };
-
-    setDependencyNodes((current) => [...current, nextNode]);
-    setDependencyNodeForm(defaultDependencyNodeForm);
-    setEditingDependencyNodeId(nextNode.id);
-    setDependencyLinkForm((current) => ({
-      ...current,
-      toNodeId: nextNode.id,
-    }));
-  }
-
-  function deleteDependencyNode(id: string) {
-    setDependencyNodes((current) => current.filter((node) => node.id !== id));
-    setDependencyLinks((current) => current.filter((link) => link.fromNodeId !== id && link.toNodeId !== id));
-    setEditingDependencyNodeId((current) => (current === id ? null : current));
-    setEditingDependencyLinkId(null);
-  }
-
-  function updateDependencyLink(id: string, field: keyof DependencyLink, value: string | boolean) {
-    setDependencyLinks((current) =>
-      current.map((link) =>
-        link.id === id
-          ? {
-              ...link,
-              [field]: value,
-            }
-          : link,
-      ),
-    );
-  }
-
-  function updateDependencyLinkForm(field: keyof DependencyLink, value: string | boolean) {
-    setDependencyLinkForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  function addDependencyLink() {
-    if (!dependencyLinkForm.fromNodeId || !dependencyLinkForm.toNodeId) return;
-
-    const nextLink: DependencyLink = {
-      ...dependencyLinkForm,
-      id: createId(),
-      rule: dependencyLinkForm.rule.trim(),
-      owner: dependencyLinkForm.owner.trim(),
-      visible: true,
-    };
-
-    setDependencyLinks((current) => [...current, nextLink]);
-    setDependencyLinkForm((current) => ({
-      ...defaultDependencyLinkForm,
-      fromNodeId: current.fromNodeId,
-      toNodeId: current.toNodeId,
-    }));
-    setEditingDependencyLinkId(nextLink.id);
-  }
-
-  function deleteDependencyLink(id: string) {
-    setDependencyLinks((current) => current.filter((link) => link.id !== id));
-    setEditingDependencyLinkId((current) => (current === id ? null : current));
   }
 
   function startAdminVehiclesEditing() {
