@@ -54,6 +54,7 @@ import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
+import { usePtoDatabaseUiState } from "@/features/pto/usePtoDatabaseUiState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { usePtoPendingFieldFocus } from "@/features/pto/usePtoPendingFieldFocus";
 import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
@@ -334,7 +335,14 @@ export default function App() {
     lastChangeLog,
     lastUploadLog,
   } = useAdminLogsState();
-  const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(databaseConfigured ? "База данных подключается..." : "База данных не настроена.");
+  const {
+    ptoDatabaseMessage,
+    setPtoDatabaseMessage,
+    ptoDatabaseReady,
+    setPtoDatabaseReady,
+    ptoSaveRevision,
+    setPtoSaveRevision,
+  } = usePtoDatabaseUiState();
   const { saveStatus, showSaveStatus, hideSaveStatus } = useSaveStatus();
   const {
     clientSnapshots,
@@ -349,8 +357,6 @@ export default function App() {
     active: topTab === "admin" && adminSection === "database",
     showSaveStatus,
   });
-  const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!databaseConfigured);
-  const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
   const [search, setSearch] = useState("");
