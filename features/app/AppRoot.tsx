@@ -14,6 +14,7 @@ import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
+import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
@@ -61,10 +62,8 @@ import { useSectionSelectionState } from "@/features/navigation/useSectionSelect
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
-import { useAreaShiftCutoffEditor } from "@/features/reports/useAreaShiftCutoffEditor";
 import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
 import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
-import { useReportDateSelectionState } from "@/features/reports/useReportDateSelectionState";
 import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
@@ -303,14 +302,15 @@ export default function App() {
   const {
     reportDate,
     selectReportDate,
-  } = useReportDateSelectionState({
+    updateAreaShiftCutoff,
+  } = useAppReportDateControls({
     topTab,
     adminSection,
     reportArea,
     ptoAreaFilter,
     areaShiftCutoffs,
+    setAreaShiftCutoffs,
   });
-  const { updateAreaShiftCutoff } = useAreaShiftCutoffEditor({ setAreaShiftCutoffs });
   const {
     adminLogs,
     addAdminLog,
