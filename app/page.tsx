@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
+import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
@@ -96,7 +97,7 @@ import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, no
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
-import { CompactTd, CompactTh, Field, SectionCard, SourceNote } from "@/shared/ui/layout";
+import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
@@ -5483,157 +5484,7 @@ export default function App() {
             )}
 
             {adminSection === "ai" && (
-              <div style={{ ...blockStyle, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 14 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 18 }}>ИИ-сводка: как будет копиться база причин</div>
-                    <div style={{ color: "#64748b", marginTop: 4, maxWidth: 900 }}>
-                      Черновая схема: диспетчерская сводка сохраняет факты по технике, отчетность хранит подтвержденные причины по дате и виду работ, ИИ позже дает только предварительную версию причины.
-                    </div>
-                  </div>
-                  <span style={{ ...adminVehicleRenderedCountStyle, border: "1px solid #cbd5e1", borderRadius: 6, padding: "5px 8px", background: "#ffffff" }}>макет</span>
-                </div>
-
-                <div style={reportSourceGridStyle}>
-                  <SourceNote
-                    title="1. Диспетчерская сводка"
-                    source="Факты за смену"
-                    text="техника, участок, вид работ, рейсы, работа, ремонт, простой, производительность, комментарии"
-                  />
-                  <SourceNote
-                    title="2. Причины за сутки"
-                    source="Ручной ввод"
-                    text="дата + участок + вид работ + текст причины, например: Простой ДСК (5 ч.)"
-                  />
-                  <SourceNote
-                    title="3. Накопление"
-                    source="Расчет отчета"
-                    text="все суточные причины с начала года группируются отдельно по каждому виду работ"
-                  />
-                  <SourceNote
-                    title="4. ИИ-предложение"
-                    source="Будущий помощник"
-                    text="анализирует ремонты, простои, рейсы и производительность, затем предлагает причину для подтверждения"
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 1.1fr) minmax(320px, 0.9fr)", gap: 14, marginTop: 14, alignItems: "start" }}>
-                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Как диспетчер заполняет причину</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(120px, 1fr))", gap: 8, marginBottom: 10 }}>
-                      <Field label="Дата">
-                        <input value="2026-04-18" readOnly style={{ ...inputStyle, padding: "8px 10px" }} />
-                      </Field>
-                      <Field label="Участок">
-                        <input value="Аксу" readOnly style={{ ...inputStyle, padding: "8px 10px" }} />
-                      </Field>
-                      <Field label="Вид работ">
-                        <input value="Перевозка горной массы" readOnly style={{ ...inputStyle, padding: "8px 10px" }} />
-                      </Field>
-                    </div>
-                    <Field label="Причина за сутки">
-                      <textarea
-                        readOnly
-                        value="Ремонт транспортировочной техники: 1 ед. самосвала (3 ч.); Простой ДСК (5 ч.)"
-                        style={{ ...inputStyle, minHeight: 78, resize: "vertical" }}
-                      />
-                    </Field>
-                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 8 }}>
-                      В реальной версии это поле будет редактироваться прямо в отчете по выбранной рабочей дате.
-                    </div>
-                  </div>
-
-                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Что покажет накопление с начала года</div>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      <div style={compactRowStyle}>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>Ремонт транспортировочной техники</div>
-                          <div style={{ color: "#64748b", marginTop: 3 }}>самосвалы, подтверждено диспетчером</div>
-                        </div>
-                        <div style={{ fontWeight: 800 }}>18 ч.</div>
-                      </div>
-                      <div style={compactRowStyle}>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>Простой ДСК</div>
-                          <div style={{ color: "#64748b", marginTop: 3 }}>показывается только в этой строке вида работ</div>
-                        </div>
-                        <div style={{ fontWeight: 800 }}>11 ч.</div>
-                      </div>
-                      <div style={compactRowStyle}>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>Ожидание экскаватора</div>
-                          <div style={{ color: "#64748b", marginTop: 3 }}>накопление по датам до выбранной даты</div>
-                        </div>
-                        <div style={{ fontWeight: 800 }}>6 ч.</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8, marginTop: 14 }}>
-                  <div style={{ fontWeight: 800, marginBottom: 10 }}>Какие таблицы я бы заложил в базу</div>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", minWidth: 980, borderCollapse: "collapse", fontSize: 13 }}>
-                      <thead>
-                        <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-                          <CompactTh>Таблица</CompactTh>
-                          <CompactTh>Что хранит</CompactTh>
-                          <CompactTh>Зачем нужна</CompactTh>
-                          <CompactTh>Кто заполняет</CompactTh>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <CompactTd><strong>dispatch_shifts</strong></CompactTd>
-                          <CompactTd>дата, смена, участок, диспетчер</CompactTd>
-                          <CompactTd>шапка каждой диспетчерской сводки</CompactTd>
-                          <CompactTd>диспетчер</CompactTd>
-                        </tr>
-                        <tr>
-                          <CompactTd><strong>dispatch_equipment_rows</strong></CompactTd>
-                          <CompactTd>техника, работа, ремонт, простой, рейсы, производительность</CompactTd>
-                          <CompactTd>факты, по которым ИИ будет искать причину невыполнения</CompactTd>
-                          <CompactTd>диспетчерская сводка</CompactTd>
-                        </tr>
-                        <tr>
-                          <CompactTd><strong>daily_plan_reasons</strong></CompactTd>
-                          <CompactTd>дата, участок, вид работ, причина, часы, количество техники</CompactTd>
-                          <CompactTd>ручная причина за сутки и накопление с начала года</CompactTd>
-                          <CompactTd>диспетчер, позже ИИ после подтверждения</CompactTd>
-                        </tr>
-                        <tr>
-                          <CompactTd><strong>ai_reason_suggestions</strong></CompactTd>
-                          <CompactTd>предложенный текст, доказательства, статус принятия</CompactTd>
-                          <CompactTd>ИИ предлагает, человек подтверждает или отклоняет</CompactTd>
-                          <CompactTd>ИИ + диспетчер</CompactTd>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginTop: 14 }}>
-                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Правило для отчета</div>
-                    <div style={{ color: "#475569" }}>
-                      Если выбранная дата меняется, ячейка &quot;Причина за сутки&quot; берет причину только за эту дату. Ячейка &quot;Причины с накоплением&quot; собирает все причины с 01.01 выбранного года по выбранную дату.
-                    </div>
-                  </div>
-                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Правило для ИИ</div>
-                    <div style={{ color: "#475569" }}>
-                      ИИ не пишет в официальный отчет напрямую. Он предлагает текст с доказательствами: какая техника стояла, сколько часов ремонта, где просела производительность.
-                    </div>
-                  </div>
-                  <div style={{ ...blockStyle, background: "#ffffff", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Правило связки</div>
-                    <div style={{ color: "#475569" }}>
-                      Связь строится не по названию для заказчика, а по внутреннему ключу: дата + участок + вид работ. Название строки можно переименовывать без потери данных.
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <AdminAiSection />
             )}
 
             {adminSection === "vehicles" && (
@@ -5773,40 +5624,4 @@ const blockStyle: React.CSSProperties = {
   borderRadius: 16,
   padding: 16,
   background: "#f8fafc",
-};
-
-const reportSourceGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: 10,
-  marginBottom: 14,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "12px 14px",
-  borderRadius: 12,
-  border: "1px solid #cbd5e1",
-  outline: "none",
-  fontFamily: "inherit",
-  fontSize: 14,
-  lineHeight: 1.35,
-  background: "#ffffff",
-};
-
-const adminVehicleRenderedCountStyle: React.CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 700,
-};
-
-const compactRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr auto",
-  gap: 8,
-  alignItems: "center",
-  border: "1px solid #e2e8f0",
-  borderRadius: 8,
-  padding: 10,
-  background: "#ffffff",
 };
