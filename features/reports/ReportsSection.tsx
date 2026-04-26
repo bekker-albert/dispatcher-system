@@ -14,6 +14,18 @@ import { SectionCard } from "@/shared/ui/layout";
 import { ReportReasonTextarea } from "./ReportReasonTextarea";
 import { ReportCompletionGauge, ReportMetric, ReportTd, ReportTh } from "./ReportTableParts";
 import { createReportPrintLayout } from "./reportPrintLayout";
+import {
+  reportAreaGroupStartRowStyle,
+  reportAreaTabsListStyle,
+  reportAreaTabsToolbarStyle,
+  reportGaugeGridStyle,
+  reportPanelStyle,
+  reportPrintFirstTitleStyle,
+  reportTableScrollStyle,
+  reportTableStyle,
+  reportTitleStyle,
+  reportWorkspaceStyle,
+} from "./reportSectionStyles";
 
 type ReportsSectionProps = {
   reportAreaTabs: string[];
@@ -290,76 +302,3 @@ export default function ReportsSection({
     </>
   );
 }
-
-const reportTableStyle: CSSProperties = {
-  width: "100%",
-  borderCollapse: "collapse",
-  tableLayout: "fixed",
-  fontSize: 12,
-  background: "#ffffff",
-};
-
-const reportTitleStyle: CSSProperties = {
-  fontSize: 18,
-  fontWeight: 700,
-  textAlign: "center",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  width: "100%",
-};
-
-const reportPrintFirstTitleStyle: CSSProperties = {
-  display: "none",
-};
-
-const reportAreaTabsToolbarStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 10,
-  marginBottom: 12,
-};
-
-const reportAreaTabsListStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: 6,
-  minWidth: 0,
-};
-
-const reportWorkspaceStyle: CSSProperties = {
-  height: "calc(100dvh - 232px)",
-  minHeight: 320,
-  display: "grid",
-  gridTemplateRows: "minmax(0, 1fr)",
-};
-
-const reportPanelStyle: CSSProperties = {
-  flex: "1 1 auto",
-  minHeight: 0,
-  display: "grid",
-  gridTemplateRows: "auto auto minmax(0, 1fr)",
-  gap: 8,
-};
-
-const reportTableScrollStyle: CSSProperties = {
-  overflowX: "hidden",
-  overflowY: "auto",
-  minHeight: 0,
-  border: "2px solid #64748b",
-  borderRadius: 8,
-  background: "#ffffff",
-};
-
-const reportGaugeGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: 10,
-  marginBottom: 4,
-};
-
-const reportAreaGroupStartRowStyle: CSSProperties = {
-  borderTop: "2px solid #64748b",
-};
