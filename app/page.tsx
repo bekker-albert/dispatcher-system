@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
@@ -50,6 +50,7 @@ import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEdito
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
+import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
 import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
@@ -84,7 +85,7 @@ import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import { defaultPtoPlanMonth, emptyPtoDraftRowFields, normalizePtoPlanRow, normalizeStoredPtoYears, ptoRowFieldDomKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
-import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type TopTab } from "@/lib/domain/navigation/tabs";
+import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "@/lib/domain/navigation/tabs";
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
@@ -278,6 +279,17 @@ export default function App() {
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
   const [areaFilter, setAreaFilter] = useState("Все участки");
   const [search, setSearch] = useState("");
+  const {
+    selectTopTab,
+    selectPtoTab,
+    selectPtoPlanYear,
+    selectPtoArea,
+  } = useNavigationSelectionHandlers({
+    setTopTab,
+    setPtoTab,
+    setPtoPlanYear,
+    setPtoAreaFilter,
+  });
   const ptoDatabaseState = useMemo(() => createPtoDatabaseState({
     manualYears: ptoManualYears,
     planRows: ptoPlanRows,
@@ -1732,24 +1744,6 @@ export default function App() {
     setPtoInlineEditCell(null);
     setPtoSelectedCellKeys([]);
   }, [isPtoDateTab, renderedTopTab]);
-
-  function selectTopTab(tab: TopTab) {
-    setTopTab(tab);
-  }
-
-  function selectPtoTab(tab: string) {
-    startTransition(() => {
-      setPtoTab(tab);
-    });
-  }
-
-  function selectPtoPlanYear(year: string) {
-    setPtoPlanYear(year);
-  }
-
-  function selectPtoArea(area: string) {
-    setPtoAreaFilter(area);
-  }
 
   const {
     updateReportCustomer,
