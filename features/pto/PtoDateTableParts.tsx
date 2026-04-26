@@ -1,5 +1,7 @@
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import type { PtoStatus } from "../../lib/domain/pto/date-table";
+import { formatPtoCellNumber, formatPtoFormulaNumber } from "../../lib/domain/pto/formatting";
+import { ptoReadonlyCellNumberStyle, ptoReadonlyCellTextStyle } from "./ptoDateTableStyles";
 
 type PtoPlanThProps = {
   children: ReactNode;
@@ -18,6 +20,16 @@ type PtoPlanTdProps = {
   selected?: boolean;
   editing?: boolean;
   align?: CSSProperties["textAlign"];
+};
+
+type PtoReadonlyTextCellProps = {
+  value: string;
+  align?: CSSProperties["textAlign"];
+};
+
+type PtoReadonlyNumberCellProps = {
+  value: number | undefined;
+  bold?: boolean;
 };
 
 export function PtoPlanTh({
@@ -75,6 +87,28 @@ export function PtoPlanTd({
     >
       {children}
     </td>
+  );
+}
+
+export function PtoReadonlyTextCell({ value, align = "left" }: PtoReadonlyTextCellProps) {
+  return (
+    <div style={{ ...ptoReadonlyCellTextStyle, textAlign: align }} title={value || undefined}>
+      {value || ""}
+    </div>
+  );
+}
+
+export function PtoReadonlyNumberCell({ value, bold = false }: PtoReadonlyNumberCellProps) {
+  return (
+    <div
+      style={{
+        ...ptoReadonlyCellNumberStyle,
+        ...(bold ? { fontWeight: 800 } : null),
+      }}
+      title={formatPtoFormulaNumber(value)}
+    >
+      {formatPtoCellNumber(value)}
+    </div>
   );
 }
 

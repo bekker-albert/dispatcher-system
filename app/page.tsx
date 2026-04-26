@@ -5,7 +5,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
-import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -30,8 +30,6 @@ import {
   ptoPlanDayInputStyle,
   ptoPlanInputStyle,
   ptoPlanTableStyle,
-  ptoReadonlyCellNumberStyle,
-  ptoReadonlyCellTextStyle,
   ptoReadonlyTotalStyle,
   ptoRowDeleteButtonStyle,
   ptoRowResizeHandleStyle,
@@ -4680,23 +4678,6 @@ export default function App() {
         }, 0);
       }
     };
-    const renderReadonlyTextCell = (value: string, align: React.CSSProperties["textAlign"] = "left") => (
-      <div style={{ ...ptoReadonlyCellTextStyle, textAlign: align }} title={value || undefined}>
-        {value || ""}
-      </div>
-    );
-    const renderReadonlyNumberCell = (value: number | undefined, options: { bold?: boolean } = {}) => (
-      <div
-        style={{
-          ...ptoReadonlyCellNumberStyle,
-          ...(options.bold ? { fontWeight: 800 } : null),
-        }}
-        title={formatPtoFormulaNumber(value)}
-      >
-        {formatPtoCellNumber(value)}
-      </div>
-    );
-
     if (!ptoDateEditing) {
       return (
         <div style={ptoDateTableLayoutStyle}>
@@ -4838,11 +4819,11 @@ export default function App() {
 
                   return (
                     <tr key={row.id} style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}>
-                      {showCustomerCode ? <PtoPlanTd align="center">{renderReadonlyTextCell(normalizePtoCustomerCode(row.customerCode), "center")}</PtoPlanTd> : null}
-                      <PtoPlanTd>{renderReadonlyTextCell(row.area)}</PtoPlanTd>
-                      {showLocation ? <PtoPlanTd>{renderReadonlyTextCell(row.location)}</PtoPlanTd> : null}
-                      <PtoPlanTd>{renderReadonlyTextCell(row.structure)}</PtoPlanTd>
-                      <PtoPlanTd align="center">{renderReadonlyTextCell(normalizePtoUnit(row.unit), "center")}</PtoPlanTd>
+                      {showCustomerCode ? <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoCustomerCode(row.customerCode)} align="center" /></PtoPlanTd> : null}
+                      <PtoPlanTd><PtoReadonlyTextCell value={row.area} /></PtoPlanTd>
+                      {showLocation ? <PtoPlanTd><PtoReadonlyTextCell value={row.location} /></PtoPlanTd> : null}
+                      <PtoPlanTd><PtoReadonlyTextCell value={row.structure} /></PtoPlanTd>
+                      <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoUnit(row.unit)} align="center" /></PtoPlanTd>
                       <PtoPlanTd align="center">
                         <span
                           title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
@@ -4851,15 +4832,15 @@ export default function App() {
                           {rowStatus}
                         </span>
                       </PtoPlanTd>
-                      <PtoPlanTd align="center">{renderReadonlyNumberCell(effectiveCarryover)}</PtoPlanTd>
-                      <PtoPlanTd align="center">{renderReadonlyNumberCell(rowYearTotalWithCarryover, { bold: true })}</PtoPlanTd>
+                      <PtoPlanTd align="center"><PtoReadonlyNumberCell value={effectiveCarryover} /></PtoPlanTd>
+                      <PtoPlanTd align="center"><PtoReadonlyNumberCell value={rowYearTotalWithCarryover} bold /></PtoPlanTd>
                       {displayPtoMonthGroups.map((group) => {
                         const monthValue = rowDateTotals.monthTotals.get(group.month)?.value;
                         return (
                           <Fragment key={`${row.id}-${group.month}-readonly`}>
-                            <PtoPlanTd align="center">{renderReadonlyNumberCell(monthValue, { bold: true })}</PtoPlanTd>
+                            <PtoPlanTd align="center"><PtoReadonlyNumberCell value={monthValue} bold /></PtoPlanTd>
                             {group.expanded && group.days.map((day) => (
-                              <PtoPlanTd key={`${row.id}-${day}-readonly`} align="center">{renderReadonlyNumberCell(row.dailyPlans[day])}</PtoPlanTd>
+                              <PtoPlanTd key={`${row.id}-${day}-readonly`} align="center"><PtoReadonlyNumberCell value={row.dailyPlans[day]} /></PtoPlanTd>
                             ))}
                           </Fragment>
                         );
@@ -5608,7 +5589,7 @@ export default function App() {
                               <option key={option.code} value={option.code}>{option.code}</option>
                             ))}
                           </select>
-                        ) : renderReadonlyTextCell(normalizePtoCustomerCode(row.customerCode), "center")}
+                        ) : <PtoReadonlyTextCell value={normalizePtoCustomerCode(row.customerCode)} align="center" />}
                       </PtoPlanTd>
                     ) : null}
                     <PtoPlanTd>
@@ -5705,7 +5686,7 @@ export default function App() {
                             placeholder="Уч_Аксу"
                             style={ptoPlanInputStyle}
                           />
-                        ) : renderReadonlyTextCell(row.area)}
+                        ) : <PtoReadonlyTextCell value={row.area} />}
                       </div>
                     </PtoPlanTd>
                     {showLocation ? (
@@ -5748,7 +5729,7 @@ export default function App() {
                               ))}
                             </datalist>
                           </>
-                        ) : renderReadonlyTextCell(row.location)}
+                        ) : <PtoReadonlyTextCell value={row.location} />}
                       </PtoPlanTd>
                     ) : null}
                     <PtoPlanTd>
@@ -5790,7 +5771,7 @@ export default function App() {
                             ))}
                           </datalist>
                         </>
-                      ) : renderReadonlyTextCell(row.structure)}
+                      ) : <PtoReadonlyTextCell value={row.structure} />}
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       {ptoDateEditing ? (
@@ -5802,7 +5783,7 @@ export default function App() {
                             <option key={unit} value={unit}>{unit}</option>
                           ))}
                         </select>
-                      ) : renderReadonlyTextCell(normalizePtoUnit(row.unit), "center")}
+                      ) : <PtoReadonlyTextCell value={normalizePtoUnit(row.unit)} align="center" />}
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       <span
@@ -5840,7 +5821,7 @@ export default function App() {
                           title={formatPtoFormulaNumber(effectiveCarryover)}
                           style={{ ...ptoPlanInputStyle, ...ptoCompactNumberInputStyle }}
                         />
-                      ) : renderReadonlyNumberCell(effectiveCarryover)}
+                      ) : <PtoReadonlyNumberCell value={effectiveCarryover} />}
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
                       <div style={{ fontWeight: 800, textAlign: "center" }} title={formatPtoFormulaNumber(rowYearTotalWithCarryover)}>{formatPtoCellNumber(rowYearTotalWithCarryover)}</div>
@@ -5912,7 +5893,7 @@ export default function App() {
                               >
                                 {formatPtoCellNumber(monthValue)}
                               </button>
-                            ) : renderReadonlyNumberCell(monthValue, { bold: true })}
+                            ) : <PtoReadonlyNumberCell value={monthValue} bold />}
                           </PtoPlanTd>
                           {group.expanded && group.days.map((day) => {
                             const dayValue = row.dailyPlans[day];
@@ -5956,7 +5937,7 @@ export default function App() {
                                     title={formatPtoFormulaNumber(dayValue)}
                                     style={{ ...ptoPlanDayInputStyle, ...ptoCompactNumberInputStyle }}
                                   />
-                                ) : renderReadonlyNumberCell(dayValue)}
+                                ) : <PtoReadonlyNumberCell value={dayValue} />}
                               </PtoPlanTd>
                             );
                           })}
