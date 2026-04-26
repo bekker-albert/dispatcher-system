@@ -12,6 +12,7 @@ import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 import { createPtoDateTableViewModel } from "@/features/pto/ptoDateTableViewModel";
+import { usePtoDateEditingToggle } from "@/features/pto/usePtoDateEditingToggle";
 import { usePtoDraftRowController } from "@/features/pto/usePtoDraftRowController";
 import {
   dragHandleDotStyle,
@@ -146,25 +147,21 @@ export function PtoDateTableContainer({
       ptoDateEditing,
       ptoColumnWidths,
     });
-    const togglePtoDateEditing = () => {
-      const nextEditing = !ptoDateEditing;
-      setPtoDateEditing(nextEditing);
-      setDraggedPtoRowId(null);
-      setPtoDropTarget(null);
-      setPtoFormulaCell(null);
-      setPtoFormulaDraft("");
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-      setPtoSelectionAnchorCell(null);
-      setPtoSelectedCellKeys([]);
-      if (!nextEditing) {
-        savePtoLocalState();
-        requestPtoDatabaseSave();
-        window.setTimeout(() => {
-          void savePtoDatabaseChanges("manual");
-        }, 0);
-      }
-    };
+    const togglePtoDateEditing = usePtoDateEditingToggle({
+      ptoDateEditing,
+      setPtoDateEditing,
+      setDraggedPtoRowId,
+      setPtoDropTarget,
+      setPtoFormulaCell,
+      setPtoFormulaDraft,
+      setPtoInlineEditCell,
+      setPtoInlineEditInitialDraft,
+      setPtoSelectionAnchorCell,
+      setPtoSelectedCellKeys,
+      savePtoLocalState,
+      requestPtoDatabaseSave,
+      savePtoDatabaseChanges,
+    });
     const ptoDateToolbar = (
       <PtoDateToolbar
         areaTabs={ptoAreaTabs}
