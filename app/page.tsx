@@ -66,6 +66,7 @@ import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
 import type { ReportResizeState } from "@/features/reports/lib/reportResizeState";
+import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
@@ -80,7 +81,7 @@ import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber, formatPercent, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportCustomerUsesSummaryRows, reportRowDisplayKey, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer, sortAreaNamesByOrder, sortReportRowsByAreaOrder } from "@/lib/domain/reports/display";
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
-import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
+import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
 import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoDateTableKeyFromTab, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
@@ -196,7 +197,6 @@ export default function App() {
   const ptoDatabaseSaveQueuedRef = useRef(false);
   const ptoDatabaseSaveSnapshotRef = useRef("");
   const ptoLocalSaveTimerRef = useRef<number | null>(null);
-  const reportReasonDraftTimerRef = useRef<number | null>(null);
   const [reportArea, setReportArea] = useState("Все участки");
   const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
   const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
@@ -1372,6 +1372,19 @@ export default function App() {
     setPtoSaveRevision((current) => current + 1);
   }, []);
 
+  const {
+    commitReportDayReason,
+    cancelReportDayReasonDraft,
+    updateReportDayReasonDraft,
+    commitReportYearReason,
+    cancelReportYearReasonDraft,
+    updateReportYearReasonDraft,
+  } = useReportReasonDrafts({
+    reportDate,
+    setReportReasons,
+    requestSave: requestPtoDatabaseSave,
+  });
+
   useEffect(() => {
     if (!adminDataLoaded || !databaseConfigured || !ptoDatabaseLoadedRef.current || ptoSaveRevision === 0) return;
     void savePtoDatabaseChanges("auto");
@@ -2530,135 +2543,6 @@ export default function App() {
     reportResizeStateRef.current = { key, startX: event.clientX, startWidth: width };
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-  }
-
-  function commitReportDayReason(rowKey: string, value: string) {
-    const key = reportReasonEntryKey(reportDate, rowKey);
-
-    if (reportReasonDraftTimerRef.current !== null) {
-      window.clearTimeout(reportReasonDraftTimerRef.current);
-      reportReasonDraftTimerRef.current = null;
-    }
-
-    setReportReasons((current) => {
-      const next = { ...current };
-      if (value !== "") {
-        next[key] = value;
-      } else {
-        delete next[key];
-      }
-
-      return next;
-    });
-    window.setTimeout(requestPtoDatabaseSave, 0);
-  }
-
-  function commitReportYearReason(rowKey: string, value: string) {
-    const key = reportYearReasonOverrideKey(reportDate, rowKey);
-    const normalizedValue = value.trim();
-
-    if (reportReasonDraftTimerRef.current !== null) {
-      window.clearTimeout(reportReasonDraftTimerRef.current);
-      reportReasonDraftTimerRef.current = null;
-    }
-
-    setReportReasons((current) => {
-      const next = { ...current };
-      if (normalizedValue === "") {
-        delete next[key];
-      } else {
-        next[key] = normalizedValue;
-      }
-
-      return next;
-    });
-    window.setTimeout(requestPtoDatabaseSave, 0);
-  }
-
-  function updateReportDayReasonDraft(rowKey: string, value: string) {
-    const key = reportReasonEntryKey(reportDate, rowKey);
-
-    if (reportReasonDraftTimerRef.current !== null) {
-      window.clearTimeout(reportReasonDraftTimerRef.current);
-    }
-
-    reportReasonDraftTimerRef.current = window.setTimeout(() => {
-      setReportReasons((current) => {
-        const next = { ...current };
-        if (value !== "") {
-          next[key] = value;
-        } else {
-          delete next[key];
-        }
-
-        return next;
-      });
-      reportReasonDraftTimerRef.current = null;
-    }, 180);
-  }
-
-  function updateReportYearReasonDraft(rowKey: string, value: string) {
-    const key = reportYearReasonOverrideKey(reportDate, rowKey);
-
-    if (reportReasonDraftTimerRef.current !== null) {
-      window.clearTimeout(reportReasonDraftTimerRef.current);
-    }
-
-    reportReasonDraftTimerRef.current = window.setTimeout(() => {
-      setReportReasons((current) => {
-        const next = { ...current };
-        const normalizedValue = value.trim();
-        if (normalizedValue === "") {
-          delete next[key];
-        } else {
-          next[key] = normalizedValue;
-        }
-
-        return next;
-      });
-      reportReasonDraftTimerRef.current = null;
-    }, 180);
-  }
-
-  function cancelReportDayReasonDraft(rowKey: string, value: string) {
-    const key = reportReasonEntryKey(reportDate, rowKey);
-
-    if (reportReasonDraftTimerRef.current !== null) {
-      window.clearTimeout(reportReasonDraftTimerRef.current);
-      reportReasonDraftTimerRef.current = null;
-    }
-
-    setReportReasons((current) => {
-      const next = { ...current };
-      if (value !== "") {
-        next[key] = value;
-      } else {
-        delete next[key];
-      }
-
-      return next;
-    });
-  }
-
-  function cancelReportYearReasonDraft(rowKey: string, value: string) {
-    const key = reportYearReasonOverrideKey(reportDate, rowKey);
-
-    if (reportReasonDraftTimerRef.current !== null) {
-      window.clearTimeout(reportReasonDraftTimerRef.current);
-      reportReasonDraftTimerRef.current = null;
-    }
-
-    setReportReasons((current) => {
-      const next = { ...current };
-      const normalizedValue = value.trim();
-      if (normalizedValue === "") {
-        delete next[key];
-      } else {
-        next[key] = normalizedValue;
-      }
-
-      return next;
-    });
   }
 
   function startPtoRowResize(event: React.MouseEvent<HTMLElement>, key: string) {
