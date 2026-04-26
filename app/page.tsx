@@ -3,6 +3,7 @@
 import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import {
   AdminDatabaseSection,
   AdminLogsSection,
@@ -75,7 +76,7 @@ import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, default
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
 import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
-import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
+import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
@@ -93,10 +94,6 @@ import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
 const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
-
-const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
-  column.key === "visible" ? { ...column, icon: <Eye size={14} aria-hidden /> } : column
-));
 
 const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
 
