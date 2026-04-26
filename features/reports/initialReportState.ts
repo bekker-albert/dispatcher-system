@@ -50,3 +50,5 @@ export function buildInitialReportState({
     reportReasons: normalizeStringRecord(savedReportReasons),
   };
 }
+
+export type InitialReportState = ReturnType<typeof buildInitialReportState>;

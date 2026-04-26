@@ -6,14 +6,13 @@ import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicle
 import { buildInitialDispatchSummaryRows } from "@/features/dispatch/initialDispatchSummaryState";
 import { buildInitialNavigationState } from "@/features/navigation/initialNavigationState";
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
+import { applyInitialReportState, type InitialReportStateSetters } from "@/features/reports/applyInitialReportState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
-import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
@@ -23,7 +22,7 @@ type MutableRef<T> = {
   current: T;
 };
 
-type InitialAppDataLoadOptions = {
+type InitialAppDataLoadOptions = InitialReportStateSetters & {
   defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
   saveClientSnapshotToDatabase: (reason: string) => Promise<void>;
   restoreAdminLogs: (storedLogs: unknown) => void;
@@ -34,13 +33,6 @@ type InitialAppDataLoadOptions = {
   vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
   hasStoredPtoStateRef: MutableRef<boolean>;
   setAdminDataLoaded: Dispatch<SetStateAction<boolean>>;
-  setReportCustomers: Dispatch<SetStateAction<ReportCustomerConfig[]>>;
-  setReportAreaOrder: Dispatch<SetStateAction<string[]>>;
-  setReportWorkOrder: Dispatch<SetStateAction<Record<string, string[]>>>;
-  setReportHeaderLabels: Dispatch<SetStateAction<Record<string, string>>>;
-  setReportColumnWidths: Dispatch<SetStateAction<Record<string, number>>>;
-  setReportReasons: Dispatch<SetStateAction<Record<string, string>>>;
-  setAreaShiftCutoffs: Dispatch<SetStateAction<AreaShiftCutoffMap>>;
   setCustomTabs: Dispatch<SetStateAction<CustomTab[]>>;
   setTopTabs: Dispatch<SetStateAction<TopTabDefinition[]>>;
   setSubTabs: Dispatch<SetStateAction<Record<EditableSubtabGroup, SubTabConfig[]>>>;
@@ -135,13 +127,15 @@ export function useInitialAppDataLoad({
         hasStoredPtoStateRef.current = initialPtoState.hasSavedPtoState;
 
         const initialReportState = buildInitialReportState(storedState);
-        setReportCustomers(initialReportState.reportCustomers);
-        setReportAreaOrder(initialReportState.reportAreaOrder);
-        setReportWorkOrder(initialReportState.reportWorkOrder);
-        setReportHeaderLabels(initialReportState.reportHeaderLabels);
-        setReportColumnWidths(initialReportState.reportColumnWidths);
-        setReportReasons(initialReportState.reportReasons);
-        setAreaShiftCutoffs(initialReportState.areaShiftCutoffs);
+        applyInitialReportState(initialReportState, {
+          setReportCustomers,
+          setReportAreaOrder,
+          setReportWorkOrder,
+          setReportHeaderLabels,
+          setReportColumnWidths,
+          setReportReasons,
+          setAreaShiftCutoffs,
+        });
 
         const initialNavigationState = buildInitialNavigationState({
           savedCustomTabs: storedState.savedCustomTabs,
