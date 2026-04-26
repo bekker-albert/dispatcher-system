@@ -8,11 +8,7 @@ import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
-import { AdminStructureElements } from "@/features/admin/structure/AdminStructureElements";
-import { AdminStructureLinks } from "@/features/admin/structure/AdminStructureLinks";
-import { AdminStructureRoles } from "@/features/admin/structure/AdminStructureRoles";
-import { AdminStructureScheme } from "@/features/admin/structure/AdminStructureScheme";
-import { AdminStructureSchedule } from "@/features/admin/structure/AdminStructureSchedule";
+import { AdminStructureSection } from "@/features/admin/structure/AdminStructureSection";
 import {
   AdminDatabaseSection,
   AdminLogsSection,
@@ -66,7 +62,7 @@ import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSe
 import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
-import { structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
+import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { defaultDependencyLinkForm, defaultDependencyLinks, defaultDependencyNodeForm, defaultDependencyNodes, defaultOrgMemberForm, defaultOrgMembers, type DependencyLink, type DependencyNode, type OrgMember } from "@/lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDefaultDispatchSummaryRows, createDispatchSummaryRow, dispatchShiftFromTab, normalizeDispatchSummaryRows, type DispatchSummaryNumberField, type DispatchSummaryRow, type DispatchSummaryTextField } from "@/lib/domain/dispatch/summary";
 import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPtoIndex, reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/calculation";
@@ -100,8 +96,7 @@ import { errorToMessage, isRecord, mergeDefaultsById, normalizeDecimalRecord, no
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
 import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
-import { TopButton } from "@/shared/ui/buttons";
-import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs } from "@/shared/ui/layout";
+import { CompactTd, CompactTh, Field, SectionCard, SourceNote } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
@@ -5454,76 +5449,37 @@ export default function App() {
             )}
 
             {adminSection === "structure" && (
-              <div style={{ ...blockStyle, marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>Структура данных</div>
-                    <div style={{ color: "#64748b", marginTop: 4 }}>Связка: участки, техника, ПТО, объемы, оперучет, маркзамеры и отчетность.</div>
-                  </div>
-                </div>
-                <SubTabs>
-                  {structureSectionTabs.map((section) => (
-                    <TopButton
-                      key={section.value}
-                      active={structureSection === section.value}
-                      onClick={() => setStructureSection(section.value)}
-                      label={section.label}
-                    />
-                  ))}
-                </SubTabs>
-
-                {structureSection === "scheme" && (
-                  <AdminStructureScheme dependencyNodes={dependencyNodes} dependencyLinks={dependencyLinks} />
-                )}
-
-                {structureSection === "elements" && (
-                  <AdminStructureElements
-                    dependencyNodes={dependencyNodes}
-                    dependencyNodeForm={dependencyNodeForm}
-                    editingDependencyNodeId={editingDependencyNodeId}
-                    onEditDependencyNode={setEditingDependencyNodeId}
-                    onUpdateDependencyNode={updateDependencyNode}
-                    onUpdateDependencyNodeForm={updateDependencyNodeForm}
-                    onAddDependencyNode={addDependencyNode}
-                    onDeleteDependencyNode={deleteDependencyNode}
-                  />
-                )}
-
-                {structureSection === "links" && (
-                  <AdminStructureLinks
-                    dependencyNodes={dependencyNodes}
-                    dependencyLinks={dependencyLinks}
-                    dependencyLinkForm={dependencyLinkForm}
-                    editingDependencyLinkId={editingDependencyLinkId}
-                    onEditDependencyLink={setEditingDependencyLinkId}
-                    onUpdateDependencyLink={updateDependencyLink}
-                    onUpdateDependencyLinkForm={updateDependencyLinkForm}
-                    onAddDependencyLink={addDependencyLink}
-                    onDeleteDependencyLink={deleteDependencyLink}
-                  />
-                )}
-
-                {structureSection === "roles" && (
-                  <AdminStructureRoles
-                    orgMembers={orgMembers}
-                    orgMemberForm={orgMemberForm}
-                    editingOrgMemberId={editingOrgMemberId}
-                    onEditOrgMember={setEditingOrgMemberId}
-                    onUpdateOrgMember={updateOrgMember}
-                    onUpdateOrgMemberForm={updateOrgMemberForm}
-                    onAddOrgMember={addOrgMember}
-                    onDeleteOrgMember={deleteOrgMember}
-                  />
-                )}
-
-                {structureSection === "schedule" && (
-                  <AdminStructureSchedule
-                    areas={areaShiftScheduleAreas}
-                    areaShiftCutoffs={areaShiftCutoffs}
-                    onUpdateAreaShiftCutoff={updateAreaShiftCutoff}
-                  />
-                )}
-              </div>
+              <AdminStructureSection
+                structureSection={structureSection}
+                onSelectStructureSection={setStructureSection}
+                dependencyNodes={dependencyNodes}
+                dependencyLinks={dependencyLinks}
+                dependencyNodeForm={dependencyNodeForm}
+                dependencyLinkForm={dependencyLinkForm}
+                editingDependencyNodeId={editingDependencyNodeId}
+                editingDependencyLinkId={editingDependencyLinkId}
+                onEditDependencyNode={setEditingDependencyNodeId}
+                onEditDependencyLink={setEditingDependencyLinkId}
+                onUpdateDependencyNode={updateDependencyNode}
+                onUpdateDependencyNodeForm={updateDependencyNodeForm}
+                onAddDependencyNode={addDependencyNode}
+                onDeleteDependencyNode={deleteDependencyNode}
+                onUpdateDependencyLink={updateDependencyLink}
+                onUpdateDependencyLinkForm={updateDependencyLinkForm}
+                onAddDependencyLink={addDependencyLink}
+                onDeleteDependencyLink={deleteDependencyLink}
+                orgMembers={orgMembers}
+                orgMemberForm={orgMemberForm}
+                editingOrgMemberId={editingOrgMemberId}
+                onEditOrgMember={setEditingOrgMemberId}
+                onUpdateOrgMember={updateOrgMember}
+                onUpdateOrgMemberForm={updateOrgMemberForm}
+                onAddOrgMember={addOrgMember}
+                onDeleteOrgMember={deleteOrgMember}
+                areaShiftScheduleAreas={areaShiftScheduleAreas}
+                areaShiftCutoffs={areaShiftCutoffs}
+                onUpdateAreaShiftCutoff={updateAreaShiftCutoff}
+              />
             )}
 
             {adminSection === "ai" && (
