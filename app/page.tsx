@@ -45,6 +45,7 @@ import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { PtoDateTableContainer } from "@/features/pto/PtoDateTableContainer";
 import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
+import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
@@ -1734,16 +1735,15 @@ export default function App() {
     measureKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}:${expandedPtoMonthsKey}`,
   });
 
-  useEffect(() => {
-    if (renderedTopTab === "pto" && isPtoDateTab) return;
-
-    setPtoDateEditing(false);
-    setDraggedPtoRowId(null);
-    setPtoDropTarget(null);
-    setPtoFormulaCell(null);
-    setPtoInlineEditCell(null);
-    setPtoSelectedCellKeys([]);
-  }, [isPtoDateTab, renderedTopTab]);
+  usePtoDateEditingReset({
+    active: renderedTopTab === "pto" && isPtoDateTab,
+    setPtoDateEditing,
+    setDraggedPtoRowId,
+    setPtoDropTarget,
+    setPtoFormulaCell,
+    setPtoInlineEditCell,
+    setPtoSelectedCellKeys,
+  });
 
   const {
     updateReportCustomer,
