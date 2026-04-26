@@ -64,6 +64,7 @@ import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDropTarget, PtoResizeState } from "@/features/pto/ptoDateInteractionTypes";
+import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
@@ -3023,55 +3024,18 @@ export default function App() {
     });
   }
 
-  function ptoRowTextDraftKey(rowId: string, field: "area" | "location" | "structure") {
-    return `${rowId}:${field}`;
-  }
-
-  function getPtoRowTextDraft(row: PtoPlanRow, field: "area" | "location" | "structure") {
-    const key = ptoRowTextDraftKey(row.id, field);
-    return ptoRowFieldDrafts[key] ?? String(row[field] ?? "");
-  }
-
-  function beginPtoRowTextDraft(row: PtoPlanRow, field: "area" | "location" | "structure") {
-    const key = ptoRowTextDraftKey(row.id, field);
-    setPtoRowFieldDrafts((current) => (
-      current[key] === undefined
-        ? { ...current, [key]: String(row[field] ?? "") }
-        : current
-    ));
-  }
-
-  function updatePtoRowTextDraft(rowId: string, field: "area" | "location" | "structure", value: string) {
-    const key = ptoRowTextDraftKey(rowId, field);
-    setPtoRowFieldDrafts((current) => ({ ...current, [key]: value }));
-  }
-
-  function clearPtoRowTextDraft(rowId: string, field: "area" | "location" | "structure") {
-    const key = ptoRowTextDraftKey(rowId, field);
-    setPtoRowFieldDrafts((current) => {
-      if (!(key in current)) return current;
-
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-  }
-
-  function commitPtoRowTextDraft(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, row: PtoPlanRow, field: "area" | "location" | "structure") {
-    const key = ptoRowTextDraftKey(row.id, field);
-    const nextValue = ptoRowFieldDrafts[key];
-    if (nextValue === undefined) return;
-
-    clearPtoRowTextDraft(row.id, field);
-    if (nextValue === String(row[field] ?? "")) return;
-
-    updatePtoDateRow(setRows, row.id, field, nextValue);
-    requestPtoDatabaseSave();
-  }
-
-  function cancelPtoRowTextDraft(rowId: string, field: "area" | "location" | "structure") {
-    clearPtoRowTextDraft(rowId, field);
-  }
+  const {
+    getPtoRowTextDraft,
+    beginPtoRowTextDraft,
+    updatePtoRowTextDraft,
+    commitPtoRowTextDraft,
+    cancelPtoRowTextDraft,
+  } = usePtoRowTextDrafts({
+    drafts: ptoRowFieldDrafts,
+    setDrafts: setPtoRowFieldDrafts,
+    commitValue: (setRows, row, field, value) => updatePtoDateRow(setRows, row.id, field, value),
+    requestSave: requestPtoDatabaseSave,
+  });
 
   function clearPtoCarryoverOverride(setRows: React.Dispatch<React.SetStateAction<PtoPlanRow[]>>, id: string, year: string) {
     setRows((current) =>
