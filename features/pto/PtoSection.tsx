@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { SectionCard } from "@/shared/ui/layout";
 
-type PtoSectionProps = {
+export type PtoSectionProps = {
   ptoTab: string;
   activePtoSubtabLabel: string;
   activePtoSubtabContent: string;

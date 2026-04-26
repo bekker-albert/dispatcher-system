@@ -17,6 +17,7 @@ import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoPersistence } from "@/features/app/useAppPtoPersistence";
+import { useAppPtoSectionProps } from "@/features/app/useAppPtoSectionProps";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
 import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
@@ -40,7 +41,6 @@ import { usePtoUiState } from "@/features/pto/usePtoUiState";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
-import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
 import { useReportUiState } from "@/features/reports/useReportUiState";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
@@ -966,14 +966,31 @@ export default function App() {
     requestPtoDatabaseSave,
     addAdminLog,
   });
-  const renderPtoDateTable = usePtoDateTableRenderer({
+  const ptoSectionProps = useAppPtoSectionProps({
     ptoTab,
+    activePtoSubtabLabel: activePtoSubtab?.label ?? ptoTab,
+    activePtoSubtabContent: activePtoSubtab?.content || "",
+    isPtoDateTab,
+    ptoAreaTabs,
     ptoAreaFilter,
+    ptoBucketRows,
+    ptoBucketColumns,
+    ptoBucketValues,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+    setPtoPlanRows,
+    setPtoOperRows,
+    setPtoSurveyRows,
+    selectPtoArea,
+    commitPtoBucketValue,
+    clearPtoBucketCells,
+    addPtoBucketManualRow,
+    deletePtoBucketManualRow,
     ptoPlanYear,
     reportDate,
     ptoYearMonths,
     ptoMonthGroups,
-    ptoAreaTabs,
     ptoYearTabs,
     ptoYearDialogOpen,
     ptoYearInput,
@@ -1016,7 +1033,6 @@ export default function App() {
     savePtoLocalState,
     requestPtoDatabaseSave,
     savePtoDatabaseChanges,
-    selectPtoArea,
     currentPtoDateExcelMeta,
     exportPtoDateTableToExcel,
     openPtoDateImportFilePicker,
@@ -1146,37 +1162,7 @@ export default function App() {
             subTabs: subTabs.fuel,
             onSelectTab: setFuelTab,
           }}
-          ptoProps={{
-            ptoTab,
-            activePtoSubtabLabel: activePtoSubtab?.label ?? ptoTab,
-            activePtoSubtabContent: activePtoSubtab?.content || "",
-            isPtoDateTab,
-            ptoAreaTabs,
-            ptoAreaFilter,
-            onSelectArea: selectPtoArea,
-            ptoBucketRows,
-            ptoBucketColumns,
-            ptoBucketValues,
-            onCommitBucketValue: commitPtoBucketValue,
-            onClearBucketCells: clearPtoBucketCells,
-            onAddBucketManualRow: addPtoBucketManualRow,
-            onDeleteBucketManualRow: deletePtoBucketManualRow,
-            renderPlanTable: () => renderPtoDateTable(
-              ptoPlanRows,
-              setPtoPlanRows,
-              { showLocation: false, editableMonthTotal: true },
-            ),
-            renderOperTable: () => renderPtoDateTable(
-              ptoOperRows,
-              setPtoOperRows,
-              { showLocation: false, editableMonthTotal: false },
-            ),
-            renderSurveyTable: () => renderPtoDateTable(
-              ptoSurveyRows,
-              setPtoSurveyRows,
-              { showLocation: false, editableMonthTotal: false },
-            ),
-          }}
+          ptoProps={ptoSectionProps}
           safetyProps={{
             tbTab,
             subTabs: subTabs.tb,
