@@ -36,6 +36,7 @@ import {
 } from "@/features/app/lazySections";
 import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
 import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
+import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
@@ -113,9 +114,8 @@ import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normaliz
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
-import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import { cloneVehicleRows } from "@/lib/domain/vehicles/filtering";
-import { adminVehicleFallbackPreviewRows, parseVehicleInlineFieldDomKey, vehicleFieldIsNumeric, vehicleInlineFieldDomKey, vehicleInlineFields, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
+import { adminVehicleFallbackPreviewRows, parseVehicleInlineFieldDomKey, vehicleInlineFieldDomKey, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
@@ -125,7 +125,7 @@ import { createId } from "@/lib/utils/id";
 import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 import { createXlsxBlob, parseTableImportFile } from "@/lib/utils/xlsx";
-import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys, isEditableGridArrowKey, toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
+import { isEditableGridArrowKey } from "@/shared/editable-grid/selection";
 import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
@@ -2403,236 +2403,33 @@ export default function App() {
     addAdminLog,
   });
 
-  function vehicleCellValue(id: number, field: VehicleInlineField) {
-    const vehicle = vehicleRows.find((item) => item.id === id);
-    return String(vehicle?.[field] ?? "");
-  }
-
-  function vehicleCellRangeKeys(anchor: { id: number; field: VehicleInlineField }, target: { id: number; field: VehicleInlineField }) {
-    const vehicleGridKeys = visibleVehicleRows.map((vehicle) => (
-      vehicleInlineFields.map((inlineField) => vehicleInlineFieldDomKey(vehicle.id, inlineField))
-    ));
-
-    return editableGridRangeKeys(
-      vehicleGridKeys,
-      vehicleInlineFieldDomKey(anchor.id, anchor.field),
-      vehicleInlineFieldDomKey(target.id, target.field),
-    );
-  }
-
-  function selectVehicleInlineCell(id: number, field: VehicleInlineField, event?: React.MouseEvent<HTMLElement>) {
-    const fieldKey = vehicleInlineFieldDomKey(id, field);
-    const targetCell = { id, field };
-
-    setActiveVehicleCell(fieldKey);
-    setEditingVehicleCell((current) => (current === fieldKey ? current : null));
-
-    if (event?.ctrlKey || event?.metaKey) {
-      vehicleSelectionAnchorRef.current = targetCell;
-      setVehicleSelectionAnchorCell(targetCell);
-      setSelectedVehicleCellKeys((currentKeys) => toggleEditableGridSelectionKey(currentKeys, fieldKey));
-      return;
-    }
-
-    if (event?.shiftKey && vehicleSelectionAnchorCell) {
-      setSelectedVehicleCellKeys(vehicleCellRangeKeys(vehicleSelectionAnchorCell, targetCell));
-      return;
-    }
-
-    vehicleSelectionAnchorRef.current = targetCell;
-    setVehicleSelectionAnchorCell(targetCell);
-    setSelectedVehicleCellKeys([fieldKey]);
-  }
-
-  function extendVehicleInlineSelection(id: number, field: VehicleInlineField, event: React.MouseEvent<HTMLElement>) {
-    if (!vehicleSelectionDraggingRef.current || event.buttons !== 1 || event.ctrlKey || event.metaKey) return;
-
-    const targetCell = { id, field };
-    const anchorCell = vehicleSelectionAnchorRef.current ?? vehicleSelectionAnchorCell ?? targetCell;
-    setActiveVehicleCell(vehicleInlineFieldDomKey(id, field));
-    setEditingVehicleCell(null);
-    setSelectedVehicleCellKeys(vehicleCellRangeKeys(anchorCell, targetCell));
-  }
-
-  function startVehicleInlineSelection(id: number, field: VehicleInlineField, event: React.MouseEvent<HTMLElement>) {
-    if (event.button !== 0) return;
-
-    vehicleSelectionDraggingRef.current = true;
-    selectVehicleInlineCell(id, field, event);
-  }
-
-  function startVehicleInlineCellEdit(id: number, field: VehicleInlineField, draftOverride?: string) {
-    const fieldKey = vehicleInlineFieldDomKey(id, field);
-    const currentValue = vehicleCellValue(id, field);
-    const draft = draftOverride ?? currentValue;
-
-    vehicleCellSkipBlurCommitRef.current = false;
-    setActiveVehicleCell(fieldKey);
-    vehicleSelectionAnchorRef.current = { id, field };
-    setVehicleSelectionAnchorCell({ id, field });
-    setSelectedVehicleCellKeys([fieldKey]);
-    setEditingVehicleCell(fieldKey);
-    setVehicleCellDraft(draft);
-    setVehicleCellInitialDraft(currentValue);
-    setPendingVehicleFocus({ id, field, edit: true, selectContents: draftOverride === undefined });
-  }
-
-  function commitVehicleInlineCellEdit(id: number, field: VehicleInlineField) {
-    const fieldKey = vehicleInlineFieldDomKey(id, field);
-    setEditingVehicleCell((current) => (current === fieldKey ? null : current));
-    if (vehicleCellDraft !== vehicleCellInitialDraft) {
-      updateVehicleRow(id, field, vehicleCellDraft);
-      const vehicle = vehicleRows.find((item) => item.id === id);
-      addAdminLog({
-        action: "Редактирование",
-        section: "Техника",
-        details: `Изменено поле "${vehicleFilterColumns.find((column) => column.key === field)?.label ?? field}"${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
-      });
-    }
-    setVehicleCellInitialDraft("");
-  }
-
-  function cancelVehicleInlineCellEdit(id: number, field: VehicleInlineField) {
-    const fieldKey = vehicleInlineFieldDomKey(id, field);
-    vehicleCellSkipBlurCommitRef.current = true;
-    setVehicleCellDraft(vehicleCellInitialDraft);
-    setVehicleCellInitialDraft("");
-    setEditingVehicleCell((current) => (current === fieldKey ? null : current));
-    setPendingVehicleFocus({ id, field });
-  }
-
-  function focusVehicleInlineCell(id: number, field: VehicleInlineField, edit = false) {
-    setPendingVehicleFocus({ id, field, edit });
-  }
-
-  function clearSelectedVehicleCells(id: number, field: VehicleInlineField) {
-    const fallbackKey = vehicleInlineFieldDomKey(id, field);
-    const targetKeys = selectedVehicleCellKeys.length ? selectedVehicleCellKeys : [fallbackKey];
-    const targetFieldsById = new Map<number, Set<VehicleInlineField>>();
-
-    targetKeys.forEach((key) => {
-      const parsedCell = parseVehicleInlineFieldDomKey(key);
-      if (!parsedCell) return;
-
-      const fields = targetFieldsById.get(parsedCell.vehicleId) ?? new Set<VehicleInlineField>();
-      fields.add(parsedCell.field);
-      targetFieldsById.set(parsedCell.vehicleId, fields);
-    });
-
-    pushVehicleUndoSnapshot();
-    setVehicleRows((current) =>
-      current.map((vehicle) => {
-        const fields = targetFieldsById.get(vehicle.id);
-        if (!fields) return vehicle;
-
-        const nextVehicle = { ...vehicle };
-        fields.forEach((inlineField) => {
-          nextVehicle[inlineField] = "";
-          if (inlineField === "owner") nextVehicle.contractor = "";
-        });
-        nextVehicle.name = buildVehicleDisplayName(nextVehicle);
-
-        return nextVehicle;
-      }),
-    );
-    addAdminLog({
-      action: "Редактирование",
-      section: "Техника",
-      details: `Очищены выбранные ячейки: ${targetKeys.length}.`,
-    });
-  }
-
-  function focusVehicleCellByOffset(id: number, field: VehicleInlineField, rowOffset: number, fieldOffset: number) {
-    const vehicleGridKeys = visibleVehicleRows.map((vehicle) => (
-      vehicleInlineFields.map((inlineField) => vehicleInlineFieldDomKey(vehicle.id, inlineField))
-    ));
-    const nextKey = editableGridKeyAtOffset(vehicleGridKeys, vehicleInlineFieldDomKey(id, field), rowOffset, fieldOffset);
-    if (!nextKey) return;
-
-    const parsedCell = parseVehicleInlineFieldDomKey(nextKey);
-
-    if (!parsedCell) return;
-    focusVehicleInlineCell(parsedCell.vehicleId, parsedCell.field);
-  }
-
-  function handleVehicleCellKeyDown(event: React.KeyboardEvent<HTMLElement>, id: number, field: VehicleInlineField, editing: boolean) {
-    if (event.ctrlKey || event.altKey || event.metaKey) return;
-
-    if (editing) {
-      if (isEditableGridArrowKey(event.key)) {
-        event.preventDefault();
-        commitVehicleInlineCellEdit(id, field);
-        const offset = editableGridArrowOffset(event.key);
-        focusVehicleCellByOffset(id, field, offset.rowOffset, offset.columnOffset);
-        return;
-      }
-
-      if (event.key === "Enter") {
-        event.preventDefault();
-        commitVehicleInlineCellEdit(id, field);
-        setPendingVehicleFocus({ id, field });
-        return;
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        cancelVehicleInlineCellEdit(id, field);
-        return;
-      }
-
-      return;
-    }
-
-    if (event.key.length === 1 && (!vehicleFieldIsNumeric(field) || /^[0-9]$/.test(event.key))) {
-      event.preventDefault();
-      startVehicleInlineCellEdit(id, field, event.key);
-    } else if (event.key === "Backspace") {
-      event.preventDefault();
-      clearSelectedVehicleCells(id, field);
-    } else if (event.key === "F2") {
-      event.preventDefault();
-      startVehicleInlineCellEdit(id, field);
-    } else if (isEditableGridArrowKey(event.key)) {
-      event.preventDefault();
-      const offset = editableGridArrowOffset(event.key);
-      focusVehicleCellByOffset(id, field, offset.rowOffset, offset.columnOffset);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      startVehicleInlineCellEdit(id, field);
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      setEditingVehicleCell(null);
-      setSelectedVehicleCellKeys(activeVehicleCell ? [activeVehicleCell] : []);
-    } else if (event.key === "Delete") {
-      event.preventDefault();
-      clearSelectedVehicleCells(id, field);
-    }
-  }
-
-  function vehicleCellInputProps(id: number, field: VehicleInlineField) {
-    const fieldKey = vehicleInlineFieldDomKey(id, field);
-
-    return {
-      active: activeVehicleCell === fieldKey,
-      selected: selectedVehicleCellKeys.includes(fieldKey),
-      editing: editingVehicleCell === fieldKey,
-      draft: vehicleCellDraft,
-      fieldKey,
-      onSelect: (event: React.MouseEvent<HTMLElement>) => startVehicleInlineSelection(id, field, event),
-      onExtendSelection: (event: React.MouseEvent<HTMLElement>) => extendVehicleInlineSelection(id, field, event),
-      onStartEdit: () => startVehicleInlineCellEdit(id, field),
-      onDraftChange: setVehicleCellDraft,
-      onCommitEdit: () => {
-        if (vehicleCellSkipBlurCommitRef.current) {
-          vehicleCellSkipBlurCommitRef.current = false;
-          return;
-        }
-
-        if (editingVehicleCell === fieldKey) commitVehicleInlineCellEdit(id, field);
-      },
-      onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => handleVehicleCellKeyDown(event, id, field, editingVehicleCell === fieldKey),
-    };
-  }
+  const {
+    commitVehicleInlineCellEdit,
+    vehicleCellInputProps,
+  } = useVehicleInlineGridEditor({
+    vehicleRows,
+    visibleVehicleRows,
+    activeVehicleCell,
+    selectedVehicleCellKeys,
+    editingVehicleCell,
+    vehicleCellDraft,
+    vehicleCellInitialDraft,
+    vehicleSelectionAnchorCell,
+    vehicleCellSkipBlurCommitRef,
+    vehicleSelectionDraggingRef,
+    vehicleSelectionAnchorRef,
+    setVehicleRows,
+    setActiveVehicleCell,
+    setVehicleSelectionAnchorCell,
+    setSelectedVehicleCellKeys,
+    setEditingVehicleCell,
+    setVehicleCellDraft,
+    setVehicleCellInitialDraft,
+    setPendingVehicleFocus,
+    updateVehicleRow,
+    pushVehicleUndoSnapshot,
+    addAdminLog,
+  });
 
   const {
     openVehicleImportFilePicker,
