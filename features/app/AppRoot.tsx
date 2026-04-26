@@ -3,7 +3,6 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppAdminContent } from "@/features/app/AppAdminContent";
 import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
-import { defaultSubTabs } from "@/features/app/appDefaults";
 import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import { useAppAdminContentProps } from "@/features/app/useAppAdminContentProps";
 import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProps";
@@ -15,6 +14,7 @@ import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSection
 import { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppHeaderProps } from "@/features/app/useAppHeaderProps";
+import { useAppInitialDataLoadController } from "@/features/app/useAppInitialDataLoadController";
 import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
@@ -31,7 +31,6 @@ import { useAppTableInteractionEffects } from "@/features/app/useAppTableInterac
 import { useAppUndoController } from "@/features/app/useAppUndoController";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
 import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
-import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import { useFleetRows } from "@/features/fleet/useFleetRows";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
@@ -43,11 +42,8 @@ export default function App() {
   const {
     topTab,
     topTabs,
-    setTopTabs,
     subTabs,
-    setSubTabs,
     customTabs,
-    setCustomTabs,
     addCustomTab,
     updateTopTabLabel,
     deleteTopTab,
@@ -113,11 +109,9 @@ export default function App() {
     vehicleRowsRef,
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
-    appDatabaseSaveSnapshotRef,
     appSettingsDatabaseLoadedRef,
     appSettingsDatabaseSaveSnapshotRef,
     adminDataLoaded,
-    setAdminDataLoaded,
     draggedPtoRowId,
     setDraggedPtoRowId,
     ptoDropTarget,
@@ -165,9 +159,7 @@ export default function App() {
     reportCustomers,
     setReportCustomers,
     reportAreaOrder,
-    setReportAreaOrder,
     reportWorkOrder,
-    setReportWorkOrder,
     reportHeaderLabels,
     setReportHeaderLabels,
     reportColumnWidths,
@@ -179,7 +171,6 @@ export default function App() {
     reportHeaderDraft,
     setReportHeaderDraft,
     areaShiftCutoffs,
-    setAreaShiftCutoffs,
     ptoPlanYear,
     setPtoPlanYear,
     ptoYearInput,
@@ -213,7 +204,6 @@ export default function App() {
     ptoBucketManualRows,
     setPtoBucketManualRows,
     orgMembers,
-    setOrgMembers,
     orgMemberForm,
     editingOrgMemberId,
     setEditingOrgMemberId,
@@ -222,12 +212,9 @@ export default function App() {
     addOrgMember,
     deleteOrgMember,
     dependencyNodes,
-    setDependencyNodes,
     dependencyLinks,
-    setDependencyLinks,
     dependencyNodeForm,
     dependencyLinkForm,
-    setDependencyLinkForm,
     editingDependencyNodeId,
     setEditingDependencyNodeId,
     editingDependencyLinkId,
@@ -245,7 +232,6 @@ export default function App() {
     updateAreaShiftCutoff,
     adminLogs,
     addAdminLog,
-    restoreAdminLogs,
     clearAdminLogs,
     lastChangeLog,
     lastUploadLog,
@@ -261,7 +247,6 @@ export default function App() {
     clientSnapshots,
     databasePanelMessage,
     databasePanelLoading,
-    saveClientSnapshotToDatabase,
     requestClientSnapshotSave,
     refreshClientSnapshots,
     createClientSnapshotNow,
@@ -293,43 +278,7 @@ export default function App() {
     setSelectedVehicleCellKeys,
   });
 
-  useInitialAppDataLoad({
-    defaultSubTabs,
-    saveClientSnapshotToDatabase,
-    restoreAdminLogs,
-    appDatabaseSaveSnapshotRef,
-    appSettingsDatabaseLoadedRef,
-    appSettingsDatabaseSaveSnapshotRef,
-    vehiclesDatabaseLoadedRef,
-    vehiclesDatabaseSaveSnapshotRef,
-    hasStoredPtoStateRef,
-    setAdminDataLoaded,
-    setReportCustomers,
-    setReportAreaOrder,
-    setReportWorkOrder,
-    setReportHeaderLabels,
-    setReportColumnWidths,
-    setReportReasons,
-    setAreaShiftCutoffs,
-    setCustomTabs,
-    setTopTabs,
-    setSubTabs,
-    setVehicleRows,
-    setDispatchSummaryRows,
-    setPtoManualYears,
-    setPtoPlanRows,
-    setPtoSurveyRows,
-    setPtoOperRows,
-    setPtoColumnWidths,
-    setPtoRowHeights,
-    setPtoHeaderLabels,
-    setPtoBucketValues,
-    setPtoBucketManualRows,
-    setOrgMembers,
-    setDependencyNodes,
-    setDependencyLinks,
-    setDependencyLinkForm,
-  });
+  useAppInitialDataLoadController({ appState });
 
   const {
     savePtoDatabaseChanges,
