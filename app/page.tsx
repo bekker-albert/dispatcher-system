@@ -68,6 +68,7 @@ import { useCustomerReportViewModel } from "@/features/reports/useCustomerReport
 import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
+import { useReportSelectionGuards } from "@/features/reports/useReportSelectionGuards";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
@@ -93,7 +94,6 @@ import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { clientSnapshotRestoreFlagKey, clientSnapshotStats, collectLocalStorageBackup, getOrCreateClientId, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
-import { normalizeLookupValue } from "@/lib/utils/text";
 import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
@@ -1564,16 +1564,14 @@ export default function App() {
     reportColumnWidths,
   });
 
-  useEffect(() => {
-    const visibleCustomers = reportCustomers.filter((customer) => customer.visible);
-    if (visibleCustomers.some((customer) => customer.id === reportCustomerId)) return;
-    setReportCustomerId(visibleCustomers[0]?.id ?? reportCustomers[0]?.id ?? defaultReportCustomerId);
-  }, [reportCustomerId, reportCustomers]);
-
-  useEffect(() => {
-    if (reportAreaTabs.some((area) => normalizeLookupValue(area) === normalizeLookupValue(reportArea))) return;
-    setReportArea("Все участки");
-  }, [reportArea, reportAreaTabs]);
+  useReportSelectionGuards({
+    reportCustomers,
+    reportCustomerId,
+    setReportCustomerId,
+    reportArea,
+    reportAreaTabs,
+    setReportArea,
+  });
 
   const {
     isPtoDateTab,
