@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
@@ -17,11 +18,6 @@ import {
   ptoCompactNumberInputStyle,
   ptoDateTableLayoutStyle,
   ptoDateTableScrollStyle,
-  ptoDraftAddButtonStyle,
-  ptoDraftCellHintStyle,
-  ptoDraftInputStyle,
-  ptoDraftRowStyle,
-  ptoDraftStatusStyle,
   ptoDropIndicatorStyle,
   ptoInlineAddRowButtonHoverStyle,
   ptoInlineAddRowButtonStyle,
@@ -5602,89 +5598,17 @@ export default function App() {
                   <td colSpan={tableSpacerColSpan} style={{ height: bottomSpacerHeight, padding: 0, border: "none", background: "transparent" }} />
                 </tr>
               ) : null}
-              {ptoDateEditing ? <tr style={ptoDraftRowStyle}>
-                {showCustomerCode ? (
-                  <PtoPlanTd align="center">
-                    <select
-                      value={ptoDraftRowFields.customerCode}
-                      onChange={(event) => updatePtoDraftField("customerCode", event.target.value)}
-                      onKeyDown={(event) => handlePtoDraftKeyDown(event, "area")}
-                      style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}
-                    >
-                      <option value="">Заказчик</option>
-                      {ptoCustomerCodeOptions.map((option) => (
-                        <option key={option.code} value={option.code}>{option.code}</option>
-                      ))}
-                    </select>
-                  </PtoPlanTd>
-                ) : null}
-                <PtoPlanTd>
-                  <div style={ptoAreaCellStyle}>
-                    <button
-                      type="button"
-                      onClick={addPtoRowFromDraft}
-                      style={ptoDraftAddButtonStyle}
-                      title="Добавить строку"
-                      aria-label="Добавить строку"
-                    >
-                      +
-                    </button>
-                    <input
-                      value={ptoDraftRowFields.area}
-                      onChange={(event) => updatePtoDraftField("area", event.target.value)}
-                      onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
-                      placeholder="Новая строка"
-                      style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }}
-                    />
-                  </div>
-                </PtoPlanTd>
-                {showLocation ? (
-                  <PtoPlanTd>
-                    <input
-                      value={ptoDraftRowFields.location}
-                      onChange={(event) => updatePtoDraftField("location", event.target.value)}
-                      onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
-                      placeholder="Местонахождение"
-                      style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }}
-                    />
-                  </PtoPlanTd>
-                ) : null}
-                <PtoPlanTd>
-                  <input
-                    value={ptoDraftRowFields.structure}
-                    onChange={(event) => updatePtoDraftField("structure", event.target.value)}
-                    onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
-                    placeholder="Структура"
-                    style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle }}
-                  />
-                </PtoPlanTd>
-                <PtoPlanTd align="center">
-                  <select
-                    value={ptoDraftRowFields.unit}
-                    onChange={(event) => updatePtoDraftField("unit", event.target.value)}
-                    onKeyDown={(event) => handlePtoDraftKeyDown(event, "structure")}
-                    style={{ ...ptoPlanInputStyle, ...ptoDraftInputStyle, textAlign: "center" }}
-                  >
-                    <option value="">Ед.</option>
-                    {ptoUnitOptions.map((unit) => (
-                      <option key={unit} value={unit}>{unit}</option>
-                    ))}
-                  </select>
-                </PtoPlanTd>
-                <PtoPlanTd align="center">
-                  <span style={ptoDraftStatusStyle}>Новая</span>
-                </PtoPlanTd>
-                <PtoPlanTd align="center"><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
-                <PtoPlanTd align="center"><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
-                {displayPtoMonthGroups.map((group) => (
-                  <Fragment key={`draft-${group.month}`}>
-                    <PtoPlanTd align="center"><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
-                    {group.expanded && group.days.map((day) => (
-                      <PtoPlanTd key={`draft-${day}`} align="center"><span style={ptoDraftCellHintStyle} /></PtoPlanTd>
-                    ))}
-                  </Fragment>
-                ))}
-              </tr> : null}
+              {ptoDateEditing ? (
+                <PtoDateDraftRow
+                  showCustomerCode={showCustomerCode}
+                  showLocation={showLocation}
+                  fields={ptoDraftRowFields}
+                  monthGroups={displayPtoMonthGroups}
+                  onUpdateField={updatePtoDraftField}
+                  onKeyDown={handlePtoDraftKeyDown}
+                  onAddRow={addPtoRowFromDraft}
+                />
+              ) : null}
             </tbody>
           </table>
         </div>
