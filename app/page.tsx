@@ -74,6 +74,7 @@ import { editableGridArrowOffset, editableGridKeyAtOffset, editableGridRangeKeys
 import { IconButton, TopButton } from "@/shared/ui/buttons";
 import { CompactTd, CompactTh, Field, SectionCard, SourceNote, SubTabs, VehicleMeta } from "@/shared/ui/layout";
 import { HeaderSubButton } from "@/shared/ui/navigation";
+import { SaveStatusIndicator, type SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 type PtoDropTarget = {
   rowId: string;
@@ -88,11 +89,6 @@ type ReportResizeState = {
   key: string;
   startX: number;
   startWidth: number;
-};
-
-type SaveStatusState = {
-  kind: "idle" | "saving" | "saved" | "error";
-  message: string;
 };
 
 type UndoSnapshot = {
@@ -6585,79 +6581,11 @@ export default function App() {
   );
 }
 
-function SaveStatusIndicator({ status, onClose }: { status: SaveStatusState; onClose: () => void }) {
-  if (status.kind === "idle") return null;
-
-  const kindStyle = status.kind === "error"
-    ? saveStatusErrorStyle
-    : status.kind === "saving"
-      ? saveStatusSavingStyle
-      : saveStatusSavedStyle;
-
-  return (
-    <div className="app-save-status" aria-live="polite" style={{ ...saveStatusIndicatorStyle, ...kindStyle }}>
-      <span>{status.message}</span>
-      <button type="button" aria-label="Закрыть уведомление" onClick={onClose} style={saveStatusCloseButtonStyle}>
-        ×
-      </button>
-    </div>
-  );
-}
-
 const blockStyle: React.CSSProperties = {
   border: "1px solid #e2e8f0",
   borderRadius: 16,
   padding: 16,
   background: "#f8fafc",
-};
-
-const saveStatusIndicatorStyle: React.CSSProperties = {
-  position: "fixed",
-  right: 18,
-  bottom: 18,
-  zIndex: 10000,
-  maxWidth: 420,
-  padding: "10px 12px",
-  borderRadius: 8,
-  borderStyle: "solid",
-  borderWidth: 1,
-  boxShadow: "0 10px 24px rgba(15, 23, 42, 0.16)",
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  fontSize: 13,
-  fontWeight: 700,
-  lineHeight: 1.25,
-};
-
-const saveStatusCloseButtonStyle: React.CSSProperties = {
-  appearance: "none",
-  border: "none",
-  background: "transparent",
-  color: "inherit",
-  cursor: "pointer",
-  fontSize: 18,
-  fontWeight: 700,
-  lineHeight: 1,
-  padding: 0,
-};
-
-const saveStatusSavingStyle: React.CSSProperties = {
-  background: "#111827",
-  borderColor: "#111827",
-  color: "#ffffff",
-};
-
-const saveStatusSavedStyle: React.CSSProperties = {
-  background: "#f8fafc",
-  borderColor: "#0f172a",
-  color: "#0f172a",
-};
-
-const saveStatusErrorStyle: React.CSSProperties = {
-  background: "#fef2f2",
-  borderColor: "#b91c1c",
-  color: "#991b1b",
 };
 
 const reportSourceGridStyle: React.CSSProperties = {
