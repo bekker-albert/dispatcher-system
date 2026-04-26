@@ -55,3 +55,11 @@ export function savePtoStateToBrowserStorage(state: DataPtoState, markLocalUpdat
   }
   window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
 }
+
+export function serializePtoDatabaseState(state: DataPtoState) {
+  return JSON.stringify(state);
+}
+
+export function ptoDatabaseStateChanged(state: DataPtoState, savedSnapshot: string) {
+  return serializePtoDatabaseState(state) !== savedSnapshot;
+}

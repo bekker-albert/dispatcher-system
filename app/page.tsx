@@ -7,7 +7,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
-import { createPtoDatabaseState, savePtoStateToBrowserStorage } from "@/features/pto/ptoPersistenceModel";
+import { createPtoDatabaseState, ptoDatabaseStateChanged, savePtoStateToBrowserStorage, serializePtoDatabaseState } from "@/features/pto/ptoPersistenceModel";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -1252,7 +1252,7 @@ export default function App() {
         ptoDatabaseLoadedRef.current = true;
         undoHistoryRef.current = [];
         undoRestoringRef.current = true;
-        ptoDatabaseSaveSnapshotRef.current = JSON.stringify({
+        ptoDatabaseSaveSnapshotRef.current = serializePtoDatabaseState(createPtoDatabaseState({
           manualYears: nextManualYears,
           planRows: nextPlanRows,
           operRows: nextOperRows,
@@ -1270,7 +1270,7 @@ export default function App() {
             ptoRowHeights: nextUiState.ptoRowHeights ?? fallbackUiState.ptoRowHeights,
             ptoHeaderLabels: nextUiState.ptoHeaderLabels ?? fallbackUiState.ptoHeaderLabels,
           },
-        });
+        }));
         setPtoManualYears(nextManualYears);
         setPtoPlanRows(nextPlanRows);
         setPtoOperRows(nextOperRows);
@@ -1546,7 +1546,7 @@ export default function App() {
       return;
     }
 
-    const snapshotToSave = JSON.stringify(ptoDatabaseStateRef.current);
+    const snapshotToSave = serializePtoDatabaseState(ptoDatabaseStateRef.current);
     if (mode === "auto" && snapshotToSave === ptoDatabaseSaveSnapshotRef.current) {
       setPtoDatabaseMessage("ПТО сохранено в базе данных.");
       return;
@@ -1574,7 +1574,7 @@ export default function App() {
       ptoDatabaseSavingRef.current = false;
       if (ptoDatabaseSaveQueuedRef.current) {
         ptoDatabaseSaveQueuedRef.current = false;
-        if (JSON.stringify(ptoDatabaseStateRef.current) !== ptoDatabaseSaveSnapshotRef.current) {
+        if (ptoDatabaseStateChanged(ptoDatabaseStateRef.current, ptoDatabaseSaveSnapshotRef.current)) {
           setPtoSaveRevision((current) => current + 1);
         }
       }
