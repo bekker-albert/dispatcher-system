@@ -2,8 +2,17 @@
 
 import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
-import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import {
+  AdminDatabaseSection,
+  AdminLogsSection,
+  AdminNavigationSection,
+  AdminReportSettingsSection,
+  AdminVehiclesSection,
+  DispatchSection,
+  PtoSection,
+  ReportsSection,
+} from "@/features/app/lazySections";
 import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
@@ -90,31 +99,6 @@ const vehicleFilterColumns = vehicleFilterColumnConfigs.map((column) => (
 ));
 
 const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
-
-const AdminVehiclesSection = dynamic(() => import("@/features/admin/vehicles/AdminVehiclesSection"), {
-  ssr: false,
-});
-const AdminDatabaseSection = dynamic(() => import("@/features/admin/database/AdminDatabaseSection"), {
-  ssr: false,
-});
-const AdminLogsSection = dynamic(() => import("@/features/admin/logs/AdminLogsSection"), {
-  ssr: false,
-});
-const AdminNavigationSection = dynamic(() => import("@/features/admin/navigation/AdminNavigationSection"), {
-  ssr: false,
-});
-const DispatchSection = dynamic(() => import("@/features/dispatch/DispatchSection"), {
-  ssr: false,
-});
-const ReportsSection = dynamic(() => import("@/features/reports/ReportsSection"), {
-  ssr: false,
-});
-const PtoSection = dynamic(() => import("@/features/pto/PtoSection"), {
-  ssr: false,
-});
-const AdminReportSettingsSection = dynamic(() => import("@/features/reports/admin/AdminReportSettingsSection"), {
-  ssr: false,
-});
 
 export default function App() {
   const [topTab, setTopTab] = useState<TopTab>("reports");
