@@ -1,11 +1,12 @@
 "use client";
 
-import { Check, ChevronDown, ChevronRight, Download, Eye, EyeOff, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPtoDateFormulaModel, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -33,13 +34,7 @@ import {
   ptoRowResizeHandleStyle,
   ptoRowToolsStyle,
   ptoStatusBadgeStyle,
-  ptoToolbarBlockStyle,
-  ptoToolbarLabelStyle,
-  ptoToolbarRowStyle,
-  ptoToolbarStyle,
-  ptoYearDialogStyle,
 } from "@/features/pto/ptoDateTableStyles";
-import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
@@ -4679,87 +4674,35 @@ export default function App() {
     if (!ptoDateEditing) {
       return (
         <div style={ptoDateTableLayoutStyle}>
-          <div style={ptoToolbarStyle}>
-            <div style={ptoToolbarBlockStyle}>
-              <span style={ptoToolbarLabelStyle}>Участки</span>
-              <div style={ptoToolbarRowStyle}>
-                {ptoAreaTabs.map((area) => (
-                  <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
-                ))}
-              </div>
-            </div>
-
-            {(["plan", "oper", "survey"] as string[]).includes(ptoTab) ? (
-              <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
-                <span style={ptoToolbarLabelStyle}>Excel</span>
-                <div style={ptoToolbarRowStyle}>
-                  <PtoToolbarIconButton label={`Скачать ${currentPtoDateExcelMeta().label} в Excel`} onClick={exportPtoDateTableToExcel}>
-                    <Download size={14} aria-hidden />
-                  </PtoToolbarIconButton>
-                  <PtoToolbarIconButton label={`Загрузить ${currentPtoDateExcelMeta().label} из Excel`} onClick={openPtoDateImportFilePicker}>
-                    <Upload size={14} aria-hidden />
-                  </PtoToolbarIconButton>
-                  <PtoToolbarIconButton label="Редактировать таблицу" onClick={togglePtoDateEditing}>
-                    <Pencil size={14} aria-hidden />
-                  </PtoToolbarIconButton>
-                </div>
-                <input
-                  ref={ptoPlanImportInputRef}
-                  accept=".xlsx,.csv"
-                  onChange={importPtoDateTableFromExcel}
-                  style={{ display: "none" }}
-                  type="file"
-                />
-              </div>
-            ) : null}
-
-            <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
-              <span style={ptoToolbarLabelStyle}>Годы</span>
-              <div style={ptoToolbarRowStyle}>
-                <PtoToolbarIconButton label="Удалить выбранный год" onClick={deletePtoYear}>
-                  <span aria-hidden>−</span>
-                </PtoToolbarIconButton>
-                {ptoYearTabs.map((year) => (
-                  <PtoToolbarButton key={year} active={ptoPlanYear === year} onClick={() => {
-                    selectPtoPlanYear(year);
-                  }} label={year} />
-                ))}
-                <PtoToolbarIconButton label="Добавить год" onClick={() => {
-                  setPtoYearInput("");
-                  setPtoYearDialogOpen(true);
-                }}>
-                  <span aria-hidden>+</span>
-                </PtoToolbarIconButton>
-              </div>
-              {ptoYearDialogOpen ? (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    addPtoYear();
-                  }}
-                  style={ptoYearDialogStyle}
-                >
-                  <label style={{ display: "grid", gap: 3 }}>
-                    <span style={ptoToolbarLabelStyle}>Новый год</span>
-                    <input
-                      autoFocus
-                      type="number"
-                      min="1900"
-                      max="2100"
-                      value={ptoYearInput}
-                      onChange={(event) => setPtoYearInput(event.target.value)}
-                      style={{ ...inputStyle, width: 96, padding: "5px 8px", borderRadius: 8, fontSize: 12 }}
-                    />
-                  </label>
-                  <PtoToolbarButton active onClick={addPtoYear} label="ОК" />
-                  <PtoToolbarButton active={false} onClick={() => {
-                    setPtoYearDialogOpen(false);
-                    setPtoYearInput("");
-                  }} label="Отмена" />
-                </form>
-              ) : null}
-            </div>
-          </div>
+          <PtoDateToolbar
+            areaTabs={ptoAreaTabs}
+            areaFilter={ptoAreaFilter}
+            onSelectArea={selectPtoArea}
+            showExcelControls={["plan", "oper", "survey"].includes(ptoTab)}
+            excelLabel={currentPtoDateExcelMeta().label}
+            editing={ptoDateEditing}
+            onExport={exportPtoDateTableToExcel}
+            onOpenImport={openPtoDateImportFilePicker}
+            onImportChange={importPtoDateTableFromExcel}
+            importInputRef={ptoPlanImportInputRef}
+            onToggleEditing={togglePtoDateEditing}
+            yearTabs={ptoYearTabs}
+            selectedYear={ptoPlanYear}
+            onSelectYear={selectPtoPlanYear}
+            onDeleteYear={deletePtoYear}
+            onOpenYearDialog={() => {
+              setPtoYearInput("");
+              setPtoYearDialogOpen(true);
+            }}
+            yearDialogOpen={ptoYearDialogOpen}
+            yearInput={ptoYearInput}
+            onYearInputChange={setPtoYearInput}
+            onAddYear={addPtoYear}
+            onCloseYearDialog={() => {
+              setPtoYearDialogOpen(false);
+              setPtoYearInput("");
+            }}
+          />
 
           <div ref={ptoDateTableScrollRef} style={ptoDateTableScrollStyle}>
             <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth, marginRight: 40 }}>
@@ -5325,87 +5268,35 @@ export default function App() {
 
     return (
       <div style={ptoDateTableLayoutStyle}>
-        <div style={ptoToolbarStyle}>
-          <div style={ptoToolbarBlockStyle}>
-            <span style={ptoToolbarLabelStyle}>Участки</span>
-            <div style={ptoToolbarRowStyle}>
-              {ptoAreaTabs.map((area) => (
-                <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => selectPtoArea(area)} label={area} />
-              ))}
-            </div>
-          </div>
-
-          {(["plan", "oper", "survey"] as string[]).includes(ptoTab) ? (
-            <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
-              <span style={ptoToolbarLabelStyle}>Excel</span>
-              <div style={ptoToolbarRowStyle}>
-                <PtoToolbarIconButton label={`Скачать ${currentPtoDateExcelMeta().label} в Excel`} onClick={exportPtoDateTableToExcel}>
-                  <Download size={14} aria-hidden />
-                </PtoToolbarIconButton>
-                <PtoToolbarIconButton label={`Загрузить ${currentPtoDateExcelMeta().label} из Excel`} onClick={openPtoDateImportFilePicker}>
-                  <Upload size={14} aria-hidden />
-                </PtoToolbarIconButton>
-                <PtoToolbarIconButton label={ptoDateEditing ? "Завершить редактирование таблицы" : "Редактировать таблицу"} onClick={togglePtoDateEditing}>
-                  {ptoDateEditing ? <Check size={14} aria-hidden /> : <Pencil size={14} aria-hidden />}
-                </PtoToolbarIconButton>
-              </div>
-              <input
-                ref={ptoPlanImportInputRef}
-                accept=".xlsx,.csv"
-                onChange={importPtoDateTableFromExcel}
-                style={{ display: "none" }}
-                type="file"
-              />
-            </div>
-          ) : null}
-
-          <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
-            <span style={ptoToolbarLabelStyle}>Годы</span>
-            <div style={ptoToolbarRowStyle}>
-              <PtoToolbarIconButton label="Удалить выбранный год" onClick={deletePtoYear}>
-                <span aria-hidden>−</span>
-              </PtoToolbarIconButton>
-              {ptoYearTabs.map((year) => (
-                <PtoToolbarButton key={year} active={ptoPlanYear === year} onClick={() => {
-                  selectPtoPlanYear(year);
-                }} label={year} />
-              ))}
-              <PtoToolbarIconButton label="Добавить год" onClick={() => {
-                setPtoYearInput("");
-                setPtoYearDialogOpen(true);
-              }}>
-                <span aria-hidden>+</span>
-              </PtoToolbarIconButton>
-            </div>
-            {ptoYearDialogOpen ? (
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  addPtoYear();
-                }}
-                style={ptoYearDialogStyle}
-              >
-                <label style={{ display: "grid", gap: 3 }}>
-                  <span style={ptoToolbarLabelStyle}>Новый год</span>
-                  <input
-                    autoFocus
-                    type="number"
-                    min="1900"
-                    max="2100"
-                    value={ptoYearInput}
-                    onChange={(event) => setPtoYearInput(event.target.value)}
-                    style={{ ...inputStyle, width: 96, padding: "5px 8px", borderRadius: 8, fontSize: 12 }}
-                  />
-                </label>
-                <PtoToolbarButton active onClick={addPtoYear} label="ОК" />
-                <PtoToolbarButton active={false} onClick={() => {
-                  setPtoYearDialogOpen(false);
-                  setPtoYearInput("");
-                }} label="Отмена" />
-              </form>
-            ) : null}
-          </div>
-        </div>
+        <PtoDateToolbar
+          areaTabs={ptoAreaTabs}
+          areaFilter={ptoAreaFilter}
+          onSelectArea={selectPtoArea}
+          showExcelControls={["plan", "oper", "survey"].includes(ptoTab)}
+          excelLabel={currentPtoDateExcelMeta().label}
+          editing={ptoDateEditing}
+          onExport={exportPtoDateTableToExcel}
+          onOpenImport={openPtoDateImportFilePicker}
+          onImportChange={importPtoDateTableFromExcel}
+          importInputRef={ptoPlanImportInputRef}
+          onToggleEditing={togglePtoDateEditing}
+          yearTabs={ptoYearTabs}
+          selectedYear={ptoPlanYear}
+          onSelectYear={selectPtoPlanYear}
+          onDeleteYear={deletePtoYear}
+          onOpenYearDialog={() => {
+            setPtoYearInput("");
+            setPtoYearDialogOpen(true);
+          }}
+          yearDialogOpen={ptoYearDialogOpen}
+          yearInput={ptoYearInput}
+          onYearInputChange={setPtoYearInput}
+          onAddYear={addPtoYear}
+          onCloseYearDialog={() => {
+            setPtoYearDialogOpen(false);
+            setPtoYearInput("");
+          }}
+        />
 
         {ptoDateEditing ? (
           <div style={ptoFormulaBarStyle}>
