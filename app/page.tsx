@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useDeferredValue, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
@@ -42,7 +42,6 @@ import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleR
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
-import { createPtoDatabaseState } from "@/features/pto/ptoPersistenceModel";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { PtoDateTableContainer } from "@/features/pto/PtoDateTableContainer";
@@ -53,6 +52,7 @@ import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEdito
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
+import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { usePtoPendingFieldFocus } from "@/features/pto/usePtoPendingFieldFocus";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
@@ -288,25 +288,23 @@ export default function App() {
     setPtoPlanYear,
     setPtoAreaFilter,
   });
-  const ptoDatabaseState = useMemo(() => createPtoDatabaseState({
-    manualYears: ptoManualYears,
-    planRows: ptoPlanRows,
-    operRows: ptoOperRows,
-    surveyRows: ptoSurveyRows,
-    bucketValues: ptoBucketValues,
-    bucketRows: ptoBucketManualRows,
-    uiState: {
-      ptoTab,
-      ptoPlanYear,
-      ptoAreaFilter,
-      expandedPtoMonths,
-      reportColumnWidths,
-      reportReasons,
-      ptoColumnWidths,
-      ptoRowHeights,
-      ptoHeaderLabels,
-    },
-  }), [expandedPtoMonths, ptoAreaFilter, ptoBucketManualRows, ptoBucketValues, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportColumnWidths, reportReasons]);
+  const ptoDatabaseState = usePtoDatabaseState({
+    ptoManualYears,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+    ptoBucketValues,
+    ptoBucketManualRows,
+    ptoTab,
+    ptoPlanYear,
+    ptoAreaFilter,
+    expandedPtoMonths,
+    reportColumnWidths,
+    reportReasons,
+    ptoColumnWidths,
+    ptoRowHeights,
+    ptoHeaderLabels,
+  });
   const ptoDatabaseStateRef = useSyncedRef(ptoDatabaseState);
   const {
     ptoDatabaseSaveSnapshotRef,
