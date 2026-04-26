@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
-import { Fragment, type ChangeEvent, type CSSProperties, type Dispatch, type DragEvent, type KeyboardEvent, type MouseEvent, type RefObject, type SetStateAction, type UIEvent } from "react";
+import { Fragment, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
@@ -10,10 +10,8 @@ import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, Pto
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
-import type { PtoDateExcelMetaWithRows } from "@/features/pto/usePtoDateExcelTransfer";
-import type { PtoRowTextField } from "@/features/pto/usePtoRowTextDrafts";
-import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
-import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter, type PtoMonthGroupView } from "@/features/pto/ptoDateTableModel";
+import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
+import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -33,114 +31,11 @@ import {
   ptoRowResizeHandleStyle,
   ptoRowToolsStyle,
 } from "@/features/pto/ptoDateTableStyles";
-import type { PtoDateViewport } from "@/features/pto/usePtoDateViewport";
-import type { PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
-import { emptyPtoDraftRowFields, normalizePtoCustomerCode, normalizePtoUnit, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, type PtoDraftRowFields, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { emptyPtoDraftRowFields, normalizePtoCustomerCode, normalizePtoUnit, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { cleanAreaName, normalizeLookupValue } from "@/lib/utils/text";
 import { isEditableGridArrowKey } from "@/shared/editable-grid/selection";
-
-type PtoRowsSetter = Dispatch<SetStateAction<PtoPlanRow[]>>;
-
-type PtoDateTableOptions = {
-  showLocation?: boolean;
-  editableMonthTotal?: boolean;
-};
-
-type PtoDateOptionMaps = {
-  allAreasKey: string;
-  locationsByArea: Map<string, string[]>;
-  structuresByArea: Map<string, string[]>;
-  structuresByAreaLocation: Map<string, string[]>;
-};
-
-type PtoHeaderEditor = {
-  ptoHeaderLabel: (key: string, fallback: string) => string;
-  editingPtoHeaderKey: string | null;
-  ptoHeaderDraft: string;
-  setPtoHeaderDraft: Dispatch<SetStateAction<string>>;
-  startPtoHeaderEdit: (key: string, fallback: string) => void;
-  commitPtoHeaderEdit: (key: string, fallback: string) => void;
-  cancelPtoHeaderEdit: () => void;
-};
-
-export type PtoDateTableContainerProps = PtoHeaderEditor & {
-  rows: PtoPlanRow[];
-  setRows: PtoRowsSetter;
-  options?: PtoDateTableOptions;
-  ptoTab: string;
-  ptoAreaFilter: string;
-  ptoPlanYear: string;
-  reportDate: string;
-  ptoYearMonths: string[];
-  ptoMonthGroups: PtoMonthGroupView[];
-  ptoAreaTabs: string[];
-  ptoYearTabs: string[];
-  ptoYearDialogOpen: boolean;
-  ptoYearInput: string;
-  ptoDateEditing: boolean;
-  ptoColumnWidths: Record<string, number>;
-  ptoRowHeights: Record<string, number>;
-  ptoDateViewport: PtoDateViewport;
-  ptoDateOptionMaps: PtoDateOptionMaps;
-  ptoDateTableScrollRef: RefObject<HTMLDivElement | null>;
-  ptoPlanImportInputRef: RefObject<HTMLInputElement | null>;
-  draggedPtoRowId: string | null;
-  ptoDropTarget: PtoDropTarget | null;
-  hoveredPtoAddRowId: string | null;
-  ptoFormulaCell: PtoFormulaCell | null;
-  ptoFormulaDraft: string;
-  ptoInlineEditCell: PtoFormulaCell | null;
-  ptoInlineEditInitialDraft: string;
-  ptoSelectionAnchorCell: PtoFormulaCell | null;
-  ptoSelectedCellKeys: string[];
-  ptoSelectionDraggingRef: RefObject<boolean>;
-  ptoDraftRowFields: PtoDraftRowFields;
-  setPtoDateEditing: Dispatch<SetStateAction<boolean>>;
-  setDraggedPtoRowId: Dispatch<SetStateAction<string | null>>;
-  setPtoDropTarget: Dispatch<SetStateAction<PtoDropTarget | null>>;
-  setPtoFormulaCell: Dispatch<SetStateAction<PtoFormulaCell | null>>;
-  setPtoFormulaDraft: Dispatch<SetStateAction<string>>;
-  setPtoInlineEditCell: Dispatch<SetStateAction<PtoFormulaCell | null>>;
-  setPtoInlineEditInitialDraft: Dispatch<SetStateAction<string>>;
-  setPtoSelectionAnchorCell: Dispatch<SetStateAction<PtoFormulaCell | null>>;
-  setPtoSelectedCellKeys: Dispatch<SetStateAction<string[]>>;
-  setPtoYearInput: Dispatch<SetStateAction<string>>;
-  setPtoYearDialogOpen: Dispatch<SetStateAction<boolean>>;
-  setExpandedPtoMonths: Dispatch<SetStateAction<Record<string, boolean>>>;
-  setHoveredPtoAddRowId: Dispatch<SetStateAction<string | null>>;
-  setPtoDraftRowFields: Dispatch<SetStateAction<PtoDraftRowFields>>;
-  setPtoPendingFieldFocus: Dispatch<SetStateAction<{ rowId: string; field: string } | null>>;
-  savePtoLocalState: () => void;
-  requestPtoDatabaseSave: () => void;
-  savePtoDatabaseChanges: (mode: PtoDatabaseSaveMode) => void | Promise<void>;
-  selectPtoArea: (area: string) => void;
-  currentPtoDateExcelMeta: () => PtoDateExcelMetaWithRows;
-  exportPtoDateTableToExcel: () => void;
-  openPtoDateImportFilePicker: () => void;
-  importPtoDateTableFromExcel: (event: ChangeEvent<HTMLInputElement>) => void;
-  selectPtoPlanYear: (year: string) => void;
-  deletePtoYear: () => void;
-  addPtoYear: () => void;
-  updatePtoDateViewportFromElement: (element: HTMLDivElement, threshold?: number) => void;
-  handlePtoDateTableScroll: (event: UIEvent<HTMLDivElement>) => void;
-  startPtoColumnResize: (event: MouseEvent<HTMLElement>, key: string, width: number) => void;
-  startPtoRowResize: (event: MouseEvent<HTMLElement>, key: string) => void;
-  addLinkedPtoDateRow: (overrides?: Partial<PtoPlanRow>, insertAfterRow?: PtoPlanRow) => string;
-  removeLinkedPtoDateRow: (row: PtoPlanRow) => void;
-  getPtoDropPosition: (event: DragEvent<HTMLTableRowElement>) => PtoDropPosition;
-  moveLinkedPtoDateRow: (sourceId: string, targetId: string, visibleRows: PtoPlanRow[], position: PtoDropPosition) => void;
-  updatePtoDateRow: (setRows: PtoRowsSetter, id: string, field: keyof Omit<PtoPlanRow, "id" | "dailyPlans">, value: string) => void;
-  clearPtoCarryoverOverride: (setRows: PtoRowsSetter, id: string, year: string) => void;
-  updatePtoDateDay: (setRows: PtoRowsSetter, id: string, day: string, value: string) => void;
-  updatePtoMonthTotal: (setRows: PtoRowsSetter, id: string, days: string[], value: string) => void;
-  beginPtoRowTextDraft: (row: PtoPlanRow, field: PtoRowTextField) => void;
-  getPtoRowTextDraft: (row: PtoPlanRow, field: PtoRowTextField) => string;
-  updatePtoRowTextDraft: (rowId: string, field: PtoRowTextField, value: string) => void;
-  commitPtoRowTextDraft: (setRows: PtoRowsSetter, row: PtoPlanRow, field: PtoRowTextField) => void;
-  cancelPtoRowTextDraft: (rowId: string, field: PtoRowTextField) => void;
-};
 
 export function PtoDateTableContainer({
   rows,
