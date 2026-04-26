@@ -6,6 +6,7 @@ import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffs
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
 import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandlers";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
+import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
@@ -76,7 +77,7 @@ import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
 import { useReportSelectionGuards } from "@/features/reports/useReportSelectionGuards";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
-import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
+import { sharedAppSettingKeys } from "@/lib/domain/app/settings";
 import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
@@ -95,8 +96,7 @@ import { cloneVehicleRows } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, vehicleInlineFieldDomKey, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
-import type { DataClientSnapshot } from "@/lib/data/app-state";
-import { clientSnapshotRestoreFlagKey, clientSnapshotStats, collectLocalStorageBackup, getOrCreateClientId, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
+import { clientSnapshotRestoreFlagKey, clientSnapshotStats, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { SectionCard } from "@/shared/ui/layout";
@@ -161,10 +161,6 @@ export default function App() {
   const appDatabaseSaveSnapshotRef = useRef("");
   const appSettingsDatabaseLoadedRef = useRef(false);
   const appSettingsDatabaseSaveSnapshotRef = useRef("");
-  const clientSnapshotSaveTimerRef = useRef<number | null>(null);
-  const clientSnapshotSaveSnapshotRef = useRef("");
-  const clientSnapshotSaveDisabledRef = useRef(false);
-  const clientSnapshotLastAutoQueuedAtRef = useRef(0);
   const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
@@ -263,9 +259,6 @@ export default function App() {
     areaShiftCutoffs,
   });
   const { updateAreaShiftCutoff } = useAreaShiftCutoffEditor({ setAreaShiftCutoffs });
-  const [clientSnapshots, setClientSnapshots] = useState<DataClientSnapshot[]>([]);
-  const [databasePanelMessage, setDatabasePanelMessage] = useState("");
-  const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
   const {
     adminLogs,
     addAdminLog,
@@ -276,6 +269,16 @@ export default function App() {
   } = useAdminLogsState();
   const [ptoDatabaseMessage, setPtoDatabaseMessage] = useState(databaseConfigured ? "База данных подключается..." : "База данных не настроена.");
   const { saveStatus, showSaveStatus, hideSaveStatus } = useSaveStatus();
+  const {
+    clientSnapshots,
+    databasePanelMessage,
+    databasePanelLoading,
+    saveClientSnapshotToDatabase,
+    requestClientSnapshotSave,
+    refreshClientSnapshots,
+    createClientSnapshotNow,
+    restoreClientSnapshot,
+  } = useClientSnapshotsPanel({ showSaveStatus });
   const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!databaseConfigured);
   const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
@@ -366,89 +369,6 @@ export default function App() {
     subTabs,
     topTabs,
   ]);
-
-  const saveClientSnapshotToDatabase = useCallback(async (reason: string) => {
-    if (!databaseConfigured || clientSnapshotSaveDisabledRef.current) return;
-
-    const clientId = getOrCreateClientId();
-    const storage = collectLocalStorageBackup();
-    if (Object.keys(storage).length === 0) return;
-
-    const snapshot = JSON.stringify({ clientId, storage });
-    if (snapshot === clientSnapshotSaveSnapshotRef.current) return;
-
-    const { saveClientAppSnapshotToDatabase } = await import("@/lib/data/app-state");
-    await saveClientAppSnapshotToDatabase(clientId, storage, {
-      reason,
-      userAgent: window.navigator.userAgent,
-      url: window.location.href,
-    });
-    clientSnapshotSaveSnapshotRef.current = snapshot;
-  }, []);
-
-  const requestClientSnapshotSave = useCallback((reason = "auto") => {
-    if (!databaseConfigured || clientSnapshotSaveDisabledRef.current) return;
-
-    const manualSnapshot = reason.startsWith("manual");
-    const now = Date.now();
-    if (!manualSnapshot && now - clientSnapshotLastAutoQueuedAtRef.current < clientSnapshotAutoMinIntervalMs) return;
-    if (!manualSnapshot) clientSnapshotLastAutoQueuedAtRef.current = now;
-
-    if (clientSnapshotSaveTimerRef.current !== null) {
-      window.clearTimeout(clientSnapshotSaveTimerRef.current);
-    }
-
-    clientSnapshotSaveTimerRef.current = window.setTimeout(() => {
-      void saveClientSnapshotToDatabase(reason).catch((error) => {
-        console.warn("Database client snapshot save failed:", error);
-        const message = errorToMessage(error);
-        if (message.includes("public.app_state") || message.includes("PGRST205")) {
-          clientSnapshotSaveDisabledRef.current = true;
-          showSaveStatus("error", "Резервная копия браузера отключена: таблица снимков не создана. Основные данные сохраняются отдельно.");
-          return;
-        }
-        showSaveStatus("error", `Резервная копия не сохранена: ${message}`);
-      });
-      clientSnapshotSaveTimerRef.current = null;
-    }, clientSnapshotSaveDelayMs);
-  }, [saveClientSnapshotToDatabase, showSaveStatus]);
-
-  const refreshClientSnapshots = useCallback(async () => {
-    if (!databaseConfigured) {
-      setDatabasePanelMessage("База данных не настроена.");
-      return;
-    }
-
-    setDatabasePanelLoading(true);
-    try {
-      const { loadClientAppSnapshotsFromDatabase } = await import("@/lib/data/app-state");
-      const snapshots = await loadClientAppSnapshotsFromDatabase();
-      setClientSnapshots(snapshots);
-      setDatabasePanelMessage(`Снимков браузеров: ${snapshots.length}.`);
-    } catch (error) {
-      setDatabasePanelMessage(`Не удалось прочитать снимки: ${errorToMessage(error)}`);
-    } finally {
-      setDatabasePanelLoading(false);
-    }
-  }, []);
-
-  const createClientSnapshotNow = useCallback(() => {
-    void saveClientSnapshotToDatabase("manual-admin-database-panel")
-      .then(refreshClientSnapshots)
-      .catch((error) => {
-        setDatabasePanelMessage(`Не удалось создать снимок: ${errorToMessage(error)}`);
-      });
-  }, [refreshClientSnapshots, saveClientSnapshotToDatabase]);
-
-  const restoreClientSnapshot = useCallback((snapshot: DataClientSnapshot) => {
-    Object.entries(snapshot.storage).forEach(([key, value]) => {
-      window.localStorage.setItem(key, value);
-    });
-    window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
-    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-    window.sessionStorage.setItem(clientSnapshotRestoreFlagKey, "1");
-    window.location.reload();
-  }, []);
 
   function pushVehicleUndoSnapshot() {
     vehicleUndoHistoryRef.current = [
