@@ -47,7 +47,7 @@ import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleR
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
-import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, resolvePtoDatabaseLoadResolution, serializePtoDatabaseState, validatePtoDatabaseLoadState } from "@/features/pto/ptoPersistenceModel";
+import { createPtoDatabaseState } from "@/features/pto/ptoPersistenceModel";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { PtoDateTableContainer } from "@/features/pto/PtoDateTableContainer";
@@ -56,6 +56,7 @@ import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
+import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { usePtoPendingFieldFocus } from "@/features/pto/usePtoPendingFieldFocus";
@@ -102,9 +103,9 @@ import { createDefaultVehicles, defaultVehicleSeedReplaceLimit, normalizeVehicle
 import { adminVehicleFallbackPreviewRows, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
-import { clientSnapshotRestoreFlagKey, clientSnapshotStats, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
+import { clientSnapshotStats } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
-import { errorToMessage, isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
+import { isRecord, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "@/lib/utils/normalizers";
 import { SectionCard } from "@/shared/ui/layout";
 import { SaveStatusIndicator } from "@/shared/ui/SaveStatusIndicator";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
@@ -705,106 +706,33 @@ export default function App() {
     };
   }, [restoreAdminLogs, saveClientSnapshotToDatabase, setCustomTabs, setDependencyLinkForm, setDependencyLinks, setDependencyNodes, setOrgMembers, setSubTabs, setTopTabs]);
 
-  useEffect(() => {
-    if (!adminDataLoaded) return;
-
-    let cancelled = false;
-
-    async function loadPtoDatabase() {
-      if (!databaseConfigured) {
-        setPtoDatabaseReady(true);
-        setPtoDatabaseMessage(ptoDatabaseMessages.notConfigured);
-        return;
-      }
-
-      ptoDatabaseLoadedRef.current = false;
-      setPtoDatabaseReady(false);
-      setPtoDatabaseMessage(ptoDatabaseMessages.loading);
-
-      try {
-        const { loadPtoStateFromDatabase } = await import("@/lib/data/pto");
-        const databaseState = await loadPtoStateFromDatabase();
-        if (cancelled) return;
-
-        validatePtoDatabaseLoadState(databaseState);
-
-        const resolution = resolvePtoDatabaseLoadResolution({
-          databaseState,
-          currentState: ptoDatabaseStateRef.current,
-          hasStoredPtoState: hasStoredPtoStateRef.current,
-          localUpdatedAt: window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt),
-          shouldRestoreClientSnapshot: window.sessionStorage.getItem(clientSnapshotRestoreFlagKey) === "1",
-        });
-
-        if (resolution.kind === "empty-save-local" || resolution.kind === "empty-ready") {
-          ptoDatabaseLoadedRef.current = true;
-          ptoDatabaseSaveSnapshotRef.current = "";
-          setPtoDatabaseReady(true);
-          if (resolution.kind === "empty-save-local") {
-            setPtoSaveRevision((revision) => revision + 1);
-          }
-          setPtoDatabaseMessage(resolution.message);
-          return;
-        }
-
-        if (resolution.kind === "restore-local" || resolution.kind === "keep-local") {
-          if (resolution.kind === "restore-local") {
-            window.sessionStorage.removeItem(clientSnapshotRestoreFlagKey);
-          }
-          savePtoLocalRecoveryBackup(resolution.backupReason, databaseState?.updatedAt);
-          ptoDatabaseLoadedRef.current = true;
-          ptoDatabaseSaveSnapshotRef.current = "";
-          setPtoDatabaseReady(true);
-          setPtoSaveRevision((revision) => revision + 1);
-          setPtoDatabaseMessage(resolution.message);
-          return;
-        }
-
-        if (!databaseState) return;
-
-        if (resolution.backupReason) {
-          savePtoLocalRecoveryBackup(resolution.backupReason, databaseState.updatedAt);
-        }
-
-        const loadedState = normalizeLoadedPtoDatabaseState(databaseState, ptoDatabaseStateRef.current);
-
-        ptoDatabaseLoadedRef.current = true;
-        resetUndoHistoryForExternalRestore();
-        ptoDatabaseSaveSnapshotRef.current = serializePtoDatabaseState(loadedState.snapshotState);
-        setPtoManualYears(loadedState.manualYears);
-        setPtoPlanRows(loadedState.planRows);
-        setPtoOperRows(loadedState.operRows);
-        setPtoSurveyRows(loadedState.surveyRows);
-        setPtoBucketValues(loadedState.bucketValues);
-        setPtoBucketManualRows(loadedState.bucketRows);
-        if (loadedState.uiState.ptoTab) setPtoTab(loadedState.uiState.ptoTab);
-        if (loadedState.uiState.ptoPlanYear) setPtoPlanYear(loadedState.uiState.ptoPlanYear);
-        if (loadedState.uiState.ptoAreaFilter) setPtoAreaFilter(loadedState.uiState.ptoAreaFilter);
-        setExpandedPtoMonths(loadedState.uiState.expandedPtoMonths);
-        setReportColumnWidths(loadedState.uiState.reportColumnWidths);
-        setReportReasons(loadedState.uiState.reportReasons);
-        setPtoColumnWidths(loadedState.uiState.ptoColumnWidths);
-        setPtoRowHeights(loadedState.uiState.ptoRowHeights);
-        setPtoHeaderLabels(loadedState.uiState.ptoHeaderLabels);
-        setPtoDatabaseReady(true);
-        setPtoDatabaseMessage(ptoDatabaseMessages.loaded);
-      } catch (error) {
-        if (!cancelled) {
-          ptoDatabaseLoadedRef.current = false;
-          setPtoDatabaseReady(true);
-          const message = ptoDatabaseMessages.loadError(errorToMessage(error));
-          setPtoDatabaseMessage(message);
-          showSaveStatus("error", message);
-        }
-      }
-    }
-
-    void loadPtoDatabase();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [adminDataLoaded, ptoDatabaseSaveSnapshotRef, resetUndoHistoryForExternalRestore, showSaveStatus]);
+  usePtoDatabaseLoad({
+    adminDataLoaded,
+    ptoDatabaseStateRef,
+    hasStoredPtoStateRef,
+    ptoDatabaseLoadedRef,
+    ptoDatabaseSaveSnapshotRef,
+    resetUndoHistoryForExternalRestore,
+    showSaveStatus,
+    setPtoDatabaseReady,
+    setPtoDatabaseMessage,
+    setPtoSaveRevision,
+    setPtoManualYears,
+    setPtoPlanRows,
+    setPtoOperRows,
+    setPtoSurveyRows,
+    setPtoBucketValues,
+    setPtoBucketManualRows,
+    setPtoTab,
+    setPtoPlanYear,
+    setPtoAreaFilter,
+    setExpandedPtoMonths,
+    setReportColumnWidths,
+    setReportReasons,
+    setPtoColumnWidths,
+    setPtoRowHeights,
+    setPtoHeaderLabels,
+  });
 
   useAppLocalPersistence({
     adminDataLoaded,
