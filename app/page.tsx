@@ -11,6 +11,7 @@ import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
 import { FleetSection } from "@/features/fleet/FleetSection";
+import { useFleetRows } from "@/features/fleet/useFleetRows";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { useAdminVehicleRowsViewModel } from "@/features/admin/vehicles/useAdminVehicleRowsViewModel";
@@ -2106,27 +2107,11 @@ export default function App() {
     addAdminLog,
   });
 
-  const filteredFleet = useMemo(() => {
-    if (renderedTopTab !== "fleet") return [];
-
-    return vehicleRows.filter((v) => {
-      if (v.visible === false) return false;
-      switch (fleetTab) {
-        case "rent":
-          return v.rent > 0;
-        case "work":
-          return v.work > 0;
-        case "idle":
-          return v.downtime > 0;
-        case "repair":
-          return v.repair > 0;
-        case "free":
-          return !v.active || (v.work === 0 && v.rent === 0 && v.repair === 0 && v.downtime === 0);
-        default:
-          return true;
-      }
-    });
-  }, [fleetTab, renderedTopTab, vehicleRows]);
+  const filteredFleet = useFleetRows({
+    active: renderedTopTab === "fleet",
+    fleetTab,
+    vehicleRows,
+  });
 
   const activeCustomTab = customTabs.find((tab) => tab.visible !== false && customTabKey(tab.id) === renderedTopTab);
   const activeDispatchSubtab = subTabs.dispatch.find((tab) => tab.value === dispatchTab);
