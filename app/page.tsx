@@ -57,6 +57,7 @@ import {
   ptoRowResizeHandleStyle,
   ptoRowToolsStyle,
 } from "@/features/pto/ptoDateTableStyles";
+import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDropTarget, PtoResizeState } from "@/features/pto/ptoDateInteractionTypes";
@@ -5412,28 +5413,9 @@ export default function App() {
           </SectionCard>
         )}
 
-        {activeCustomTab && (
-          <SectionCard title={activeCustomTab.title}>
-            <div style={{ display: "grid", gap: 16 }}>
-              {activeCustomTab.description && <div style={{ color: "#475569" }}>{activeCustomTab.description}</div>}
-              {activeCustomTab.items.length > 0 ? (
-                activeCustomTab.items.map((item, index) => (
-                  <div key={`${activeCustomTab.id}-${index}`} style={blockStyle}>{item}</div>
-                ))
-              ) : (
-                <div style={blockStyle}>Во вкладке пока нет информации.</div>
-              )}
-            </div>
-          </SectionCard>
-        )}
+        {activeCustomTab && <CustomTabSection tab={activeCustomTab} />}
       </div>
     </div>
   );
 }
 
-const blockStyle: React.CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 16,
-  padding: 16,
-  background: "#f8fafc",
-};
