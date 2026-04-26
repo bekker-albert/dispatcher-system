@@ -10,6 +10,7 @@ import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
+import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
@@ -51,7 +52,6 @@ import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer"
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
-import { usePtoDateViewportReset } from "@/features/pto/usePtoDateViewportReset";
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
@@ -923,22 +923,19 @@ export default function App() {
     reportCustomerId,
     reportCustomers,
   });
-  const expandedPtoMonthsKey = Object.entries(expandedPtoMonths)
-    .filter(([, expanded]) => expanded)
-    .map(([month]) => month)
-    .sort()
-    .join("|");
   const {
     viewport: ptoDateViewport,
     scrollRef: ptoDateTableScrollRef,
     updateViewportFromElement: updatePtoDateViewportFromElement,
     handleScroll: handlePtoDateTableScroll,
-  } = usePtoDateViewportReset({
+  } = useAppPtoDateViewport({
     renderedTopTab,
     isPtoDateTab,
     ptoDateEditing,
-    resetKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}`,
-    measureKey: `${ptoTab}:${ptoPlanYear}:${ptoAreaFilter}:${expandedPtoMonthsKey}`,
+    expandedPtoMonths,
+    ptoTab,
+    ptoPlanYear,
+    ptoAreaFilter,
     setPtoDateEditing,
     setDraggedPtoRowId,
     setPtoDropTarget,
