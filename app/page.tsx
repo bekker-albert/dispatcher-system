@@ -277,7 +277,10 @@ export default function App() {
     refreshClientSnapshots,
     createClientSnapshotNow,
     restoreClientSnapshot,
-  } = useClientSnapshotsPanel({ showSaveStatus });
+  } = useClientSnapshotsPanel({
+    active: topTab === "admin" && adminSection === "database",
+    showSaveStatus,
+  });
   const [ptoDatabaseReady, setPtoDatabaseReady] = useState(!databaseConfigured);
   const [ptoSaveRevision, setPtoSaveRevision] = useState(0);
   const [adminDataLoaded, setAdminDataLoaded] = useState(false);
@@ -403,12 +406,6 @@ export default function App() {
   useEffect(() => {
     ptoDatabaseStateRef.current = ptoDatabaseState;
   }, [ptoDatabaseState]);
-
-  useEffect(() => {
-    if (topTab === "admin" && adminSection === "database") {
-      void refreshClientSnapshots();
-    }
-  }, [adminSection, refreshClientSnapshots, topTab]);
 
   useVehiclePendingFocus({
     pendingVehicleFocus,

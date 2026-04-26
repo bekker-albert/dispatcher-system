@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs } from "@/lib/domain/app/settings";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { databaseConfigured } from "@/lib/data/config";
@@ -12,10 +12,11 @@ import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type ClientSnapshotsPanelOptions = {
+  active: boolean;
   showSaveStatus: ShowSaveStatus;
 };
 
-export function useClientSnapshotsPanel({ showSaveStatus }: ClientSnapshotsPanelOptions) {
+export function useClientSnapshotsPanel({ active, showSaveStatus }: ClientSnapshotsPanelOptions) {
   const [clientSnapshots, setClientSnapshots] = useState<DataClientSnapshot[]>([]);
   const [databasePanelMessage, setDatabasePanelMessage] = useState("");
   const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
@@ -88,6 +89,11 @@ export function useClientSnapshotsPanel({ showSaveStatus }: ClientSnapshotsPanel
       setDatabasePanelLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!active) return;
+    void refreshClientSnapshots();
+  }, [active, refreshClientSnapshots]);
 
   const createClientSnapshotNow = useCallback(() => {
     void saveClientSnapshotToDatabase("manual-admin-database-panel")
