@@ -11,6 +11,7 @@ import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummary
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
+import { useVehicleFilterMenu } from "@/features/admin/vehicles/useVehicleFilterMenu";
 import {
   dependencyLinkFormNodePatch,
   normalizeStoredDependencyLinks,
@@ -2163,6 +2164,24 @@ export default function App() {
     Object.values(vehicleFilters).filter((values) => values !== undefined).length
   ), [vehicleFilters]);
 
+  const {
+    openVehicleFilterMenu,
+    toggleVehicleFilterDraftValue,
+    selectAllVehicleFilterDraftValues,
+    deselectAllVehicleFilterDraftValues,
+    applyVehicleFilter,
+    clearAllVehicleFilters,
+  } = useVehicleFilterMenu({
+    openVehicleFilter,
+    vehicleFilters,
+    vehicleFilterDrafts,
+    vehicleRows,
+    activeVehicleFilterOptions,
+    setOpenVehicleFilter,
+    setVehicleFilters,
+    setVehicleFilterDrafts,
+  });
+
   const filteredDispatch = useMemo(() => {
     if (renderedTopTab !== "dispatch") return [];
 
@@ -2383,105 +2402,6 @@ export default function App() {
       ...current,
       [area]: value,
     }));
-  }
-
-  function openVehicleFilterMenu(key: VehicleFilterKey) {
-    if (openVehicleFilter === key) {
-      setOpenVehicleFilter(null);
-      return;
-    }
-
-    setVehicleFilterDrafts((current) => {
-      const nextDrafts = { ...current };
-      const appliedValues = vehicleFilters[key];
-
-      if (appliedValues === undefined) {
-        delete nextDrafts[key];
-      } else {
-        nextDrafts[key] = appliedValues;
-      }
-
-      return nextDrafts;
-    });
-    setOpenVehicleFilter(key);
-  }
-
-  function getVehicleFilterOptionsForKey(key: VehicleFilterKey) {
-    if (openVehicleFilter === key) return activeVehicleFilterOptions;
-
-    const column = vehicleFilterColumns.find((item) => item.key === key);
-    if (!column) return [];
-
-      const rowsForColumn = vehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns, key));
-    const options = createVehicleFilterOptions(rowsForColumn, column);
-    const selectedValues = vehicleFilters[key] ?? [];
-
-    return Array.from(new Set([...options, ...selectedValues]))
-      .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
-  }
-
-  function toggleVehicleFilterDraftValue(key: VehicleFilterKey, value: string) {
-    const allOptions = getVehicleFilterOptionsForKey(key);
-
-    setVehicleFilterDrafts((current) => {
-      const selected = current[key];
-      const nextSelection = new Set(selected === undefined ? allOptions : selected);
-
-      if (nextSelection.has(value)) {
-        nextSelection.delete(value);
-      } else {
-        nextSelection.add(value);
-      }
-
-      const nextValues = allOptions.filter((option) => nextSelection.has(option));
-      const nextDrafts = { ...current };
-
-      if (nextValues.length === allOptions.length) {
-        delete nextDrafts[key];
-      } else {
-        nextDrafts[key] = nextValues;
-      }
-
-      return nextDrafts;
-    });
-  }
-
-  function selectAllVehicleFilterDraftValues(key: VehicleFilterKey) {
-    setVehicleFilterDrafts((current) => {
-      const nextDrafts = { ...current };
-      delete nextDrafts[key];
-      return nextDrafts;
-    });
-  }
-
-  function deselectAllVehicleFilterDraftValues(key: VehicleFilterKey) {
-    setVehicleFilterDrafts((current) => ({
-      ...current,
-      [key]: [],
-    }));
-  }
-
-  function applyVehicleFilter(key: VehicleFilterKey) {
-    const draftValues = vehicleFilterDrafts[key];
-
-    setVehicleFilters((current) => {
-      const nextFilters = { ...current };
-
-      if (draftValues === undefined) {
-        delete nextFilters[key];
-      } else {
-        nextFilters[key] = draftValues;
-      }
-
-      return nextFilters;
-    });
-    setOpenVehicleFilter(null);
-  }
-
-  function clearAllVehicleFilters() {
-    setVehicleFilters({});
-    setVehicleFilterDrafts({});
-    setOpenVehicleFilter(null);
   }
 
   function startPtoColumnResize(event: React.MouseEvent<HTMLElement>, key: string, width: number) {
