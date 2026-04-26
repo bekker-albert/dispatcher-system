@@ -47,6 +47,7 @@ import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, savePtoStateToBrowserStorage, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
+import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import {
   dragHandleDotStyle,
   dragHandleDotsStyle,
@@ -97,7 +98,7 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoDateTableKeyFromTab, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -2269,31 +2270,17 @@ export default function App() {
     addAdminLog,
   });
 
-  function currentPtoTableLabel() {
-    return subTabs.pto.find((tab) => tab.value === ptoTab)?.label ?? ptoTab;
-  }
-
-  function currentPtoDateTableKey(): PtoDateTableKey | null {
-    return ptoDateTableKeyFromTab(ptoTab);
-  }
-
-  function savePtoDayPatchToDatabase(rowId: string, day: string, value: number | null) {
-    const table = currentPtoDateTableKey();
-    if (!table || !databaseConfigured || !ptoDatabaseLoadedRef.current) return;
-
-    void import("@/lib/data/pto")
-      .then(({ savePtoDayValueToDatabase }) => savePtoDayValueToDatabase(table, rowId, day, value))
-      .catch((error) => console.warn("Database PTO day save failed:", error));
-  }
-
-  function savePtoDayPatchesToDatabase(values: Array<{ rowId: string; day: string; value: number | null }>) {
-    const table = currentPtoDateTableKey();
-    if (!table || !databaseConfigured || !ptoDatabaseLoadedRef.current || values.length === 0) return;
-
-    void import("@/lib/data/pto")
-      .then(({ savePtoDayValuesToDatabase }) => savePtoDayValuesToDatabase(table, values))
-      .catch((error) => console.warn("Database PTO day batch save failed:", error));
-  }
+  const {
+    currentPtoTableLabel,
+    currentPtoDateTableKey,
+    savePtoDayPatchToDatabase,
+    savePtoDayPatchesToDatabase,
+  } = usePtoDateTableContext({
+    ptoTab,
+    ptoSubTabs: subTabs.pto,
+    databaseConfigured,
+    databaseLoadedRef: ptoDatabaseLoadedRef,
+  });
 
   function addLinkedPtoDateRow(overrides: Partial<PtoPlanRow> = {}, insertAfterRow?: PtoPlanRow) {
     const id = createId();
