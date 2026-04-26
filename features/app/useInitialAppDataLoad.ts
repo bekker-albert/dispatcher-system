@@ -7,7 +7,7 @@ import {
   normalizeStoredDependencyNodes,
   normalizeStoredOrgMembers,
 } from "@/features/admin/structure/adminStructurePersistence";
-import { loadDefaultVehicleSeed } from "@/features/admin/vehicles/lib/defaultVehicleSeed";
+import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
 import { readClientReportDateSelection } from "@/features/reports/lib/reportDateSelection";
 import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { defaultAreaShiftScheduleArea, normalizeAreaShiftCutoffs } from "@/lib/domain/admin/area-schedule";
@@ -19,7 +19,6 @@ import { normalizePtoPlanRow, normalizeStoredPtoYears, type PtoPlanRow } from "@
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
 import { defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
-import { defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import { adminStorageKeys } from "@/lib/storage/keys";
@@ -131,31 +130,13 @@ export function useInitialAppDataLoad({
         }
 
         const storedState = readInitialStoredAppState();
-        let savedVehicles = storedState.savedVehicles;
-        let loadedVehiclesFromDatabase = false;
-
-        if (databaseConfigured) {
-          try {
-            const { loadVehiclesFromDatabase } = await import("@/lib/data/vehicles");
-            const databaseVehicles = await loadVehiclesFromDatabase();
-            vehiclesDatabaseLoadedRef.current = true;
-
-            if (cancelled) return;
-
-            if (databaseVehicles?.rows.length) {
-              savedVehicles = databaseVehicles.rows;
-              loadedVehiclesFromDatabase = true;
-              vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(databaseVehicles.rows);
-              window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(databaseVehicles.rows));
-              if (databaseVehicles.updatedAt) {
-                window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseVehicles.updatedAt);
-              }
-            }
-          } catch (error) {
-            vehiclesDatabaseLoadedRef.current = false;
-            console.warn("Vehicles table is not ready:", error);
-          }
-        }
+        const initialVehicleRows = await loadInitialVehicleRows({
+          savedVehicles: storedState.savedVehicles,
+          isCancelled: () => cancelled,
+          vehiclesDatabaseLoadedRef,
+          vehiclesDatabaseSaveSnapshotRef,
+        });
+        if (!initialVehicleRows.completed) return;
 
         const hasSavedPtoState = Boolean(
           storedState.savedPtoYears
@@ -208,21 +189,8 @@ export function useInitialAppDataLoad({
           setSubTabs(normalizeStoredSubTabs(storedState.savedSubTabs, defaultSubTabs));
         }
 
-        const savedVehicleSeedVersion = window.localStorage.getItem(adminStorageKeys.vehiclesSeedVersion);
-        const needsVehicleSeed = !loadedVehiclesFromDatabase && (!Array.isArray(savedVehicles) || savedVehicles.length <= defaultVehicleSeedReplaceLimit);
-        const defaultVehicleSeed = needsVehicleSeed ? await loadDefaultVehicleSeed() : null;
-        if (cancelled) return;
-        const shouldUseVehicleSeed = defaultVehicleSeed !== null && defaultVehicleSeed.rows.length > 0 && (
-          !Array.isArray(savedVehicles)
-          || savedVehicleSeedVersion !== defaultVehicleSeed.version
-        );
-
-        if (shouldUseVehicleSeed && defaultVehicleSeed) {
-          setVehicleRows(defaultVehicleSeed.vehicles);
-          window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(defaultVehicleSeed.vehicles));
-          window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, defaultVehicleSeed.version);
-        } else if (Array.isArray(savedVehicles)) {
-          setVehicleRows(savedVehicles.map((vehicle) => normalizeVehicleRow(vehicle)));
+        if (initialVehicleRows.rows) {
+          setVehicleRows(initialVehicleRows.rows);
         }
 
         const parsedDispatchSummaryRows = normalizeDispatchSummaryRows(storedState.savedDispatchSummaryRows, preferredReportDate);
@@ -231,8 +199,8 @@ export function useInitialAppDataLoad({
           setDispatchSummaryRows(hasEditableDispatchRows
             ? parsedDispatchSummaryRows
             : parsedDispatchSummaryRows.map((row) => (row.shift === "daily" ? { ...row, shift: "night" } : row)));
-        } else if (shouldUseVehicleSeed) {
-          setDispatchSummaryRows(createDefaultDispatchSummaryRows(defaultVehicleSeed.vehicles, preferredReportDate));
+        } else if (initialVehicleRows.usedSeed && initialVehicleRows.rows) {
+          setDispatchSummaryRows(createDefaultDispatchSummaryRows(initialVehicleRows.rows, preferredReportDate));
         }
 
         if (storedState.savedPtoYears) {
