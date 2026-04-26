@@ -10,8 +10,8 @@ import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, Pto
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
-import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
+import { createPtoDateTableViewModel } from "@/features/pto/ptoDateTableViewModel";
 import { usePtoDraftRowController } from "@/features/pto/usePtoDraftRowController";
 import {
   dragHandleDotStyle,
@@ -32,7 +32,7 @@ import {
   ptoRowResizeHandleStyle,
   ptoRowToolsStyle,
 } from "@/features/pto/ptoDateTableStyles";
-import { previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
+import { ptoAutomatedStatus, ptoRowFieldDomKey, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
 import { formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { cleanAreaName, normalizeLookupValue } from "@/lib/utils/text";
@@ -121,28 +121,30 @@ export function PtoDateTableContainer({
   commitPtoHeaderEdit,
   cancelPtoHeaderEdit,
 }: PtoDateTableContainerProps) {
-    const showLocation = options.showLocation !== false;
-    const showCustomerCode = ptoTab === "plan";
-    const editableMonthTotal = options.editableMonthTotal === true;
-    const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
-    const rowById = new Map(rows.map((row) => [row.id, row] as const));
-    const getRowDateTotals = createPtoRowDateTotalsGetter(ptoPlanYear);
-    const getEffectiveCarryover = createPtoEffectiveCarryoverGetter(rows, ptoPlanYear);
-    const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;
     const {
-      displayPtoMonthGroups,
-      tableColumns,
-      tableMinWidth,
+      carryoverHeader,
       columnWidthByKey,
-    } = createPtoDateTableModel({
+      displayPtoMonthGroups,
+      editableMonthTotal,
+      filteredRows,
+      getEffectiveCarryover,
+      getRowDateTotals,
+      rowById,
       showCustomerCode,
       showLocation,
-      planYear: ptoPlanYear,
+      tableColumns,
+      tableMinWidth,
+    } = createPtoDateTableViewModel({
+      rows,
+      options,
+      ptoTab,
+      ptoAreaFilter,
+      ptoPlanYear,
       reportDate,
-      yearMonths: ptoYearMonths,
-      monthGroups: ptoMonthGroups,
-      editing: ptoDateEditing,
-      columnWidths: ptoColumnWidths,
+      ptoYearMonths,
+      ptoMonthGroups,
+      ptoDateEditing,
+      ptoColumnWidths,
     });
     const togglePtoDateEditing = () => {
       const nextEditing = !ptoDateEditing;
