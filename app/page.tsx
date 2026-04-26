@@ -9,6 +9,7 @@ import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
+import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
@@ -81,7 +82,6 @@ import { useReportSelectionGuards } from "@/features/reports/useReportSelectionG
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { sharedAppSettingKeys } from "@/lib/domain/app/settings";
-import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
@@ -95,7 +95,6 @@ import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normaliz
 import { normalizePtoBucketManualRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
-import { cloneVehicleRows } from "@/lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, vehicleInlineFieldDomKey, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
@@ -162,7 +161,6 @@ export default function App() {
   const appDatabaseSaveSnapshotRef = useRef("");
   const appSettingsDatabaseLoadedRef = useRef(false);
   const appSettingsDatabaseSaveSnapshotRef = useRef("");
-  const vehicleUndoHistoryRef = useRef<VehicleRow[][]>([]);
   const [draggedPtoRowId, setDraggedPtoRowId] = useState<string | null>(null);
   const [ptoDropTarget, setPtoDropTarget] = useState<PtoDropTarget | null>(null);
   const [ptoFormulaCell, setPtoFormulaCell] = useState<PtoFormulaCell | null>(null);
@@ -315,11 +313,19 @@ export default function App() {
     },
   }), [expandedPtoMonths, ptoAreaFilter, ptoBucketManualRows, ptoBucketValues, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportColumnWidths, reportReasons]);
   const ptoDatabaseStateRef = useRef(ptoDatabaseState);
-  const undoHistoryRef = useRef<UndoSnapshot[]>([]);
-  const undoCurrentSnapshotRef = useRef<UndoSnapshot | null>(null);
-  const undoSnapshotTimerRef = useRef<number | null>(null);
-  const undoRestoringRef = useRef(false);
-  const createUndoSnapshot = useCallback((): UndoSnapshot => ({
+  const {
+    pushVehicleUndoSnapshot,
+    resetUndoHistoryForExternalRestore,
+  } = useAppUndoHistory({
+    adminDataLoaded,
+    topTab,
+    adminSection,
+    databaseConfigured,
+    ptoDatabaseLoadedRef,
+    vehicleRows,
+    vehicleRowsRef,
+    setPtoSaveRevision,
+    addAdminLog,
     reportCustomers,
     reportAreaOrder,
     reportWorkOrder,
@@ -330,7 +336,6 @@ export default function App() {
     customTabs,
     topTabs,
     subTabs,
-    vehicleRows: cloneVehicleRows(vehicleRowsRef.current),
     ptoManualYears,
     expandedPtoMonths,
     ptoPlanRows,
@@ -344,192 +349,42 @@ export default function App() {
     orgMembers,
     dependencyNodes,
     dependencyLinks,
-  }), [
-    customTabs,
-    dependencyLinks,
-    dependencyNodes,
-    expandedPtoMonths,
-    areaShiftCutoffs,
-    orgMembers,
-    ptoBucketManualRows,
-    ptoBucketValues,
-    ptoColumnWidths,
-    ptoHeaderLabels,
-    ptoManualYears,
-    ptoOperRows,
-    ptoPlanRows,
-    ptoRowHeights,
-    ptoSurveyRows,
-    reportAreaOrder,
-    reportColumnWidths,
-    reportReasons,
-    reportWorkOrder,
-    reportHeaderLabels,
-    reportCustomers,
-    subTabs,
-    topTabs,
-  ]);
-
-  function pushVehicleUndoSnapshot() {
-    vehicleUndoHistoryRef.current = [
-      ...vehicleUndoHistoryRef.current,
-      cloneVehicleRows(vehicleRowsRef.current),
-    ].slice(-10);
-  }
-
-  const restoreUndoSnapshot = useCallback((snapshot: UndoSnapshot) => {
-    setReportCustomers(snapshot.reportCustomers);
-    setReportAreaOrder(snapshot.reportAreaOrder);
-    setReportWorkOrder(snapshot.reportWorkOrder);
-    setReportHeaderLabels(snapshot.reportHeaderLabels);
-    setReportColumnWidths(snapshot.reportColumnWidths);
-    setReportReasons(snapshot.reportReasons);
-    setAreaShiftCutoffs(snapshot.areaShiftCutoffs);
-    setCustomTabs(snapshot.customTabs);
-    setTopTabs(snapshot.topTabs);
-    setSubTabs(snapshot.subTabs);
-    setVehicleRows(snapshot.vehicleRows);
-    setPtoManualYears(snapshot.ptoManualYears);
-    setExpandedPtoMonths(snapshot.expandedPtoMonths);
-    setPtoPlanRows(snapshot.ptoPlanRows);
-    setPtoSurveyRows(snapshot.ptoSurveyRows);
-    setPtoOperRows(snapshot.ptoOperRows);
-    setPtoColumnWidths(snapshot.ptoColumnWidths);
-    setPtoRowHeights(snapshot.ptoRowHeights);
-    setPtoHeaderLabels(snapshot.ptoHeaderLabels);
-    setPtoBucketValues(snapshot.ptoBucketValues);
-    setPtoBucketManualRows(snapshot.ptoBucketManualRows);
-    setOrgMembers(snapshot.orgMembers);
-    setDependencyNodes(snapshot.dependencyNodes);
-    setDependencyLinks(snapshot.dependencyLinks);
-
-    setEditingVehicleCell(null);
-    setVehicleCellDraft("");
-    setVehicleCellInitialDraft("");
-    setPtoInlineEditCell(null);
-    setPtoInlineEditInitialDraft("");
-    setPtoFormulaDraft("");
-    setEditingPtoHeaderKey(null);
-    setPtoHeaderDraft("");
-    setEditingReportHeaderKey(null);
-    setReportHeaderDraft("");
-    setOpenVehicleFilter(null);
-
-    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
-      setPtoSaveRevision((revision) => revision + 1);
-    }
-
-    addAdminLog({
-      action: "Отмена",
-      section: "Система",
-      details: "Выполнен возврат на шаг назад через Ctrl+Z.",
-    });
-  }, [addAdminLog, setCustomTabs, setDependencyLinks, setDependencyNodes, setOrgMembers, setSubTabs, setTopTabs]);
-
-  const restoreVehicleUndoSnapshot = useCallback(() => {
-    const previousVehicleRows = vehicleUndoHistoryRef.current.pop();
-    if (!previousVehicleRows) return;
-
-    setVehicleRows(cloneVehicleRows(previousVehicleRows));
-    setEditingVehicleCell(null);
-    setVehicleCellDraft("");
-    setVehicleCellInitialDraft("");
-    setOpenVehicleFilter(null);
-    addAdminLog({
-      action: "Отмена",
-      section: "Техника",
-      details: "Выполнен возврат списка техники на шаг назад через Ctrl+Z.",
-    });
-  }, [addAdminLog]);
-
-  useEffect(() => {
-    vehicleRowsRef.current = vehicleRows;
-    if (undoCurrentSnapshotRef.current) {
-      undoCurrentSnapshotRef.current = {
-        ...undoCurrentSnapshotRef.current,
-        vehicleRows: cloneVehicleRows(vehicleRows),
-      };
-    }
-  }, [vehicleRows]);
-
-  useEffect(() => {
-    if (undoSnapshotTimerRef.current !== null) {
-      window.clearTimeout(undoSnapshotTimerRef.current);
-    }
-
-    undoSnapshotTimerRef.current = window.setTimeout(() => {
-      const nextSnapshot = cloneUndoSnapshot(createUndoSnapshot());
-
-      if (!adminDataLoaded) {
-        undoHistoryRef.current = [];
-        undoCurrentSnapshotRef.current = nextSnapshot;
-        undoRestoringRef.current = false;
-        undoSnapshotTimerRef.current = null;
-        return;
-      }
-
-      if (!undoCurrentSnapshotRef.current) {
-        undoCurrentSnapshotRef.current = nextSnapshot;
-        undoSnapshotTimerRef.current = null;
-        return;
-      }
-
-      if (undoRestoringRef.current) {
-        undoRestoringRef.current = false;
-        undoCurrentSnapshotRef.current = nextSnapshot;
-        undoSnapshotTimerRef.current = null;
-        return;
-      }
-
-      undoHistoryRef.current = [
-        ...undoHistoryRef.current,
-        cloneUndoSnapshot(undoCurrentSnapshotRef.current),
-      ].slice(-10);
-      undoCurrentSnapshotRef.current = nextSnapshot;
-
-      undoSnapshotTimerRef.current = null;
-    }, 700);
-
-    return () => {
-      if (undoSnapshotTimerRef.current !== null) {
-        window.clearTimeout(undoSnapshotTimerRef.current);
-        undoSnapshotTimerRef.current = null;
-      }
-    };
-  }, [adminDataLoaded, createUndoSnapshot]);
-
-  useEffect(() => {
-    const handleGlobalUndo = (event: KeyboardEvent) => {
-      const isUndo = (event.ctrlKey || event.metaKey)
-        && !event.shiftKey
-        && (event.key.toLowerCase() === "z" || event.code === "KeyZ");
-
-      const canUndoVehicleRows = topTab === "admin" && adminSection === "vehicles" && vehicleUndoHistoryRef.current.length > 0;
-      if (!isUndo || (!canUndoVehicleRows && undoHistoryRef.current.length === 0)) return;
-
-      const target = event.target;
-      const targetElement = target instanceof HTMLElement ? target : null;
-      const isNativeEditable = Boolean(targetElement?.closest("input, textarea, select, [contenteditable='true']"));
-      if (isNativeEditable) return;
-
-      event.preventDefault();
-
-      if (canUndoVehicleRows) {
-        restoreVehicleUndoSnapshot();
-        return;
-      }
-
-      const previousSnapshot = undoHistoryRef.current.pop();
-      if (!previousSnapshot) return;
-
-      undoRestoringRef.current = true;
-      undoCurrentSnapshotRef.current = cloneUndoSnapshot(previousSnapshot);
-      restoreUndoSnapshot(previousSnapshot);
-    };
-
-    window.addEventListener("keydown", handleGlobalUndo);
-    return () => window.removeEventListener("keydown", handleGlobalUndo);
-  }, [adminSection, restoreUndoSnapshot, restoreVehicleUndoSnapshot, topTab]);
+    setReportCustomers,
+    setReportAreaOrder,
+    setReportWorkOrder,
+    setReportHeaderLabels,
+    setReportColumnWidths,
+    setReportReasons,
+    setAreaShiftCutoffs,
+    setCustomTabs,
+    setTopTabs,
+    setSubTabs,
+    setVehicleRows,
+    setPtoManualYears,
+    setExpandedPtoMonths,
+    setPtoPlanRows,
+    setPtoSurveyRows,
+    setPtoOperRows,
+    setPtoColumnWidths,
+    setPtoRowHeights,
+    setPtoHeaderLabels,
+    setPtoBucketValues,
+    setPtoBucketManualRows,
+    setOrgMembers,
+    setDependencyNodes,
+    setDependencyLinks,
+    setEditingVehicleCell,
+    setVehicleCellDraft,
+    setVehicleCellInitialDraft,
+    setPtoInlineEditCell,
+    setPtoInlineEditInitialDraft,
+    setPtoFormulaDraft,
+    setEditingPtoHeaderKey,
+    setPtoHeaderDraft,
+    setEditingReportHeaderKey,
+    setReportHeaderDraft,
+    setOpenVehicleFilter,
+  });
 
   useEffect(() => {
     ptoDatabaseStateRef.current = ptoDatabaseState;
@@ -941,8 +796,7 @@ export default function App() {
         const loadedState = normalizeLoadedPtoDatabaseState(databaseState, ptoDatabaseStateRef.current);
 
         ptoDatabaseLoadedRef.current = true;
-        undoHistoryRef.current = [];
-        undoRestoringRef.current = true;
+        resetUndoHistoryForExternalRestore();
         ptoDatabaseSaveSnapshotRef.current = serializePtoDatabaseState(loadedState.snapshotState);
         setPtoManualYears(loadedState.manualYears);
         setPtoPlanRows(loadedState.planRows);
@@ -977,7 +831,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [adminDataLoaded, showSaveStatus]);
+  }, [adminDataLoaded, resetUndoHistoryForExternalRestore, showSaveStatus]);
 
   useAppLocalPersistence({
     adminDataLoaded,
