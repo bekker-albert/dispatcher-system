@@ -3,6 +3,9 @@
 import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { ContractorsSection } from "@/features/contractors/ContractorsSection";
+import { FleetSection } from "@/features/fleet/FleetSection";
+import { FuelSection } from "@/features/fuel/FuelSection";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import {
   AdminDatabaseSection,
@@ -49,6 +52,8 @@ import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
 import type { ReportResizeState } from "@/features/reports/lib/reportResizeState";
+import { SafetySection } from "@/features/safety-driving/SafetySection";
+import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
 import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
@@ -70,9 +75,9 @@ import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsF
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
-import { compactSubTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
+import { createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import { createPtoBucketColumns, createPtoBucketRows, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
-import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "@/lib/domain/reference/defaults";
+import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
 import { cloneVehicleRows, createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
@@ -2198,11 +2203,7 @@ export default function App() {
 
   const activeCustomTab = customTabs.find((tab) => tab.visible !== false && customTabKey(tab.id) === renderedTopTab);
   const activeDispatchSubtab = subTabs.dispatch.find((tab) => tab.value === dispatchTab);
-  const activeFleetSubtab = subTabs.fleet.find((tab) => tab.value === fleetTab);
-  const activeContractorSubtab = subTabs.contractors.find((tab) => tab.value === contractorTab);
-  const activeFuelSubtab = subTabs.fuel.find((tab) => tab.value === fuelTab);
   const activePtoSubtab = subTabs.pto.find((tab) => tab.value === ptoTab);
-  const activeTbSubtab = subTabs.tb.find((tab) => tab.value === tbTab);
   const lastChangeLog = adminLogs.find((log) => ["Редактирование", "Добавление", "Удаление"].includes(log.action));
   const lastUploadLog = adminLogs.find((log) => log.action === "Загрузка");
   const headerHasSubtabs = topTab === "reports" || topTab === "dispatch" || topTab === "pto" || topTab === "admin";
@@ -5415,83 +5416,27 @@ export default function App() {
         )}
 
         {renderedTopTab === "fleet" && (
-          <>
-            <SubTabs>
-              {subTabs.fleet.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={fleetTab === tab.value} onClick={() => setFleetTab(tab.value)} label={compactSubTabLabel("fleet", tab)} />
-              ))}
-            </SubTabs>
-
-            <SectionCard title={activeFleetSubtab?.label ?? "Список техники по участкам"}>
-              {fleetTab.startsWith("custom:") ? (
-                <div style={blockStyle}>{activeFleetSubtab?.content || "В этой подвкладке пока нет информации."}</div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-                  {filteredFleet.map((v) => (
-                    <div key={v.id} style={blockStyle}>
-                      <div style={{ fontWeight: 700 }}>{buildVehicleDisplayName(v)}</div>
-                      <div style={{ color: "#64748b", marginTop: 6 }}>{v.area} · {v.location}</div>
-                      <div style={{ marginTop: 8 }}>Вид работ: {v.workType}</div>
-                      <div>Работа: {v.work} ч | Аренда: {v.rent} ч</div>
-                      <div>Ремонт: {v.repair} ч | Простой: {v.downtime} ч</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </SectionCard>
-          </>
+          <FleetSection
+            fleetTab={fleetTab}
+            subTabs={subTabs.fleet}
+            rows={filteredFleet}
+            onSelectTab={setFleetTab}
+          />
         )}
-
         {renderedTopTab === "contractors" && (
-          <>
-            <SubTabs>
-              {subTabs.contractors.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={contractorTab === tab.value} onClick={() => setContractorTab(tab.value)} label={compactSubTabLabel("contractors", tab)} />
-              ))}
-            </SubTabs>
-
-            <SectionCard title={`Действующий подрядчик: ${activeContractorSubtab?.label ?? contractorTab}`}>
-              {contractorTab.startsWith("custom:") ? (
-                <div style={blockStyle}>{activeContractorSubtab?.content || "В этой подвкладке пока нет информации."}</div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
-                  {(defaultContractors[contractorTab] ?? []).map((unit) => (
-                    <div key={unit} style={blockStyle}>{unit}</div>
-                  ))}
-                </div>
-              )}
-            </SectionCard>
-          </>
+          <ContractorsSection
+            contractorTab={contractorTab}
+            subTabs={subTabs.contractors}
+            onSelectTab={setContractorTab}
+          />
         )}
-
         {renderedTopTab === "fuel" && (
-          <>
-            <SubTabs>
-              {subTabs.fuel.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={fuelTab === tab.value} onClick={() => setFuelTab(tab.value)} label={compactSubTabLabel("fuel", tab)} />
-              ))}
-            </SubTabs>
-
-            <SectionCard title={`Топливо — ${activeFuelSubtab?.label ?? fuelTab}`}>
-              {fuelTab.startsWith("custom:") ? (
-                <div style={blockStyle}>{activeFuelSubtab?.content || "В этой подвкладке пока нет информации."}</div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-                  {(fuelTab === "general" ? defaultFuelGeneral : defaultFuelContractors).map((row) => (
-                    <div key={`${row.unit}-${row.mode}`} style={blockStyle}>
-                      <div style={{ fontWeight: 700 }}>{row.unit}</div>
-                      {row.contractor ? <div style={{ color: "#64748b", marginTop: 6 }}>Организация: {row.contractor}</div> : null}
-                      <div style={{ marginTop: 8 }}>Режим: {row.mode}</div>
-                      <div>Литраж: {row.liters} л</div>
-                      <div>Долг: {row.debt} л</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </SectionCard>
-          </>
+          <FuelSection
+            fuelTab={fuelTab}
+            subTabs={subTabs.fuel}
+            onSelectTab={setFuelTab}
+          />
         )}
-
         {renderedTopTab === "pto" && (
           shouldGatePtoDatabase ? renderPtoDatabaseGate() : (
           <PtoSection
@@ -5529,47 +5474,15 @@ export default function App() {
         )}
 
         {renderedTopTab === "tb" && (
-          <>
-            <SubTabs>
-              {subTabs.tb.filter((tab) => tab.visible).map((tab) => (
-                <TopButton key={tab.id} active={tbTab === tab.value} onClick={() => setTbTab(tab.value)} label={compactSubTabLabel("tb", tab)} />
-              ))}
-            </SubTabs>
-
-            <SectionCard title={`ТБ: ${activeTbSubtab?.label ?? tbTab}`}>
-              {tbTab.startsWith("custom:") && (
-                <div style={blockStyle}>{activeTbSubtab?.content || "В этой подвкладке пока нет информации."}</div>
-              )}
-              {tbTab === "list" && (
-                <div style={blockStyle}>
-                  {activeTbSubtab?.content || "Список техники с данными GPS и статусом подключения."}
-                </div>
-              )}
-              {tbTab === "driving" && (
-                <div style={blockStyle}>
-                  {activeTbSubtab?.content || "Анализ качества вождения: резкие ускорения, торможения, превышения скорости, ремень, фары."}
-                </div>
-              )}
-              {tbTab === "contractors" && (
-                <div style={blockStyle}>
-                  {activeTbSubtab?.content || "Подрядчики с контролем наличия и активности GPS на технике."}
-                </div>
-              )}
-            </SectionCard>
-          </>
+          <SafetySection
+            tbTab={tbTab}
+            subTabs={subTabs.tb}
+            onSelectTab={setTbTab}
+          />
         )}
-
         {renderedTopTab === "user" && (
-          <SectionCard title="Пользователь">
-            <div style={{ ...blockStyle, maxWidth: 520 }}>
-              <div style={{ fontWeight: 700, fontSize: 20 }}>{defaultUserCard.fullName}</div>
-              <div style={{ color: "#64748b", marginTop: 6 }}>{defaultUserCard.role}</div>
-              <div style={{ marginTop: 10 }}>Подразделение: {defaultUserCard.department}</div>
-              <div>Права доступа: {defaultUserCard.access}</div>
-            </div>
-          </SectionCard>
+          <UserProfileSection userCard={defaultUserCard} />
         )}
-
         {renderedTopTab === "admin" && (
           <SectionCard title="">
             {adminSection === "navigation" && (
