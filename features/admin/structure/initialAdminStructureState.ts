@@ -26,3 +26,5 @@ export function buildInitialAdminStructureState({
     dependencyLinks: normalizeStoredDependencyLinks(savedDependencyLinks),
   };
 }
+
+export type InitialAdminStructureState = ReturnType<typeof buildInitialAdminStructureState>;

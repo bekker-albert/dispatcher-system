@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { applyInitialAdminStructureState, type InitialAdminStructureStateSetters } from "@/features/admin/structure/applyInitialAdminStructureState";
 import { buildInitialAdminStructureState } from "@/features/admin/structure/initialAdminStructureState";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
 import { buildInitialDispatchSummaryRows } from "@/features/dispatch/initialDispatchSummaryState";
@@ -9,7 +10,6 @@ import { applyInitialPtoState, type InitialPtoStateSetters } from "@/features/pt
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { applyInitialReportState, type InitialReportStateSetters } from "@/features/reports/applyInitialReportState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
-import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
@@ -21,7 +21,7 @@ type MutableRef<T> = {
   current: T;
 };
 
-type InitialAppDataLoadOptions = InitialReportStateSetters & InitialPtoStateSetters & {
+type InitialAppDataLoadOptions = InitialReportStateSetters & InitialPtoStateSetters & InitialAdminStructureStateSetters & {
   defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
   saveClientSnapshotToDatabase: (reason: string) => Promise<void>;
   restoreAdminLogs: (storedLogs: unknown) => void;
@@ -36,10 +36,6 @@ type InitialAppDataLoadOptions = InitialReportStateSetters & InitialPtoStateSett
   setSubTabs: Dispatch<SetStateAction<Record<EditableSubtabGroup, SubTabConfig[]>>>;
   setVehicleRows: Dispatch<SetStateAction<VehicleRow[]>>;
   setDispatchSummaryRows: Dispatch<SetStateAction<DispatchSummaryRow[]>>;
-  setOrgMembers: Dispatch<SetStateAction<OrgMember[]>>;
-  setDependencyNodes: Dispatch<SetStateAction<DependencyNode[]>>;
-  setDependencyLinks: Dispatch<SetStateAction<DependencyLink[]>>;
-  setDependencyLinkForm: Dispatch<SetStateAction<DependencyLink>>;
 };
 
 export function useInitialAppDataLoad({
@@ -163,23 +159,12 @@ export function useInitialAppDataLoad({
         });
 
         const initialAdminStructureState = buildInitialAdminStructureState(storedState);
-        if (initialAdminStructureState.orgMembers) {
-          setOrgMembers(initialAdminStructureState.orgMembers);
-        }
-
-        if (initialAdminStructureState.dependencyNodes) {
-          setDependencyNodes(initialAdminStructureState.dependencyNodes);
-          if (initialAdminStructureState.dependencyLinkFormPatch) {
-            setDependencyLinkForm((current) => ({
-              ...current,
-              ...initialAdminStructureState.dependencyLinkFormPatch,
-            }));
-          }
-        }
-
-        if (initialAdminStructureState.dependencyLinks) {
-          setDependencyLinks(initialAdminStructureState.dependencyLinks);
-        }
+        applyInitialAdminStructureState(initialAdminStructureState, {
+          setOrgMembers,
+          setDependencyNodes,
+          setDependencyLinks,
+          setDependencyLinkForm,
+        });
 
         restoreAdminLogs(storedState.savedAdminLogs);
       } finally {
