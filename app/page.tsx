@@ -55,6 +55,7 @@ import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { usePtoPendingFieldFocus } from "@/features/pto/usePtoPendingFieldFocus";
+import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
@@ -85,11 +86,10 @@ import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureS
 import { createDefaultDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
-import { defaultPtoPlanMonth, emptyPtoDraftRowFields, normalizePtoPlanRow, type PtoPlanRow } from "@/lib/domain/pto/date-table";
-import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
+import { emptyPtoDraftRowFields, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { defaultReportDate } from "@/lib/domain/pto/defaults";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { createDefaultSubTabs, customTabKey } from "@/lib/domain/navigation/tabs";
-import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles } from "@/lib/domain/vehicles/defaults";
 import { adminVehicleFallbackPreviewRows, type VehicleFilterKey, type VehicleFilters, type VehicleInlineField } from "@/lib/domain/vehicles/grid";
@@ -190,22 +190,40 @@ export default function App() {
   const [editingReportHeaderKey, setEditingReportHeaderKey] = useState<string | null>(null);
   const [reportHeaderDraft, setReportHeaderDraft] = useState("");
   const [areaShiftCutoffs, setAreaShiftCutoffs] = useState<AreaShiftCutoffMap>(defaultAreaShiftCutoffs);
-  const [ptoPlanYear, setPtoPlanYear] = useState(defaultPtoPlanMonth.slice(0, 4));
-  const [ptoYearInput, setPtoYearInput] = useState("");
-  const [ptoYearDialogOpen, setPtoYearDialogOpen] = useState(false);
-  const [ptoManualYears, setPtoManualYears] = useState<string[]>([defaultPtoPlanMonth.slice(0, 4)]);
-  const [ptoAreaFilter, setPtoAreaFilter] = useState("Все участки");
-  const [expandedPtoMonths, setExpandedPtoMonths] = useState<Record<string, boolean>>({ [defaultPtoPlanMonth]: true });
-  const [ptoPlanRows, setPtoPlanRows] = useState<PtoPlanRow[]>(() => defaultPtoPlanRows.map(normalizePtoPlanRow));
-  const [ptoSurveyRows, setPtoSurveyRows] = useState<PtoPlanRow[]>(() => defaultPtoSurveyRows.map(normalizePtoPlanRow));
-  const [ptoOperRows, setPtoOperRows] = useState<PtoPlanRow[]>(() => defaultPtoOperRows.map(normalizePtoPlanRow));
-  const [ptoColumnWidths, setPtoColumnWidths] = useState<Record<string, number>>({});
-  const [ptoRowHeights, setPtoRowHeights] = useState<Record<string, number>>({});
-  const [ptoHeaderLabels, setPtoHeaderLabels] = useState<Record<string, string>>({});
-  const [editingPtoHeaderKey, setEditingPtoHeaderKey] = useState<string | null>(null);
-  const [ptoHeaderDraft, setPtoHeaderDraft] = useState("");
-  const [ptoBucketValues, setPtoBucketValues] = useState<Record<string, number>>({});
-  const [ptoBucketManualRows, setPtoBucketManualRows] = useState<PtoBucketRow[]>([]);
+  const {
+    ptoPlanYear,
+    setPtoPlanYear,
+    ptoYearInput,
+    setPtoYearInput,
+    ptoYearDialogOpen,
+    setPtoYearDialogOpen,
+    ptoManualYears,
+    setPtoManualYears,
+    ptoAreaFilter,
+    setPtoAreaFilter,
+    expandedPtoMonths,
+    setExpandedPtoMonths,
+    ptoPlanRows,
+    setPtoPlanRows,
+    ptoSurveyRows,
+    setPtoSurveyRows,
+    ptoOperRows,
+    setPtoOperRows,
+    ptoColumnWidths,
+    setPtoColumnWidths,
+    ptoRowHeights,
+    setPtoRowHeights,
+    ptoHeaderLabels,
+    setPtoHeaderLabels,
+    editingPtoHeaderKey,
+    setEditingPtoHeaderKey,
+    ptoHeaderDraft,
+    setPtoHeaderDraft,
+    ptoBucketValues,
+    setPtoBucketValues,
+    ptoBucketManualRows,
+    setPtoBucketManualRows,
+  } = usePtoPersistentState();
   const {
     orgMembers,
     setOrgMembers,
