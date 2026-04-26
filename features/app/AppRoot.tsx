@@ -1,11 +1,11 @@
 ﻿"use client";
 
 import { AppHeader } from "@/components/layout/AppHeader";
-import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
+import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
@@ -85,7 +85,6 @@ import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
-import { customTabKey } from "@/lib/domain/navigation/tabs";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
 import { clientSnapshotStats } from "@/lib/storage/client-snapshots";
@@ -904,25 +903,25 @@ export default function App() {
     vehicleRows,
   });
 
-  const activeCustomTab = customTabs.find((tab) => tab.visible !== false && customTabKey(tab.id) === renderedTopTab);
-  const activeDispatchSubtab = subTabs.dispatch.find((tab) => tab.value === dispatchTab);
-  const activePtoSubtab = subTabs.pto.find((tab) => tab.value === ptoTab);
-  const headerHasSubtabs = topTab === "reports" || topTab === "dispatch" || topTab === "pto" || topTab === "admin";
   const {
     headerNavRef,
     activeHeaderTabRef,
     headerSubtabsRef,
-    headerSubtabsOffset,
-  } = useHeaderSubtabsOffset({
     headerHasSubtabs,
+    headerSubtabsOffset,
+    activeCustomTab,
+    activeDispatchSubtab,
+    activePtoSubtab,
+  } = useAppActiveNavigation({
     topTab,
+    renderedTopTab,
+    customTabs,
+    subTabs,
     adminSection,
     dispatchTab,
     ptoTab,
     reportCustomerId,
     reportCustomers,
-    dispatchSubTabs: subTabs.dispatch,
-    ptoSubTabs: subTabs.pto,
   });
   const expandedPtoMonthsKey = Object.entries(expandedPtoMonths)
     .filter(([, expanded]) => expanded)
