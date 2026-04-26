@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, resolvePtoDatabaseLoadResolution, validatePtoDatabaseLoadState } from "../features/pto/ptoPersistenceModel";
+import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "../lib/domain/app/settings";
 import { cloneUndoSnapshot, type UndoSnapshot } from "../lib/domain/app/undo";
 import { adminLogLimit, normalizeAdminLogEntry } from "../lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navigation";
@@ -83,6 +84,9 @@ const undoClone = cloneUndoSnapshot(undoSource);
 assert.deepEqual(undoClone, undoSource);
 assert.notEqual(undoClone, undoSource);
 assert.notEqual(undoClone.reportCustomers, undoSource.reportCustomers);
+assert.equal(clientSnapshotSaveDelayMs, 1500);
+assert.equal(clientSnapshotAutoMinIntervalMs, 120000);
+assert.equal(sharedAppSettingKeys.includes(adminStorageKeys.reportCustomers), true);
 assert.equal(adminStorageKeys.vehicles, "dispatcher:vehicles");
 assert.equal(ptoBucketRowKey("Уч_Аксу", "Подача"), "аксу:подача");
 assert.equal(ptoBucketCellKey("row", "equipment"), "row::equipment");
