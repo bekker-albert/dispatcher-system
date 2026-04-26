@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
-import { Fragment, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
-import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import { Fragment, type CSSProperties } from "react";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
 import { PtoDateFormulaInput } from "@/features/pto/PtoDateFormulaInput";
@@ -10,6 +10,7 @@ import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, Pto
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbarPanel } from "@/features/pto/PtoDateToolbarPanel";
+import { usePtoDateFormulaController } from "@/features/pto/ptoDateFormulaController";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 import { createPtoDateTableViewModel } from "@/features/pto/ptoDateTableViewModel";
 import { createPtoDateVirtualRowsViewModel } from "@/features/pto/ptoDateVirtualRowsViewModel";
@@ -35,10 +36,9 @@ import {
   ptoRowToolsStyle,
 } from "@/features/pto/ptoDateTableStyles";
 import { ptoAutomatedStatus, ptoRowFieldDomKey, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
-import { formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
+import { formatPtoCellNumber, formatPtoFormulaNumber } from "@/lib/domain/pto/formatting";
 import { ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { cleanAreaName, normalizeLookupValue } from "@/lib/utils/text";
-import { isEditableGridArrowKey } from "@/shared/editable-grid/selection";
 
 export function PtoDateTableContainer({
   rows,
@@ -202,6 +202,93 @@ export function PtoDateTableContainer({
       setPendingFieldFocus: setPtoPendingFieldFocus,
     });
 
+    const {
+      renderedRows,
+      filteredRowHeights,
+      rowOffsetAt,
+      virtualStartIndex,
+      topSpacerHeight,
+      bottomSpacerHeight,
+    } = createPtoDateVirtualRowsViewModel({
+      editing: ptoDateEditing,
+      rows: filteredRows,
+      rowHeights: ptoRowHeights,
+      table: ptoTab,
+      viewport: ptoDateViewport,
+    });
+    const ptoColumnResizeHandler = ptoDateEditing ? startPtoColumnResize : undefined;
+    const tableSpacerColSpan = tableColumns.length;
+    const scrollFormulaCellIntoView = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
+      if (!ptoDateEditing) return;
+
+      const scrollElement = ptoDateTableScrollRef.current;
+      const rowIndex = filteredRows.findIndex((row) => row.id === cell.rowId);
+      if (!scrollElement || rowIndex < 0) return;
+
+      const rowTop = ptoDateVirtualHeaderOffset + rowOffsetAt(rowIndex);
+      const rowBottom = rowTop + (filteredRowHeights[rowIndex] ?? ptoDateVirtualDefaultRowHeight);
+      const viewTop = scrollElement.scrollTop;
+      const viewBottom = viewTop + scrollElement.clientHeight;
+
+      if (rowTop < viewTop + 24) {
+        scrollElement.scrollTop = Math.max(0, rowTop - 24);
+      } else if (rowBottom > viewBottom - 24) {
+        scrollElement.scrollTop = Math.max(0, rowBottom - scrollElement.clientHeight + 48);
+      }
+
+      updatePtoDateViewportFromElement(scrollElement);
+    };
+    const {
+      activeFormulaCell,
+      activeFormulaValue,
+      formulaCellDomKey,
+      formulaCellsByRowId,
+      formulaInputDisabled,
+      formulaCellActive,
+      formulaCellEditing,
+      formulaCellSelected,
+      handleFormulaCellKeyDown,
+      handleFormulaCellMouseDown,
+      handleFormulaCellMouseEnter,
+      selectFormulaCell,
+      selectFormulaRange,
+      startInlineFormulaEdit,
+      commitInlineFormulaEdit,
+      updateFormulaValue,
+    } = usePtoDateFormulaController({
+      ptoTab,
+      ptoPlanYear,
+      ptoDateEditing,
+      ptoFormulaCell,
+      ptoFormulaDraft,
+      ptoInlineEditCell,
+      ptoInlineEditInitialDraft,
+      ptoSelectionAnchorCell,
+      ptoSelectedCellKeys,
+      ptoSelectionDraggingRef,
+      setRows,
+      setPtoFormulaCell,
+      setPtoFormulaDraft,
+      setPtoInlineEditCell,
+      setPtoInlineEditInitialDraft,
+      setPtoSelectionAnchorCell,
+      setPtoSelectedCellKeys,
+      requestPtoDatabaseSave,
+      updatePtoDateRow,
+      clearPtoCarryoverOverride,
+      updatePtoDateDay,
+      updatePtoMonthTotal,
+      carryoverHeader,
+      displayPtoMonthGroups,
+      editableMonthTotal,
+      filteredRows,
+      renderedRows,
+      rowById,
+      getEffectiveCarryover,
+      getRowDateTotals,
+      scrollFormulaCellIntoView,
+    });
+
     if (!ptoDateEditing) {
       return (
         <PtoDateReadonlyTable
@@ -229,343 +316,6 @@ export function PtoDateTableContainer({
         />
       );
     }
-
-    const activeFormulaCell = ptoFormulaCell?.table === ptoTab && ptoFormulaCell.year === ptoPlanYear ? ptoFormulaCell : null;
-    const activeInlineEditCell = ptoInlineEditCell?.table === ptoTab && ptoInlineEditCell.year === ptoPlanYear ? ptoInlineEditCell : null;
-    const activeFormulaRow = activeFormulaCell ? rowById.get(activeFormulaCell.rowId) : undefined;
-    const formulaValueContext = { rowById, getEffectiveCarryover, getRowDateTotals };
-    const activeFormulaValue = activeFormulaCell
-      ? getPtoFormulaCellValue(activeFormulaCell, formulaValueContext)
-      : undefined;
-    const formulaInputDisabled = !ptoDateEditing || !activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false;
-    const {
-      renderedRows,
-      filteredRowHeights,
-      rowOffsetAt,
-      virtualStartIndex,
-      topSpacerHeight,
-      bottomSpacerHeight,
-    } = createPtoDateVirtualRowsViewModel({
-      editing: ptoDateEditing,
-      rows: filteredRows,
-      rowHeights: ptoRowHeights,
-      table: ptoTab,
-      viewport: ptoDateViewport,
-    });
-    const ptoColumnResizeHandler = ptoDateEditing ? startPtoColumnResize : undefined;
-    const tableSpacerColSpan = tableColumns.length;
-    const {
-      formulaCellDomKey,
-      formulaSelectionKey,
-      formulaCellsByRowId,
-      formulaSelectionScope,
-      selectedFormulaCellKeys,
-      formulaCellTemplates,
-      formulaTemplateIndexByKey,
-      formulaRowIndexById,
-      formulaCellFromTemplate,
-      formulaCellFromSelectionKey,
-      formulaRangeKeys,
-      formulaCellSelected,
-    } = createPtoDateFormulaModel({
-      table: ptoTab,
-      year: ptoPlanYear,
-      renderedRows,
-      filteredRows,
-      displayMonthGroups: displayPtoMonthGroups,
-      editableMonthTotal,
-      carryoverHeader,
-      selectedCellKeys: ptoSelectedCellKeys,
-    });
-    const scrollFormulaCellIntoView = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
-      if (!ptoDateEditing) return;
-
-      const scrollElement = ptoDateTableScrollRef.current;
-      const rowIndex = filteredRows.findIndex((row) => row.id === cell.rowId);
-      if (!scrollElement || rowIndex < 0) return;
-
-      const rowTop = ptoDateVirtualHeaderOffset + rowOffsetAt(rowIndex);
-      const rowBottom = rowTop + (filteredRowHeights[rowIndex] ?? ptoDateVirtualDefaultRowHeight);
-      const viewTop = scrollElement.scrollTop;
-      const viewBottom = viewTop + scrollElement.clientHeight;
-
-      if (rowTop < viewTop + 24) {
-        scrollElement.scrollTop = Math.max(0, rowTop - 24);
-      } else if (rowBottom > viewBottom - 24) {
-        scrollElement.scrollTop = Math.max(0, rowBottom - scrollElement.clientHeight + 48);
-      }
-
-      updatePtoDateViewportFromElement(scrollElement);
-    };
-
-    const focusFormulaCell = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
-      const focusTarget = () => {
-        const target = document.querySelector<HTMLInputElement>(`[data-pto-cell-key="${formulaCellDomKey(cell)}"]`);
-        if (!target) return false;
-
-        target.focus();
-        return true;
-      };
-
-      window.requestAnimationFrame(() => {
-        const focused = focusTarget();
-        if (focused) return;
-
-        scrollFormulaCellIntoView(cell);
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(focusTarget);
-        });
-      });
-    };
-
-    const selectFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
-      if (!ptoDateEditing) return;
-
-      const nextCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
-      setPtoFormulaCell(nextCell);
-      setPtoFormulaDraft(formatPtoFormulaNumber(value));
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-      setPtoSelectionAnchorCell(nextCell);
-      setPtoSelectedCellKeys([formulaSelectionKey(nextCell)]);
-    };
-
-    const selectFormulaRange = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
-      if (!ptoDateEditing) return;
-
-      const targetCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
-      const anchorCell = resolvePtoFormulaAnchor(ptoSelectionAnchorCell, ptoTab, ptoPlanYear, targetCell);
-
-      setPtoFormulaCell(targetCell);
-      setPtoFormulaDraft(formatPtoFormulaNumber(value));
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-      setPtoSelectionAnchorCell(anchorCell);
-      setPtoSelectedCellKeys(formulaRangeKeys(anchorCell, targetCell));
-    };
-
-    const toggleFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
-      if (!ptoDateEditing) return;
-
-      const targetCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
-      const targetKey = formulaSelectionKey(targetCell);
-
-      setPtoFormulaCell(targetCell);
-      setPtoFormulaDraft(formatPtoFormulaNumber(value));
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-      setPtoSelectionAnchorCell(targetCell);
-      setPtoSelectedCellKeys((currentKeys) => togglePtoFormulaSelectionKeys(currentKeys, formulaSelectionScope, targetKey));
-    };
-
-    const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
-      if (!ptoDateEditing) return;
-
-      const nextCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
-      const draft = draftOverride ?? formatPtoFormulaNumber(value);
-      setPtoFormulaCell(nextCell);
-      setPtoInlineEditCell(nextCell);
-      setPtoFormulaDraft(draft);
-      setPtoInlineEditInitialDraft(draft);
-    };
-
-    const cancelInlineFormulaEdit = () => {
-      setPtoFormulaDraft(ptoInlineEditInitialDraft);
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-    };
-
-    const formulaCellActive = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
-      ptoFormulaCellMatches(activeFormulaCell, ptoTab, ptoPlanYear, rowId, kind, key)
-    );
-    const formulaCellEditing = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
-      ptoFormulaCellMatches(activeInlineEditCell, ptoTab, ptoPlanYear, rowId, kind, key)
-    );
-    const commitFormulaCellValue = (cell: PtoFormulaCell, value: string) => {
-      if (!ptoDateEditing) return false;
-      if (cell.editable === false) return false;
-      if (value.trim() !== "" && parseDecimalInput(value) === null) return false;
-
-      if (cell.kind === "carryover") {
-        if (value.trim() === "") {
-          clearPtoCarryoverOverride(setRows, cell.rowId, ptoPlanYear);
-          return true;
-        }
-
-        updatePtoDateRow(setRows, cell.rowId, "carryover", value);
-        return true;
-      }
-
-      if (cell.kind === "month" && cell.days) {
-        updatePtoMonthTotal(setRows, cell.rowId, cell.days, value);
-        return true;
-      }
-
-      if (cell.kind === "day" && cell.day) {
-        updatePtoDateDay(setRows, cell.rowId, cell.day, value);
-        return true;
-      }
-
-      return false;
-    };
-
-    const clearSelectedFormulaCells = (fallbackCell: Omit<PtoFormulaCell, "table" | "year">) => {
-      const cellsToClear = selectedPtoFormulaCells(selectedFormulaCellKeys, formulaCellFromSelectionKey);
-      const targetCells = cellsToClear.length ? cellsToClear : [fallbackCell];
-      let committed = false;
-
-      targetCells.forEach((targetCell) => {
-        committed = commitFormulaCellValue({ ...targetCell, table: ptoTab, year: ptoPlanYear }, "") || committed;
-      });
-
-      if (!committed) return false;
-
-      const nextActiveCell = resolvePtoFormulaActiveAfterClear(activeFormulaCell, targetCells, ptoTab, ptoPlanYear);
-
-      setPtoFormulaCell(nextActiveCell);
-      setPtoFormulaDraft("");
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-      setPtoSelectionAnchorCell(nextActiveCell);
-      setPtoSelectedCellKeys(targetCells.map((targetCell) => formulaSelectionKey(targetCell)));
-      requestPtoDatabaseSave();
-      return true;
-    };
-
-    const collapseFormulaSelection = (fallbackCell: Omit<PtoFormulaCell, "table" | "year">) => {
-      const nextActiveCell = activeFormulaCell ?? withPtoFormulaScope(fallbackCell, ptoTab, ptoPlanYear);
-
-      setPtoFormulaCell(nextActiveCell);
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-      setPtoSelectionAnchorCell(nextActiveCell);
-      setPtoSelectedCellKeys([formulaSelectionKey(nextActiveCell)]);
-    };
-
-    const commitInlineFormulaEdit = () => {
-      if (!activeInlineEditCell) return;
-      const committed = commitFormulaCellValue(activeInlineEditCell, ptoFormulaDraft);
-      if (!committed) return;
-
-      setPtoInlineEditCell(null);
-      setPtoInlineEditInitialDraft("");
-      setPtoFormulaDraft(ptoFormulaDraft.trim() ? formatPtoFormulaNumber(parseDecimalValue(ptoFormulaDraft)) : "");
-      requestPtoDatabaseSave();
-    };
-
-    const handleInlineFormulaKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        commitInlineFormulaEdit();
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        cancelInlineFormulaEdit();
-      }
-    };
-
-    const updateFormulaValue = (value: string) => {
-      if (!ptoDateEditing) return;
-
-      setPtoFormulaDraft(value);
-      if (activeInlineEditCell) return;
-      if (!activeFormulaCell || !activeFormulaRow || activeFormulaCell.editable === false) return;
-      commitFormulaCellValue(activeFormulaCell, value);
-    };
-
-    const moveFormulaSelection = (key: string) => {
-      if (!ptoDateEditing) return;
-      if (!activeFormulaCell || !isEditableGridArrowKey(key)) return;
-
-      const nextCell = resolvePtoFormulaMoveTarget({
-        activeCell: activeFormulaCell,
-        key,
-        rowIndexById: formulaRowIndexById,
-        templateIndexByKey: formulaTemplateIndexByKey,
-        templates: formulaCellTemplates,
-        filteredRows,
-        formulaCellFromTemplate,
-      });
-
-      if (!nextCell) return;
-      selectFormulaCell(nextCell, getPtoFormulaCellValue(nextCell, formulaValueContext));
-      focusFormulaCell(nextCell);
-    };
-
-    const handleFormulaCellKeyDown = (event: KeyboardEvent<HTMLInputElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
-      if (!ptoDateEditing) return;
-
-      if (isEditing) {
-        if (isEditableGridArrowKey(event.key)) {
-          event.preventDefault();
-          if (!activeInlineEditCell) return;
-
-          const committed = commitFormulaCellValue(activeInlineEditCell, ptoFormulaDraft);
-          if (!committed) return;
-
-          setPtoInlineEditCell(null);
-          setPtoInlineEditInitialDraft("");
-          moveFormulaSelection(event.key);
-          requestPtoDatabaseSave();
-          return;
-        }
-
-        handleInlineFormulaKeyDown(event);
-        return;
-      }
-
-      if (isEditableGridArrowKey(event.key)) {
-        event.preventDefault();
-        moveFormulaSelection(event.key);
-        return;
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        collapseFormulaSelection(cell);
-        return;
-      }
-
-      if (cell.editable === false) return;
-
-      if (/^[0-9]$/.test(event.key) || event.key === "-" || event.key === "," || event.key === ".") {
-        event.preventDefault();
-        startInlineFormulaEdit(cell, value, event.key === "." || event.key === "," ? "0," : event.key);
-        return;
-      }
-
-      if (event.key === "Backspace" || event.key === "Delete") {
-        event.preventDefault();
-        clearSelectedFormulaCells(cell);
-        return;
-      }
-
-      if (event.key === "Enter") {
-        event.preventDefault();
-        startInlineFormulaEdit(cell, value);
-      }
-    };
-
-    const handleFormulaCellMouseDown = (event: MouseEvent<HTMLElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
-      if (!ptoDateEditing) return;
-      if (event.button !== 0 || isEditing) return;
-
-      ptoSelectionDraggingRef.current = true;
-      if (event.ctrlKey || event.metaKey) {
-        toggleFormulaCell(cell, value);
-      } else if (event.shiftKey) {
-        selectFormulaRange(cell, value);
-      } else {
-        selectFormulaCell(cell, value);
-      }
-    };
-
-    const handleFormulaCellMouseEnter = (event: MouseEvent<HTMLElement>, cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, isEditing: boolean) => {
-      if (!ptoDateEditing) return;
-      if (!ptoSelectionDraggingRef.current || event.buttons !== 1 || event.ctrlKey || event.metaKey || isEditing) return;
-      selectFormulaRange(cell, value);
-    };
 
     const renderPtoHeaderText = (key: string, fallback: string, align: CSSProperties["textAlign"] = "left") => {
       return (
