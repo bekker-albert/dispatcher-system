@@ -7,9 +7,12 @@ import {
   ptoFormulaInputStyle,
   ptoHeaderInputStyle,
   ptoHeaderLabelButtonStyle,
+  ptoPlanInputStyle,
   ptoReadonlyCellNumberStyle,
   ptoReadonlyCellTextStyle,
+  ptoStatusBadgeStyle,
 } from "./ptoDateTableStyles";
+import { normalizePtoUnit, ptoUnitOptions } from "../../lib/domain/pto/date-table";
 
 type PtoPlanThProps = {
   children: ReactNode;
@@ -43,6 +46,17 @@ type PtoReadonlyTextCellProps = {
 type PtoReadonlyNumberCellProps = {
   value: number | undefined;
   bold?: boolean;
+};
+
+type PtoUnitCellProps = {
+  editing: boolean;
+  value: string;
+  dataFieldKey: string;
+  onChange: (value: string) => void;
+};
+
+type PtoStatusCellProps = {
+  status: PtoStatus;
 };
 
 type PtoEditableHeaderTextProps = {
@@ -159,6 +173,36 @@ export function PtoReadonlyNumberCell({ value, bold = false }: PtoReadonlyNumber
     >
       {formatPtoCellNumber(value)}
     </div>
+  );
+}
+
+export function PtoUnitCell({ editing, value, dataFieldKey, onChange }: PtoUnitCellProps) {
+  const unit = normalizePtoUnit(value);
+
+  if (!editing) return <PtoReadonlyTextCell value={unit} align="center" />;
+
+  return (
+    <select
+      data-pto-row-field={dataFieldKey}
+      value={unit}
+      onChange={(event) => onChange(event.target.value)}
+      style={{ ...ptoPlanInputStyle, textAlign: "center" }}
+    >
+      {ptoUnitOptions.map((option) => (
+        <option key={option} value={option}>{option}</option>
+      ))}
+    </select>
+  );
+}
+
+export function PtoStatusCell({ status }: PtoStatusCellProps) {
+  return (
+    <span
+      title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
+      style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(status) }}
+    >
+      {status}
+    </span>
   );
 }
 

@@ -7,7 +7,7 @@ import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, us
 import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTextCell } from "@/features/pto/PtoDateEditableTextCell";
-import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoReadonlyTextCell, PtoVirtualSpacerRow, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoReadonlyNumberCell, PtoReadonlyTextCell, PtoStatusCell, PtoUnitCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
@@ -30,7 +30,6 @@ import {
   ptoRowDeleteButtonStyle,
   ptoRowResizeHandleStyle,
   ptoRowToolsStyle,
-  ptoStatusBadgeStyle,
 } from "@/features/pto/ptoDateTableStyles";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
@@ -48,7 +47,7 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
-import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoCustomerCodeOptions, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoUnitOptions, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoCustomerCodeOptions, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -5330,24 +5329,18 @@ export default function App() {
                       />
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
-                      {ptoDateEditing ? (
-                        <select data-pto-row-field={ptoRowFieldDomKey(row.id, "unit")} value={normalizePtoUnit(row.unit)} onChange={(e) => {
-                          updatePtoDateRow(setRows, row.id, "unit", e.target.value);
+                      <PtoUnitCell
+                        editing={ptoDateEditing}
+                        value={row.unit}
+                        dataFieldKey={ptoRowFieldDomKey(row.id, "unit")}
+                        onChange={(value) => {
+                          updatePtoDateRow(setRows, row.id, "unit", value);
                           requestPtoDatabaseSave();
-                        }} style={{ ...ptoPlanInputStyle, textAlign: "center" }}>
-                          {ptoUnitOptions.map((unit) => (
-                            <option key={unit} value={unit}>{unit}</option>
-                          ))}
-                        </select>
-                      ) : <PtoReadonlyTextCell value={normalizePtoUnit(row.unit)} align="center" />}
+                        }}
+                      />
                     </PtoPlanTd>
                     <PtoPlanTd align="center">
-                      <span
-                        title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
-                        style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}
-                      >
-                        {rowStatus}
-                      </span>
+                      <PtoStatusCell status={rowStatus} />
                     </PtoPlanTd>
                     <PtoPlanTd active={carryoverCellActive} selected={carryoverCellSelected} editing={carryoverCellEditing} align="center">
                       {ptoDateEditing ? (
