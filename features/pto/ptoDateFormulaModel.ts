@@ -1,6 +1,6 @@
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { PtoMonthGroupView, PtoRowDateTotals } from "@/features/pto/ptoDateTableModel";
-import { toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
+import { editableGridArrowOffset, toggleEditableGridSelectionKey, type EditableGridArrowKey } from "@/shared/editable-grid/selection";
 
 export type PtoFormulaCell = {
   table: string;
@@ -35,6 +35,16 @@ type PtoFormulaCellValueContext = {
 };
 
 type PtoFormulaCellFromSelectionKey = (key: string) => PtoFormulaCellWithoutScope | null;
+
+type ResolvePtoFormulaMoveTargetOptions = {
+  activeCell: PtoFormulaCell | null;
+  key: EditableGridArrowKey;
+  rowIndexById: Map<string, number>;
+  templateIndexByKey: Map<string, number>;
+  templates: PtoFormulaCellTemplate[];
+  filteredRows: PtoPlanRow[];
+  formulaCellFromTemplate: (rowId: string, template: PtoFormulaCellTemplate) => PtoFormulaCellWithoutScope;
+};
 
 function createPtoFormulaCellTemplates(
   displayMonthGroups: PtoMonthGroupView[],
@@ -224,6 +234,30 @@ export function selectedPtoFormulaCells(
   return Array.from(selectedKeys)
     .map((key) => formulaCellFromSelectionKey(key))
     .filter((formulaCell): formulaCell is PtoFormulaCellWithoutScope => formulaCell !== null);
+}
+
+export function resolvePtoFormulaMoveTarget({
+  activeCell,
+  key,
+  rowIndexById,
+  templateIndexByKey,
+  templates,
+  filteredRows,
+  formulaCellFromTemplate,
+}: ResolvePtoFormulaMoveTargetOptions) {
+  if (!activeCell || templates.length === 0) return null;
+
+  const offset = editableGridArrowOffset(key);
+  const currentRowIndex = rowIndexById.get(activeCell.rowId);
+  const currentColumnIndex = templateIndexByKey.get(ptoFormulaTemplateKey(activeCell));
+  if (currentRowIndex === undefined || currentColumnIndex === undefined) return null;
+
+  const nextRowIndex = Math.min(filteredRows.length - 1, Math.max(0, currentRowIndex + offset.rowOffset));
+  const nextColumnIndex = Math.min(templates.length - 1, Math.max(0, currentColumnIndex + offset.columnOffset));
+  const nextRow = filteredRows[nextRowIndex];
+  const nextTemplate = templates[nextColumnIndex];
+
+  return nextRow && nextTemplate ? formulaCellFromTemplate(nextRow.id, nextTemplate) : null;
 }
 
 export function resolvePtoFormulaActiveAfterClear(

@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } f
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, resolvePtoFormulaMoveTarget, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import {
@@ -4821,7 +4821,6 @@ export default function App() {
       formulaCellsByRowId,
       selectedFormulaCellKeys,
       formulaCellTemplates,
-      formulaTemplateKey,
       formulaTemplateIndexByKey,
       formulaRowIndexById,
       formulaCellFromTemplate,
@@ -5045,16 +5044,15 @@ export default function App() {
       if (!ptoDateEditing) return;
       if (!activeFormulaCell || !isEditableGridArrowKey(key)) return;
 
-      const offset = editableGridArrowOffset(key);
-      const currentRowIndex = formulaRowIndexById.get(activeFormulaCell.rowId);
-      const currentColumnIndex = formulaTemplateIndexByKey.get(formulaTemplateKey(activeFormulaCell));
-      if (currentRowIndex === undefined || currentColumnIndex === undefined || formulaCellTemplates.length === 0) return;
-
-      const nextRowIndex = Math.min(filteredRows.length - 1, Math.max(0, currentRowIndex + offset.rowOffset));
-      const nextColumnIndex = Math.min(formulaCellTemplates.length - 1, Math.max(0, currentColumnIndex + offset.columnOffset));
-      const nextRow = filteredRows[nextRowIndex];
-      const nextTemplate = formulaCellTemplates[nextColumnIndex];
-      const nextCell = nextRow && nextTemplate ? formulaCellFromTemplate(nextRow.id, nextTemplate) : null;
+      const nextCell = resolvePtoFormulaMoveTarget({
+        activeCell: activeFormulaCell,
+        key,
+        rowIndexById: formulaRowIndexById,
+        templateIndexByKey: formulaTemplateIndexByKey,
+        templates: formulaCellTemplates,
+        filteredRows,
+        formulaCellFromTemplate,
+      });
 
       if (!nextCell) return;
       selectFormulaCell(nextCell, getPtoFormulaCellValue(nextCell, formulaValueContext));
