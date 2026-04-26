@@ -71,6 +71,7 @@ import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
+import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
@@ -99,7 +100,7 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { defaultPtoPlanMonth, distributeMonthlyTotal, emptyPtoDraftRowFields, isPtoDateTableKey, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoYearOptions, yearMonths, type PtoDateTableKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -2283,31 +2284,25 @@ export default function App() {
     databaseLoadedRef: ptoDatabaseLoadedRef,
   });
 
-  function addLinkedPtoDateRow(overrides: Partial<PtoPlanRow> = {}, insertAfterRow?: PtoPlanRow) {
-    const id = createId();
-    const sharedOverrides = {
-      area: overrides.area,
-      location: overrides.location,
-      structure: overrides.structure,
-      unit: overrides.unit,
-      years: overrides.years,
-    };
-    const planRow = createEmptyPtoDateRow("Новая", ptoAreaFilter, ptoPlanYear, id, ptoTab === "plan" ? overrides : sharedOverrides);
-    const operRow = createEmptyPtoDateRow("Новая", ptoAreaFilter, ptoPlanYear, id, ptoTab === "oper" ? overrides : sharedOverrides);
-    const surveyRow = createEmptyPtoDateRow("Новая", ptoAreaFilter, ptoPlanYear, id, ptoTab === "survey" ? overrides : sharedOverrides);
-
-    setPtoPlanRows((current) => insertPtoRowAfter(current, insertAfterRow, planRow));
-    setPtoOperRows((current) => insertPtoRowAfter(current, insertAfterRow, operRow));
-    setPtoSurveyRows((current) => insertPtoRowAfter(current, insertAfterRow, surveyRow));
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Добавление",
-      section: "ПТО",
-      details: `Добавлена строка в ${currentPtoTableLabel()}.`,
-    });
-
-    return id;
-  }
+  const {
+    addLinkedPtoDateRow,
+    removeLinkedPtoDateRow,
+    getPtoDropPosition,
+    moveLinkedPtoDateRow,
+  } = usePtoLinkedRowsEditor({
+    ptoTab,
+    ptoAreaFilter,
+    ptoPlanYear,
+    databaseConfigured,
+    databaseLoadedRef: ptoDatabaseLoadedRef,
+    currentPtoTableLabel,
+    currentPtoDateTableKey,
+    setPtoPlanRows,
+    setPtoOperRows,
+    setPtoSurveyRows,
+    requestSave: requestPtoDatabaseSave,
+    addAdminLog,
+  });
 
   const {
     addPtoYear,
@@ -2490,60 +2485,6 @@ export default function App() {
       action: "Редактирование",
       section: "ПТО",
       details: `Распределен итог месяца в ${currentPtoTableLabel()}.`,
-    });
-  }
-
-  function removeLinkedPtoDateRow(row: PtoPlanRow) {
-    const table = currentPtoDateTableKey();
-    if (!table) return;
-    const rowName = [cleanAreaName(row.area), row.structure].filter(Boolean).join(" / ") || "строку ПТО";
-    const confirmed = window.confirm(`\u0412\u044b \u0442\u043e\u0447\u043d\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u0443\u0434\u0430\u043b\u0438\u0442\u044c ${rowName}? \u0421\u0442\u0440\u043e\u043a\u0430 \u0443\u0434\u0430\u043b\u0438\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0438\u0437 \u0432\u043a\u043b\u0430\u0434\u043a\u0438 "${currentPtoTableLabel()}".`);
-    if (!confirmed) return;
-
-    const removeRow = (current: PtoPlanRow[]) => current.filter((item) => item.id !== row.id);
-
-    if (table === "plan") {
-      setPtoPlanRows(removeRow);
-    } else if (table === "oper") {
-      setPtoOperRows(removeRow);
-    } else {
-      setPtoSurveyRows(removeRow);
-    }
-    if (databaseConfigured && ptoDatabaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ deletePtoRowsFromDatabase }) => deletePtoRowsFromDatabase(table, [row.id]))
-        .catch((error) => console.warn("Database PTO row delete failed:", error));
-    }
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Удаление",
-      section: "ПТО",
-      details: `\u0423\u0434\u0430\u043b\u0435\u043d\u0430 \u0441\u0442\u0440\u043e\u043a\u0430 \u0438\u0437 ${currentPtoTableLabel()}: ${rowName}.`,
-    });
-  }
-
-  function getPtoDropPosition(event: React.DragEvent<HTMLTableRowElement>): PtoDropPosition {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    return event.clientY - bounds.top > bounds.height / 2 ? "after" : "before";
-  }
-
-  function moveLinkedPtoDateRow(sourceId: string, targetId: string, visibleRows: PtoPlanRow[], position: PtoDropPosition) {
-    const sourceRow = visibleRows.find((row) => row.id === sourceId);
-    const targetRow = visibleRows.find((row) => row.id === targetId);
-    if (!sourceRow || !targetRow) return;
-
-    const sourceSignature = ptoLinkedRowSignature(sourceRow);
-    const targetSignature = ptoLinkedRowSignature(targetRow);
-    const reorderRows = (current: PtoPlanRow[]) => reorderPtoRows(current, sourceRow.id, sourceSignature, targetRow.id, targetSignature, position);
-
-    setPtoPlanRows(reorderRows);
-    setPtoOperRows(reorderRows);
-    setPtoSurveyRows(reorderRows);
-    requestPtoDatabaseSave();
-    addAdminLog({
-      action: "Редактирование",
-      section: "ПТО",
-      details: `Изменен порядок строк в ${currentPtoTableLabel()}.`,
     });
   }
 
