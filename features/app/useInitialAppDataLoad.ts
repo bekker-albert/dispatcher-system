@@ -3,12 +3,13 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { buildInitialAdminStructureState } from "@/features/admin/structure/initialAdminStructureState";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
+import { buildInitialDispatchSummaryRows } from "@/features/dispatch/initialDispatchSummaryState";
 import { buildInitialNavigationState } from "@/features/navigation/initialNavigationState";
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
 import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import type { DependencyLink, DependencyNode, OrgMember } from "@/lib/domain/admin/structure";
-import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
+import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
@@ -157,14 +158,13 @@ export function useInitialAppDataLoad({
           setVehicleRows(initialVehicleRows.rows);
         }
 
-        const parsedDispatchSummaryRows = normalizeDispatchSummaryRows(storedState.savedDispatchSummaryRows, initialReportState.preferredReportDate);
-        if (parsedDispatchSummaryRows) {
-          const hasEditableDispatchRows = parsedDispatchSummaryRows.some((row) => row.shift === "night" || row.shift === "day");
-          setDispatchSummaryRows(hasEditableDispatchRows
-            ? parsedDispatchSummaryRows
-            : parsedDispatchSummaryRows.map((row) => (row.shift === "daily" ? { ...row, shift: "night" } : row)));
-        } else if (initialVehicleRows.usedSeed && initialVehicleRows.rows) {
-          setDispatchSummaryRows(createDefaultDispatchSummaryRows(initialVehicleRows.rows, initialReportState.preferredReportDate));
+        const initialDispatchSummaryRows = buildInitialDispatchSummaryRows({
+          savedDispatchSummaryRows: storedState.savedDispatchSummaryRows,
+          preferredReportDate: initialReportState.preferredReportDate,
+          seedVehicleRows: initialVehicleRows.usedSeed ? initialVehicleRows.rows : null,
+        });
+        if (initialDispatchSummaryRows) {
+          setDispatchSummaryRows(initialDispatchSummaryRows);
         }
 
         if (initialPtoState.manualYears) {
