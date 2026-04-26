@@ -79,13 +79,11 @@ import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout"
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
 import { useReportSelectionGuards } from "@/features/reports/useReportSelectionGuards";
+import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
-import { defaultAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
-import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
+import { type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { createDefaultDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
-import { defaultReportCustomerId, defaultReportCustomers } from "@/lib/domain/reports/defaults";
-import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import { emptyPtoDraftRowFields, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultReportDate } from "@/lib/domain/pto/defaults";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
@@ -174,22 +172,40 @@ export default function App() {
   const ptoPlanImportInputRef = useRef<HTMLInputElement | null>(null);
   const hasStoredPtoStateRef = useRef(false);
   const ptoDatabaseLoadedRef = useRef(false);
-  const [reportArea, setReportArea] = useState("Все участки");
-  const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
-  const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
-  const [adminReportCustomerSettingsTab, setAdminReportCustomerSettingsTab] = useState<AdminReportCustomerSettingsTab>("display");
-  const [editingReportRowLabelKeys, setEditingReportRowLabelKeys] = useState<string[]>([]);
-  const [expandedReportSummaryIds, setExpandedReportSummaryIds] = useState<string[]>([]);
-  const [editingReportFactSourceRowKey, setEditingReportFactSourceRowKey] = useState<string | null>(null);
-  const [reportCustomers, setReportCustomers] = useState<ReportCustomerConfig[]>(defaultReportCustomers);
-  const [reportAreaOrder, setReportAreaOrder] = useState<string[]>([]);
-  const [reportWorkOrder, setReportWorkOrder] = useState<Record<string, string[]>>({});
-  const [reportHeaderLabels, setReportHeaderLabels] = useState<Record<string, string>>({});
-  const [reportColumnWidths, setReportColumnWidths] = useState<Record<string, number>>({});
-  const [reportReasons, setReportReasons] = useState<Record<string, string>>({});
-  const [editingReportHeaderKey, setEditingReportHeaderKey] = useState<string | null>(null);
-  const [reportHeaderDraft, setReportHeaderDraft] = useState("");
-  const [areaShiftCutoffs, setAreaShiftCutoffs] = useState<AreaShiftCutoffMap>(defaultAreaShiftCutoffs);
+  const {
+    reportArea,
+    setReportArea,
+    reportCustomerId,
+    setReportCustomerId,
+    adminReportCustomerId,
+    setAdminReportCustomerId,
+    adminReportCustomerSettingsTab,
+    setAdminReportCustomerSettingsTab,
+    editingReportRowLabelKeys,
+    setEditingReportRowLabelKeys,
+    expandedReportSummaryIds,
+    setExpandedReportSummaryIds,
+    editingReportFactSourceRowKey,
+    setEditingReportFactSourceRowKey,
+    reportCustomers,
+    setReportCustomers,
+    reportAreaOrder,
+    setReportAreaOrder,
+    reportWorkOrder,
+    setReportWorkOrder,
+    reportHeaderLabels,
+    setReportHeaderLabels,
+    reportColumnWidths,
+    setReportColumnWidths,
+    reportReasons,
+    setReportReasons,
+    editingReportHeaderKey,
+    setEditingReportHeaderKey,
+    reportHeaderDraft,
+    setReportHeaderDraft,
+    areaShiftCutoffs,
+    setAreaShiftCutoffs,
+  } = useReportUiState();
   const {
     ptoPlanYear,
     setPtoPlanYear,
