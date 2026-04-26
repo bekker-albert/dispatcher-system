@@ -5,7 +5,7 @@ import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navi
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "../lib/domain/navigation/tabs";
-import { isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketSelectionKey } from "../lib/domain/pto/buckets";
+import { createPtoBucketColumns, createPtoBucketRows, isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketSelectionKey } from "../lib/domain/pto/buckets";
 import { createEmptyPtoDateRow, dateRange, distributeMonthlyTotal, insertPtoRowAfter, nextDate, normalizePtoCustomerCode, normalizePtoPlanRow, ptoAreaMatches, ptoColumnDefaults, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, reorderPtoRows } from "../lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "../lib/domain/pto/defaults";
 import { createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "../lib/domain/pto/excel";
@@ -52,6 +52,21 @@ assert.equal(ptoBucketRowKey("Уч_Аксу", "Подача"), "аксу:под�
 assert.equal(ptoBucketCellKey("row", "equipment"), "row::equipment");
 assert.equal(ptoBucketSelectionKey({ rowKey: "row", equipmentKey: "equipment" }), "row::equipment");
 assert.equal(normalizePtoBucketManualRows([{ area: "Уч_Аксу", structure: "Подача" }, { area: "Аксу", structure: "Подача" }]).length, 1);
+assert.deepEqual(
+  createPtoBucketRows(
+    [{ area: "Уч_Аксу", structure: "Подача" }, { area: "Аксу", structure: "Подача" }],
+    [{ key: ptoBucketRowKey("Акбакай", "Временная"), area: "Акбакай", structure: "Временная", source: "manual" }],
+    "Все участки",
+  ).map((row) => row.key),
+  ["аксу:подача", "акбакай:временная"],
+);
+assert.deepEqual(
+  createPtoBucketColumns([
+    normalizeVehicleRow({ ...defaultVehicleForm, id: 9001, vehicleType: "Экскаватор", brand: "CAT", model: "390", name: "CAT 390" }),
+    normalizeVehicleRow({ ...defaultVehicleForm, id: 9002, vehicleType: "Самосвал", brand: "Howo", model: "A7", name: "Howo A7" }),
+  ]),
+  [{ key: "cat390", label: "CAT 390" }],
+);
 assert.equal(normalizeAdminLogEntry({ action: "Удаление", section: "Техника", details: "Удалена строка" })?.action, "Удаление");
 assert.equal(normalizeAdminLogEntry({ action: "bad" }), null);
 assert.equal(adminLogLimit, 200);

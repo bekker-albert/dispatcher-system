@@ -55,7 +55,7 @@ import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDeci
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
-import { isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
+import { createPtoBucketColumns, createPtoBucketRows, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow, type VehicleSeedRow } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
@@ -2174,42 +2174,12 @@ export default function App() {
   const ptoBucketRows = useMemo<PtoBucketRow[]>(() => {
     if (!isPtoBucketsSection) return [];
 
-    const rowsByKey = new Map<string, PtoBucketRow>();
-
-    allPtoDateRows.forEach((row) => {
-      const area = cleanAreaName(row.area).trim();
-      const structure = row.structure.trim();
-      if (!area || !structure) return;
-
-      const key = ptoBucketRowKey(area, structure);
-      if (!rowsByKey.has(key)) rowsByKey.set(key, { key, area, structure, source: "auto" });
-    });
-
-    ptoBucketManualRows.forEach((row) => {
-      if (!rowsByKey.has(row.key)) rowsByKey.set(row.key, { ...row, source: "manual" });
-    });
-
-    return Array.from(rowsByKey.values())
-      .filter((row) => ptoAreaMatches(row.area, ptoAreaFilter));
+    return createPtoBucketRows(allPtoDateRows, ptoBucketManualRows, ptoAreaFilter);
   }, [allPtoDateRows, isPtoBucketsSection, ptoAreaFilter, ptoBucketManualRows]);
   const ptoBucketColumns = useMemo<PtoBucketColumn[]>(() => {
     if (!isPtoBucketsSection) return [];
 
-    const columnsByKey = new Map<string, PtoBucketColumn>();
-
-    deferredVehicleRows
-      .filter((vehicle) => vehicle.visible !== false)
-      .filter(isLoadingEquipment)
-      .forEach((vehicle) => {
-        const label = loadingEquipmentLabel(vehicle);
-        if (!label) return;
-
-        const key = normalizeLookupValue(label);
-        if (!columnsByKey.has(key)) columnsByKey.set(key, { key, label });
-      });
-
-    return Array.from(columnsByKey.values())
-      .sort((left, right) => left.label.localeCompare(right.label, "ru"));
+    return createPtoBucketColumns(deferredVehicleRows);
   }, [deferredVehicleRows, isPtoBucketsSection]);
 
   const isAdminVehiclesSection = renderedTopTab === "admin" && adminSection === "vehicles";
