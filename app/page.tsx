@@ -2097,8 +2097,8 @@ export default function App() {
     return [];
   }, [isPtoSection, ptoOperRows, ptoPlanRows, ptoSurveyRows, ptoTab]);
   const allPtoDateRows = useMemo(() => (
-    isPtoBucketsSection ? [...ptoPlanRows, ...ptoSurveyRows, ...ptoOperRows] : activePtoDateRows
-  ), [activePtoDateRows, isPtoBucketsSection, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
+    isPtoBucketsSection ? [...deferredPtoPlanRows, ...deferredPtoSurveyRows, ...deferredPtoOperRows] : activePtoDateRows
+  ), [activePtoDateRows, deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
   const ptoYearTabs = useMemo(() => (
     isPtoDateTab ? ptoYearOptions(activePtoDateRows, ptoPlanYear, ptoManualYears) : [ptoPlanYear]
   ), [activePtoDateRows, isPtoDateTab, ptoManualYears, ptoPlanYear]);
