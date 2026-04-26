@@ -12,25 +12,18 @@ import { useAppAdminVehiclesProps } from "@/features/app/useAppAdminVehiclesProp
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
 import { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
-import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppHeaderProps } from "@/features/app/useAppHeaderProps";
-import { useAppInitialDataLoadController } from "@/features/app/useAppInitialDataLoadController";
 import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
-import { useAppPtoPersistenceController } from "@/features/app/useAppPtoPersistenceController";
 import { useAppPtoSectionProps } from "@/features/app/useAppPtoSectionProps";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
-import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
 import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionProps";
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
-import { useAppSharedPersistenceController } from "@/features/app/useAppSharedPersistenceController";
+import { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
-import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
-import { useAppUndoController } from "@/features/app/useAppUndoController";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
-import { useAppVehicleFocusController } from "@/features/app/useAppVehicleFocusController";
 import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
 import { useFleetRows } from "@/features/fleet/useFleetRows";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
@@ -127,7 +120,6 @@ export default function App() {
     setPtoDateEditing,
     hoveredPtoAddRowId,
     setHoveredPtoAddRowId,
-    ptoPendingFieldFocus,
     setPtoPendingFieldFocus,
     ptoRowFieldDrafts,
     setPtoRowFieldDrafts,
@@ -155,15 +147,8 @@ export default function App() {
     reportAreaOrder,
     reportWorkOrder,
     reportHeaderLabels,
-    setReportHeaderLabels,
     reportColumnWidths,
-    setReportColumnWidths,
     reportReasons,
-    setReportReasons,
-    editingReportHeaderKey,
-    setEditingReportHeaderKey,
-    reportHeaderDraft,
-    setReportHeaderDraft,
     areaShiftCutoffs,
     ptoPlanYear,
     setPtoPlanYear,
@@ -183,13 +168,8 @@ export default function App() {
     ptoOperRows,
     setPtoOperRows,
     ptoColumnWidths,
-    setPtoColumnWidths,
     ptoRowHeights,
-    setPtoRowHeights,
-    ptoHeaderLabels,
-    setPtoHeaderLabels,
     editingPtoHeaderKey,
-    setEditingPtoHeaderKey,
     ptoHeaderDraft,
     setPtoHeaderDraft,
     ptoBucketValues,
@@ -250,41 +230,15 @@ export default function App() {
   } = appState;
   const {
     pushVehicleUndoSnapshot,
-    resetUndoHistoryForExternalRestore,
-  } = useAppUndoController({
-    appState,
-    databaseConfigured,
-  });
-
-  useAppVehicleFocusController({ appState });
-
-  useAppInitialDataLoadController({ appState });
-
-  const {
     savePtoDatabaseChanges,
     requestPtoDatabaseSave,
     savePtoLocalState,
-  } = useAppPtoPersistenceController({
-    appState,
-    resetUndoHistoryForExternalRestore,
-  });
-
-  useAppSharedPersistenceController({ appState, databaseConfigured });
-
-  const {
     commitReportDayReason,
     cancelReportDayReasonDraft,
     updateReportDayReasonDraft,
     commitReportYearReason,
     cancelReportYearReasonDraft,
     updateReportYearReasonDraft,
-  } = useAppReportReasonEditing({
-    reportDate,
-    setReportReasons,
-    requestPtoDatabaseSave,
-  });
-
-  const {
     cancelPtoHeaderEdit,
     commitPtoHeaderEdit,
     printReport,
@@ -292,52 +246,10 @@ export default function App() {
     reportHeaderLabel,
     renderReportHeaderText,
     startPtoHeaderEdit,
-  } = useAppHeaderEditors({
-    ptoHeaderLabels,
-    ptoHeaderDraft,
-    setPtoHeaderLabels,
-    setEditingPtoHeaderKey,
-    setPtoHeaderDraft,
-    reportHeaderLabels,
-    reportHeaderDraft,
-    editingReportHeaderKey,
-    setReportHeaderLabels,
-    setEditingReportHeaderKey,
-    setReportHeaderDraft,
-    requestPtoDatabaseSave,
-    addAdminLog,
-  });
-
-  const {
     startPtoColumnResize,
     startReportColumnResize,
     startPtoRowResize,
-  } = useAppTableInteractionEffects({
-    ptoRowHeights,
-    setPtoColumnWidths,
-    setPtoRowHeights,
-    setReportColumnWidths,
-    requestSave: requestPtoDatabaseSave,
-    addAdminLog,
-    ptoSelectionDraggingRef,
-    vehicleSelectionDraggingRef,
-    vehicleSelectionAnchorRef,
-    setActiveVehicleCell,
-    setVehicleSelectionAnchorCell,
-    setSelectedVehicleCellKeys,
-    setEditingVehicleCell,
-    setPtoFormulaCell,
-    setPtoFormulaDraft,
-    setPtoInlineEditCell,
-    setPtoInlineEditInitialDraft,
-    setPtoSelectionAnchorCell,
-    setPtoSelectedCellKeys,
-    pendingFieldFocus: ptoPendingFieldFocus,
-    setPendingFieldFocus: setPtoPendingFieldFocus,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-  });
+  } = useAppRuntimeControllers({ appState, databaseConfigured });
 
   const {
     deferredPtoPlanRows,

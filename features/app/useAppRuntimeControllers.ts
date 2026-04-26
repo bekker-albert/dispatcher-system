@@ -1,0 +1,144 @@
+"use client";
+
+import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
+import { useAppInitialDataLoadController } from "@/features/app/useAppInitialDataLoadController";
+import { useAppPtoPersistenceController } from "@/features/app/useAppPtoPersistenceController";
+import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
+import { useAppSharedPersistenceController } from "@/features/app/useAppSharedPersistenceController";
+import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
+import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import { useAppUndoController } from "@/features/app/useAppUndoController";
+import { useAppVehicleFocusController } from "@/features/app/useAppVehicleFocusController";
+
+type AppStateBundle = ReturnType<typeof useAppStateBundle>;
+
+type UseAppRuntimeControllersArgs = {
+  appState: AppStateBundle;
+  databaseConfigured: boolean;
+};
+
+export function useAppRuntimeControllers({
+  appState,
+  databaseConfigured,
+}: UseAppRuntimeControllersArgs) {
+  const {
+    reportDate,
+    setReportReasons,
+    ptoHeaderLabels,
+    ptoHeaderDraft,
+    setPtoHeaderLabels,
+    setEditingPtoHeaderKey,
+    setPtoHeaderDraft,
+    reportHeaderLabels,
+    reportHeaderDraft,
+    editingReportHeaderKey,
+    setReportHeaderLabels,
+    setEditingReportHeaderKey,
+    setReportHeaderDraft,
+    addAdminLog,
+    ptoRowHeights,
+    setPtoColumnWidths,
+    setPtoRowHeights,
+    setReportColumnWidths,
+    ptoSelectionDraggingRef,
+    vehicleSelectionDraggingRef,
+    vehicleSelectionAnchorRef,
+    setActiveVehicleCell,
+    setVehicleSelectionAnchorCell,
+    setSelectedVehicleCellKeys,
+    setEditingVehicleCell,
+    setPtoFormulaCell,
+    setPtoFormulaDraft,
+    setPtoInlineEditCell,
+    setPtoInlineEditInitialDraft,
+    setPtoSelectionAnchorCell,
+    setPtoSelectedCellKeys,
+    ptoPendingFieldFocus,
+    setPtoPendingFieldFocus,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+  } = appState;
+
+  const {
+    pushVehicleUndoSnapshot,
+    resetUndoHistoryForExternalRestore,
+  } = useAppUndoController({
+    appState,
+    databaseConfigured,
+  });
+
+  useAppVehicleFocusController({ appState });
+  useAppInitialDataLoadController({ appState });
+
+  const {
+    savePtoDatabaseChanges,
+    requestPtoDatabaseSave,
+    savePtoLocalState,
+  } = useAppPtoPersistenceController({
+    appState,
+    resetUndoHistoryForExternalRestore,
+  });
+
+  useAppSharedPersistenceController({ appState, databaseConfigured });
+
+  const reportReasonEditing = useAppReportReasonEditing({
+    reportDate,
+    setReportReasons,
+    requestPtoDatabaseSave,
+  });
+
+  const headerEditors = useAppHeaderEditors({
+    ptoHeaderLabels,
+    ptoHeaderDraft,
+    setPtoHeaderLabels,
+    setEditingPtoHeaderKey,
+    setPtoHeaderDraft,
+    reportHeaderLabels,
+    reportHeaderDraft,
+    editingReportHeaderKey,
+    setReportHeaderLabels,
+    setEditingReportHeaderKey,
+    setReportHeaderDraft,
+    requestPtoDatabaseSave,
+    addAdminLog,
+  });
+
+  const tableInteractionEffects = useAppTableInteractionEffects({
+    ptoRowHeights,
+    setPtoColumnWidths,
+    setPtoRowHeights,
+    setReportColumnWidths,
+    requestSave: requestPtoDatabaseSave,
+    addAdminLog,
+    ptoSelectionDraggingRef,
+    vehicleSelectionDraggingRef,
+    vehicleSelectionAnchorRef,
+    setActiveVehicleCell,
+    setVehicleSelectionAnchorCell,
+    setSelectedVehicleCellKeys,
+    setEditingVehicleCell,
+    setPtoFormulaCell,
+    setPtoFormulaDraft,
+    setPtoInlineEditCell,
+    setPtoInlineEditInitialDraft,
+    setPtoSelectionAnchorCell,
+    setPtoSelectedCellKeys,
+    pendingFieldFocus: ptoPendingFieldFocus,
+    setPendingFieldFocus: setPtoPendingFieldFocus,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+  });
+
+  return {
+    pushVehicleUndoSnapshot,
+    resetUndoHistoryForExternalRestore,
+    savePtoDatabaseChanges,
+    requestPtoDatabaseSave,
+    savePtoLocalState,
+    ...reportReasonEditing,
+    ...headerEditors,
+    ...tableInteractionEffects,
+  };
+}
