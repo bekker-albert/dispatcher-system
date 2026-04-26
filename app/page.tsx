@@ -63,6 +63,7 @@ import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportC
 import { useAdminReportFactSourceEditor } from "@/features/reports/useAdminReportFactSourceEditor";
 import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportRowLabelEditor";
 import { useAdminReportSummaryRowsEditor } from "@/features/reports/useAdminReportSummaryRowsEditor";
+import { useAreaShiftCutoffEditor } from "@/features/reports/useAreaShiftCutoffEditor";
 import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
 import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
 import { useReportDateSelectionState } from "@/features/reports/useReportDateSelectionState";
@@ -74,7 +75,7 @@ import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "@/lib/domain/app/settings";
 import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
-import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
+import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, normalizeAreaShiftCutoffs, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { createDefaultDispatchSummaryRows, normalizeDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { normalizeStoredReportCustomers } from "@/lib/domain/reports/customers";
@@ -258,6 +259,7 @@ export default function App() {
     ptoAreaFilter,
     areaShiftCutoffs,
   });
+  const { updateAreaShiftCutoff } = useAreaShiftCutoffEditor({ setAreaShiftCutoffs });
   const [clientSnapshots, setClientSnapshots] = useState<DataClientSnapshot[]>([]);
   const [databasePanelMessage, setDatabasePanelMessage] = useState("");
   const [databasePanelLoading, setDatabasePanelLoading] = useState(false);
@@ -1747,15 +1749,6 @@ export default function App() {
 
   function selectPtoArea(area: string) {
     setPtoAreaFilter(area);
-  }
-
-  function updateAreaShiftCutoff(area: string, value: string) {
-    if (!isValidAreaShiftCutoffTime(value)) return;
-
-    setAreaShiftCutoffs((current) => ({
-      ...current,
-      [area]: value,
-    }));
   }
 
   const {
