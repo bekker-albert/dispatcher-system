@@ -6,14 +6,14 @@ This project is a production dispatcher system. It must stay modular because it 
 
 The repository already has the right high-level direction:
 
-- `app/` contains the Next.js application entry points and API routes.
+- `app/` contains the Next.js application entry points and API routes. `app/page.tsx` is intentionally thin and delegates to `features/app/AppRoot.tsx`.
 - `features/` contains several feature modules: admin, auth, dispatch, PTO, reports.
 - `lib/domain/` contains business/domain helpers for reports, PTO, vehicles, dispatch, navigation, admin, and references.
 - `lib/data/`, `lib/server/`, and `lib/database/` contain storage and server adapters.
 - `shared/` contains reusable UI and editable-grid helpers.
 - `tests/domain-checks.ts` provides fast domain-level regression checks.
 
-The main architectural problem is still `app/page.tsx`: it is too large and owns too much orchestration, state, persistence flow, and rendering. New work must reduce that file over time instead of adding to it.
+The remaining main architectural problem is `features/app/AppRoot.tsx`: it owns too much orchestration and should keep shrinking as feature-level hooks and section renderers are extracted. New work must not move product logic back into `app/page.tsx`.
 
 ## Target Structure
 
@@ -131,7 +131,7 @@ Avoid large rewrites that change data shape, persistence, UI, and calculations a
 
 ## Technical Debt Register
 
-- `app/page.tsx` remains too large and must be reduced progressively.
+- `features/app/AppRoot.tsx` remains too large and must be reduced progressively.
 - Persistence orchestration for app settings, vehicles, PTO, and browser snapshots should move into dedicated hooks.
 - Report header editing and admin report configuration should continue moving into `features/reports`.
 - PTO editable row rendering should be split further after the current extraction work.

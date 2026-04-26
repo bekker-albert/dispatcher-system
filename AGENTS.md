@@ -28,7 +28,8 @@ Folder ownership:
 
 Hard rules:
 
-- Keep `app/page.tsx` thin. It should compose modules, not own all behavior.
+- Keep `app/page.tsx` thin. It should only route to the app root or compose route-level modules, not own product behavior.
+- Keep reducing `features/app/AppRoot.tsx`; it is an orchestration shell, not a place for new feature internals.
 - Do not mix UI, persistence, business calculations, mock data, and table editing logic in one file.
 - Extract repeated logic immediately.
 - Split large components into named parts with clear ownership.
