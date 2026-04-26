@@ -14,7 +14,7 @@ import {
 import type { AdminSection } from "@/lib/domain/admin/navigation";
 import { SectionCard } from "@/shared/ui/layout";
 
-type AppAdminContentProps = {
+export type AppAdminContentProps = {
   adminSection: AdminSection;
   navigationProps: ComponentProps<typeof AdminNavigationSection>;
   structureProps: ComponentProps<typeof AdminStructureSection>;

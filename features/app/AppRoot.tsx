@@ -7,6 +7,7 @@ import { AppAdminContent } from "@/features/app/AppAdminContent";
 import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
 import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
+import { useAppAdminContentProps } from "@/features/app/useAppAdminContentProps";
 import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProps";
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import { useAppAdminReportsProps } from "@/features/app/useAppAdminReportsProps";
@@ -1210,6 +1211,54 @@ export default function App() {
     finishReportSummaryEdit,
     removeReportSummaryRow,
   });
+  const adminContentProps = useAppAdminContentProps({
+    adminSection,
+    topTabs,
+    customTabs,
+    addCustomTab,
+    updateTopTabLabel,
+    updateCustomTabTitle,
+    deleteTopTab,
+    showTopTab,
+    deleteCustomTab,
+    showCustomTab,
+    structureSection,
+    setStructureSection,
+    dependencyNodes,
+    dependencyLinks,
+    dependencyNodeForm,
+    dependencyLinkForm,
+    editingDependencyNodeId,
+    editingDependencyLinkId,
+    setEditingDependencyNodeId,
+    setEditingDependencyLinkId,
+    updateDependencyNode,
+    updateDependencyNodeForm,
+    addDependencyNode,
+    deleteDependencyNode,
+    updateDependencyLink,
+    updateDependencyLinkForm,
+    addDependencyLink,
+    deleteDependencyLink,
+    orgMembers,
+    orgMemberForm,
+    editingOrgMemberId,
+    setEditingOrgMemberId,
+    updateOrgMember,
+    updateOrgMemberForm,
+    addOrgMember,
+    deleteOrgMember,
+    areaShiftScheduleAreas,
+    areaShiftCutoffs,
+    updateAreaShiftCutoff,
+    adminVehiclesProps,
+    adminDatabaseProps,
+    adminReportsProps,
+    adminLogs,
+    lastChangeLog,
+    lastUploadLog,
+    clearAdminLogs,
+  });
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
@@ -1267,62 +1316,7 @@ export default function App() {
             onSelectTab: setTbTab,
           }}
           userProfileProps={{ userCard: defaultUserCard }}
-          adminContent={(
-            <AppAdminContent
-              adminSection={adminSection}
-              navigationProps={{
-                topTabs,
-                customTabs,
-                onAddCustomTab: addCustomTab,
-                onUpdateTopTabLabel: updateTopTabLabel,
-                onUpdateCustomTabTitle: updateCustomTabTitle,
-                onDeleteTopTab: deleteTopTab,
-                onShowTopTab: showTopTab,
-                onDeleteCustomTab: deleteCustomTab,
-                onShowCustomTab: showCustomTab,
-              }}
-              structureProps={{
-                structureSection,
-                onSelectStructureSection: setStructureSection,
-                dependencyNodes,
-                dependencyLinks,
-                dependencyNodeForm,
-                dependencyLinkForm,
-                editingDependencyNodeId,
-                editingDependencyLinkId,
-                onEditDependencyNode: setEditingDependencyNodeId,
-                onEditDependencyLink: setEditingDependencyLinkId,
-                onUpdateDependencyNode: updateDependencyNode,
-                onUpdateDependencyNodeForm: updateDependencyNodeForm,
-                onAddDependencyNode: addDependencyNode,
-                onDeleteDependencyNode: deleteDependencyNode,
-                onUpdateDependencyLink: updateDependencyLink,
-                onUpdateDependencyLinkForm: updateDependencyLinkForm,
-                onAddDependencyLink: addDependencyLink,
-                onDeleteDependencyLink: deleteDependencyLink,
-                orgMembers,
-                orgMemberForm,
-                editingOrgMemberId,
-                onEditOrgMember: setEditingOrgMemberId,
-                onUpdateOrgMember: updateOrgMember,
-                onUpdateOrgMemberForm: updateOrgMemberForm,
-                onAddOrgMember: addOrgMember,
-                onDeleteOrgMember: deleteOrgMember,
-                areaShiftScheduleAreas,
-                areaShiftCutoffs,
-                onUpdateAreaShiftCutoff: updateAreaShiftCutoff,
-              }}
-              vehiclesProps={adminVehiclesProps}
-              databaseProps={adminDatabaseProps}
-              logsProps={{
-                logs: adminLogs,
-                lastChangeLog,
-                lastUploadLog,
-                onClearLogs: clearAdminLogs,
-              }}
-              reportsProps={adminReportsProps}
-            />
-          )}
+          adminContent={<AppAdminContent {...adminContentProps} />}
           customTabProps={activeCustomTab ? { tab: activeCustomTab } : null}
         />
     </AppPageShell>
