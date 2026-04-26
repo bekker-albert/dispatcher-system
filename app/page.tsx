@@ -8,6 +8,7 @@ import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandle
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
+import { useGlobalCellSelectionEffects } from "@/features/app/useGlobalCellSelectionEffects";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
@@ -974,50 +975,21 @@ export default function App() {
     addAdminLog,
   });
 
-  useEffect(() => {
-    const stopPtoSelectionDrag = () => {
-      ptoSelectionDraggingRef.current = false;
-      vehicleSelectionDraggingRef.current = false;
-    };
-
-    window.addEventListener("mouseup", stopPtoSelectionDrag);
-    return () => window.removeEventListener("mouseup", stopPtoSelectionDrag);
-  }, []);
-
-  useEffect(() => {
-    const clearCellSelectionsOnOutsideClick = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-
-      const isCellClick = target.closest([
-        "[data-admin-vehicle-cell]",
-        "[data-admin-vehicle-input]",
-        "[data-pto-cell-key]",
-        "[data-pto-bucket-cell]",
-      ].join(","));
-
-      if (isCellClick) return;
-
-      vehicleSelectionDraggingRef.current = false;
-      vehicleSelectionAnchorRef.current = null;
-      ptoSelectionDraggingRef.current = false;
-
-      setActiveVehicleCell((current) => (current === null ? current : null));
-      setVehicleSelectionAnchorCell((current) => (current === null ? current : null));
-      setSelectedVehicleCellKeys((current) => (current.length === 0 ? current : []));
-      setEditingVehicleCell((current) => (current === null ? current : null));
-
-      setPtoFormulaCell((current) => (current === null ? current : null));
-      setPtoFormulaDraft((current) => (current === "" ? current : ""));
-      setPtoInlineEditCell((current) => (current === null ? current : null));
-      setPtoInlineEditInitialDraft((current) => (current === "" ? current : ""));
-      setPtoSelectionAnchorCell((current) => (current === null ? current : null));
-      setPtoSelectedCellKeys((current) => (current.length === 0 ? current : []));
-    };
-
-    window.addEventListener("mousedown", clearCellSelectionsOnOutsideClick);
-    return () => window.removeEventListener("mousedown", clearCellSelectionsOnOutsideClick);
-  }, []);
+  useGlobalCellSelectionEffects({
+    ptoSelectionDraggingRef,
+    vehicleSelectionDraggingRef,
+    vehicleSelectionAnchorRef,
+    setActiveVehicleCell,
+    setVehicleSelectionAnchorCell,
+    setSelectedVehicleCellKeys,
+    setEditingVehicleCell,
+    setPtoFormulaCell,
+    setPtoFormulaDraft,
+    setPtoInlineEditCell,
+    setPtoInlineEditInitialDraft,
+    setPtoSelectionAnchorCell,
+    setPtoSelectedCellKeys,
+  });
 
   useEffect(() => {
     if (!ptoPendingFieldFocus) return;
