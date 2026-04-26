@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, resolvePtoDatabaseLoadResolution, validatePtoDatabaseLoadState } from "../features/pto/ptoPersistenceModel";
 import { adminLogLimit, normalizeAdminLogEntry } from "../lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navigation";
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
@@ -164,6 +165,69 @@ assert.equal(virtualRows.renderedRows.length < 100, true);
 assert.equal(virtualRows.topSpacerHeight > 0, true);
 assert.equal(virtualRows.bottomSpacerHeight > 0, true);
 assert.equal(virtualRows.rowHeights[20], 80);
+
+const emptyPtoDatabaseState = createPtoDatabaseState({
+  manualYears: ["2026"],
+  planRows: [],
+  operRows: [],
+  surveyRows: [],
+  bucketValues: {},
+  bucketRows: [],
+  uiState: { expandedPtoMonths: {} },
+});
+const databasePtoRow = createEmptyPtoDateRow("Database", "Aksu", "2026", "database-row");
+const localPtoRow = createEmptyPtoDateRow("Local", "Aksu", "2026", "local-row");
+const staleDatabasePtoState = {
+  ...emptyPtoDatabaseState,
+  planRows: [databasePtoRow],
+  updatedAt: "2026-04-24T10:00:00.000Z",
+};
+const newerLocalPtoState = {
+  ...emptyPtoDatabaseState,
+  planRows: [localPtoRow],
+};
+
+assert.doesNotThrow(() => validatePtoDatabaseLoadState(staleDatabasePtoState));
+assert.throws(() => validatePtoDatabaseLoadState({ ...staleDatabasePtoState, planRows: undefined as unknown as never }));
+assert.equal(resolvePtoDatabaseLoadResolution({
+  databaseState: null,
+  currentState: newerLocalPtoState,
+  hasStoredPtoState: true,
+  localUpdatedAt: "2026-04-24T12:00:00.000Z",
+  shouldRestoreClientSnapshot: false,
+}).kind, "empty-save-local");
+assert.equal(resolvePtoDatabaseLoadResolution({
+  databaseState: staleDatabasePtoState,
+  currentState: newerLocalPtoState,
+  hasStoredPtoState: true,
+  localUpdatedAt: "2026-04-24T12:00:00.000Z",
+  shouldRestoreClientSnapshot: false,
+}).kind, "keep-local");
+assert.equal(resolvePtoDatabaseLoadResolution({
+  databaseState: staleDatabasePtoState,
+  currentState: newerLocalPtoState,
+  hasStoredPtoState: true,
+  localUpdatedAt: "2026-04-24T09:00:00.000Z",
+  shouldRestoreClientSnapshot: true,
+}).kind, "restore-local");
+assert.equal(resolvePtoDatabaseLoadResolution({
+  databaseState: staleDatabasePtoState,
+  currentState: newerLocalPtoState,
+  hasStoredPtoState: true,
+  localUpdatedAt: "2026-04-24T09:00:00.000Z",
+  shouldRestoreClientSnapshot: false,
+}).kind, "use-database");
+const normalizedLoadedPtoState = normalizeLoadedPtoDatabaseState({
+  ...staleDatabasePtoState,
+  uiState: {
+    ptoTab: "plan",
+    expandedPtoMonths: { "2026-04": true, bad: "x" as unknown as boolean },
+    ptoColumnWidths: { area: 9999, unit: 10 },
+  },
+}, emptyPtoDatabaseState);
+assert.deepEqual(normalizedLoadedPtoState.uiState.expandedPtoMonths, { "2026-04": true });
+assert.equal(normalizedLoadedPtoState.uiState.ptoColumnWidths.area, 800);
+assert.equal(normalizedLoadedPtoState.uiState.ptoColumnWidths.unit, 44);
 
 const planRow = normalizePtoPlanRow({
   id: "plan",
