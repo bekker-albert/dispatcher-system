@@ -2,7 +2,6 @@
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
-import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
 import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandlers";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
@@ -11,6 +10,7 @@ import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useGlobalCellSelectionEffects } from "@/features/app/useGlobalCellSelectionEffects";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
+import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
@@ -80,7 +80,6 @@ import { useAreaShiftCutoffEditor } from "@/features/reports/useAreaShiftCutoffE
 import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
 import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
 import { useReportDateSelectionState } from "@/features/reports/useReportDateSelectionState";
-import { useReportHeaderActions } from "@/features/reports/useReportHeaderActions";
 import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
@@ -620,56 +619,27 @@ export default function App() {
   });
 
   const {
-    headerLabel: ptoHeaderLabel,
-    startHeaderEdit: startPtoHeaderEdit,
-    cancelHeaderEdit: cancelPtoHeaderEdit,
-    commitHeaderEdit: commitPtoHeaderEdit,
-  } = useEditableHeaderLabels({
-    labels: ptoHeaderLabels,
-    draft: ptoHeaderDraft,
-    setLabels: setPtoHeaderLabels,
-    setEditingKey: setEditingPtoHeaderKey,
-    setDraft: setPtoHeaderDraft,
-    onCommit: (_key, fallback) => {
-      requestPtoDatabaseSave();
-      addAdminLog({
-        action: "Редактирование",
-        section: "ПТО",
-        details: `Изменен заголовок таблицы: ${fallback}.`,
-      });
-    },
-  });
-
-  const {
-    headerLabel: reportHeaderLabel,
-    startHeaderEdit: startReportHeaderEdit,
-    cancelHeaderEdit: cancelReportHeaderEdit,
-    commitHeaderEdit: commitReportHeaderEdit,
-  } = useEditableHeaderLabels({
-    labels: reportHeaderLabels,
-    draft: reportHeaderDraft,
-    setLabels: setReportHeaderLabels,
-    setEditingKey: setEditingReportHeaderKey,
-    setDraft: setReportHeaderDraft,
-    onCommit: (_key, fallback) => {
-      addAdminLog({
-        action: "Редактирование",
-        section: "Отчетность",
-        details: `Изменен заголовок таблицы: ${fallback}.`,
-      });
-    },
-  });
-  const {
-    renderReportHeaderText,
+    cancelPtoHeaderEdit,
+    commitPtoHeaderEdit,
     printReport,
-  } = useReportHeaderActions({
+    ptoHeaderLabel,
     reportHeaderLabel,
-    editingReportHeaderKey,
+    renderReportHeaderText,
+    startPtoHeaderEdit,
+  } = useAppHeaderEditors({
+    ptoHeaderLabels,
+    ptoHeaderDraft,
+    setPtoHeaderLabels,
+    setEditingPtoHeaderKey,
+    setPtoHeaderDraft,
+    reportHeaderLabels,
     reportHeaderDraft,
+    editingReportHeaderKey,
+    setReportHeaderLabels,
+    setEditingReportHeaderKey,
     setReportHeaderDraft,
-    commitReportHeaderEdit,
-    cancelReportHeaderEdit,
-    startReportHeaderEdit,
+    requestPtoDatabaseSave,
+    addAdminLog,
   });
 
   const {
