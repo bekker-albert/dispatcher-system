@@ -12,7 +12,6 @@ import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
-import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
@@ -22,6 +21,7 @@ import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementa
 import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
 import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
+import { useAppSharedPersistence } from "@/features/app/useAppSharedPersistence";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
@@ -34,7 +34,6 @@ import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterCol
 import { useVehicleUiState } from "@/features/admin/vehicles/useVehicleUiState";
 import { useAdminStructureState } from "@/features/admin/structure/useAdminStructureState";
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
-import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
 import { usePtoDatabaseUiState } from "@/features/pto/usePtoDatabaseUiState";
 import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
 import { usePtoUiState } from "@/features/pto/usePtoUiState";
@@ -496,12 +495,15 @@ export default function App() {
     setPtoHeaderLabels,
   });
 
-  useAppLocalPersistence({
+  useAppSharedPersistence({
     adminDataLoaded,
     appSettingsDatabaseLoadedRef,
     appSettingsDatabaseSaveSnapshotRef,
+    vehiclesDatabaseLoadedRef,
+    vehiclesDatabaseSaveSnapshotRef,
     requestClientSnapshotSave,
     showSaveStatus,
+    databaseConfigured,
     reportCustomers,
     reportAreaOrder,
     reportWorkOrder,
@@ -517,17 +519,8 @@ export default function App() {
     dependencyNodes,
     dependencyLinks,
     adminLogs,
-  });
-
-  useVehicleRowsPersistence({
-    adminDataLoaded,
     vehicleRows,
     vehicleRowsRef,
-    databaseConfigured,
-    databaseLoadedRef: vehiclesDatabaseLoadedRef,
-    databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
-    requestClientSnapshotSave,
-    showSaveStatus,
   });
 
   const {
