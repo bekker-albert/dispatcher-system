@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, resolvePtoDatabaseLoadResolution, validatePtoDatabaseLoadState } from "../features/pto/ptoPersistenceModel";
+import { cloneUndoSnapshot, type UndoSnapshot } from "../lib/domain/app/undo";
 import { adminLogLimit, normalizeAdminLogEntry } from "../lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navigation";
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
@@ -52,6 +53,36 @@ assert.equal(formatDateInputValue(new Date(2026, 3, 5)), "2026-04-05");
 assert.equal(isStoredReportDateValue("2026-04-05"), true);
 assert.equal(isStoredReportDateValue("bad"), false);
 assert.equal(resolveReportDateAreaContext("pto", "vehicles", "Все участки", "Уч_Аксу"), "Аксу");
+const undoSource: UndoSnapshot = {
+  reportCustomers: [...defaultReportCustomers],
+  reportAreaOrder: ["Аксу"],
+  reportWorkOrder: {},
+  reportHeaderLabels: {},
+  reportColumnWidths: {},
+  reportReasons: {},
+  areaShiftCutoffs: {},
+  customTabs: [],
+  topTabs: [...defaultTopTabs],
+  subTabs: createDefaultSubTabs(["AA Mining"]),
+  vehicleRows: [],
+  ptoManualYears: ["2026"],
+  expandedPtoMonths: {},
+  ptoPlanRows: [...defaultPtoPlanRows],
+  ptoSurveyRows: [...defaultPtoSurveyRows],
+  ptoOperRows: [...defaultPtoOperRows],
+  ptoColumnWidths: {},
+  ptoRowHeights: {},
+  ptoHeaderLabels: {},
+  ptoBucketValues: {},
+  ptoBucketManualRows: [],
+  orgMembers: [...defaultOrgMembers],
+  dependencyNodes: [...defaultDependencyNodes],
+  dependencyLinks: [...defaultDependencyLinks],
+};
+const undoClone = cloneUndoSnapshot(undoSource);
+assert.deepEqual(undoClone, undoSource);
+assert.notEqual(undoClone, undoSource);
+assert.notEqual(undoClone.reportCustomers, undoSource.reportCustomers);
 assert.equal(adminStorageKeys.vehicles, "dispatcher:vehicles");
 assert.equal(ptoBucketRowKey("Уч_Аксу", "Подача"), "аксу:подача");
 assert.equal(ptoBucketCellKey("row", "equipment"), "row::equipment");

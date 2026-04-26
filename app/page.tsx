@@ -36,6 +36,7 @@ import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRo
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { automaticReportDate, hasClientReportDateOverride, isStoredReportDateValue, readClientReportDateSelection, reportDateOverrideStorageKey, resolveReportDateAreaContext } from "@/features/reports/lib/reportDateSelection";
+import { cloneUndoSnapshot, type UndoSnapshot } from "@/lib/domain/app/undo";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs, type AdminReportCustomerSettingsTab, type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
@@ -91,33 +92,6 @@ type ReportResizeState = {
   key: string;
   startX: number;
   startWidth: number;
-};
-
-type UndoSnapshot = {
-  reportCustomers: ReportCustomerConfig[];
-  reportAreaOrder: string[];
-  reportWorkOrder: Record<string, string[]>;
-  reportHeaderLabels: Record<string, string>;
-  reportColumnWidths: Record<string, number>;
-  reportReasons: Record<string, string>;
-  areaShiftCutoffs: AreaShiftCutoffMap;
-  customTabs: CustomTab[];
-  topTabs: TopTabDefinition[];
-  subTabs: Record<EditableSubtabGroup, SubTabConfig[]>;
-  vehicleRows: VehicleRow[];
-  ptoManualYears: string[];
-  expandedPtoMonths: Record<string, boolean>;
-  ptoPlanRows: PtoPlanRow[];
-  ptoSurveyRows: PtoPlanRow[];
-  ptoOperRows: PtoPlanRow[];
-  ptoColumnWidths: Record<string, number>;
-  ptoRowHeights: Record<string, number>;
-  ptoHeaderLabels: Record<string, string>;
-  ptoBucketValues: Record<string, number>;
-  ptoBucketManualRows: PtoBucketRow[];
-  orgMembers: OrgMember[];
-  dependencyNodes: DependencyNode[];
-  dependencyLinks: DependencyLink[];
 };
 
 const emptyPtoDraftRowFields = {
@@ -190,14 +164,6 @@ const PtoSection = dynamic(() => import("@/features/pto/PtoSection"), {
 const AdminReportSettingsSection = dynamic(() => import("@/features/reports/admin/AdminReportSettingsSection"), {
   ssr: false,
 });
-
-function cloneUndoSnapshot(snapshot: UndoSnapshot): UndoSnapshot {
-  if (typeof structuredClone === "function") {
-    return structuredClone(snapshot) as UndoSnapshot;
-  }
-
-  return JSON.parse(JSON.stringify(snapshot)) as UndoSnapshot;
-}
 
 export default function App() {
   const [topTab, setTopTab] = useState<TopTab>("reports");
