@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
@@ -45,7 +45,7 @@ import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleR
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
-import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, ptoDatabaseSaveShouldSkip, ptoDatabaseStateChanged, resolvePtoDatabaseLoadResolution, savePtoDatabaseSnapshot, serializePtoDatabaseState, validatePtoDatabaseLoadState, type PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
+import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, ptoDatabaseMessages, resolvePtoDatabaseLoadResolution, serializePtoDatabaseState, validatePtoDatabaseLoadState } from "@/features/pto/ptoPersistenceModel";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { PtoDateTableContainer } from "@/features/pto/PtoDateTableContainer";
@@ -54,6 +54,7 @@ import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
 import { usePtoDateTableContext } from "@/features/pto/usePtoDateTableContext";
 import { usePtoDateRowValueEditor } from "@/features/pto/usePtoDateRowValueEditor";
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
+import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
@@ -179,9 +180,6 @@ export default function App() {
   const ptoPlanImportInputRef = useRef<HTMLInputElement | null>(null);
   const hasStoredPtoStateRef = useRef(false);
   const ptoDatabaseLoadedRef = useRef(false);
-  const ptoDatabaseSavingRef = useRef(false);
-  const ptoDatabaseSaveQueuedRef = useRef(false);
-  const ptoDatabaseSaveSnapshotRef = useRef("");
   const [reportArea, setReportArea] = useState("Все участки");
   const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
   const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
@@ -313,6 +311,19 @@ export default function App() {
     },
   }), [expandedPtoMonths, ptoAreaFilter, ptoBucketManualRows, ptoBucketValues, ptoColumnWidths, ptoHeaderLabels, ptoManualYears, ptoOperRows, ptoPlanRows, ptoPlanYear, ptoRowHeights, ptoSurveyRows, ptoTab, reportColumnWidths, reportReasons]);
   const ptoDatabaseStateRef = useRef(ptoDatabaseState);
+  const {
+    ptoDatabaseSaveSnapshotRef,
+    savePtoDatabaseChanges,
+    requestPtoDatabaseSave,
+  } = usePtoDatabaseSave({
+    adminDataLoaded,
+    ptoSaveRevision,
+    ptoDatabaseStateRef,
+    ptoDatabaseLoadedRef,
+    setPtoDatabaseMessage,
+    setPtoSaveRevision,
+    showSaveStatus,
+  });
   const {
     pushVehicleUndoSnapshot,
     resetUndoHistoryForExternalRestore,
@@ -831,7 +842,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [adminDataLoaded, resetUndoHistoryForExternalRestore, showSaveStatus]);
+  }, [adminDataLoaded, ptoDatabaseSaveSnapshotRef, resetUndoHistoryForExternalRestore, showSaveStatus]);
 
   useAppLocalPersistence({
     adminDataLoaded,
@@ -883,60 +894,6 @@ export default function App() {
     ptoBucketValues,
     ptoBucketManualRows,
   });
-
-  const savePtoDatabaseChanges = useCallback(async (mode: PtoDatabaseSaveMode = "manual") => {
-    if (!databaseConfigured) {
-      setPtoDatabaseMessage(ptoDatabaseMessages.notConfigured);
-      showSaveStatus("error", ptoDatabaseMessages.notConfigured);
-      return;
-    }
-
-    if (!ptoDatabaseLoadedRef.current) {
-      setPtoDatabaseMessage(ptoDatabaseMessages.loadingSaveDeferred);
-      showSaveStatus("saving", ptoDatabaseMessages.loadingSaveDeferredStatus);
-      return;
-    }
-
-    const snapshotToSave = serializePtoDatabaseState(ptoDatabaseStateRef.current);
-    if (ptoDatabaseSaveShouldSkip(mode, snapshotToSave, ptoDatabaseSaveSnapshotRef.current)) {
-      setPtoDatabaseMessage(ptoDatabaseMessages.alreadySaved);
-      return;
-    }
-
-    if (ptoDatabaseSavingRef.current) {
-      ptoDatabaseSaveQueuedRef.current = true;
-      return;
-    }
-
-    ptoDatabaseSavingRef.current = true;
-    setPtoDatabaseMessage(ptoDatabaseMessages.savingState(mode));
-    showSaveStatus("saving", ptoDatabaseMessages.saving);
-
-    try {
-      await savePtoDatabaseSnapshot(ptoDatabaseStateRef.current);
-      ptoDatabaseSaveSnapshotRef.current = snapshotToSave;
-      setPtoDatabaseMessage(ptoDatabaseMessages.savedState(mode));
-      showSaveStatus("saved", ptoDatabaseMessages.savedStatus);
-    } catch (error) {
-      const message = errorToMessage(error);
-      setPtoDatabaseMessage(ptoDatabaseMessages.saveError(message));
-      showSaveStatus("error", ptoDatabaseMessages.saveErrorStatus(message));
-    } finally {
-      ptoDatabaseSavingRef.current = false;
-      if (ptoDatabaseSaveQueuedRef.current) {
-        ptoDatabaseSaveQueuedRef.current = false;
-        if (ptoDatabaseStateChanged(ptoDatabaseStateRef.current, ptoDatabaseSaveSnapshotRef.current)) {
-          setPtoSaveRevision((current) => current + 1);
-        }
-      }
-    }
-  }, [showSaveStatus]);
-
-  const requestPtoDatabaseSave = useCallback(() => {
-    if (!databaseConfigured || !ptoDatabaseLoadedRef.current) return;
-    setPtoDatabaseMessage(ptoDatabaseMessages.queued);
-    setPtoSaveRevision((current) => current + 1);
-  }, []);
 
   const {
     commitReportDayReason,
@@ -1016,11 +973,6 @@ export default function App() {
     requestSave: requestPtoDatabaseSave,
     addAdminLog,
   });
-
-  useEffect(() => {
-    if (!adminDataLoaded || !databaseConfigured || !ptoDatabaseLoadedRef.current || ptoSaveRevision === 0) return;
-    void savePtoDatabaseChanges("auto");
-  }, [adminDataLoaded, ptoSaveRevision, savePtoDatabaseChanges]);
 
   useEffect(() => {
     const stopPtoSelectionDrag = () => {
