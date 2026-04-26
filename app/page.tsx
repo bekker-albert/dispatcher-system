@@ -60,6 +60,7 @@ import { usePtoUiState } from "@/features/pto/usePtoUiState";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
+import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
 import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
@@ -82,7 +83,6 @@ import { useReportSelectionGuards } from "@/features/reports/useReportSelectionG
 import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
-import { type AdminSection, type StructureSection } from "@/lib/domain/admin/navigation";
 import { createDefaultDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultReportDate } from "@/lib/domain/pto/defaults";
@@ -119,12 +119,24 @@ export default function App() {
     deleteCustomTab,
   } = useAppTabsState({ defaultSubTabs });
 
-  const [dispatchTab, setDispatchTab] = useState("daily");
-  const [fleetTab, setFleetTab] = useState("all");
-  const [contractorTab, setContractorTab] = useState("AA Mining");
-  const [fuelTab, setFuelTab] = useState("general");
-  const [ptoTab, setPtoTab] = useState("bodies");
-  const [tbTab, setTbTab] = useState("list");
+  const {
+    dispatchTab,
+    setDispatchTab,
+    fleetTab,
+    setFleetTab,
+    contractorTab,
+    setContractorTab,
+    fuelTab,
+    setFuelTab,
+    ptoTab,
+    setPtoTab,
+    tbTab,
+    setTbTab,
+    structureSection,
+    setStructureSection,
+    adminSection,
+    setAdminSection,
+  } = useSectionSelectionState();
   const [dispatchSummaryRows, setDispatchSummaryRows] = useState<DispatchSummaryRow[]>(() => createDefaultDispatchSummaryRows(defaultVehicles, defaultReportDate));
   const [dispatchVehicleToAddId, setDispatchVehicleToAddId] = useState("");
   const {
@@ -300,8 +312,6 @@ export default function App() {
     addDependencyLink,
     deleteDependencyLink,
   } = useAdminStructureState();
-  const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
-  const [adminSection, setAdminSection] = useState<AdminSection>("vehicles");
   const {
     reportDate,
     selectReportDate,
