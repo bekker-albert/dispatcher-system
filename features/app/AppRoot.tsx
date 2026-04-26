@@ -17,6 +17,7 @@ import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
+import { useAppPtoPersistence } from "@/features/app/useAppPtoPersistence";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportDateControls } from "@/features/app/useAppReportDateControls";
 import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
@@ -26,7 +27,6 @@ import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
 import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
-import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { useDispatchFilterState } from "@/features/dispatch/useDispatchFilterState";
 import { useDispatchSummaryState } from "@/features/dispatch/useDispatchSummaryState";
 import { useFleetRows } from "@/features/fleet/useFleetRows";
@@ -35,11 +35,7 @@ import { useVehicleUiState } from "@/features/admin/vehicles/useVehicleUiState";
 import { useAdminStructureState } from "@/features/admin/structure/useAdminStructureState";
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
 import { useVehicleRowsPersistence } from "@/features/admin/vehicles/useVehicleRowsPersistence";
-import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
-import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
-import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
 import { usePtoDatabaseUiState } from "@/features/pto/usePtoDatabaseUiState";
-import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
 import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
 import { usePtoUiState } from "@/features/pto/usePtoUiState";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
@@ -332,37 +328,6 @@ export default function App() {
     setPtoPlanYear,
     setPtoAreaFilter,
   });
-  const ptoDatabaseState = usePtoDatabaseState({
-    ptoManualYears,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    ptoBucketValues,
-    ptoBucketManualRows,
-    ptoTab,
-    ptoPlanYear,
-    ptoAreaFilter,
-    expandedPtoMonths,
-    reportColumnWidths,
-    reportReasons,
-    ptoColumnWidths,
-    ptoRowHeights,
-    ptoHeaderLabels,
-  });
-  const ptoDatabaseStateRef = useSyncedRef(ptoDatabaseState);
-  const {
-    ptoDatabaseSaveSnapshotRef,
-    savePtoDatabaseChanges,
-    requestPtoDatabaseSave,
-  } = usePtoDatabaseSave({
-    adminDataLoaded,
-    ptoSaveRevision,
-    ptoDatabaseStateRef,
-    ptoDatabaseLoadedRef,
-    setPtoDatabaseMessage,
-    setPtoSaveRevision,
-    showSaveStatus,
-  });
   const {
     pushVehicleUndoSnapshot,
     resetUndoHistoryForExternalRestore,
@@ -484,12 +449,31 @@ export default function App() {
     setDependencyLinkForm,
   });
 
-  usePtoDatabaseLoad({
+  const {
+    savePtoDatabaseChanges,
+    requestPtoDatabaseSave,
+    savePtoLocalState,
+  } = useAppPtoPersistence({
     adminDataLoaded,
-    ptoDatabaseStateRef,
-    hasStoredPtoStateRef,
+    ptoSaveRevision,
+    ptoManualYears,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+    ptoBucketValues,
+    ptoBucketManualRows,
+    ptoTab,
+    ptoPlanYear,
+    ptoAreaFilter,
+    expandedPtoMonths,
+    reportColumnWidths,
+    reportReasons,
+    ptoColumnWidths,
+    ptoRowHeights,
+    ptoHeaderLabels,
     ptoDatabaseLoadedRef,
-    ptoDatabaseSaveSnapshotRef,
+    hasStoredPtoStateRef,
+    requestClientSnapshotSave,
     resetUndoHistoryForExternalRestore,
     showSaveStatus,
     setPtoDatabaseReady,
@@ -544,23 +528,6 @@ export default function App() {
     databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
     requestClientSnapshotSave,
     showSaveStatus,
-  });
-
-  const { savePtoLocalState } = usePtoLocalPersistence({
-    adminDataLoaded,
-    ptoDatabaseStateRef,
-    ptoDatabaseLoadedRef,
-    hasStoredPtoStateRef,
-    requestClientSnapshotSave,
-    ptoManualYears,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    ptoColumnWidths,
-    ptoRowHeights,
-    ptoHeaderLabels,
-    ptoBucketValues,
-    ptoBucketManualRows,
   });
 
   const {
