@@ -12,7 +12,7 @@ import {
   ptoReadonlyCellTextStyle,
   ptoStatusBadgeStyle,
 } from "./ptoDateTableStyles";
-import { normalizePtoUnit, ptoUnitOptions } from "../../lib/domain/pto/date-table";
+import { normalizePtoCustomerCode, normalizePtoUnit, ptoCustomerCodeOptions, ptoUnitOptions } from "../../lib/domain/pto/date-table";
 
 type PtoPlanThProps = {
   children: ReactNode;
@@ -51,6 +51,13 @@ type PtoReadonlyNumberCellProps = {
 type PtoUnitCellProps = {
   editing: boolean;
   value: string;
+  dataFieldKey: string;
+  onChange: (value: string) => void;
+};
+
+type PtoCustomerCodeCellProps = {
+  editing: boolean;
+  value: string | undefined;
   dataFieldKey: string;
   onChange: (value: string) => void;
 };
@@ -173,6 +180,27 @@ export function PtoReadonlyNumberCell({ value, bold = false }: PtoReadonlyNumber
     >
       {formatPtoCellNumber(value)}
     </div>
+  );
+}
+
+export function PtoCustomerCodeCell({ editing, value, dataFieldKey, onChange }: PtoCustomerCodeCellProps) {
+  const customerCode = normalizePtoCustomerCode(value);
+
+  if (!editing) return <PtoReadonlyTextCell value={customerCode} align="center" />;
+
+  return (
+    <select
+      data-pto-row-field={dataFieldKey}
+      value={customerCode}
+      onChange={(event) => onChange(event.target.value)}
+      style={{ ...ptoPlanInputStyle, textAlign: "center" }}
+      title="AAM - ТОО AA Mining, AA - АО АК Алтыналмас, AAE - ТОО AA Engineering"
+    >
+      <option value="">—</option>
+      {ptoCustomerCodeOptions.map((option) => (
+        <option key={option.code} value={option.code}>{option.code}</option>
+      ))}
+    </select>
   );
 }
 
