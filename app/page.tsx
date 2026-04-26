@@ -58,7 +58,6 @@ import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
-import { ReportEditableHeaderText } from "@/features/reports/ReportEditableHeaderText";
 import { readClientReportDateSelection } from "@/features/reports/lib/reportDateSelection";
 import { useAdminReportSettingsViewModel } from "@/features/reports/useAdminReportSettingsViewModel";
 import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportCustomerEditor";
@@ -69,6 +68,7 @@ import { useAreaShiftCutoffEditor } from "@/features/reports/useAreaShiftCutoffE
 import { useAreaShiftScheduleAreas } from "@/features/reports/useAreaShiftScheduleAreas";
 import { useCustomerReportViewModel } from "@/features/reports/useCustomerReportViewModel";
 import { useReportDateSelectionState } from "@/features/reports/useReportDateSelectionState";
+import { useReportHeaderActions } from "@/features/reports/useReportHeaderActions";
 import { useReportColumnLayout } from "@/features/reports/useReportColumnLayout";
 import { useReportReasonDrafts } from "@/features/reports/useReportReasonDrafts";
 import { useReportRowsModel } from "@/features/reports/useReportRowsModel";
@@ -1389,6 +1389,18 @@ export default function App() {
       });
     },
   });
+  const {
+    renderReportHeaderText,
+    printReport,
+  } = useReportHeaderActions({
+    reportHeaderLabel,
+    editingReportHeaderKey,
+    reportHeaderDraft,
+    setReportHeaderDraft,
+    commitReportHeaderEdit,
+    cancelReportHeaderEdit,
+    startReportHeaderEdit,
+  });
 
   const {
     startPtoColumnResize,
@@ -2111,26 +2123,6 @@ export default function App() {
       />
     );
   }
-  function renderReportHeaderText(key: string, fallback: string) {
-    return (
-      <ReportEditableHeaderText
-        columnKey={key}
-        fallback={fallback}
-        label={reportHeaderLabel(key, fallback)}
-        isEditing={editingReportHeaderKey === key}
-        draft={reportHeaderDraft}
-        onDraftChange={setReportHeaderDraft}
-        onCommit={commitReportHeaderEdit}
-        onCancel={cancelReportHeaderEdit}
-        onStartEdit={startReportHeaderEdit}
-      />
-    );
-  }
-
-  const printReport = useCallback(() => {
-    window.print();
-  }, []);
-
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
