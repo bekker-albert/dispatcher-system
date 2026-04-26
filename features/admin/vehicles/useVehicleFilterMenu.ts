@@ -1,4 +1,4 @@
-import { useCallback, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
@@ -26,6 +26,15 @@ export function useVehicleFilterMenu({
   setVehicleFilters,
   setVehicleFilterDrafts,
 }: UseVehicleFilterMenuOptions) {
+  useEffect(() => {
+    if (!openVehicleFilter) return undefined;
+
+    const closeVehicleFilter = () => setOpenVehicleFilter(null);
+    window.addEventListener("click", closeVehicleFilter);
+
+    return () => window.removeEventListener("click", closeVehicleFilter);
+  }, [openVehicleFilter, setOpenVehicleFilter]);
+
   const openVehicleFilterMenu = useCallback((key: VehicleFilterKey) => {
     if (openVehicleFilter === key) {
       setOpenVehicleFilter(null);

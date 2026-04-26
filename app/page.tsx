@@ -405,15 +405,6 @@ export default function App() {
   }, [ptoDatabaseState]);
 
   useEffect(() => {
-    if (!openVehicleFilter) return undefined;
-
-    const closeVehicleFilter = () => setOpenVehicleFilter(null);
-    window.addEventListener("click", closeVehicleFilter);
-
-    return () => window.removeEventListener("click", closeVehicleFilter);
-  }, [openVehicleFilter]);
-
-  useEffect(() => {
     if (topTab === "admin" && adminSection === "database") {
       void refreshClientSnapshots();
     }
