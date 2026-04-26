@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { PtoPlanTd, PtoPlanTh, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
+import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, isValidAreaShiftCutoffTime, normalizeAreaShiftCutoffs, resolveAreaShiftCutoffTime, resolveAutomaticWorkingDate, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
@@ -21,7 +22,7 @@ import { applyReportFactSourceRows, createReportSummaryRow, delta, formatNumber,
 import { reportAnnualFact, reportMonthFact, reportYearFact } from "@/lib/domain/reports/facts";
 import { reportReason, reportReasonEntryKey, reportYearReasonOverrideKey, reportYearReasonValue } from "@/lib/domain/reports/reasons";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
-import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoColumnDefaults, ptoCustomerCodeOptions, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoUnitOptions, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+import { createEmptyPtoDateRow, defaultPtoPlanMonth, distributeMonthlyTotal, insertPtoRowAfter, monthDays, normalizePtoCustomerCode, normalizePtoPlanRow, normalizePtoUnit, normalizePtoYearValue, normalizeStoredPtoYears, previousPtoYearLabel, ptoAreaMatches, ptoAutomatedStatus, ptoCustomerCodeOptions, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, ptoRowHasYear, ptoStatusRowBackground, ptoUnitOptions, ptoYearOptions, removeYearFromPtoRows, reorderPtoRows, yearMonths, type PtoDateTableKey, type PtoDropPosition, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "@/lib/domain/pto/defaults";
 import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "@/lib/domain/pto/excel";
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
@@ -78,11 +79,6 @@ type ReportResizeState = {
 type SaveStatusState = {
   kind: "idle" | "saving" | "saved" | "error";
   message: string;
-};
-
-type PtoTableColumn = {
-  key: string;
-  width: number;
 };
 
 type UndoSnapshot = {
@@ -4621,73 +4617,24 @@ export default function App() {
     const editableMonthTotal = options.editableMonthTotal === true;
     const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
     const rowById = new Map(rows.map((row) => [row.id, row] as const));
-    const rowDateTotalsCache = new Map<string, {
-      monthTotals: Map<string, { hasValue: boolean; value: number }>;
-      yearDailyTotal: number;
-    }>();
-    const effectiveCarryoverCache = new Map<string, number>();
-    const getRowDateTotals = (row: PtoPlanRow) => {
-      const cached = rowDateTotalsCache.get(row.id);
-      if (cached) return cached;
-
-      const monthTotals = new Map<string, { hasValue: boolean; value: number }>();
-      let yearDailyTotal = 0;
-
-      Object.entries(row.dailyPlans).forEach(([date, value]) => {
-        if (!date.startsWith(ptoPlanYear) || !Number.isFinite(value)) return;
-
-        yearDailyTotal += value;
-        const month = date.slice(0, 7);
-        const current = monthTotals.get(month) ?? { hasValue: false, value: 0 };
-        current.hasValue = true;
-        current.value += value;
-        monthTotals.set(month, current);
-      });
-
-      const totals = {
-        monthTotals,
-        yearDailyTotal: Math.round(yearDailyTotal * 1000000) / 1000000,
-      };
-      rowDateTotalsCache.set(row.id, totals);
-      return totals;
-    };
-    const getEffectiveCarryover = (row: PtoPlanRow) => {
-      const cached = effectiveCarryoverCache.get(row.id);
-      if (cached !== undefined) return cached;
-
-      const value = ptoEffectiveCarryover(row, ptoPlanYear, rows);
-      effectiveCarryoverCache.set(row.id, value);
-      return value;
-    };
+    const getRowDateTotals = createPtoRowDateTotalsGetter(ptoPlanYear);
+    const getEffectiveCarryover = createPtoEffectiveCarryoverGetter(rows, ptoPlanYear);
     const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;
-    const columnWidth = (key: string, fallback: number) => {
-      const minWidth = key === "customerCode" ? 88 : 44;
-      return Math.min(800, Math.max(minWidth, Math.round(ptoColumnWidths[key] ?? fallback)));
-    };
-    const readonlyExpandedMonth = reportDate.startsWith(`${ptoPlanYear}-`) ? reportDate.slice(0, 7) : (ptoYearMonths[0] ?? `${ptoPlanYear}-01`);
-    const displayPtoMonthGroups = ptoDateEditing
-      ? ptoMonthGroups
-      : ptoMonthGroups.map((group) => ({
-          ...group,
-          expanded: group.month === readonlyExpandedMonth,
-        }));
-    const baseColumns: PtoTableColumn[] = [
-      ...(showCustomerCode ? [{ key: "customerCode", width: columnWidth("customerCode", ptoColumnDefaults.customerCode) }] : []),
-      { key: "area", width: columnWidth("area", ptoColumnDefaults.area) },
-      ...(showLocation ? [{ key: "location", width: columnWidth("location", ptoColumnDefaults.location) }] : []),
-      { key: "structure", width: columnWidth("structure", ptoColumnDefaults.structure) },
-      { key: "unit", width: columnWidth("unit", ptoColumnDefaults.unit) },
-      { key: "status", width: columnWidth("status", ptoColumnDefaults.status) },
-      { key: `carryover:${ptoPlanYear}`, width: columnWidth(`carryover:${ptoPlanYear}`, ptoColumnDefaults.carryover) },
-      { key: "year-total", width: columnWidth("year-total", ptoColumnDefaults.yearTotal) },
-    ];
-    const dateColumns = displayPtoMonthGroups.flatMap((group) => [
-      { key: `month-total:${group.month}`, width: columnWidth(`month-total:${group.month}`, ptoColumnDefaults.monthTotal) },
-      ...(group.expanded ? group.days.map((day) => ({ key: `day:${day}`, width: columnWidth(`day:${day}`, ptoColumnDefaults.day) })) : []),
-    ]);
-    const tableColumns = [...baseColumns, ...dateColumns];
-    const tableMinWidth = tableColumns.reduce((sum, column) => sum + column.width, 0);
-    const columnWidthByKey = new Map(tableColumns.map((column) => [column.key, column.width]));
+    const {
+      displayPtoMonthGroups,
+      tableColumns,
+      tableMinWidth,
+      columnWidthByKey,
+    } = createPtoDateTableModel({
+      showCustomerCode,
+      showLocation,
+      planYear: ptoPlanYear,
+      reportDate,
+      yearMonths: ptoYearMonths,
+      monthGroups: ptoMonthGroups,
+      editing: ptoDateEditing,
+      columnWidths: ptoColumnWidths,
+    });
     const togglePtoDateEditing = () => {
       const nextEditing = !ptoDateEditing;
       setPtoDateEditing(nextEditing);
