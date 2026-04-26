@@ -14,6 +14,7 @@ import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
+import { useDispatchSummaryState } from "@/features/dispatch/useDispatchSummaryState";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
 import { FleetSection } from "@/features/fleet/FleetSection";
@@ -83,9 +84,7 @@ import { useReportSelectionGuards } from "@/features/reports/useReportSelectionG
 import { useReportUiState } from "@/features/reports/useReportUiState";
 import { SafetySection } from "@/features/safety-driving/SafetySection";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
-import { createDefaultDispatchSummaryRows, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-import { defaultReportDate } from "@/lib/domain/pto/defaults";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { createDefaultSubTabs, customTabKey } from "@/lib/domain/navigation/tabs";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
@@ -137,8 +136,12 @@ export default function App() {
     adminSection,
     setAdminSection,
   } = useSectionSelectionState();
-  const [dispatchSummaryRows, setDispatchSummaryRows] = useState<DispatchSummaryRow[]>(() => createDefaultDispatchSummaryRows(defaultVehicles, defaultReportDate));
-  const [dispatchVehicleToAddId, setDispatchVehicleToAddId] = useState("");
+  const {
+    dispatchSummaryRows,
+    setDispatchSummaryRows,
+    dispatchVehicleToAddId,
+    setDispatchVehicleToAddId,
+  } = useDispatchSummaryState(defaultVehicles);
   const {
     adminVehiclesEditing,
     setAdminVehiclesEditing,
