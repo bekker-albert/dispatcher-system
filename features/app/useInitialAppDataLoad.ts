@@ -3,7 +3,9 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { applyInitialAdminStructureState, type InitialAdminStructureStateSetters } from "@/features/admin/structure/applyInitialAdminStructureState";
 import { buildInitialAdminStructureState } from "@/features/admin/structure/initialAdminStructureState";
+import { applyInitialVehicleRows, type InitialVehicleRowsSetters } from "@/features/admin/vehicles/applyInitialVehicleRows";
 import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
+import { applyInitialDispatchSummaryRows, type InitialDispatchSummaryStateSetters } from "@/features/dispatch/applyInitialDispatchSummaryState";
 import { buildInitialDispatchSummaryRows } from "@/features/dispatch/initialDispatchSummaryState";
 import { applyInitialNavigationState, type InitialNavigationStateSetters } from "@/features/navigation/applyInitialNavigationState";
 import { buildInitialNavigationState } from "@/features/navigation/initialNavigationState";
@@ -11,9 +13,7 @@ import { applyInitialPtoState, type InitialPtoStateSetters } from "@/features/pt
 import { buildInitialPtoState } from "@/features/pto/initialPtoState";
 import { applyInitialReportState, type InitialReportStateSetters } from "@/features/reports/applyInitialReportState";
 import { buildInitialReportState } from "@/features/reports/initialReportState";
-import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { createDefaultSubTabs } from "@/lib/domain/navigation/tabs";
-import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { databaseConfigured } from "@/lib/data/config";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
 import { hasInitialLocalAppState, readInitialStoredAppState } from "@/features/app/initialAppStorage";
@@ -26,6 +26,8 @@ type InitialAppDataLoadOptions = InitialReportStateSetters
   & InitialPtoStateSetters
   & InitialAdminStructureStateSetters
   & InitialNavigationStateSetters
+  & InitialVehicleRowsSetters
+  & InitialDispatchSummaryStateSetters
   & {
   defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
   saveClientSnapshotToDatabase: (reason: string) => Promise<void>;
@@ -36,8 +38,6 @@ type InitialAppDataLoadOptions = InitialReportStateSetters
   vehiclesDatabaseLoadedRef: MutableRef<boolean>;
   vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
   setAdminDataLoaded: Dispatch<SetStateAction<boolean>>;
-  setVehicleRows: Dispatch<SetStateAction<VehicleRow[]>>;
-  setDispatchSummaryRows: Dispatch<SetStateAction<DispatchSummaryRow[]>>;
 };
 
 export function useInitialAppDataLoad({
@@ -136,18 +136,14 @@ export function useInitialAppDataLoad({
           setSubTabs,
         });
 
-        if (initialVehicleRows.rows) {
-          setVehicleRows(initialVehicleRows.rows);
-        }
+        applyInitialVehicleRows(initialVehicleRows.rows, { setVehicleRows });
 
         const initialDispatchSummaryRows = buildInitialDispatchSummaryRows({
           savedDispatchSummaryRows: storedState.savedDispatchSummaryRows,
           preferredReportDate: initialReportState.preferredReportDate,
           seedVehicleRows: initialVehicleRows.usedSeed ? initialVehicleRows.rows : null,
         });
-        if (initialDispatchSummaryRows) {
-          setDispatchSummaryRows(initialDispatchSummaryRows);
-        }
+        applyInitialDispatchSummaryRows(initialDispatchSummaryRows, { setDispatchSummaryRows });
 
         applyInitialPtoState(initialPtoState, {
           hasStoredPtoStateRef,
