@@ -57,6 +57,7 @@ import {
   ptoRowResizeHandleStyle,
   ptoRowToolsStyle,
 } from "@/features/pto/ptoDateTableStyles";
+import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDropTarget, PtoResizeState } from "@/features/pto/ptoDateInteractionTypes";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
@@ -86,7 +87,7 @@ import { createPtoPlanExportColumns, createPtoPlanExportRows, createPtoPlanRowsF
 import { formatMonthName, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { calculatePtoVirtualRows, ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
-import { createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type CustomTab, type EditableSubtabGroup, type SubTabConfig, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
+import { createDefaultSubTabs, customTabKey, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs, type TopTab } from "@/lib/domain/navigation/tabs";
 import { createPtoBucketColumns, createPtoBucketRows, normalizePtoBucketManualRows, ptoBucketRowKey, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { defaultContractors, defaultUserCard } from "@/lib/domain/reference/defaults";
 import { createDefaultVehicles, defaultVehicleForm, defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "@/lib/domain/vehicles/defaults";
@@ -112,7 +113,23 @@ const defaultVehicles: VehicleRow[] = createDefaultVehicles([]);
 const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
 
 export default function App() {
-  const [topTab, setTopTab] = useState<TopTab>("reports");
+  const {
+    topTab,
+    setTopTab,
+    topTabs,
+    setTopTabs,
+    subTabs,
+    setSubTabs,
+    customTabs,
+    setCustomTabs,
+    addCustomTab,
+    updateTopTabLabel,
+    deleteTopTab,
+    showTopTab,
+    updateCustomTabTitle,
+    showCustomTab,
+    deleteCustomTab,
+  } = useAppTabsState({ defaultSubTabs });
 
   const [dispatchTab, setDispatchTab] = useState("daily");
   const [fleetTab, setFleetTab] = useState("all");
@@ -179,8 +196,6 @@ export default function App() {
   const ptoDatabaseSaveSnapshotRef = useRef("");
   const ptoLocalSaveTimerRef = useRef<number | null>(null);
   const reportReasonDraftTimerRef = useRef<number | null>(null);
-  const [topTabs, setTopTabs] = useState<TopTabDefinition[]>(defaultTopTabs);
-  const [subTabs, setSubTabs] = useState<Record<EditableSubtabGroup, SubTabConfig[]>>(defaultSubTabs);
   const [reportArea, setReportArea] = useState("Все участки");
   const [reportCustomerId, setReportCustomerId] = useState(defaultReportCustomerId);
   const [adminReportCustomerId, setAdminReportCustomerId] = useState(defaultReportCustomerId);
@@ -215,7 +230,6 @@ export default function App() {
   const [ptoHeaderDraft, setPtoHeaderDraft] = useState("");
   const [ptoBucketValues, setPtoBucketValues] = useState<Record<string, number>>({});
   const [ptoBucketManualRows, setPtoBucketManualRows] = useState<PtoBucketRow[]>([]);
-  const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const {
     orgMembers,
     setOrgMembers,
@@ -497,7 +511,7 @@ export default function App() {
       section: "Система",
       details: "Выполнен возврат на шаг назад через Ctrl+Z.",
     });
-  }, [addAdminLog, setDependencyLinks, setDependencyNodes, setOrgMembers]);
+  }, [addAdminLog, setCustomTabs, setDependencyLinks, setDependencyNodes, setOrgMembers, setSubTabs, setTopTabs]);
 
   const restoreVehicleUndoSnapshot = useCallback(() => {
     const previousVehicleRows = vehicleUndoHistoryRef.current.pop();
@@ -975,7 +989,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [saveClientSnapshotToDatabase, setDependencyLinkForm, setDependencyLinks, setDependencyNodes, setOrgMembers]);
+  }, [saveClientSnapshotToDatabase, setCustomTabs, setDependencyLinkForm, setDependencyLinks, setDependencyNodes, setOrgMembers, setSubTabs, setTopTabs]);
 
   useEffect(() => {
     if (!adminDataLoaded) return;
@@ -3511,77 +3525,6 @@ export default function App() {
       section: "ПТО",
       details: `Изменен порядок строк в ${currentPtoTableLabel()}.`,
     });
-  }
-
-  function addCustomTab(title: string) {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-
-    const nextTab: CustomTab = {
-      id: createId(),
-      title: trimmedTitle,
-      description: "",
-      items: [],
-      visible: true,
-    };
-
-    setCustomTabs((current) => [...current, nextTab]);
-    setTopTab(customTabKey(nextTab.id));
-  }
-
-  function updateTopTabLabel(id: TopTabDefinition["id"], label: string) {
-    const trimmedLabel = label.trim();
-    if (!trimmedLabel) return;
-
-    setTopTabs((current) =>
-      current.map((tab) => (tab.id === id ? { ...tab, label: trimmedLabel } : tab)),
-    );
-  }
-
-  function deleteTopTab(id: TopTabDefinition["id"]) {
-    const tab = topTabs.find((item) => item.id === id);
-    if (!tab || tab.locked) return;
-    if (!window.confirm(`Удалить вкладку "${tab.label}"? Она будет скрыта, при необходимости ее можно вернуть.`)) return;
-
-    setTopTabs((current) =>
-      current.map((item) => (item.id === id ? { ...item, visible: false } : item)),
-    );
-
-    if (topTab === id) {
-      setTopTab("admin");
-    }
-  }
-
-  function showTopTab(id: TopTabDefinition["id"]) {
-    setTopTabs((current) =>
-      current.map((tab) => (tab.id === id ? { ...tab, visible: true } : tab)),
-    );
-  }
-
-  function updateCustomTabTitle(id: string, title: string) {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-
-    setCustomTabs((current) =>
-      current.map((tab) => (tab.id === id ? { ...tab, title: trimmedTitle } : tab)),
-    );
-  }
-
-  function showCustomTab(id: string) {
-    setCustomTabs((current) =>
-      current.map((tab) => (tab.id === id ? { ...tab, visible: true } : tab)),
-    );
-  }
-
-  function deleteCustomTab(id: string) {
-    const tab = customTabs.find((item) => item.id === id);
-    if (!tab) return;
-    if (!window.confirm(`Удалить вкладку "${tab.title}"?`)) return;
-
-    setCustomTabs((current) => current.filter((tab) => tab.id !== id));
-    if (topTab === customTabKey(id)) {
-      setTopTab("admin");
-    }
   }
 
   function startAdminVehiclesEditing() {
