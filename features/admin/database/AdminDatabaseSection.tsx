@@ -14,7 +14,7 @@ type ClientSnapshotStats = {
   bucketValues: number;
 };
 
-type AdminDatabaseSectionProps = {
+export type AdminDatabaseSectionProps = {
   databaseConfigured: boolean;
   databaseProviderLabel: string;
   ptoMemoryTotal: number;

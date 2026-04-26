@@ -7,6 +7,7 @@ import { AppAdminContent } from "@/features/app/AppAdminContent";
 import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
 import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
+import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProps";
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
@@ -42,10 +43,8 @@ import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
 import { useReportUiState } from "@/features/reports/useReportUiState";
-import { countPtoStateData } from "@/lib/domain/pto/state-stats";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
-import { databaseConfigured, dataProviderLabel } from "@/lib/data/config";
-import { clientSnapshotStats } from "@/lib/storage/client-snapshots";
+import { databaseConfigured } from "@/lib/data/config";
 import { useSaveStatus } from "@/shared/ui/useSaveStatus";
 
 export default function App() {
@@ -1062,6 +1061,21 @@ export default function App() {
     commitPtoHeaderEdit,
     cancelPtoHeaderEdit,
   });
+  const adminDatabaseProps = useAppAdminDatabaseProps({
+    databaseConfigured,
+    ptoPlanRows,
+    ptoOperRows,
+    ptoSurveyRows,
+    ptoBucketManualRows,
+    ptoBucketValues,
+    vehicleRows,
+    clientSnapshots,
+    databasePanelMessage,
+    databasePanelLoading,
+    createClientSnapshotNow,
+    refreshClientSnapshots,
+    restoreClientSnapshot,
+  });
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
 
   return (
@@ -1250,19 +1264,7 @@ export default function App() {
                 onDeleteVehicle: deleteVehicle,
                 onShowAllVehicleRows: () => setShowAllVehicleRows(true),
               }}
-              databaseProps={{
-                databaseConfigured,
-                databaseProviderLabel: dataProviderLabel,
-                ptoMemoryTotal: countPtoStateData({ planRows: ptoPlanRows, operRows: ptoOperRows, surveyRows: ptoSurveyRows, bucketRows: ptoBucketManualRows, bucketValues: ptoBucketValues }).total,
-                vehicleCount: vehicleRows.length,
-                snapshots: clientSnapshots,
-                message: databasePanelMessage,
-                loading: databasePanelLoading,
-                getSnapshotStats: clientSnapshotStats,
-                onCreateSnapshot: createClientSnapshotNow,
-                onRefreshSnapshots: refreshClientSnapshots,
-                onRestoreSnapshot: restoreClientSnapshot,
-              }}
+              databaseProps={adminDatabaseProps}
               logsProps={{
                 logs: adminLogs,
                 lastChangeLog,
