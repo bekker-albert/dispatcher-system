@@ -8,6 +8,7 @@ import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandle
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
+import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
@@ -158,7 +159,6 @@ export default function App() {
   const vehicleRowsRef = useRef(vehicleRows);
   const vehiclesDatabaseLoadedRef = useRef(false);
   const vehiclesDatabaseSaveSnapshotRef = useRef("");
-  const appStateSaveTimerRef = useRef<number | null>(null);
   const appDatabaseSaveSnapshotRef = useRef("");
   const appSettingsDatabaseLoadedRef = useRef(false);
   const appSettingsDatabaseSaveSnapshotRef = useRef("");
@@ -979,102 +979,28 @@ export default function App() {
     };
   }, [adminDataLoaded, showSaveStatus]);
 
-  const saveAppLocalState = useCallback(() => {
-    window.localStorage.setItem(adminStorageKeys.reportCustomers, JSON.stringify(reportCustomers));
-    window.localStorage.setItem(adminStorageKeys.reportAreaOrder, JSON.stringify(reportAreaOrder));
-    window.localStorage.setItem(adminStorageKeys.reportWorkOrder, JSON.stringify(reportWorkOrder));
-    window.localStorage.setItem(adminStorageKeys.reportHeaderLabels, JSON.stringify(reportHeaderLabels));
-    window.localStorage.setItem(adminStorageKeys.reportColumnWidths, JSON.stringify(reportColumnWidths));
-    window.localStorage.setItem(adminStorageKeys.reportReasons, JSON.stringify(reportReasons));
-    window.localStorage.setItem(adminStorageKeys.areaShiftCutoffs, JSON.stringify(areaShiftCutoffs));
-    window.localStorage.setItem(adminStorageKeys.customTabs, JSON.stringify(customTabs));
-    window.localStorage.setItem(adminStorageKeys.topTabs, JSON.stringify(topTabs));
-    window.localStorage.setItem(adminStorageKeys.subTabs, JSON.stringify(subTabs));
-    window.localStorage.setItem(adminStorageKeys.dispatchSummaryRows, JSON.stringify(dispatchSummaryRows));
-    window.localStorage.setItem(adminStorageKeys.orgMembers, JSON.stringify(orgMembers));
-    window.localStorage.setItem(adminStorageKeys.dependencyNodes, JSON.stringify(dependencyNodes));
-    window.localStorage.setItem(adminStorageKeys.dependencyLinks, JSON.stringify(dependencyLinks));
-    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(adminLogs));
-    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
-  }, [
-      adminLogs,
-      areaShiftCutoffs,
-      customTabs,
-    dependencyLinks,
-    dependencyNodes,
+  useAppLocalPersistence({
+    adminDataLoaded,
+    appSettingsDatabaseLoadedRef,
+    appSettingsDatabaseSaveSnapshotRef,
+    requestClientSnapshotSave,
+    showSaveStatus,
+    reportCustomers,
+    reportAreaOrder,
+    reportWorkOrder,
+    reportHeaderLabels,
+    reportColumnWidths,
+    reportReasons,
+    areaShiftCutoffs,
+    customTabs,
+    topTabs,
+    subTabs,
     dispatchSummaryRows,
     orgMembers,
-    reportAreaOrder,
-    reportColumnWidths,
-    reportCustomers,
-    reportHeaderLabels,
-    reportReasons,
-    reportWorkOrder,
-    subTabs,
-    topTabs,
-  ]);
-
-  const collectSharedAppSettings = useCallback(() => (
-    Object.fromEntries(
-      sharedAppSettingKeys.flatMap((key) => {
-        const value = window.localStorage.getItem(key);
-        if (value === null) return [];
-
-        try {
-          return [[key, JSON.parse(value)] as const];
-        } catch {
-          return [];
-        }
-      }),
-    )
-  ), []);
-
-  const saveSharedAppSettingsToDatabase = useCallback(async () => {
-    if (!databaseConfigured || !appSettingsDatabaseLoadedRef.current) return;
-
-    const settings = collectSharedAppSettings();
-    const snapshot = JSON.stringify(settings);
-    if (snapshot === appSettingsDatabaseSaveSnapshotRef.current) return;
-
-    showSaveStatus("saving", "Сохраняю настройки...");
-
-    try {
-      const { saveAppSettingsToDatabase } = await import("@/lib/data/settings");
-      await saveAppSettingsToDatabase(settings);
-      appSettingsDatabaseSaveSnapshotRef.current = snapshot;
-      showSaveStatus("saved", "Настройки сохранены.");
-    } catch (error) {
-      showSaveStatus("error", `Настройки не сохранены: ${errorToMessage(error)}`);
-      throw error;
-    }
-  }, [collectSharedAppSettings, showSaveStatus]);
-
-  useEffect(() => {
-    if (!adminDataLoaded) return undefined;
-
-    if (appStateSaveTimerRef.current !== null) {
-      window.clearTimeout(appStateSaveTimerRef.current);
-    }
-
-    appStateSaveTimerRef.current = window.setTimeout(() => {
-      saveAppLocalState();
-      void saveSharedAppSettingsToDatabase().catch((error) => {
-        console.warn("Database app_settings save failed:", error);
-      });
-      requestClientSnapshotSave("app-state-save");
-      appStateSaveTimerRef.current = null;
-    }, 300);
-
-    return () => {
-      if (appStateSaveTimerRef.current !== null) {
-        window.clearTimeout(appStateSaveTimerRef.current);
-        appStateSaveTimerRef.current = null;
-      }
-    };
-  }, [adminDataLoaded, requestClientSnapshotSave, saveAppLocalState, saveSharedAppSettingsToDatabase]);
-
-  // The shared main app_state remains load-only. Per-browser snapshots are
-  // written separately so one stale browser cannot overwrite another one.
+    dependencyNodes,
+    dependencyLinks,
+    adminLogs,
+  });
 
   useVehicleRowsPersistence({
     adminDataLoaded,
@@ -1086,21 +1012,6 @@ export default function App() {
     requestClientSnapshotSave,
     showSaveStatus,
   });
-
-  useEffect(() => {
-    if (!adminDataLoaded) return undefined;
-
-    const flushAppLocalState = () => {
-      if (appStateSaveTimerRef.current !== null) {
-        window.clearTimeout(appStateSaveTimerRef.current);
-        appStateSaveTimerRef.current = null;
-      }
-      saveAppLocalState();
-    };
-
-    window.addEventListener("pagehide", flushAppLocalState);
-    return () => window.removeEventListener("pagehide", flushAppLocalState);
-  }, [adminDataLoaded, saveAppLocalState]);
 
   const { savePtoLocalState } = usePtoLocalPersistence({
     adminDataLoaded,
