@@ -2,16 +2,15 @@
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
-import { useTableResizeHandlers } from "@/components/shared/useTableResizeHandlers";
 import { AdminAiSection } from "@/features/admin/ai/AdminAiSection";
 import { useClientSnapshotsPanel } from "@/features/admin/database/useClientSnapshotsPanel";
 import { useAdminLogsState } from "@/features/admin/logs/useAdminLogsState";
 import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
-import { useGlobalCellSelectionEffects } from "@/features/app/useGlobalCellSelectionEffects";
 import { useAppDataLoadState } from "@/features/app/useAppDataLoadState";
 import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import { useAppHeaderEditors } from "@/features/app/useAppHeaderEditors";
 import { useAppLocalPersistence } from "@/features/app/useAppLocalPersistence";
+import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
@@ -58,7 +57,6 @@ import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
 import { usePtoDatabaseUiState } from "@/features/pto/usePtoDatabaseUiState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
-import { usePtoPendingFieldFocus } from "@/features/pto/usePtoPendingFieldFocus";
 import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
 import { usePtoUiState } from "@/features/pto/usePtoUiState";
 import { CustomTabSection } from "@/features/navigation/CustomTabSection";
@@ -646,16 +644,13 @@ export default function App() {
     startPtoColumnResize,
     startReportColumnResize,
     startPtoRowResize,
-  } = useTableResizeHandlers({
+  } = useAppTableInteractionEffects({
     ptoRowHeights,
     setPtoColumnWidths,
     setPtoRowHeights,
     setReportColumnWidths,
     requestSave: requestPtoDatabaseSave,
     addAdminLog,
-  });
-
-  useGlobalCellSelectionEffects({
     ptoSelectionDraggingRef,
     vehicleSelectionDraggingRef,
     vehicleSelectionAnchorRef,
@@ -669,9 +664,6 @@ export default function App() {
     setPtoInlineEditInitialDraft,
     setPtoSelectionAnchorCell,
     setPtoSelectedCellKeys,
-  });
-
-  usePtoPendingFieldFocus({
     pendingFieldFocus: ptoPendingFieldFocus,
     setPendingFieldFocus: setPtoPendingFieldFocus,
     ptoPlanRows,
