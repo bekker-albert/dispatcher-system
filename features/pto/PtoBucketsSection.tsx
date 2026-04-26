@@ -4,6 +4,16 @@ import { Check, Pencil, Trash2 } from "lucide-react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
+import {
+  allAreasLabel,
+  bucketAreaColumnWidth,
+  bucketFrozenWidth,
+  bucketOverscanColumns,
+  bucketOverscanRows,
+  bucketRowHeight,
+  bucketStructureColumnWidth,
+  bucketValueColumnWidth,
+} from "@/features/pto/ptoBucketsConfig";
 import { usePtoGridViewport } from "@/features/pto/usePtoGridViewport";
 import { ptoBucketCellKey, ptoBucketSelectionKey, type PtoBucketCell, type PtoBucketColumn, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { formatBucketNumber } from "@/lib/domain/pto/formatting";
@@ -48,15 +58,6 @@ type PtoBucketsSectionProps = {
   onAddManualRow: (area: string, structure: string) => boolean;
   onDeleteManualRow: (row: PtoBucketRow) => void;
 };
-
-const allAreasLabel = "Все участки";
-const bucketAreaColumnWidth = 150;
-const bucketStructureColumnWidth = 320;
-const bucketValueColumnWidth = 120;
-const bucketFrozenWidth = bucketAreaColumnWidth + bucketStructureColumnWidth;
-const bucketRowHeight = 34;
-const bucketOverscanRows = 8;
-const bucketOverscanColumns = 5;
 
 export default function PtoBucketsSection({
   ptoAreaTabs,
