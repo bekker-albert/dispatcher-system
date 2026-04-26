@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } f
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import { createPtoDateFormulaModel, getPtoFormulaCellValue, ptoFormulaCellMatches, resolvePtoFormulaActiveAfterClear, resolvePtoFormulaAnchor, selectedPtoFormulaCells, togglePtoFormulaSelectionKeys, withPtoFormulaScope, type PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import {
@@ -4816,7 +4816,6 @@ export default function App() {
     const rowOffsetAt = (index: number) => rowOffsets[index] ?? virtualRowsTotalHeight;
     const tableSpacerColSpan = tableColumns.length;
     const {
-      formulaCellKey,
       formulaCellDomKey,
       formulaSelectionKey,
       formulaCellsByRowId,
@@ -4882,7 +4881,7 @@ export default function App() {
     const selectFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
       if (!ptoDateEditing) return;
 
-      const nextCell = { ...cell, table: ptoTab, year: ptoPlanYear };
+      const nextCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
       setPtoFormulaCell(nextCell);
       setPtoFormulaDraft(formatPtoFormulaNumber(value));
       setPtoInlineEditCell(null);
@@ -4894,10 +4893,8 @@ export default function App() {
     const selectFormulaRange = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
       if (!ptoDateEditing) return;
 
-      const targetCell = { ...cell, table: ptoTab, year: ptoPlanYear };
-      const anchorCell = ptoSelectionAnchorCell?.table === ptoTab && ptoSelectionAnchorCell.year === ptoPlanYear
-        ? ptoSelectionAnchorCell
-        : targetCell;
+      const targetCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
+      const anchorCell = resolvePtoFormulaAnchor(ptoSelectionAnchorCell, ptoTab, ptoPlanYear, targetCell);
 
       setPtoFormulaCell(targetCell);
       setPtoFormulaDraft(formatPtoFormulaNumber(value));
@@ -4910,7 +4907,7 @@ export default function App() {
     const toggleFormulaCell = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined) => {
       if (!ptoDateEditing) return;
 
-      const targetCell = { ...cell, table: ptoTab, year: ptoPlanYear };
+      const targetCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
       const targetKey = formulaSelectionKey(targetCell);
       const selectionScope = `${ptoTab}:${ptoPlanYear}:`;
 
@@ -4919,16 +4916,13 @@ export default function App() {
       setPtoInlineEditCell(null);
       setPtoInlineEditInitialDraft("");
       setPtoSelectionAnchorCell(targetCell);
-      setPtoSelectedCellKeys((currentKeys) => {
-        const scopedKeys = currentKeys.filter((key) => key.startsWith(selectionScope));
-        return toggleEditableGridSelectionKey(scopedKeys, targetKey);
-      });
+      setPtoSelectedCellKeys((currentKeys) => togglePtoFormulaSelectionKeys(currentKeys, selectionScope, targetKey));
     };
 
     const startInlineFormulaEdit = (cell: Omit<PtoFormulaCell, "table" | "year">, value: number | undefined, draftOverride?: string) => {
       if (!ptoDateEditing) return;
 
-      const nextCell = { ...cell, table: ptoTab, year: ptoPlanYear };
+      const nextCell = withPtoFormulaScope(cell, ptoTab, ptoPlanYear);
       const draft = draftOverride ?? formatPtoFormulaNumber(value);
       setPtoFormulaCell(nextCell);
       setPtoInlineEditCell(nextCell);
@@ -4982,12 +4976,8 @@ export default function App() {
       return false;
     };
 
-    const selectedFormulaCells = () => Array.from(selectedFormulaCellKeys)
-      .map((key) => formulaCellFromSelectionKey(key))
-      .filter((formulaCell): formulaCell is Omit<PtoFormulaCell, "table" | "year"> => formulaCell !== null);
-
     const clearSelectedFormulaCells = (fallbackCell: Omit<PtoFormulaCell, "table" | "year">) => {
-      const cellsToClear = selectedFormulaCells();
+      const cellsToClear = selectedPtoFormulaCells(selectedFormulaCellKeys, formulaCellFromSelectionKey);
       const targetCells = cellsToClear.length ? cellsToClear : [fallbackCell];
       let committed = false;
 
@@ -4997,9 +4987,7 @@ export default function App() {
 
       if (!committed) return false;
 
-      const nextActiveCell = activeFormulaCell && targetCells.some((targetCell) => formulaCellKey(targetCell) === formulaCellKey(activeFormulaCell))
-        ? activeFormulaCell
-        : { ...targetCells[0], table: ptoTab, year: ptoPlanYear };
+      const nextActiveCell = resolvePtoFormulaActiveAfterClear(activeFormulaCell, targetCells, ptoTab, ptoPlanYear);
 
       setPtoFormulaCell(nextActiveCell);
       setPtoFormulaDraft("");
@@ -5012,7 +5000,7 @@ export default function App() {
     };
 
     const collapseFormulaSelection = (fallbackCell: Omit<PtoFormulaCell, "table" | "year">) => {
-      const nextActiveCell = activeFormulaCell ?? { ...fallbackCell, table: ptoTab, year: ptoPlanYear };
+      const nextActiveCell = activeFormulaCell ?? withPtoFormulaScope(fallbackCell, ptoTab, ptoPlanYear);
 
       setPtoFormulaCell(nextActiveCell);
       setPtoInlineEditCell(null);

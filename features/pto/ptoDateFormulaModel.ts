@@ -1,5 +1,6 @@
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { PtoMonthGroupView, PtoRowDateTotals } from "@/features/pto/ptoDateTableModel";
+import { toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
 
 export type PtoFormulaCell = {
   table: string;
@@ -32,6 +33,8 @@ type PtoFormulaCellValueContext = {
   getEffectiveCarryover: (row: PtoPlanRow) => number;
   getRowDateTotals: (row: PtoPlanRow) => PtoRowDateTotals;
 };
+
+type PtoFormulaCellFromSelectionKey = (key: string) => PtoFormulaCellWithoutScope | null;
 
 function createPtoFormulaCellTemplates(
   displayMonthGroups: PtoMonthGroupView[],
@@ -190,4 +193,46 @@ export function ptoFormulaCellMatches(
     && cell.table === table
     && cell.year === year
     && (kind === "month" ? cell.month === key : kind === "day" ? cell.day === key : true);
+}
+
+export function withPtoFormulaScope(
+  cell: PtoFormulaCellWithoutScope,
+  table: string,
+  year: string,
+): PtoFormulaCell {
+  return { ...cell, table, year };
+}
+
+export function resolvePtoFormulaAnchor(
+  anchorCell: PtoFormulaCell | null,
+  table: string,
+  year: string,
+  targetCell: PtoFormulaCell,
+) {
+  return anchorCell?.table === table && anchorCell.year === year ? anchorCell : targetCell;
+}
+
+export function togglePtoFormulaSelectionKeys(currentKeys: string[], selectionScope: string, targetKey: string) {
+  const scopedKeys = currentKeys.filter((key) => key.startsWith(selectionScope));
+  return toggleEditableGridSelectionKey(scopedKeys, targetKey);
+}
+
+export function selectedPtoFormulaCells(
+  selectedKeys: Set<string>,
+  formulaCellFromSelectionKey: PtoFormulaCellFromSelectionKey,
+) {
+  return Array.from(selectedKeys)
+    .map((key) => formulaCellFromSelectionKey(key))
+    .filter((formulaCell): formulaCell is PtoFormulaCellWithoutScope => formulaCell !== null);
+}
+
+export function resolvePtoFormulaActiveAfterClear(
+  activeCell: PtoFormulaCell | null,
+  targetCells: PtoFormulaCellWithoutScope[],
+  table: string,
+  year: string,
+) {
+  return activeCell && targetCells.some((targetCell) => ptoFormulaCellKey(targetCell) === ptoFormulaCellKey(activeCell))
+    ? activeCell
+    : withPtoFormulaScope(targetCells[0], table, year);
 }
