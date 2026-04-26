@@ -3,6 +3,7 @@
 import { Check, ChevronDown, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { Fragment, startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { useHeaderSubtabsOffset } from "@/components/layout/useHeaderSubtabsOffset";
 import { ContractorsSection } from "@/features/contractors/ContractorsSection";
 import { FleetSection } from "@/features/fleet/FleetSection";
 import { FuelSection } from "@/features/fuel/FuelSection";
@@ -105,9 +106,6 @@ const defaultSubTabs = createDefaultSubTabs(Object.keys(defaultContractors));
 
 export default function App() {
   const [topTab, setTopTab] = useState<TopTab>("reports");
-  const headerNavRef = useRef<HTMLDivElement | null>(null);
-  const activeHeaderTabRef = useRef<HTMLDivElement | null>(null);
-  const headerSubtabsRef = useRef<HTMLDivElement | null>(null);
 
   const [dispatchTab, setDispatchTab] = useState("daily");
   const [fleetTab, setFleetTab] = useState("all");
@@ -210,7 +208,6 @@ export default function App() {
   const [ptoHeaderDraft, setPtoHeaderDraft] = useState("");
   const [ptoBucketValues, setPtoBucketValues] = useState<Record<string, number>>({});
   const [ptoBucketManualRows, setPtoBucketManualRows] = useState<PtoBucketRow[]>([]);
-  const [headerSubtabsOffset, setHeaderSubtabsOffset] = useState(0);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);
   const [orgMembers, setOrgMembers] = useState<OrgMember[]>(defaultOrgMembers);
   const [orgMemberForm, setOrgMemberForm] = useState<OrgMember>(defaultOrgMemberForm);
@@ -2209,6 +2206,22 @@ export default function App() {
   const lastChangeLog = adminLogs.find((log) => ["Редактирование", "Добавление", "Удаление"].includes(log.action));
   const lastUploadLog = adminLogs.find((log) => log.action === "Загрузка");
   const headerHasSubtabs = topTab === "reports" || topTab === "dispatch" || topTab === "pto" || topTab === "admin";
+  const {
+    headerNavRef,
+    activeHeaderTabRef,
+    headerSubtabsRef,
+    headerSubtabsOffset,
+  } = useHeaderSubtabsOffset({
+    headerHasSubtabs,
+    topTab,
+    adminSection,
+    dispatchTab,
+    ptoTab,
+    reportCustomerId,
+    reportCustomers,
+    dispatchSubTabs: subTabs.dispatch,
+    ptoSubTabs: subTabs.pto,
+  });
   const expandedPtoMonthsKey = Object.entries(expandedPtoMonths)
     .filter(([, expanded]) => expanded)
     .map(([month]) => month)
@@ -2235,37 +2248,6 @@ export default function App() {
     setPtoInlineEditCell(null);
     setPtoSelectedCellKeys([]);
   }, [isPtoDateTab, renderedTopTab]);
-
-  useEffect(() => {
-    if (!headerHasSubtabs) {
-      setHeaderSubtabsOffset(0);
-      return;
-    }
-
-    const measureHeaderSubtabs = () => {
-      const nav = headerNavRef.current;
-      const activeTab = activeHeaderTabRef.current;
-      const subtabs = headerSubtabsRef.current;
-      if (!nav || !activeTab || !subtabs) return;
-
-      const navRect = nav.getBoundingClientRect();
-      const activeRect = activeTab.getBoundingClientRect();
-      const subtabsRect = subtabs.getBoundingClientRect();
-      const desiredLeft = activeRect.left - navRect.left + activeRect.width / 2 - subtabsRect.width / 2;
-      const maxLeft = Math.max(0, navRect.width - subtabsRect.width);
-      const nextLeft = Math.round(Math.min(maxLeft, Math.max(0, desiredLeft)));
-
-      setHeaderSubtabsOffset((current) => (current === nextLeft ? current : nextLeft));
-    };
-
-    const frame = window.requestAnimationFrame(measureHeaderSubtabs);
-    window.addEventListener("resize", measureHeaderSubtabs);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", measureHeaderSubtabs);
-    };
-  }, [adminSection, dispatchTab, headerHasSubtabs, ptoTab, reportCustomerId, reportCustomers, subTabs.dispatch, subTabs.pto, topTab]);
 
   function selectTopTab(tab: TopTab) {
     setTopTab(tab);
