@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import type { CSSProperties } from "react";
 import { dispatchProductivity, dispatchShiftLabel, type DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
@@ -10,6 +9,32 @@ import { formatReportDate } from "@/lib/domain/reports/display";
 import { formatPtoCellNumber } from "@/lib/domain/pto/formatting";
 import { MiniIconButton } from "@/shared/ui/buttons";
 import { Field, Pill, SectionCard } from "@/shared/ui/layout";
+import {
+  blockStyle,
+  dispatchSuggestionStyle,
+  dispatchSummaryActionTdStyle,
+  dispatchSummaryBadRowStyle,
+  dispatchSummaryButtonStyle,
+  dispatchSummaryEmptyStyle,
+  dispatchSummaryHeaderStyle,
+  dispatchSummaryInputStyle,
+  dispatchSummaryNumberInputStyle,
+  dispatchSummaryNumberThStyle,
+  dispatchSummaryReadonlyNoteStyle,
+  dispatchSummaryReadonlyNumberStyle,
+  dispatchSummarySecondaryButtonStyle,
+  dispatchSummaryStatCardStyle,
+  dispatchSummaryStatsStyle,
+  dispatchSummaryTableScrollStyle,
+  dispatchSummaryTableStyle,
+  dispatchSummaryTdNumberStyle,
+  dispatchSummaryTdStyle,
+  dispatchSummaryTextareaStyle,
+  dispatchSummaryThStyle,
+  dispatchSummaryToolbarDailyStyle,
+  dispatchSummaryToolbarStyle,
+  inputStyle,
+} from "@/features/dispatch/dispatchSectionStyles";
 
 type DispatchTotals = {
   plan: number;
@@ -321,233 +346,3 @@ export default function DispatchSection({
 function dispatchNumberInputValue(value: number) {
   return value === 0 ? "" : String(value);
 }
-
-const blockStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 16,
-  padding: 16,
-  background: "#f8fafc",
-};
-
-const inputStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 14,
-  lineHeight: 1.25,
-  outline: "none",
-  padding: "12px 14px",
-};
-
-const dispatchSummaryHeaderStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 12,
-  flexWrap: "wrap",
-  marginBottom: 12,
-};
-
-const dispatchSummaryStatsStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-  gap: 8,
-  marginBottom: 12,
-};
-
-const dispatchSummaryStatCardStyle: CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: "9px 10px",
-  display: "grid",
-  gap: 4,
-  fontSize: 12,
-};
-
-const dispatchSummaryToolbarStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(240px, 360px) auto auto",
-  gap: 8,
-  alignItems: "end",
-  marginBottom: 10,
-};
-
-const dispatchSummaryToolbarDailyStyle: CSSProperties = {
-  ...dispatchSummaryToolbarStyle,
-  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(260px, 1fr)",
-};
-
-const dispatchSummaryReadonlyNoteStyle: CSSProperties = {
-  alignSelf: "stretch",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#f8fafc",
-  color: "#475569",
-  display: "flex",
-  alignItems: "center",
-  fontSize: 12,
-  fontWeight: 700,
-  lineHeight: 1.25,
-  padding: "8px 10px",
-};
-
-const dispatchSummaryButtonStyle: CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#0f172a",
-  borderRadius: 8,
-  background: "#0f172a",
-  color: "#ffffff",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
-  lineHeight: 1.2,
-  padding: "9px 10px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
-  whiteSpace: "nowrap",
-};
-
-const dispatchSummarySecondaryButtonStyle: CSSProperties = {
-  ...dispatchSummaryButtonStyle,
-  borderColor: "#cbd5e1",
-  background: "#ffffff",
-  color: "#0f172a",
-};
-
-const dispatchSuggestionStyle: CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#475569",
-  fontSize: 13,
-  lineHeight: 1.35,
-  padding: "8px 10px",
-  marginBottom: 10,
-};
-
-const dispatchSummaryTableScrollStyle: CSSProperties = {
-  overflow: "auto",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  borderRadius: 8,
-  background: "#ffffff",
-  maxHeight: "calc(100dvh - 430px)",
-  minHeight: 260,
-};
-
-const dispatchSummaryTableStyle: CSSProperties = {
-  width: "max-content",
-  minWidth: 1700,
-  borderCollapse: "collapse",
-  tableLayout: "fixed",
-  fontSize: 12,
-};
-
-const dispatchSummaryThStyle: CSSProperties = {
-  padding: "7px 8px",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  background: "#f1f5f9",
-  color: "#0f172a",
-  fontWeight: 800,
-  textAlign: "left",
-  whiteSpace: "normal",
-  overflowWrap: "normal",
-  wordBreak: "normal",
-};
-
-const dispatchSummaryNumberThStyle: CSSProperties = {
-  ...dispatchSummaryThStyle,
-  textAlign: "center",
-};
-
-const dispatchSummaryTdStyle: CSSProperties = {
-  padding: 4,
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  verticalAlign: "top",
-  background: "inherit",
-};
-
-const dispatchSummaryTdNumberStyle: CSSProperties = {
-  ...dispatchSummaryTdStyle,
-  verticalAlign: "middle",
-};
-
-const dispatchSummaryReadonlyNumberStyle: CSSProperties = {
-  ...dispatchSummaryTdStyle,
-  verticalAlign: "middle",
-  textAlign: "center",
-  fontVariantNumeric: "tabular-nums",
-  fontWeight: 700,
-};
-
-const dispatchSummaryActionTdStyle: CSSProperties = {
-  ...dispatchSummaryTdStyle,
-  verticalAlign: "middle",
-  textAlign: "center",
-  overflow: "visible",
-};
-
-const dispatchSummaryInputStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 4,
-  background: "#ffffff",
-  color: "#0f172a",
-  fontFamily: "inherit",
-  fontSize: 12,
-  lineHeight: 1.25,
-  outline: "none",
-  padding: "5px 6px",
-};
-
-const dispatchSummaryNumberInputStyle: CSSProperties = {
-  ...dispatchSummaryInputStyle,
-  textAlign: "center",
-  fontVariantNumeric: "tabular-nums",
-};
-
-const dispatchSummaryTextareaStyle: CSSProperties = {
-  ...dispatchSummaryInputStyle,
-  minHeight: 44,
-  resize: "vertical",
-};
-
-const dispatchSummaryBadRowStyle: CSSProperties = {
-  background: "#fff7ed",
-};
-
-const dispatchSummaryEmptyStyle: CSSProperties = {
-  padding: "16px 10px",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#e2e8f0",
-  color: "#64748b",
-  textAlign: "center",
-};
