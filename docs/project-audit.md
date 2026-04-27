@@ -55,6 +55,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 - `AppRoot` is now a thin composition shell instead of the owner of individual PTO, admin, vehicle, and navigation hooks.
 - PTO date table toolbar, editable header renderers, and active formula-cell scrolling were moved out of `PtoDateTableContainer`.
 - `PtoDateTableContainer` now keeps the table assembly while the reusable interaction helpers live behind PTO-owned hooks.
+- PTO editable table body was moved into `features/pto/PtoDateEditableTableBody.tsx`.
+- PTO row rendering, drag/drop handling, text cells, formula cells, and draft-row rendering are now isolated from the table container.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here

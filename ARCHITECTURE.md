@@ -136,5 +136,5 @@ Avoid large rewrites that change data shape, persistence, UI, and calculations a
 - Persistence orchestration for app settings, vehicles, and PTO is now behind app-level hooks; browser snapshot administration should continue moving out of `AppRoot` when the database admin panel is touched again.
 - Report screen props are behind `useAppReportsScreenProps`; report header editing and admin report configuration should continue moving into `features/reports`.
 - Admin section rendering is behind `AppAdminContent`; database, vehicles, and report settings props now use smaller feature-owned adapters.
-- PTO editable table shell has started moving internals into feature hooks (`usePtoDateToolbar`, `usePtoDateHeaderRenderers`, `usePtoFormulaCellScroller`). Editable row/body rendering is still the next split point when PTO table behavior is touched again.
+- PTO editable table shell has started moving internals into feature hooks (`usePtoDateToolbar`, `usePtoDateHeaderRenderers`, `usePtoFormulaCellScroller`) and `PtoDateEditableTableBody`. Row-level behavior can be split further when the next PTO editing task touches drag/drop or formula cells.
 - Future heavy tabs such as bodies, performance, and cycle must follow the PTO/Buckets pattern: feature component, domain model, virtualization if table-like, view mode by default, edit mode behind an explicit action.
