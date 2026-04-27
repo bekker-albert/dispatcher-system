@@ -4,8 +4,8 @@ import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { reportRowKey } from "@/lib/domain/reports/display";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
-import { normalizeLookupValue } from "@/lib/utils/text";
 import { IconButton, MiniIconButton } from "@/shared/ui/buttons";
+import { buildAdminReportSummaryRowModel } from "./summarySettingsViewModel";
 
 type SummaryUpdateField = Exclude<keyof ReportSummaryRowConfig, "id" | "rowKeys">;
 
@@ -57,23 +57,22 @@ export default function AdminReportSummarySettings({
       ) : null}
 
       {customer.summaryRows.map((summary) => {
-        const hasStoredArea = areaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
-        const visibleSummaryArea = hasStoredArea ? summary.area : areaOptions[0] ?? summary.area;
-        const summaryAreaRows = rowsForArea(visibleSummaryArea);
-        const selectedSummaryRows = summaryAreaRows.filter((row) => summary.rowKeys.includes(reportRowKey(row)));
-        const summaryExpanded = expandedIds.includes(summary.id);
-        const selectedSummaryLabels = selectedSummaryRows.map((row) => {
-          const rowKey = reportRowKey(row);
-          return customer.rowLabels[rowKey]?.trim() || row.name;
+        const {
+          hasStoredArea,
+          visibleSummaryArea,
+          summaryAreaRows,
+          selectedSummaryRows,
+          summaryExpanded,
+          selectedSummaryText,
+          selectedPlanRow,
+          selectedPlanText,
+        } = buildAdminReportSummaryRowModel({
+          customer,
+          summary,
+          areaOptions,
+          expandedIds,
+          rowsForArea,
         });
-        const selectedSummaryText = selectedSummaryLabels.length > 0 ? selectedSummaryLabels.join(" + ") : "Строки не выбраны.";
-        const selectedPlanRow = summary.planRowKey
-          ? summaryAreaRows.find((row) => reportRowKey(row) === summary.planRowKey)
-          : undefined;
-        const selectedPlanText = selectedPlanRow
-          ? customer.rowLabels[reportRowKey(selectedPlanRow)]?.trim() || selectedPlanRow.name
-          : "Авто: сумма выбранных строк";
-
         return (
           <div key={summary.id} style={summaryCardStyle}>
             <div style={summaryFormStyle}>
