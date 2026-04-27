@@ -49,6 +49,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 - Dispatch filters, row editing callbacks, totals, and shift context now stay behind one dispatch-owned adapter.
 - PTO screen prop assembly was moved out of the common screen adapter into `features/app/useAppPtoScreenProps.ts`.
 - PTO date table, year/month controls, bucket table, import/export, and row editing wiring now stays behind one PTO-owned adapter.
+- Admin database, vehicles, and report settings props were moved out of `useAppAdminScreenProps.tsx` into dedicated admin adapter hooks.
+- `useAppAdminScreenProps.tsx` now only coordinates admin content, structure, navigation, logs, and the already prepared admin feature props.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here
