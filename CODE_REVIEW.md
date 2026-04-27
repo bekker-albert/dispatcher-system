@@ -41,6 +41,7 @@ Use this checklist before every commit.
 Run these when code changes affect TypeScript, React, domain logic, persistence, or build output:
 
 ```powershell
+npm run refactor:audit
 npm run verify
 git diff --check
 git status --ignored --short .env.local .env.example

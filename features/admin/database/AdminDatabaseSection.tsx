@@ -41,6 +41,11 @@ export default function AdminDatabaseSection({
   onRefreshSnapshots,
   onRestoreSnapshot,
 }: AdminDatabaseSectionProps) {
+  const saveModeTitle = databaseConfigured ? "Данные сохраняются на сервер" : "Данные сохраняются только в браузере";
+  const saveModeText = databaseConfigured
+    ? "ПТО, техника, настройки отчетности и общие данные отправляются в базу. Если сохранение не пройдет, сверху появится уведомление с причиной."
+    : "База не настроена. Изменения видны только на этом компьютере и могут не появиться у других пользователей.";
+
   return (
     <div style={sectionStyle}>
       <div style={headerStyle}>
@@ -83,6 +88,10 @@ export default function AdminDatabaseSection({
         {message ? (
           <div style={{ color: "#475569", marginTop: 10, fontSize: 13 }}>{message}</div>
         ) : null}
+        <div style={saveInfoStyle}>
+          <div style={saveInfoTitleStyle}>{saveModeTitle}</div>
+          <div style={saveInfoTextStyle}>{saveModeText}</div>
+        </div>
       </div>
 
       <div style={tableScrollStyle}>
@@ -176,6 +185,25 @@ const summaryNoteStyle: CSSProperties = {
   color: "#64748b",
   fontSize: 12,
   marginTop: 4,
+};
+
+const saveInfoStyle: CSSProperties = {
+  borderTop: "1px solid #e2e8f0",
+  marginTop: 12,
+  paddingTop: 12,
+};
+
+const saveInfoTitleStyle: CSSProperties = {
+  color: "#0f172a",
+  fontSize: 13,
+  fontWeight: 800,
+  marginBottom: 4,
+};
+
+const saveInfoTextStyle: CSSProperties = {
+  color: "#475569",
+  fontSize: 13,
+  lineHeight: 1.4,
 };
 
 const tableScrollStyle: CSSProperties = {

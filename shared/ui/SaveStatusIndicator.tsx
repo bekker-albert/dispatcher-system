@@ -15,6 +15,7 @@ type SaveStatusIndicatorProps = {
 export function SaveStatusIndicator({ status, onClose }: SaveStatusIndicatorProps) {
   if (status.kind === "idle") return null;
 
+  const statusLabel = saveStatusLabels[status.kind];
   const kindStyle = status.kind === "error"
     ? saveStatusErrorStyle
     : status.kind === "saving"
@@ -22,14 +23,28 @@ export function SaveStatusIndicator({ status, onClose }: SaveStatusIndicatorProp
       : saveStatusSavedStyle;
 
   return (
-    <div className="app-save-status" aria-live="polite" style={{ ...saveStatusIndicatorStyle, ...kindStyle }}>
-      <span>{status.message}</span>
+    <div
+      className="app-save-status"
+      role={status.kind === "error" ? "alert" : "status"}
+      aria-live={status.kind === "error" ? "assertive" : "polite"}
+      style={{ ...saveStatusIndicatorStyle, ...kindStyle }}
+    >
+      <div style={saveStatusMessageStyle}>
+        <span style={saveStatusLabelStyle}>{statusLabel}</span>
+        <span>{status.message}</span>
+      </div>
       <button type="button" aria-label="Закрыть уведомление" onClick={onClose} style={saveStatusCloseButtonStyle}>
         ×
       </button>
     </div>
   );
 }
+
+const saveStatusLabels: Record<Exclude<SaveStatusState["kind"], "idle">, string> = {
+  saving: "Идет сохранение",
+  saved: "Готово",
+  error: "Ошибка",
+};
 
 const saveStatusIndicatorStyle: CSSProperties = {
   position: "fixed",
@@ -48,6 +63,20 @@ const saveStatusIndicatorStyle: CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
   lineHeight: 1.25,
+};
+
+const saveStatusMessageStyle: CSSProperties = {
+  display: "grid",
+  gap: 2,
+  minWidth: 0,
+};
+
+const saveStatusLabelStyle: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 800,
+  lineHeight: 1.1,
+  opacity: 0.82,
+  textTransform: "uppercase",
 };
 
 const saveStatusCloseButtonStyle: CSSProperties = {
