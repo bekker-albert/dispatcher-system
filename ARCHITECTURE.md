@@ -13,7 +13,7 @@ The repository already has the right high-level direction:
 - `shared/` contains reusable UI and editable-grid helpers.
 - `tests/domain-checks.ts` provides fast domain-level regression checks.
 
-The remaining main architectural problem is `features/app/AppRoot.tsx`: it still owns too much orchestration and render composition, but table editing, persistence, primary-section rendering, admin-section rendering, and PTO section props are moving behind named `features/app/*` hooks/components. New work must not move product logic back into `app/page.tsx`.
+The remaining main architectural problem is `features/app/AppRoot.tsx`: it still owns app-level orchestration order, but runtime controllers, derived screen models, screen props, table editing, persistence, primary-section rendering, admin-section rendering, and PTO section props are now behind named `features/app/*` hooks/components. New work must not move product logic back into `app/page.tsx`.
 
 ## Target Structure
 
@@ -132,7 +132,7 @@ Avoid large rewrites that change data shape, persistence, UI, and calculations a
 
 ## Technical Debt Register
 
-- `features/app/AppRoot.tsx` remains too large and must be reduced progressively; recent extractions moved report, dispatch, PTO date/supplemental, derived screen models, runtime controllers, PTO persistence, shared persistence, PTO section props, vehicle editing/view, primary content, admin content, and page-shell wiring into named app hooks/components.
+- `features/app/AppRoot.tsx` remains an app-level orchestration shell; recent extractions moved report, dispatch, PTO date/supplemental, screen props, derived screen models, runtime controllers, PTO persistence, shared persistence, PTO section props, vehicle editing/view, primary content, admin content, and page-shell wiring into named app hooks/components.
 - Persistence orchestration for app settings, vehicles, and PTO is now behind app-level hooks; browser snapshot administration should continue moving out of `AppRoot` when the database admin panel is touched again.
 - Report header editing and admin report configuration should continue moving into `features/reports`.
 - Admin section rendering is behind `AppAdminContent`, but the large admin props mapping should continue moving into smaller feature-owned adapters.

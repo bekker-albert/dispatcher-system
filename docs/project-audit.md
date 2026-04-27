@@ -39,6 +39,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 - `AppRoot` now delegates undo, initial data loading, PTO persistence, shared persistence, report reason editing, header editing, and table resize wiring to a named app-level hook.
 - Derived screen models were moved out of `AppRoot` into `features/app/useAppDerivedModels.ts`.
 - `AppRoot` now delegates report, PTO, vehicle, dispatch, and fleet model calculation to a named app-level hook.
+- Screen prop assembly was moved out of `AppRoot` into `features/app/useAppScreenProps.tsx`.
+- `AppRoot` now renders the header and primary content from prepared props instead of manually wiring every section.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here
