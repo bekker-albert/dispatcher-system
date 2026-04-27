@@ -12,6 +12,8 @@
     "refactor:audit": "node scripts/refactor-audit.mjs",
     "refactor:agent": "npm run refactor:audit && npm run check:project",
     "refactor:ai": "node scripts/refactor-ai-agent.mjs",
+    "refactor:ai:plan": "node scripts/refactor-ai-agent.mjs --mode plan",
+    "refactor:ai:review": "node scripts/refactor-ai-agent.mjs --mode review --include-diff",
     "migrate:supabase-to-mysql": "jiti scripts/migrate-supabase-to-mysql.ts",
     "verify": "npm run lint && npm run build && npm run check:domain && npm run check:project"
   },

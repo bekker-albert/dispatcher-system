@@ -50,7 +50,13 @@ git status --ignored --short .env.local .env.example
 For larger architecture tasks, run the AI review agent before coding:
 
 ```powershell
-npm run refactor:ai -- --task "Describe the area to review"
+npm run refactor:ai -- --mode plan --target path/to/file.tsx --task "Describe the area to review"
+```
+
+After a risky refactor, review the current diff before committing:
+
+```powershell
+npm run refactor:ai -- --mode review --include-diff --task "Review current refactor diff"
 ```
 
 If a check was not run, the final response must say why.
