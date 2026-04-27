@@ -7,7 +7,7 @@ import { useAppAdminScreenProps } from "@/features/app/useAppAdminScreenProps";
 import type { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import type { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
-import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
+import { useAppDispatchScreenProps } from "@/features/app/useAppDispatchScreenProps";
 import { useAppHeaderProps } from "@/features/app/useAppHeaderProps";
 import type { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import type { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
@@ -78,8 +78,6 @@ export function useAppScreenProps({
     setTbTab,
     adminSection,
     setAdminSection,
-    dispatchVehicleToAddId,
-    setDispatchVehicleToAddId,
     draggedPtoRowId,
     setDraggedPtoRowId,
     ptoDropTarget,
@@ -131,10 +129,6 @@ export function useAppScreenProps({
     selectReportDate,
     ptoDatabaseMessage,
     ptoDatabaseReady,
-    areaFilter,
-    setAreaFilter,
-    search,
-    setSearch,
     selectTopTab,
     selectPtoTab,
     selectPtoPlanYear,
@@ -149,22 +143,6 @@ export function useAppScreenProps({
     ptoMonthGroups,
     ptoAreaTabs,
     ptoDateOptionMaps,
-    currentDispatchShift,
-    isDailyDispatchShift,
-    dispatchAreaOptions,
-    dispatchVehicleOptions,
-    dispatchLocationOptions,
-    dispatchWorkTypeOptions,
-    dispatchExcavatorOptions,
-    filteredDispatchSummaryRows,
-    dispatchSummaryTotals,
-    dispatchAiSuggestion,
-    addSelectedDispatchVehicle,
-    addFilteredVehiclesToDispatchSummary,
-    updateDispatchSummaryText,
-    updateDispatchSummaryNumber,
-    updateDispatchSummaryVehicle,
-    deleteDispatchSummaryRow,
     filteredFleet,
   } = models;
 
@@ -187,7 +165,6 @@ export function useAppScreenProps({
     headerHasSubtabs,
     headerSubtabsOffset,
     activeCustomTab,
-    activeDispatchSubtab,
     activePtoSubtab,
   } = navigation;
 
@@ -332,32 +309,10 @@ export function useAppScreenProps({
     runtime,
   });
 
-  const dispatchSectionProps = useAppDispatchSectionProps({
-    activeDispatchSubtab,
-    dispatchTab,
-    reportDate,
-    isDailyDispatchShift,
-    currentDispatchShift,
-    dispatchSummaryTotals,
-    search,
-    setSearch,
-    areaFilter,
-    setAreaFilter,
-    dispatchAreaOptions,
-    dispatchVehicleToAddId,
-    setDispatchVehicleToAddId,
-    dispatchVehicleOptions,
-    addSelectedDispatchVehicle,
-    addFilteredVehiclesToDispatchSummary,
-    dispatchAiSuggestion,
-    filteredDispatchSummaryRows,
-    updateDispatchSummaryVehicle,
-    updateDispatchSummaryText,
-    updateDispatchSummaryNumber,
-    deleteDispatchSummaryRow,
-    dispatchLocationOptions,
-    dispatchWorkTypeOptions,
-    dispatchExcavatorOptions,
+  const dispatchSectionProps = useAppDispatchScreenProps({
+    appState,
+    models,
+    navigation,
   });
 
   const adminContent = useAppAdminScreenProps({
