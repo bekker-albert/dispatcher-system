@@ -53,6 +53,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 - `useAppAdminScreenProps.tsx` now only coordinates admin content, structure, navigation, logs, and the already prepared admin feature props.
 - Feature controller wiring was moved out of `AppRoot` into `features/app/useAppFeatureControllers.ts`.
 - `AppRoot` is now a thin composition shell instead of the owner of individual PTO, admin, vehicle, and navigation hooks.
+- PTO date table toolbar, editable header renderers, and active formula-cell scrolling were moved out of `PtoDateTableContainer`.
+- `PtoDateTableContainer` now keeps the table assembly while the reusable interaction helpers live behind PTO-owned hooks.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here

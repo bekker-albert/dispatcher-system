@@ -1,22 +1,20 @@
 ﻿"use client";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
-import type { CSSProperties } from "react";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
 import { PtoDateAreaCell } from "@/features/pto/PtoDateAreaCell";
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateFormulaCells } from "@/features/pto/PtoDateFormulaCells";
 import { PtoDateTextCells } from "@/features/pto/PtoDateTextCells";
-import { PtoCustomerCodeCell, PtoEditableHeaderText, PtoEditableMonthHeader, PtoFormulaBar, PtoPlanTd, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
+import { PtoCustomerCodeCell, PtoFormulaBar, PtoPlanTd, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
 import { PtoDateDraftRow } from "@/features/pto/PtoDateDraftRow";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
-import { PtoDateToolbarPanel } from "@/features/pto/PtoDateToolbarPanel";
 import { usePtoDateFormulaController } from "@/features/pto/ptoDateFormulaController";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 import { createPtoDateTableViewModel } from "@/features/pto/ptoDateTableViewModel";
 import { createPtoDateVirtualRowsViewModel } from "@/features/pto/ptoDateVirtualRowsViewModel";
-import { usePtoDateEditingToggle } from "@/features/pto/usePtoDateEditingToggle";
+import { usePtoDateHeaderRenderers } from "@/features/pto/usePtoDateHeaderRenderers";
+import { usePtoDateToolbar } from "@/features/pto/usePtoDateToolbar";
 import { usePtoDraftRowController } from "@/features/pto/usePtoDraftRowController";
+import { usePtoFormulaCellScroller } from "@/features/pto/usePtoFormulaCellScroller";
 import {
   ptoDateTableLayoutStyle,
   ptoDateTableScrollStyle,
@@ -25,7 +23,6 @@ import {
 } from "@/features/pto/ptoDateTableStyles";
 import { ptoAutomatedStatus, ptoRowFieldDomKey, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
 import { formatPtoFormulaNumber } from "@/lib/domain/pto/formatting";
-import { ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 import { cleanAreaName, normalizeLookupValue } from "@/lib/utils/text";
 
 export function PtoDateTableContainer({
@@ -136,45 +133,39 @@ export function PtoDateTableContainer({
       ptoDateEditing,
       ptoColumnWidths,
     });
-    const togglePtoDateEditing = usePtoDateEditingToggle({
+    const ptoDateToolbar = usePtoDateToolbar({
+      addPtoYear,
+      currentPtoDateExcelMeta,
+      deletePtoYear,
+      exportPtoDateTableToExcel,
+      importPtoDateTableFromExcel,
+      openPtoDateImportFilePicker,
+      ptoAreaFilter,
+      ptoAreaTabs,
       ptoDateEditing,
-      setPtoDateEditing,
+      ptoPlanImportInputRef,
+      ptoPlanYear,
+      ptoTab,
+      ptoYearDialogOpen,
+      ptoYearInput,
+      ptoYearTabs,
+      requestPtoDatabaseSave,
+      savePtoDatabaseChanges,
+      savePtoLocalState,
+      selectPtoArea,
+      selectPtoPlanYear,
       setDraggedPtoRowId,
+      setPtoDateEditing,
       setPtoDropTarget,
       setPtoFormulaCell,
       setPtoFormulaDraft,
       setPtoInlineEditCell,
       setPtoInlineEditInitialDraft,
-      setPtoSelectionAnchorCell,
       setPtoSelectedCellKeys,
-      savePtoLocalState,
-      requestPtoDatabaseSave,
-      savePtoDatabaseChanges,
+      setPtoSelectionAnchorCell,
+      setPtoYearDialogOpen,
+      setPtoYearInput,
     });
-    const ptoDateToolbar = (
-      <PtoDateToolbarPanel
-        ptoAreaTabs={ptoAreaTabs}
-        ptoAreaFilter={ptoAreaFilter}
-        selectPtoArea={selectPtoArea}
-        ptoTab={ptoTab}
-        ptoDateEditing={ptoDateEditing}
-        exportPtoDateTableToExcel={exportPtoDateTableToExcel}
-        openPtoDateImportFilePicker={openPtoDateImportFilePicker}
-        importPtoDateTableFromExcel={importPtoDateTableFromExcel}
-        ptoPlanImportInputRef={ptoPlanImportInputRef}
-        ptoYearTabs={ptoYearTabs}
-        ptoPlanYear={ptoPlanYear}
-        selectPtoPlanYear={selectPtoPlanYear}
-        deletePtoYear={deletePtoYear}
-        ptoYearDialogOpen={ptoYearDialogOpen}
-        ptoYearInput={ptoYearInput}
-        setPtoYearInput={setPtoYearInput}
-        setPtoYearDialogOpen={setPtoYearDialogOpen}
-        addPtoYear={addPtoYear}
-        excelLabel={currentPtoDateExcelMeta().label}
-        onToggleEditing={togglePtoDateEditing}
-      />
-    );
     const {
       updateDraftField: updatePtoDraftField,
       handleDraftKeyDown: handlePtoDraftKeyDown,
@@ -206,26 +197,14 @@ export function PtoDateTableContainer({
     });
     const ptoColumnResizeHandler = ptoDateEditing ? startPtoColumnResize : undefined;
     const tableSpacerColSpan = tableColumns.length;
-    const scrollFormulaCellIntoView = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
-      if (!ptoDateEditing) return;
-
-      const scrollElement = ptoDateTableScrollRef.current;
-      const rowIndex = filteredRows.findIndex((row) => row.id === cell.rowId);
-      if (!scrollElement || rowIndex < 0) return;
-
-      const rowTop = ptoDateVirtualHeaderOffset + rowOffsetAt(rowIndex);
-      const rowBottom = rowTop + (filteredRowHeights[rowIndex] ?? ptoDateVirtualDefaultRowHeight);
-      const viewTop = scrollElement.scrollTop;
-      const viewBottom = viewTop + scrollElement.clientHeight;
-
-      if (rowTop < viewTop + 24) {
-        scrollElement.scrollTop = Math.max(0, rowTop - 24);
-      } else if (rowBottom > viewBottom - 24) {
-        scrollElement.scrollTop = Math.max(0, rowBottom - scrollElement.clientHeight + 48);
-      }
-
-      updatePtoDateViewportFromElement(scrollElement);
-    };
+    const scrollFormulaCellIntoView = usePtoFormulaCellScroller({
+      filteredRows,
+      filteredRowHeights,
+      ptoDateEditing,
+      ptoDateTableScrollRef,
+      rowOffsetAt,
+      updatePtoDateViewportFromElement,
+    });
     const {
       activeFormulaCell,
       activeFormulaValue,
@@ -277,6 +256,22 @@ export function PtoDateTableContainer({
       scrollFormulaCellIntoView,
     });
 
+    const {
+      renderPtoHeaderText,
+      renderPtoMonthHeader,
+    } = usePtoDateHeaderRenderers({
+      cancelPtoHeaderEdit,
+      commitPtoHeaderEdit,
+      editingPtoHeaderKey,
+      ptoDateEditing,
+      ptoHeaderDraft,
+      ptoHeaderLabel,
+      requestPtoDatabaseSave,
+      setExpandedPtoMonths,
+      setPtoHeaderDraft,
+      startPtoHeaderEdit,
+    });
+
     if (!ptoDateEditing) {
       return (
         <PtoDateReadonlyTable
@@ -304,49 +299,6 @@ export function PtoDateTableContainer({
         />
       );
     }
-
-    const renderPtoHeaderText = (key: string, fallback: string, align: CSSProperties["textAlign"] = "left") => {
-      return (
-        <PtoEditableHeaderText
-          columnKey={key}
-          fallback={fallback}
-          label={ptoHeaderLabel(key, fallback)}
-          align={align}
-          editing={editingPtoHeaderKey === key}
-          editingEnabled={ptoDateEditing}
-          draft={ptoHeaderDraft}
-          onDraftChange={setPtoHeaderDraft}
-          onStartEdit={startPtoHeaderEdit}
-          onCommit={commitPtoHeaderEdit}
-          onCancel={cancelPtoHeaderEdit}
-        />
-      );
-    };
-
-    const renderPtoMonthHeader = (month: string, fallback: string, expanded: boolean) => {
-      const key = `month-group:${month}`;
-
-      return (
-        <PtoEditableMonthHeader
-          columnKey={key}
-          fallback={fallback}
-          label={ptoHeaderLabel(key, fallback)}
-          editing={editingPtoHeaderKey === key}
-          editingEnabled={ptoDateEditing}
-          draft={ptoHeaderDraft}
-          expanded={expanded}
-          icon={expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
-          onDraftChange={setPtoHeaderDraft}
-          onStartEdit={startPtoHeaderEdit}
-          onCommit={commitPtoHeaderEdit}
-          onCancel={cancelPtoHeaderEdit}
-          onToggle={() => {
-            setExpandedPtoMonths((current) => ({ ...current, [month]: !current[month] }));
-            requestPtoDatabaseSave();
-          }}
-        />
-      );
-    };
 
     return (
       <div style={ptoDateTableLayoutStyle}>
