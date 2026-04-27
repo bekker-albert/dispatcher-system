@@ -10,10 +10,13 @@ import {
   togglePtoFormulaSelectionKeys,
   withPtoFormulaScope,
   type PtoFormulaCell,
+  type PtoFormulaCellWithoutScope,
 } from "@/features/pto/ptoDateFormulaModel";
+import { commitPtoFormulaCellValue } from "@/features/pto/ptoFormulaCellCommit";
+import { focusPtoFormulaCell } from "@/features/pto/ptoFormulaCellFocus";
 import type { PtoMonthGroupView, PtoRowDateTotals } from "@/features/pto/ptoDateTableModel";
 import type { PtoDateTableContainerProps, PtoRowsSetter } from "@/features/pto/ptoDateTableTypes";
-import { formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "@/lib/domain/pto/formatting";
+import { formatPtoFormulaNumber, parseDecimalValue } from "@/lib/domain/pto/formatting";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { isEditableGridArrowKey } from "@/shared/editable-grid/selection";
 
@@ -52,8 +55,6 @@ type PtoDateFormulaControllerOptions = Pick<
   getRowDateTotals: (row: PtoPlanRow) => PtoRowDateTotals;
   scrollFormulaCellIntoView: (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => void;
 };
-
-type PtoFormulaCellWithoutScope = Omit<PtoFormulaCell, "table" | "year">;
 
 function createFormulaValueContext({
   rowById,
@@ -214,53 +215,19 @@ export function usePtoDateFormulaController({
   const formulaCellEditing = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
     ptoFormulaCellMatches(activeInlineEditCell, ptoTab, ptoPlanYear, rowId, kind, key)
   );
-  const focusFormulaCell = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => {
-    const focusTarget = () => {
-      const target = document.querySelector<HTMLInputElement>(`[data-pto-cell-key="${formulaCellDomKey(cell)}"]`);
-      if (!target) return false;
-
-      target.focus();
-      return true;
-    };
-
-    window.requestAnimationFrame(() => {
-      const focused = focusTarget();
-      if (focused) return;
-
-      scrollFormulaCellIntoView(cell);
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(focusTarget);
-      });
-    });
-  };
-
 
   const commitFormulaCellValue = (cell: PtoFormulaCell, value: string) => {
-    if (!ptoDateEditing) return false;
-    if (cell.editable === false) return false;
-    if (value.trim() !== "" && parseDecimalInput(value) === null) return false;
-
-    if (cell.kind === "carryover") {
-      if (value.trim() === "") {
-        clearPtoCarryoverOverride(setRows as PtoRowsSetter, cell.rowId, ptoPlanYear);
-        return true;
-      }
-
-      updatePtoDateRow(setRows as PtoRowsSetter, cell.rowId, "carryover", value);
-      return true;
-    }
-
-    if (cell.kind === "month" && cell.days) {
-      updatePtoMonthTotal(setRows as PtoRowsSetter, cell.rowId, cell.days, value);
-      return true;
-    }
-
-    if (cell.kind === "day" && cell.day) {
-      updatePtoDateDay(setRows as PtoRowsSetter, cell.rowId, cell.day, value);
-      return true;
-    }
-
-    return false;
+    return commitPtoFormulaCellValue({
+      ptoDateEditing,
+      cell,
+      value,
+      setRows: setRows as PtoRowsSetter,
+      ptoPlanYear,
+      clearPtoCarryoverOverride,
+      updatePtoDateRow,
+      updatePtoDateDay,
+      updatePtoMonthTotal,
+    });
   };
 
   const clearSelectedFormulaCells = (fallbackCell: PtoFormulaCellWithoutScope) => {
@@ -344,7 +311,7 @@ export function usePtoDateFormulaController({
 
     if (!nextCell) return;
     selectFormulaCell(nextCell, getPtoFormulaCellValue(nextCell, formulaValueContext));
-    focusFormulaCell(nextCell);
+    focusPtoFormulaCell({ cell: nextCell, formulaCellDomKey, scrollFormulaCellIntoView });
   };
 
   const handleFormulaCellKeyDown = (event: KeyboardEvent<HTMLInputElement>, cell: PtoFormulaCellWithoutScope, value: number | undefined, isEditing: boolean) => {

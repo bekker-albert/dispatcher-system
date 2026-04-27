@@ -3,7 +3,7 @@
 import { Fragment, type KeyboardEvent, type MouseEvent, type RefObject } from "react";
 import { PtoDateFormulaInput } from "@/features/pto/PtoDateFormulaInput";
 import { PtoPlanTd, PtoReadonlyNumberCell } from "@/features/pto/PtoDateTableParts";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell, PtoFormulaCellWithoutScope } from "@/features/pto/ptoDateFormulaModel";
 import type { PtoMonthGroupView, PtoRowDateTotals } from "@/features/pto/ptoDateTableModel";
 import {
   ptoCompactNumberInputStyle,
@@ -13,8 +13,6 @@ import {
 } from "@/features/pto/ptoDateTableStyles";
 import { formatPtoCellNumber, formatPtoFormulaNumber } from "@/lib/domain/pto/formatting";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-
-type PtoFormulaCellWithoutScope = Omit<PtoFormulaCell, "table" | "year">;
 
 type PtoDateFormulaCellsProps = {
   row: PtoPlanRow;
