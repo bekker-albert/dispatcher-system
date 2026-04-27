@@ -51,6 +51,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 - PTO date table, year/month controls, bucket table, import/export, and row editing wiring now stays behind one PTO-owned adapter.
 - Admin database, vehicles, and report settings props were moved out of `useAppAdminScreenProps.tsx` into dedicated admin adapter hooks.
 - `useAppAdminScreenProps.tsx` now only coordinates admin content, structure, navigation, logs, and the already prepared admin feature props.
+- Feature controller wiring was moved out of `AppRoot` into `features/app/useAppFeatureControllers.ts`.
+- `AppRoot` is now a thin composition shell instead of the owner of individual PTO, admin, vehicle, and navigation hooks.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here
