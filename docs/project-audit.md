@@ -41,6 +41,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 - `AppRoot` now delegates report, PTO, vehicle, dispatch, and fleet model calculation to a named app-level hook.
 - Screen prop assembly was moved out of `AppRoot` into `features/app/useAppScreenProps.tsx`.
 - `AppRoot` now renders the header and primary content from prepared props instead of manually wiring every section.
+- Admin screen prop assembly was moved out of the common screen adapter into `features/app/useAppAdminScreenProps.tsx`.
+- Admin navigation, vehicle, database, log, and report settings wiring now stays behind one admin-owned adapter.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here
