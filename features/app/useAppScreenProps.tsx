@@ -13,7 +13,7 @@ import type { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
 import type { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoSectionProps } from "@/features/app/useAppPtoSectionProps";
 import type { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
-import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionProps";
+import { useAppReportsScreenProps } from "@/features/app/useAppReportsScreenProps";
 import type { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
 import type { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
@@ -105,12 +105,9 @@ export function useAppScreenProps({
     setPtoDraftRowFields,
     ptoSelectionDraggingRef,
     ptoPlanImportInputRef,
-    reportArea,
-    setReportArea,
     reportCustomerId,
     setReportCustomerId,
     reportCustomers,
-    reportReasons,
     ptoPlanYear,
     setPtoYearInput,
     ptoYearInput,
@@ -146,14 +143,6 @@ export function useAppScreenProps({
 
   const {
     renderedTopTab,
-    activeReportCustomer,
-    reportAreaTabs,
-    filteredReports,
-    filteredReportAreaGroups,
-    visibleReportColumnKeys,
-    reportTableColumnWidths,
-    reportColumnWidthByKey,
-    reportCompletionCards,
     isPtoDateTab,
     ptoYearTabs,
     ptoYearMonths,
@@ -183,21 +172,11 @@ export function useAppScreenProps({
     savePtoDatabaseChanges,
     requestPtoDatabaseSave,
     savePtoLocalState,
-    commitReportDayReason,
-    cancelReportDayReasonDraft,
-    updateReportDayReasonDraft,
-    commitReportYearReason,
-    cancelReportYearReasonDraft,
-    updateReportYearReasonDraft,
     cancelPtoHeaderEdit,
     commitPtoHeaderEdit,
-    printReport,
     ptoHeaderLabel,
-    reportHeaderLabel,
-    renderReportHeaderText,
     startPtoHeaderEdit,
     startPtoColumnResize,
-    startReportColumnResize,
     startPtoRowResize,
   } = runtime;
 
@@ -347,29 +326,10 @@ export function useAppScreenProps({
     cancelPtoHeaderEdit,
   });
 
-  const reportsSectionProps = useAppReportsSectionProps({
-    reportAreaTabs,
-    reportArea,
-    setReportArea,
-    printReport,
-    activeReportCustomer,
-    reportDate,
-    reportCompletionCards,
-    reportTableColumnWidths,
-    visibleReportColumnKeys,
-    reportColumnWidthByKey,
-    reportHeaderLabel,
-    renderReportHeaderText,
-    startReportColumnResize,
-    filteredReportAreaGroups,
-    filteredReports,
-    reportReasons,
-    commitReportDayReason,
-    cancelReportDayReasonDraft,
-    updateReportDayReasonDraft,
-    commitReportYearReason,
-    cancelReportYearReasonDraft,
-    updateReportYearReasonDraft,
+  const reportsSectionProps = useAppReportsScreenProps({
+    appState,
+    models,
+    runtime,
   });
 
   const dispatchSectionProps = useAppDispatchSectionProps({
