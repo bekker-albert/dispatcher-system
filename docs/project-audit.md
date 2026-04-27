@@ -37,6 +37,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 
 - Runtime side effects and controllers were moved out of `AppRoot` into `features/app/useAppRuntimeControllers.ts`.
 - `AppRoot` now delegates undo, initial data loading, PTO persistence, shared persistence, report reason editing, header editing, and table resize wiring to a named app-level hook.
+- Derived screen models were moved out of `AppRoot` into `features/app/useAppDerivedModels.ts`.
+- `AppRoot` now delegates report, PTO, vehicle, dispatch, and fleet model calculation to a named app-level hook.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here

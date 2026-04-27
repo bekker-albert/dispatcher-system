@@ -9,24 +9,18 @@ import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProp
 import { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import { useAppAdminReportsProps } from "@/features/app/useAppAdminReportsProps";
 import { useAppAdminVehiclesProps } from "@/features/app/useAppAdminVehiclesProps";
-import { useAppDeferredData } from "@/features/app/useAppDeferredData";
+import { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
 import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
-import { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppHeaderProps } from "@/features/app/useAppHeaderProps";
 import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppPtoDateEditing } from "@/features/app/useAppPtoDateEditing";
-import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import { useAppPtoDateViewport } from "@/features/app/useAppPtoDateViewport";
 import { useAppPtoSectionProps } from "@/features/app/useAppPtoSectionProps";
 import { useAppPtoSupplementalTables } from "@/features/app/useAppPtoSupplementalTables";
 import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionProps";
-import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
 import { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
-import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
-import { useFleetRows } from "@/features/fleet/useFleetRows";
-import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { databaseConfigured } from "@/lib/data/config";
 
@@ -59,16 +53,11 @@ export default function App() {
     setStructureSection,
     adminSection,
     setAdminSection,
-    dispatchSummaryRows,
-    setDispatchSummaryRows,
     dispatchVehicleToAddId,
     setDispatchVehicleToAddId,
     adminVehiclesEditing,
     setAdminVehiclesEditing,
-    showAllVehicleRows,
     setShowAllVehicleRows,
-    vehiclePreviewRowLimit,
-    setVehiclePreviewRowLimit,
     vehicleRows,
     setVehicleRows,
     vehicleFilters,
@@ -132,22 +121,15 @@ export default function App() {
     setReportArea,
     reportCustomerId,
     setReportCustomerId,
-    adminReportCustomerId,
     setAdminReportCustomerId,
-    adminReportCustomerSettingsTab,
     setAdminReportCustomerSettingsTab,
     editingReportRowLabelKeys,
     setEditingReportRowLabelKeys,
     expandedReportSummaryIds,
     setExpandedReportSummaryIds,
-    editingReportFactSourceRowKey,
     setEditingReportFactSourceRowKey,
     reportCustomers,
     setReportCustomers,
-    reportAreaOrder,
-    reportWorkOrder,
-    reportHeaderLabels,
-    reportColumnWidths,
     reportReasons,
     areaShiftCutoffs,
     ptoPlanYear,
@@ -156,7 +138,6 @@ export default function App() {
     setPtoYearInput,
     ptoYearDialogOpen,
     setPtoYearDialogOpen,
-    ptoManualYears,
     setPtoManualYears,
     ptoAreaFilter,
     expandedPtoMonths,
@@ -252,27 +233,8 @@ export default function App() {
   } = useAppRuntimeControllers({ appState, databaseConfigured });
 
   const {
-    deferredPtoPlanRows,
-    deferredPtoSurveyRows,
-    deferredPtoOperRows,
     deferredVehicleRows,
     renderedTopTab,
-    needsReportRows,
-    needsDerivedReportRows,
-    needsAdminReportRows,
-    needsReportIndexes,
-    needsAutoReportRows,
-  } = useAppDeferredData({
-    ptoPlanRows,
-    ptoSurveyRows,
-    ptoOperRows,
-    vehicleRows,
-    topTab,
-    adminSection,
-  });
-
-  const {
-    reportBaseRows,
     activeAdminReportCustomer,
     adminReportBaseRows,
     derivedReportRowsByKey,
@@ -299,34 +261,6 @@ export default function App() {
     reportTableColumnWidths,
     reportColumnWidthByKey,
     reportCompletionCards,
-  } = useAppReportsModel({
-    needsReportRows,
-    needsReportIndexes,
-    needsAutoReportRows,
-    needsAdminReportRows,
-    needsDerivedReportRows,
-    deferredPtoPlanRows,
-    deferredPtoSurveyRows,
-    deferredPtoOperRows,
-    deferredVehicleRows,
-    reportDate,
-    reportReasons,
-    reportCustomers,
-    reportCustomerId,
-    setReportCustomerId,
-    adminReportCustomerId,
-    adminReportCustomerSettingsTab,
-    reportArea,
-    setReportArea,
-    reportAreaOrder,
-    reportWorkOrder,
-    editingReportFactSourceRowKey,
-    areaShiftCutoffs,
-    reportHeaderLabels,
-    reportColumnWidths,
-  });
-
-  const {
     isPtoDateTab,
     isPtoBucketsSection,
     allPtoDateRows,
@@ -335,28 +269,13 @@ export default function App() {
     ptoMonthGroups,
     ptoAreaTabs,
     ptoDateOptionMaps,
-  } = useAppPtoDateModel({
-    renderedTopTab,
-    ptoTab,
-    ptoPlanYear,
-    ptoManualYears,
-    expandedPtoMonths,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    deferredPtoPlanRows,
-    deferredPtoOperRows,
-    deferredPtoSurveyRows,
-    ptoBucketManualRows,
-  });
-
-  const {
     vehicleAutocompleteOptions,
     activeVehicleFilterOptions,
     filteredVehicleRows,
     visibleVehicleRows,
     hiddenVehicleRowsCount,
     activeVehicleFilterCount,
+    vehicleFilterColumns,
     openVehicleFilterMenu,
     toggleVehicleFilterDraftValue,
     selectAllVehicleFilterDraftValues,
@@ -364,26 +283,6 @@ export default function App() {
     applyVehicleFilter,
     clearAllVehicleFilters,
     closeVehicleFilterMenu,
-  } = useAppVehicleViewModel({
-    active: renderedTopTab === "admin" && adminSection === "vehicles",
-    adminVehiclesEditing,
-    showAllVehicleRows,
-    vehiclePreviewRowLimit,
-    vehicleRows,
-    deferredVehicleRows,
-    vehicleFilters,
-    openVehicleFilter,
-    tableScrollRef: adminVehicleTableScrollRef,
-    setAdminVehiclesEditing,
-    setShowAllVehicleRows,
-    setVehiclePreviewRowLimit,
-    vehicleFilterDrafts,
-    setOpenVehicleFilter,
-    setVehicleFilters,
-    setVehicleFilterDrafts,
-  });
-
-  const {
     currentDispatchShift,
     isDailyDispatchShift,
     dispatchAreaOptions,
@@ -400,26 +299,8 @@ export default function App() {
     updateDispatchSummaryNumber,
     updateDispatchSummaryVehicle,
     deleteDispatchSummaryRow,
-  } = useAppDispatchSummaryModel({
-    active: renderedTopTab === "dispatch",
-    areaFilter,
-    search,
-    dispatchTab,
-    reportDate,
-    vehicleRows,
-    dispatchSummaryRows,
-    reportBaseRows,
-    dispatchVehicleToAddId,
-    setDispatchSummaryRows,
-    setDispatchVehicleToAddId,
-    addAdminLog,
-  });
-
-  const filteredFleet = useFleetRows({
-    active: renderedTopTab === "fleet",
-    fleetTab,
-    vehicleRows,
-  });
+    filteredFleet,
+  } = useAppDerivedModels({ appState });
 
   const {
     headerNavRef,
