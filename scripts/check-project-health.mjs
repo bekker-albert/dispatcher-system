@@ -6,6 +6,10 @@ const sourceExtensions = new Set([".ts", ".tsx", ".mjs", ".js", ".jsx"]);
 const ignoredDirs = new Set([".git", ".next", "node_modules"]);
 const hardErrors = [];
 const warnings = [];
+const mojibakePatterns = [
+  new RegExp("\\u0420[\\u0402-\\u040f\\u201a-\\u203a\\u20ac]", "u"),
+  new RegExp("\\u0421[\\u0402-\\u040f\\u201a-\\u203a\\u20ac]", "u"),
+];
 
 function walk(dir, files = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -52,6 +56,10 @@ for (const file of walk(root)) {
 
   if (/\?{4,}/.test(text)) {
     hardErrors.push(`${rel} contains repeated question marks, likely broken encoding.`);
+  }
+
+  if (mojibakePatterns.some((pattern) => pattern.test(text))) {
+    hardErrors.push(`${rel} contains mojibake markers, likely broken Russian text encoding.`);
   }
 
   if (lines > 450 && !rel.startsWith("scripts/")) {

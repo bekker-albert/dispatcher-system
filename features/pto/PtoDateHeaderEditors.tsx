@@ -26,6 +26,9 @@ type PtoEditableMonthHeaderProps = PtoEditableHeaderTextProps & {
   onToggle: () => void;
 };
 
+const headerEditTitle = "\u0414\u0432\u043e\u0439\u043d\u043e\u0439 \u043a\u043b\u0438\u043a - \u043f\u0435\u0440\u0435\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u0442\u044c \u0437\u0430\u0433\u043e\u043b\u043e\u0432\u043e\u043a";
+const monthToggleTitle = "\u041a\u043b\u0438\u043a - \u0441\u0432\u0435\u0440\u043d\u0443\u0442\u044c/\u0440\u0430\u0437\u0432\u0435\u0440\u043d\u0443\u0442\u044c, \u0434\u0432\u043e\u0439\u043d\u043e\u0439 \u043a\u043b\u0438\u043a - \u043f\u0435\u0440\u0435\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u0442\u044c";
+
 export function PtoEditableHeaderText({
   columnKey,
   fallback,
@@ -76,7 +79,7 @@ export function PtoEditableHeaderText({
         onStartEdit(columnKey, fallback);
       }}
       style={{ ...ptoHeaderLabelButtonStyle, textAlign: align }}
-      title={editingEnabled ? "Р”РІРѕР№РЅРѕР№ РєР»РёРє - РїРµСЂРµРёРјРµРЅРѕРІР°С‚СЊ Р·Р°РіРѕР»РѕРІРѕРє" : undefined}
+      title={editingEnabled ? headerEditTitle : undefined}
     >
       {label}
     </button>
@@ -125,7 +128,7 @@ export function PtoEditableMonthHeader({
         onStartEdit(columnKey, fallback);
       }}
       style={monthToggleStyle}
-      title="РљР»РёРє - СЃРІРµСЂРЅСѓС‚СЊ/СЂР°Р·РІРµСЂРЅСѓС‚СЊ, РґРІРѕР№РЅРѕР№ РєР»РёРє - РїРµСЂРµРёРјРµРЅРѕРІР°С‚СЊ"
+      title={monthToggleTitle}
       aria-expanded={expanded}
     >
       {icon}

@@ -87,7 +87,7 @@ export function PtoPlanTh({
         <span
           onMouseDown={(event) => onResizeStart(event, columnKey, width)}
           style={ptoColumnResizeHandleStyle}
-          title="РџРѕС‚СЏРЅРё, С‡С‚РѕР±С‹ РёР·РјРµРЅРёС‚СЊ С€РёСЂРёРЅСѓ СЃС‚РѕР»Р±С†Р°"
+          title="\u041f\u043e\u0442\u044f\u043d\u0438, \u0447\u0442\u043e\u0431\u044b \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u0448\u0438\u0440\u0438\u043d\u0443 \u0441\u0442\u043e\u043b\u0431\u0446\u0430"
           aria-hidden
         />
       ) : null}
@@ -162,9 +162,9 @@ export function PtoCustomerCodeCell({ editing, value, dataFieldKey, onChange }: 
       value={customerCode}
       onChange={(event) => onChange(event.target.value)}
       style={{ ...ptoPlanInputStyle, textAlign: "center" }}
-      title="AAM - РўРћРћ AA Mining, AA - РђРћ РђРљ РђР»С‚С‹РЅР°Р»РјР°СЃ, AAE - РўРћРћ AA Engineering"
+      title="AAM - \u0422\u041e\u041e AA Mining, AA - \u0410\u041e \u0410\u041a \u0410\u043b\u0442\u044b\u043d\u0430\u043b\u043c\u0430\u0441, AAE - \u0422\u041e\u041e AA Engineering"
     >
-      <option value="">вЂ”</option>
+      <option value="">-</option>
       {ptoCustomerCodeOptions.map((option) => (
         <option key={option.code} value={option.code}>{option.code}</option>
       ))}
@@ -194,7 +194,7 @@ export function PtoUnitCell({ editing, value, dataFieldKey, onChange }: PtoUnitC
 export function PtoStatusCell({ status }: PtoStatusCellProps) {
   return (
     <span
-      title="РЎС‚Р°С‚СѓСЃ СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РїРѕ СЂР°Р±РѕС‡РµР№ РґР°С‚Рµ Рё Р·Р°РїРѕР»РЅРµРЅРЅС‹Рј Р·РЅР°С‡РµРЅРёСЏРј РјРµСЃСЏС†Р°"
+      title="\u0421\u0442\u0430\u0442\u0443\u0441 \u0440\u0430\u0441\u0441\u0447\u0438\u0442\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u043f\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0439 \u0434\u0430\u0442\u0435 \u0438 \u0437\u0430\u043f\u043e\u043b\u043d\u0435\u043d\u043d\u044b\u043c \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f\u043c \u043c\u0435\u0441\u044f\u0446\u0430"
       style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(status) }}
     >
       {status}
@@ -263,7 +263,7 @@ const ptoEditingFormulaCellStyle: CSSProperties = {
 };
 
 export function ptoStatusControlStyle(status: PtoStatus): CSSProperties {
-  if (status === "РќРѕРІР°СЏ" || status === "РџСѓСЃС‚Рѕ") {
+  if (status === "\u041d\u043e\u0432\u0430\u044f" || status === "\u041f\u0443\u0441\u0442\u043e") {
     return {
       background: "#f1f5f9",
       borderColor: "#cbd5e1",
@@ -271,7 +271,7 @@ export function ptoStatusControlStyle(status: PtoStatus): CSSProperties {
     };
   }
 
-  if (status === "Р’ СЂР°Р±РѕС‚Рµ") {
+  if (status === "\u0412 \u0440\u0430\u0431\u043e\u0442\u0435") {
     return {
       background: "#dcfce7",
       borderColor: "#86efac",
@@ -279,7 +279,7 @@ export function ptoStatusControlStyle(status: PtoStatus): CSSProperties {
     };
   }
 
-  if (status === "Р—Р°РІРµСЂС€РµРЅР°") {
+  if (status === "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0430") {
     return {
       background: "#ffe4e6",
       borderColor: "#fda4af",
