@@ -36,6 +36,7 @@ excel-analysis-*
 excel-formula-deps.json
 pdf-report-*
 .chrome-pdf-profile*/
+/tmp/
 
 # env files (can opt-in for committing if needed)
 .env*

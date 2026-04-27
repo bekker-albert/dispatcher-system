@@ -47,6 +47,12 @@ git diff --check
 git status --ignored --short .env.local .env.example
 ```
 
+For larger architecture tasks, run the AI review agent before coding:
+
+```powershell
+npm run refactor:ai -- --task "Describe the area to review"
+```
+
 If a check was not run, the final response must say why.
 
 ## Final Report Format
