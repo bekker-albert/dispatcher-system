@@ -1,12 +1,14 @@
 "use client";
 
-import { Check, Download, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { CSSProperties, ChangeEvent, ComponentProps, ReactNode, RefObject } from "react";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleFilterKey, VehicleFilters, VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
-import { IconButton, MiniIconButton } from "@/shared/ui/buttons";
+import { MiniIconButton } from "@/shared/ui/buttons";
+import { AdminVehicleDatalists } from "./AdminVehicleDatalists";
 import { AdminVehicleCellInput, AdminVehicleReadOnlyCell, VehicleFilterHeader } from "./AdminVehicleGridCells";
+import { AdminVehiclesToolbar } from "./AdminVehiclesToolbar";
 
 export type VehicleFilterColumnWithIcon = {
   key: VehicleFilterKey;
@@ -104,63 +106,22 @@ export default function AdminVehiclesSection({
 }: AdminVehiclesSectionProps) {
   return (
     <div style={adminVehiclePanelStyle}>
-      <div style={adminVehicleToolbarStyle}>
-        <div style={adminVehicleCounterStyle}>
-          Техника: {activeVehicleFilterCount ? `${filteredVehicleRowsCount} из ${totalVehicleRowsCount}` : totalVehicleRowsCount}
-          <span style={adminVehicleRenderedCountStyle}>{adminVehiclesEditing ? "редактирование" : "просмотр"}</span>
-          {activeVehicleFilterCount ? (
-            <button onClick={onClearAllVehicleFilters} style={adminVehicleClearFiltersStyle} type="button">
-              Сбросить фильтры
-            </button>
-          ) : null}
-        </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <IconButton label={adminVehiclesEditing ? "Сохранить редактирование" : "Редактировать список техники"} onClick={adminVehiclesEditing ? onFinishEditing : onStartEditing}>
-            {adminVehiclesEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-          </IconButton>
-          {adminVehiclesEditing ? (
-            <>
-              <IconButton label="Добавить технику" onClick={onAddVehicleRow}>
-                <Plus size={16} aria-hidden />
-              </IconButton>
-              <IconButton label="Загрузить список из Excel" onClick={onOpenVehicleImportFilePicker}>
-                <RotateCcw size={16} aria-hidden />
-              </IconButton>
-            </>
-          ) : null}
-          <IconButton label="Выгрузить список техники в Excel" onClick={onExportVehiclesToExcel}>
-            <Download size={16} aria-hidden />
-          </IconButton>
-          <input
-            ref={vehicleImportInputRef}
-            accept=".xlsx,.csv"
-            onChange={onImportVehiclesFromExcel}
-            style={{ display: "none" }}
-            type="file"
-          />
-        </div>
-      </div>
+      <AdminVehiclesToolbar
+        activeVehicleFilterCount={activeVehicleFilterCount}
+        filteredVehicleRowsCount={filteredVehicleRowsCount}
+        totalVehicleRowsCount={totalVehicleRowsCount}
+        adminVehiclesEditing={adminVehiclesEditing}
+        vehicleImportInputRef={vehicleImportInputRef}
+        onClearAllVehicleFilters={onClearAllVehicleFilters}
+        onStartEditing={onStartEditing}
+        onFinishEditing={onFinishEditing}
+        onAddVehicleRow={onAddVehicleRow}
+        onOpenVehicleImportFilePicker={onOpenVehicleImportFilePicker}
+        onExportVehiclesToExcel={onExportVehiclesToExcel}
+        onImportVehiclesFromExcel={onImportVehiclesFromExcel}
+      />
 
-      <datalist id="admin-vehicle-category-options">
-        {(vehicleAutocompleteOptions.vehicleType ?? []).filter(Boolean).map((value) => (
-          <option key={value} value={value} />
-        ))}
-      </datalist>
-      <datalist id="admin-vehicle-equipment-type-options">
-        {(vehicleAutocompleteOptions.equipmentType ?? []).filter(Boolean).map((value) => (
-          <option key={value} value={value} />
-        ))}
-      </datalist>
-      <datalist id="admin-vehicle-brand-options">
-        {(vehicleAutocompleteOptions.brand ?? []).filter(Boolean).map((value) => (
-          <option key={value} value={value} />
-        ))}
-      </datalist>
-      <datalist id="admin-vehicle-owner-options">
-        {(vehicleAutocompleteOptions.owner ?? []).filter(Boolean).map((value) => (
-          <option key={value} value={value} />
-        ))}
-      </datalist>
+      <AdminVehicleDatalists vehicleAutocompleteOptions={vehicleAutocompleteOptions} />
 
       <div ref={adminVehicleTableScrollRef} style={adminVehicleTableScrollStyle}>
         <table style={adminVehicleTableStyle}>
@@ -317,43 +278,6 @@ const adminVehiclePanelStyle: CSSProperties = {
   background: "#f8fafc",
   marginBottom: 16,
   padding: 10,
-};
-
-const adminVehicleToolbarStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 10,
-  alignItems: "center",
-  flexWrap: "wrap",
-  marginBottom: 8,
-};
-
-const adminVehicleCounterStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  flexWrap: "wrap",
-  fontWeight: 700,
-};
-
-const adminVehicleRenderedCountStyle: CSSProperties = {
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 700,
-};
-
-const adminVehicleClearFiltersStyle: CSSProperties = {
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "#cbd5e1",
-  borderRadius: 6,
-  background: "#ffffff",
-  color: "#0f172a",
-  cursor: "pointer",
-  fontFamily: "inherit",
-  fontSize: 11,
-  fontWeight: 700,
-  padding: "4px 7px",
 };
 
 const adminVehicleTableScrollStyle: CSSProperties = {
