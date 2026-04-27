@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "check:domain": "jiti tests/domain-checks.ts",
+    "check:project": "node scripts/check-project-health.mjs",
     "migrate:supabase-to-mysql": "jiti scripts/migrate-supabase-to-mysql.ts",
-    "verify": "npm run lint && npm run build && npm run check:domain"
+    "verify": "npm run lint && npm run build && npm run check:domain && npm run check:project"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",

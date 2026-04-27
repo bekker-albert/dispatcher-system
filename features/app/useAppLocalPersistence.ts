@@ -11,6 +11,7 @@ type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type AppLocalPersistenceOptions = {
   adminDataLoaded: boolean;
+  appDatabaseSaveSnapshotRef: RefObject<string>;
   appSettingsDatabaseLoadedRef: RefObject<boolean>;
   appSettingsDatabaseSaveSnapshotRef: RefObject<string>;
   requestClientSnapshotSave: (reason?: string) => void;
@@ -34,6 +35,7 @@ type AppLocalPersistenceOptions = {
 
 export function useAppLocalPersistence({
   adminDataLoaded,
+  appDatabaseSaveSnapshotRef,
   appSettingsDatabaseLoadedRef,
   appSettingsDatabaseSaveSnapshotRef,
   requestClientSnapshotSave,
@@ -106,6 +108,35 @@ export function useAppLocalPersistence({
     )
   ), []);
 
+  const collectSharedAppStorage = useCallback(() => (
+    Object.fromEntries(
+      sharedAppSettingKeys.flatMap((key) => {
+        const value = window.localStorage.getItem(key);
+        return value === null ? [] : [[key, value] as const];
+      }),
+    )
+  ), []);
+
+  const saveSharedAppStateToDatabase = useCallback(async () => {
+    if (!databaseConfigured) return;
+
+    const storage = collectSharedAppStorage();
+    const snapshot = JSON.stringify(storage);
+    if (snapshot === appDatabaseSaveSnapshotRef.current) return;
+
+    showSaveStatus("saving", "Сохраняю общие данные...");
+
+    try {
+      const { saveAppStateToDatabase } = await import("@/lib/data/app-state");
+      await saveAppStateToDatabase(storage);
+      appDatabaseSaveSnapshotRef.current = snapshot;
+      showSaveStatus("saved", "Общие данные сохранены.");
+    } catch (error) {
+      showSaveStatus("error", `Общие данные не сохранены: ${errorToMessage(error)}`);
+      throw error;
+    }
+  }, [appDatabaseSaveSnapshotRef, collectSharedAppStorage, showSaveStatus]);
+
   const saveSharedAppSettingsToDatabase = useCallback(async () => {
     if (!databaseConfigured || !appSettingsDatabaseLoadedRef.current) return;
 
@@ -135,6 +166,9 @@ export function useAppLocalPersistence({
 
     appStateSaveTimerRef.current = window.setTimeout(() => {
       saveAppLocalState();
+      void saveSharedAppStateToDatabase().catch((error) => {
+        console.warn("Database app_state save failed:", error);
+      });
       void saveSharedAppSettingsToDatabase().catch((error) => {
         console.warn("Database app_settings save failed:", error);
       });
@@ -148,10 +182,16 @@ export function useAppLocalPersistence({
         appStateSaveTimerRef.current = null;
       }
     };
-  }, [adminDataLoaded, requestClientSnapshotSave, saveAppLocalState, saveSharedAppSettingsToDatabase]);
+  }, [
+    adminDataLoaded,
+    requestClientSnapshotSave,
+    saveAppLocalState,
+    saveSharedAppSettingsToDatabase,
+    saveSharedAppStateToDatabase,
+  ]);
 
-  // The shared main app_state remains load-only. Per-browser snapshots are
-  // written separately so one stale browser cannot overwrite another one.
+  // Pagehide only flushes browser storage. Server writes stay debounced above
+  // to avoid blocking page close and to keep database writes predictable.
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
 

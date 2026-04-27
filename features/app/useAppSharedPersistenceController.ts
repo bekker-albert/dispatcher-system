@@ -16,6 +16,7 @@ export function useAppSharedPersistenceController({
 }: UseAppSharedPersistenceControllerOptions) {
   useAppSharedPersistence({
     adminDataLoaded: appState.adminDataLoaded,
+    appDatabaseSaveSnapshotRef: appState.appDatabaseSaveSnapshotRef,
     appSettingsDatabaseLoadedRef: appState.appSettingsDatabaseLoadedRef,
     appSettingsDatabaseSaveSnapshotRef: appState.appSettingsDatabaseSaveSnapshotRef,
     vehiclesDatabaseLoadedRef: appState.vehiclesDatabaseLoadedRef,

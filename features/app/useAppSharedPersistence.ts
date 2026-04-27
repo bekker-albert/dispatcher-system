@@ -11,6 +11,7 @@ type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type UseAppSharedPersistenceOptions = {
   adminDataLoaded: boolean;
+  appDatabaseSaveSnapshotRef: RefObject<string>;
   appSettingsDatabaseLoadedRef: RefObject<boolean>;
   appSettingsDatabaseSaveSnapshotRef: RefObject<string>;
   vehiclesDatabaseLoadedRef: RefObject<boolean>;
@@ -39,6 +40,7 @@ type UseAppSharedPersistenceOptions = {
 
 export function useAppSharedPersistence({
   adminDataLoaded,
+  appDatabaseSaveSnapshotRef,
   appSettingsDatabaseLoadedRef,
   appSettingsDatabaseSaveSnapshotRef,
   vehiclesDatabaseLoadedRef,
@@ -66,6 +68,7 @@ export function useAppSharedPersistence({
 }: UseAppSharedPersistenceOptions) {
   useAppLocalPersistence({
     adminDataLoaded,
+    appDatabaseSaveSnapshotRef,
     appSettingsDatabaseLoadedRef,
     appSettingsDatabaseSaveSnapshotRef,
     requestClientSnapshotSave,
