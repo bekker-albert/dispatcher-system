@@ -6,7 +6,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   PtoEditableHeaderText,
   PtoEditableMonthHeader,
-} from "@/features/pto/PtoDateTableParts";
+} from "@/features/pto/PtoDateHeaderEditors";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 
 type UsePtoDateHeaderRenderersOptions = Pick<

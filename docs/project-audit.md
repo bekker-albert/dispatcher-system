@@ -57,6 +57,8 @@ The project is no longer a single-page prototype. The main product areas are spl
 - `PtoDateTableContainer` now keeps the table assembly while the reusable interaction helpers live behind PTO-owned hooks.
 - PTO editable table body was moved into `features/pto/PtoDateEditableTableBody.tsx`.
 - PTO row rendering, drag/drop handling, text cells, formula cells, and draft-row rendering are now isolated from the table container.
+- PTO header editor controls were moved into `features/pto/PtoDateHeaderEditors.tsx`.
+- PTO formula bar was moved into `features/pto/PtoFormulaBar.tsx`, leaving `PtoDateTableParts.tsx` focused on reusable cell primitives.
 - `app/page.tsx` stayed thin and did not receive product logic.
 
 ## Development Rules From Here

@@ -1,12 +1,7 @@
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+﻿import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import type { PtoStatus } from "../../lib/domain/pto/date-table";
 import { formatPtoCellNumber, formatPtoFormulaNumber } from "../../lib/domain/pto/formatting";
 import {
-  monthToggleStyle,
-  ptoFormulaBarStyle,
-  ptoFormulaInputStyle,
-  ptoHeaderInputStyle,
-  ptoHeaderLabelButtonStyle,
   ptoPlanInputStyle,
   ptoReadonlyCellNumberStyle,
   ptoReadonlyCellTextStyle,
@@ -66,33 +61,6 @@ type PtoStatusCellProps = {
   status: PtoStatus;
 };
 
-type PtoEditableHeaderTextProps = {
-  columnKey: string;
-  fallback: string;
-  label: string;
-  align?: CSSProperties["textAlign"];
-  editing: boolean;
-  editingEnabled: boolean;
-  draft: string;
-  onDraftChange: (value: string) => void;
-  onStartEdit: (key: string, fallback: string) => void;
-  onCommit: (key: string, fallback: string) => void;
-  onCancel: () => void;
-};
-
-type PtoEditableMonthHeaderProps = PtoEditableHeaderTextProps & {
-  expanded: boolean;
-  icon: ReactNode;
-  onToggle: () => void;
-};
-
-type PtoFormulaBarProps = {
-  value: string;
-  disabled: boolean;
-  onValueChange: (value: string) => void;
-  onBlur: () => void;
-};
-
 export function PtoPlanTh({
   children,
   colSpan = 1,
@@ -119,7 +87,7 @@ export function PtoPlanTh({
         <span
           onMouseDown={(event) => onResizeStart(event, columnKey, width)}
           style={ptoColumnResizeHandleStyle}
-          title="Потяни, чтобы изменить ширину столбца"
+          title="РџРѕС‚СЏРЅРё, С‡С‚РѕР±С‹ РёР·РјРµРЅРёС‚СЊ С€РёСЂРёРЅСѓ СЃС‚РѕР»Р±С†Р°"
           aria-hidden
         />
       ) : null}
@@ -194,9 +162,9 @@ export function PtoCustomerCodeCell({ editing, value, dataFieldKey, onChange }: 
       value={customerCode}
       onChange={(event) => onChange(event.target.value)}
       style={{ ...ptoPlanInputStyle, textAlign: "center" }}
-      title="AAM - ТОО AA Mining, AA - АО АК Алтыналмас, AAE - ТОО AA Engineering"
+      title="AAM - РўРћРћ AA Mining, AA - РђРћ РђРљ РђР»С‚С‹РЅР°Р»РјР°СЃ, AAE - РўРћРћ AA Engineering"
     >
-      <option value="">—</option>
+      <option value="">вЂ”</option>
       {ptoCustomerCodeOptions.map((option) => (
         <option key={option.code} value={option.code}>{option.code}</option>
       ))}
@@ -226,136 +194,11 @@ export function PtoUnitCell({ editing, value, dataFieldKey, onChange }: PtoUnitC
 export function PtoStatusCell({ status }: PtoStatusCellProps) {
   return (
     <span
-      title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
+      title="РЎС‚Р°С‚СѓСЃ СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РїРѕ СЂР°Р±РѕС‡РµР№ РґР°С‚Рµ Рё Р·Р°РїРѕР»РЅРµРЅРЅС‹Рј Р·РЅР°С‡РµРЅРёСЏРј РјРµСЃСЏС†Р°"
       style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(status) }}
     >
       {status}
     </span>
-  );
-}
-
-export function PtoEditableHeaderText({
-  columnKey,
-  fallback,
-  label,
-  align = "left",
-  editing,
-  editingEnabled,
-  draft,
-  onDraftChange,
-  onStartEdit,
-  onCommit,
-  onCancel,
-}: PtoEditableHeaderTextProps) {
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        value={draft}
-        onChange={(event) => onDraftChange(event.target.value)}
-        onBlur={(event) => {
-          if (event.currentTarget.dataset.cancelHeaderEdit === "true") return;
-          onCommit(columnKey, fallback);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            onCommit(columnKey, fallback);
-          }
-
-          if (event.key === "Escape") {
-            event.preventDefault();
-            event.currentTarget.dataset.cancelHeaderEdit = "true";
-            onCancel();
-          }
-        }}
-        onClick={(event) => event.stopPropagation()}
-        style={{ ...ptoHeaderInputStyle, textAlign: align }}
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onDoubleClick={(event) => {
-        if (!editingEnabled) return;
-        event.stopPropagation();
-        onStartEdit(columnKey, fallback);
-      }}
-      style={{ ...ptoHeaderLabelButtonStyle, textAlign: align }}
-      title={editingEnabled ? "Двойной клик - переименовать заголовок" : undefined}
-    >
-      {label}
-    </button>
-  );
-}
-
-export function PtoEditableMonthHeader({
-  columnKey,
-  fallback,
-  label,
-  editing,
-  editingEnabled,
-  draft,
-  expanded,
-  icon,
-  onDraftChange,
-  onStartEdit,
-  onCommit,
-  onCancel,
-  onToggle,
-}: PtoEditableMonthHeaderProps) {
-  if (editing) {
-    return (
-      <PtoEditableHeaderText
-        columnKey={columnKey}
-        fallback={fallback}
-        label={label}
-        editing={editing}
-        editingEnabled={editingEnabled}
-        draft={draft}
-        onDraftChange={onDraftChange}
-        onStartEdit={onStartEdit}
-        onCommit={onCommit}
-        onCancel={onCancel}
-      />
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      onDoubleClick={(event) => {
-        if (!editingEnabled) return;
-        event.stopPropagation();
-        onStartEdit(columnKey, fallback);
-      }}
-      style={monthToggleStyle}
-      title="Клик - свернуть/развернуть, двойной клик - переименовать"
-      aria-expanded={expanded}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
-
-export function PtoFormulaBar({ value, disabled, onValueChange, onBlur }: PtoFormulaBarProps) {
-  return (
-    <div style={ptoFormulaBarStyle}>
-      <input
-        type="text"
-        inputMode="decimal"
-        value={value}
-        onChange={(event) => onValueChange(event.target.value)}
-        onBlur={onBlur}
-        disabled={disabled}
-        placeholder="Выбери числовую ячейку"
-        style={ptoFormulaInputStyle}
-      />
-    </div>
   );
 }
 
@@ -420,7 +263,7 @@ const ptoEditingFormulaCellStyle: CSSProperties = {
 };
 
 export function ptoStatusControlStyle(status: PtoStatus): CSSProperties {
-  if (status === "Новая" || status === "Пусто") {
+  if (status === "РќРѕРІР°СЏ" || status === "РџСѓСЃС‚Рѕ") {
     return {
       background: "#f1f5f9",
       borderColor: "#cbd5e1",
@@ -428,7 +271,7 @@ export function ptoStatusControlStyle(status: PtoStatus): CSSProperties {
     };
   }
 
-  if (status === "В работе") {
+  if (status === "Р’ СЂР°Р±РѕС‚Рµ") {
     return {
       background: "#dcfce7",
       borderColor: "#86efac",
@@ -436,7 +279,7 @@ export function ptoStatusControlStyle(status: PtoStatus): CSSProperties {
     };
   }
 
-  if (status === "Завершена") {
+  if (status === "Р—Р°РІРµСЂС€РµРЅР°") {
     return {
       background: "#ffe4e6",
       borderColor: "#fda4af",

@@ -2,7 +2,7 @@
 
 import { PtoDateEditableHeaders } from "@/features/pto/PtoDateEditableHeaders";
 import { PtoDateEditableTableBody } from "@/features/pto/PtoDateEditableTableBody";
-import { PtoFormulaBar } from "@/features/pto/PtoDateTableParts";
+import { PtoFormulaBar } from "@/features/pto/PtoFormulaBar";
 import { PtoDateReadonlyTable } from "@/features/pto/PtoDateReadonlyTable";
 import { usePtoDateFormulaController } from "@/features/pto/ptoDateFormulaController";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
