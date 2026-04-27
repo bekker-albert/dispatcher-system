@@ -7,7 +7,8 @@ import type { VehicleFilterKey, VehicleFilters, VehicleInlineField } from "@/lib
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { MiniIconButton } from "@/shared/ui/buttons";
 import { AdminVehicleDatalists } from "./AdminVehicleDatalists";
-import { AdminVehicleCellInput, AdminVehicleReadOnlyCell, VehicleFilterHeader } from "./AdminVehicleGridCells";
+import { AdminVehicleFilterHeader } from "./AdminVehicleFilterHeader";
+import { AdminVehicleCellInput, AdminVehicleReadOnlyCell } from "./AdminVehicleGridCells";
 import { AdminVehiclesToolbar } from "./AdminVehiclesToolbar";
 
 export type VehicleFilterColumnWithIcon = {
@@ -142,7 +143,7 @@ export default function AdminVehiclesSection({
             <tr>
               {vehicleFilterColumns.map((column) => (
                 <th key={column.key} style={adminVehicleThStyle}>
-                  <VehicleFilterHeader
+                  <AdminVehicleFilterHeader
                     column={column}
                     options={openVehicleFilter === column.key ? activeVehicleFilterOptions : []}
                     appliedSelectedValues={vehicleFilters[column.key]}
