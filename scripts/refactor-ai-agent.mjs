@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import https from "node:https";
 import path from "node:path";
 
 const root = process.cwd();
@@ -64,30 +65,20 @@ const prompt = [
   context,
 ].join("\n");
 
-const response = await fetch("https://api.openai.com/v1/responses", {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    model,
-    instructions: "You are a rigorous software architecture review agent. Produce a practical, ordered refactoring plan.",
-    input: prompt,
-    max_output_tokens: Number(process.env.OPENAI_REFACTOR_MAX_OUTPUT_TOKENS || 5000),
-    store: false,
-  }),
+const apiResult = await createOpenAiResponse(apiKey, {
+  model,
+  instructions: "You are a rigorous software architecture review agent. Produce a practical, ordered refactoring plan.",
+  input: prompt,
+  max_output_tokens: Number(process.env.OPENAI_REFACTOR_MAX_OUTPUT_TOKENS || 5000),
+  store: false,
 });
 
-const payload = await response.json().catch(() => null);
-
-if (!response.ok) {
-  const message = payload?.error?.message || response.statusText || "unknown error";
-  console.error(`OpenAI API вернул ошибку ${response.status}: ${message}`);
+if (!apiResult.ok) {
+  printOpenAiError(apiResult.status, apiResult.body?.error?.message || apiResult.statusText || "unknown error");
   process.exit(1);
 }
 
-const outputText = extractOutputText(payload);
+const outputText = extractOutputText(apiResult.body);
 if (!outputText) {
   console.error("OpenAI API не вернул текстовый ответ.");
   process.exit(1);
@@ -126,6 +117,83 @@ function printHelp() {
     "  OPENAI_REFACTOR_MODEL=gpt-5.2",
     "  OPENAI_REFACTOR_MAX_OUTPUT_TOKENS=5000",
   ].join("\n"));
+}
+
+function createOpenAiResponse(apiKeyValue, requestBody) {
+  const body = JSON.stringify(requestBody);
+
+  return new Promise((resolve) => {
+    const request = https.request(
+      {
+        hostname: "api.openai.com",
+        path: "/v1/responses",
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKeyValue}`,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+      },
+      (response) => {
+        const chunks = [];
+
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () => {
+          const responseText = Buffer.concat(chunks).toString("utf8");
+          const parsedBody = parseJsonSafe(responseText);
+
+          resolve({
+            ok: response.statusCode >= 200 && response.statusCode < 300,
+            status: response.statusCode,
+            statusText: response.statusMessage,
+            body: parsedBody,
+          });
+        });
+      },
+    );
+
+    request.on("error", (error) => {
+      resolve({
+        ok: false,
+        status: 0,
+        statusText: error.message,
+        body: null,
+      });
+    });
+
+    request.write(body);
+    request.end();
+  });
+}
+
+function parseJsonSafe(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function printOpenAiError(status, message) {
+  if (status === 429) {
+    console.error("OpenAI API вернул ошибку 429: лимит или баланс аккаунта исчерпан.");
+    console.error("Проверь Billing/Usage в аккаунте OpenAI или используй другой API-ключ с доступной квотой.");
+    console.error("Пока квоты нет, можно запускать локальную проверку без ИИ: npm run refactor:ai -- --offline");
+    return;
+  }
+
+  if (status === 401) {
+    console.error("OpenAI API вернул ошибку 401: ключ неверный или не имеет доступа.");
+    console.error("Проверь OPENAI_API_KEY в .env.local. Не отправляй ключ в чат.");
+    return;
+  }
+
+  if (status === 0) {
+    console.error(`Не удалось подключиться к OpenAI API: ${message}`);
+    return;
+  }
+
+  console.error(`OpenAI API вернул ошибку ${status}: ${message}`);
 }
 
 function loadEnvFile(filePath) {

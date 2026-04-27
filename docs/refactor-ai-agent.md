@@ -58,3 +58,15 @@ npm run refactor:ai -- --help
 5. Commit only reviewed changes.
 
 The agent is an assistant for planning and review. Code changes still go through the normal project rules in `AGENTS.md`, `ARCHITECTURE.md`, and `CODE_REVIEW.md`.
+
+## Common Errors
+
+### OpenAI API 429
+
+The API key is valid, but the OpenAI account has no available quota or billing limit. Check billing/usage in the OpenAI account, then run the command again.
+
+Until quota is available, use:
+
+```powershell
+npm run refactor:ai -- --offline
+```
