@@ -48,7 +48,8 @@ export async function saveAppSettingsToMysql(
   options: SaveAppSettingsOptions = {},
 ) {
   const entries = Object.entries(settings);
-  if (entries.length === 0) return;
+  const keys = entries.map(([key]) => key);
+  if (entries.length === 0) return [];
 
   if (options.expectedUpdatedAt) {
     await dbTransaction(async (execute) => {
@@ -79,7 +80,7 @@ export async function saveAppSettingsToMysql(
         throw createAppSettingsConflictError(conflictedKeys);
       }
     });
-    return;
+    return await loadAppSettingsFromMysql(keys);
   }
 
   const placeholders = entries.map(() => "(?, ?)").join(", ");
@@ -93,4 +94,6 @@ export async function saveAppSettingsToMysql(
       updated_at = CURRENT_TIMESTAMP(3)`,
     values,
   );
+
+  return await loadAppSettingsFromMysql(keys);
 }

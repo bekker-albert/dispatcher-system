@@ -13,10 +13,9 @@ export const handleSettingsDatabaseAction: DatabaseResourceHandler = async ({
     return json(await settings.loadAppSettingsFromMysql((record.keys ?? []) as string[]));
   }
   if (action === "save") {
-    await settings.saveAppSettingsToMysql((record.settings ?? {}) as Record<string, unknown>, {
+    return json(await settings.saveAppSettingsToMysql((record.settings ?? {}) as Record<string, unknown>, {
       expectedUpdatedAt: (record.expectedUpdatedAt ?? undefined) as Record<string, string | null | undefined> | undefined,
-    });
-    return json({ ok: true });
+    }));
   }
 
   return undefined;

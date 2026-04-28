@@ -43,9 +43,10 @@ export async function saveAppSettingsToSupabase(
   settings: Record<string, unknown>,
   options: SaveAppSettingsOptions = {},
 ) {
+  const keys = Object.keys(settings);
+
   if (serverDatabaseConfigured) {
-    await databaseRequest("settings", "save", { settings, expectedUpdatedAt: options.expectedUpdatedAt });
-    return;
+    return await databaseRequest<SupabaseSettingRecord[]>("settings", "save", { settings, expectedUpdatedAt: options.expectedUpdatedAt });
   }
 
   const entries = Object.entries(settings);
@@ -94,7 +95,7 @@ export async function saveAppSettingsToSupabase(
     if (conflictedKeys.length > 0) {
       throw createAppSettingsConflictError(conflictedKeys);
     }
-    return;
+    return await loadAppSettingsFromSupabase(keys);
   }
 
   const { error } = await client
@@ -102,4 +103,5 @@ export async function saveAppSettingsToSupabase(
     .upsert(records, { onConflict: "key" });
 
   if (error) throw error;
+  return await loadAppSettingsFromSupabase(keys);
 }

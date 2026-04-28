@@ -76,12 +76,11 @@ export function useSharedDatabaseSaveQueue({
     showSaveStatus("saving", "Сохраняю настройки...");
 
     try {
-      const { loadAppSettingsFromDatabase, saveAppSettingsToDatabase } = await import("@/lib/data/settings");
-      await saveAppSettingsToDatabase(delta.settings, { expectedUpdatedAt: delta.expectedUpdatedAt });
-      const savedSettings = await loadAppSettingsFromDatabase(dirtyKeys);
+      const { saveAppSettingsToDatabase } = await import("@/lib/data/settings");
+      const savedSettings = await saveAppSettingsToDatabase(delta.settings, { expectedUpdatedAt: delta.expectedUpdatedAt });
       appSettingsDatabaseSaveSnapshotRef.current = applySavedSharedAppSettingsToSnapshot(
         appSettingsDatabaseSaveSnapshotRef.current,
-        savedSettings.length > 0
+        savedSettings && savedSettings.length > 0
           ? savedSettings
           : dirtyKeys.map((key) => ({ key, value: delta.settings[key], updated_at: null })),
       );
