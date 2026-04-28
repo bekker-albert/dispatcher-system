@@ -17,6 +17,14 @@ type UseReportColumnLayoutOptions = {
   reportColumnWidths: Record<string, number>;
 };
 
+function createEmptyReportColumnValueLists() {
+  const valuesByKey = {} as Record<ReportColumnKey, string[]>;
+  reportColumnKeys.forEach((key) => {
+    valuesByKey[key] = [];
+  });
+  return valuesByKey;
+}
+
 export function useReportColumnLayout({
   filteredReports,
   needsDerivedReportRows,
@@ -25,15 +33,16 @@ export function useReportColumnLayout({
   reportHeaderLabels,
   reportColumnWidths,
 }: UseReportColumnLayoutOptions) {
-  const reportColumnTextRows = useMemo(() => {
-    if (!needsDerivedReportRows) return [];
+  const reportColumnTextModel = useMemo(() => {
+    const valuesByKey = createEmptyReportColumnValueLists();
+    if (!needsDerivedReportRows) return { rows: [], valuesByKey };
 
-    return filteredReports.map((row) => {
+    const rows = filteredReports.map((row) => {
       const monthFact = reportMonthFact(row);
       const yearFact = reportYearFact(row);
       const annualFact = reportAnnualFact(row);
 
-      return {
+      const textRow = {
         "area": row.area,
         "work-name": row.name,
         "unit": row.unit,
@@ -55,7 +64,15 @@ export function useReportColumnLayout({
         "annual-fact": formatNumber(annualFact),
         "annual-remaining": formatNumber(delta(row.annualPlan, annualFact)),
       } satisfies Record<ReportColumnKey, string>;
+
+      reportColumnKeys.forEach((key) => {
+        valuesByKey[key].push(textRow[key]);
+      });
+
+      return textRow;
     });
+
+    return { rows, valuesByKey };
   }, [filteredReports, needsDerivedReportRows]);
 
   const visibleReportColumnKeys = useMemo(() => (
@@ -70,10 +87,10 @@ export function useReportColumnLayout({
       if (!needsDerivedReportRows) return [key, defaultReportColumnWidths[defaultIndex] ?? 80];
 
       const header = reportHeaderLabels[key]?.trim() || reportColumnHeaderFallbacks[key];
-      const values = reportColumnTextRows.map((row) => row[key]);
+      const values = reportColumnTextModel.valuesByKey[key];
       return [key, reportAutoColumnWidth(key, header, values)];
     })) as Record<ReportColumnKey, number>
-  ), [needsDerivedReportRows, reportColumnTextRows, reportHeaderLabels, visibleReportColumnKeys]);
+  ), [needsDerivedReportRows, reportColumnTextModel, reportHeaderLabels, visibleReportColumnKeys]);
 
   const reportTableColumnWidths = useMemo(() => (
     visibleReportColumnKeys.map((key) => {
@@ -101,7 +118,7 @@ export function useReportColumnLayout({
   }), [filteredReports, needsDerivedReportRows, reportArea, reportDate]);
 
   return {
-    reportColumnTextRows,
+    reportColumnTextRows: reportColumnTextModel.rows,
     visibleReportColumnKeys,
     autoReportColumnWidths,
     reportTableColumnWidths,

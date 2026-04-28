@@ -15,6 +15,7 @@ const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/P
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
+const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
 
 const guardedSelectTopTabSource = useAppScreenPropsSource.match(/const guardedSelectTopTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
@@ -44,6 +45,9 @@ assert.match(useReportRowsModelSource, /reasonIndex \?\?= createReportReasonInde
 assert.match(useReportRowsModelSource, /const derivedReportRowsCacheRef = useRef\(new Map<string, CachedDerivedReportRow>\(\)\);/);
 assert.match(useReportRowsModelSource, /previous\?\.base === derivedRow/);
 assert.match(useReportRowsModelSource, /return previous\.output;/);
+assert.match(useReportColumnLayoutSource, /createEmptyReportColumnValueLists/);
+assert.match(useReportColumnLayoutSource, /valuesByKey\[key\]\.push\(textRow\[key\]\)/);
+assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows\.map\(\(row\) => row\[key\]\)/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
 assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(enabled: boolean\)/);
