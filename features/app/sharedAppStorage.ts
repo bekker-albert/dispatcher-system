@@ -57,9 +57,14 @@ export function serializeSharedAppState(state: SharedAppStorageState) {
   );
 }
 
-export function parseSharedAppSettingsFromSerializedStorage(storage: Record<string, string>) {
+export function parseSharedAppSettingsFromSerializedStorage(
+  storage: Record<string, string>,
+  keys: readonly string[] = sharedAppSettingKeys,
+) {
   return Object.fromEntries(
-    sharedAppSettingKeys.flatMap((key) => {
+    keys.flatMap((key) => {
+      if (!sharedAppSettingKeys.includes(key)) return [];
+
       const value = storage[key];
       if (value === undefined) return [];
 
@@ -108,7 +113,7 @@ export function writeSharedAppStateToBrowserStorage(
 
   return {
     storage,
-    settings: parseSharedAppSettingsFromSerializedStorage(storage),
+    settings: parseSharedAppSettingsFromSerializedStorage(storage, changedKeys),
     changedKeys,
     failedLocalKeys,
   };

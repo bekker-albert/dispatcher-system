@@ -6,6 +6,7 @@ import {
   parseSharedAppSettingsDatabaseSnapshot,
   serializeSharedAppSettingsDatabaseSnapshot,
 } from "../lib/domain/app/shared-settings-snapshot";
+import { parseSharedAppSettingsFromSerializedStorage } from "../features/app/sharedAppStorage";
 import { adminStorageKeys } from "../lib/storage/keys";
 
 assert.deepEqual(parseSharedAppSettingsDatabaseSnapshot(""), { values: {}, updatedAtByKey: {} });
@@ -60,6 +61,13 @@ assert.deepEqual(createSharedAppSettingsSaveDelta({
   expectedUpdatedAt: {
     [adminStorageKeys.reportCustomers]: "2026-04-28T01:00:00.000Z",
   },
+});
+
+assert.deepEqual(parseSharedAppSettingsFromSerializedStorage({
+  [adminStorageKeys.reportCustomers]: "[\"new\"]",
+  [adminStorageKeys.reportReasons]: "{\"row1\":\"same\"}",
+}, [adminStorageKeys.reportReasons]), {
+  [adminStorageKeys.reportReasons]: { row1: "same" },
 });
 
 const updatedSnapshot = applySavedSharedAppSettingsToSnapshot(recordsSnapshot, [
