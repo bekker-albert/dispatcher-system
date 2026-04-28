@@ -14,6 +14,10 @@ import {
   vehicleInlineEditLogEntry,
 } from "../features/admin/vehicles/vehicleInlineEditModel";
 import { resolveInitialVehicleRowsSource } from "../features/admin/vehicles/initialVehicleRows";
+import {
+  createVehicleFilterSets,
+  vehicleMatchesFilterSets,
+} from "../lib/domain/vehicles/filtering";
 import type { VehicleRow } from "../lib/domain/vehicles/types";
 import { adminStorageKeys } from "../lib/storage/keys";
 
@@ -117,6 +121,16 @@ const vehicleRows = [
     active: true,
   },
 ] as VehicleRow[];
+const vehicleFilterColumns = [
+  { key: "brand", getValue: (vehicle: VehicleRow) => vehicle.brand ?? "" },
+  { key: "owner", getValue: (vehicle: VehicleRow) => vehicle.owner ?? "" },
+];
+const vehicleFilterSets = createVehicleFilterSets({ brand: ["Howo"] });
+
+assert.equal(vehicleMatchesFilterSets(vehicleRows[0], vehicleFilterSets, vehicleFilterColumns), true);
+assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns), false);
+assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns, "brand"), true);
+
 const vehicleClearFields = new Map([[10, new Set(["brand", "owner"] as const)]]);
 const clearedVehicleRows = clearVehicleInlineFields(vehicleRows, vehicleClearFields);
 assert.equal(vehicleInlineCellValue(vehicleRows, 10, "brand"), "Howo");

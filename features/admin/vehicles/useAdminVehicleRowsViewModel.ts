@@ -1,7 +1,12 @@
 import { useEffect, useMemo, type Dispatch, type RefObject, type SetStateAction } from "react";
 
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
-import { createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
+import {
+  createVehicleFilterOptions,
+  createVehicleFilterSets,
+  vehicleFilterOptionLabel,
+  vehicleMatchesFilterSets,
+} from "@/lib/domain/vehicles/filtering";
 import {
   adminVehicleFallbackPreviewRows,
   adminVehicleMinPreviewRows,
@@ -59,6 +64,10 @@ export function useAdminVehicleRowsViewModel({
     setShowAllVehicleRows(false);
   }, [setShowAllVehicleRows, vehicleFilters]);
 
+  const vehicleFilterSets = useMemo(() => (
+    active ? createVehicleFilterSets(vehicleFilters) : {}
+  ), [active, vehicleFilters]);
+
   const vehicleAutocompleteOptions = useMemo(() => (
     active && adminVehiclesEditing
       ? Object.fromEntries(
@@ -75,19 +84,19 @@ export function useAdminVehicleRowsViewModel({
     const column = vehicleFilterColumns.find((item) => item.key === openVehicleFilter);
     if (!column) return emptyVehicleFilterOptions;
 
-    const rowsForColumn = deferredVehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns, column.key));
+    const rowsForColumn = deferredVehicleRows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, vehicleFilterSets, vehicleFilterColumns, column.key));
     const options = createVehicleFilterOptions(rowsForColumn, column);
     const selectedValues = vehicleFilters[column.key] ?? [];
 
     return Array.from(new Set([...options, ...selectedValues]))
       .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
-  }, [active, deferredVehicleRows, openVehicleFilter, vehicleFilters]);
+  }, [active, deferredVehicleRows, openVehicleFilter, vehicleFilterSets, vehicleFilters]);
 
   const filteredVehicleRows = useMemo(() => (
     active
-      ? vehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns))
+      ? vehicleRows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, vehicleFilterSets, vehicleFilterColumns))
       : emptyVehicleRows
-  ), [active, vehicleFilters, vehicleRows]);
+  ), [active, vehicleFilterSets, vehicleRows]);
 
   useEffect(() => {
     if (!active || showAllVehicleRows) return undefined;

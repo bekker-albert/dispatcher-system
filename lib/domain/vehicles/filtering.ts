@@ -6,6 +6,7 @@ type VehicleFilterColumnLike = {
 };
 
 type VehicleFiltersLike = Partial<Record<string, string[]>>;
+type VehicleFilterSetsLike = Partial<Record<string, Set<string>>>;
 
 export function vehicleFilterOptionLabel(value: string) {
   return value.trim() || "Пусто";
@@ -18,6 +19,14 @@ export function vehicleFilterOptionValue(value: string) {
 export function createVehicleFilterOptions(rows: VehicleRow[], column: Pick<VehicleFilterColumnLike, "getValue">) {
   return Array.from(new Set(rows.map((vehicle) => vehicleFilterOptionValue(column.getValue(vehicle)))))
     .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
+}
+
+export function createVehicleFilterSets(filters: VehicleFiltersLike) {
+  return Object.fromEntries(
+    Object.entries(filters).flatMap(([key, values]) => (
+      values === undefined ? [] : [[key, new Set(values.map(vehicleFilterOptionValue))] as const]
+    )),
+  ) as VehicleFilterSetsLike;
 }
 
 export function vehicleMatchesFilters(
@@ -33,6 +42,22 @@ export function vehicleMatchesFilters(
     if (selectedValues === undefined) return true;
 
     return selectedValues.includes(vehicleFilterOptionValue(column.getValue(vehicle)));
+  });
+}
+
+export function vehicleMatchesFilterSets(
+  vehicle: VehicleRow,
+  filterSets: VehicleFilterSetsLike,
+  columns: VehicleFilterColumnLike[],
+  excludedKey?: string,
+) {
+  return columns.every((column) => {
+    if (column.key === excludedKey) return true;
+
+    const selectedValues = filterSets[column.key];
+    if (selectedValues === undefined) return true;
+
+    return selectedValues.has(vehicleFilterOptionValue(column.getValue(vehicle)));
   });
 }
 
