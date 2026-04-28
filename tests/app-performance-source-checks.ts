@@ -38,6 +38,9 @@ assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
 assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(enabled: boolean\)/);
 assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
+assert.match(useAppSectionPreloaderSource, /const coreSectionPreloaders = \[/);
+assert.match(useAppSectionPreloaderSource, /runNextPreload\(\);/);
+assert.doesNotMatch(useAppSectionPreloaderSource, /function preloadCoreSections/);
 assert.match(navigationSelectionHandlersSource, /const selectTopTab = useCallback\(\(tab: TopTab\) => \{\s*startTransition\(\(\) => \{\s*setTopTab\(tab\);\s*\}\);/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridRangeKeys/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridKeyAtOffset/);

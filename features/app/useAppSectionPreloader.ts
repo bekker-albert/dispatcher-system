@@ -20,20 +20,43 @@ function scheduleIdlePreload(callback: () => void) {
   return () => window.clearTimeout(handle);
 }
 
-function preloadCoreSections() {
-  void import("@/features/app/AdminPrimaryContent");
-  void import("@/features/app/DispatchPrimaryContent");
-  void import("@/features/app/PtoPrimaryContent");
-  void import("@/features/app/ReportsPrimaryContent");
-}
+const coreSectionPreloaders = [
+  () => import("@/features/app/ReportsPrimaryContent"),
+  () => import("@/features/app/DispatchPrimaryContent"),
+  () => import("@/features/app/AdminPrimaryContent"),
+  () => import("@/features/app/PtoPrimaryContent"),
+];
 
 export function useAppSectionPreloader(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return undefined;
     if (typeof window === "undefined") return undefined;
 
-    return scheduleIdlePreload(() => {
-      preloadCoreSections();
-    });
+    let cancelled = false;
+    let cancelIdlePreload: (() => void) | undefined;
+    let preloadIndex = 0;
+
+    const runNextPreload = () => {
+      if (cancelled || preloadIndex >= coreSectionPreloaders.length) return;
+
+      cancelIdlePreload = scheduleIdlePreload(() => {
+        if (cancelled) return;
+
+        const preloadSection = coreSectionPreloaders[preloadIndex];
+        preloadIndex += 1;
+        if (!preloadSection) return;
+
+        void preloadSection().finally(() => {
+          runNextPreload();
+        });
+      });
+    };
+
+    runNextPreload();
+
+    return () => {
+      cancelled = true;
+      cancelIdlePreload?.();
+    };
   }, [enabled]);
 }
