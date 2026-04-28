@@ -8,6 +8,7 @@ const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.t
 const databaseVehiclesSource = readFileSync(resolve(testDir, "../lib/server/database/vehicles.ts"), "utf8");
 const mysqlVehiclesSource = readFileSync(resolve(testDir, "../lib/server/mysql/vehicles.ts"), "utf8");
 const supabaseVehiclesSource = readFileSync(resolve(testDir, "../lib/supabase/vehicles.ts"), "utf8");
+const vehicleRowsEditorSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleRowsEditor.ts"), "utf8");
 
 function exportedFunctionSource(source: string, name: string) {
   const start = source.indexOf(`export async function ${name}`);
@@ -57,3 +58,5 @@ assert.match(dataVehiclesSource, /saveVehiclesToDatabase\(rows: VehicleRow\[], o
 assert.match(dataVehiclesSource, /replaceVehiclesInDatabase\(rows: VehicleRow\[], options\?: VehicleSnapshotReplaceOptions\)/);
 assert.match(databaseVehiclesSource, /function expectedVehicleSnapshotFromPayload/);
 assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSnapshotFromPayload\(record\.expectedSnapshot\)/g) ?? []).length, 2);
+assert.doesNotMatch(vehicleRowsEditorSource, /deleteVehicleFromDatabase/);
+assert.match(vehicleRowsEditorSource, /Удаление техники будет сохранено общим списком/);

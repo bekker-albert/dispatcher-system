@@ -4,10 +4,25 @@ import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProp
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { databaseConfigured } from "@/lib/data/config";
 
+type AppAdminDatabaseScreenState = Pick<
+  AppStateBundle,
+  | "ptoPlanRows"
+  | "ptoSurveyRows"
+  | "ptoOperRows"
+  | "ptoBucketValues"
+  | "ptoBucketManualRows"
+  | "vehicleRows"
+  | "clientSnapshots"
+  | "databasePanelMessage"
+  | "databasePanelLoading"
+  | "refreshClientSnapshots"
+  | "createClientSnapshotNow"
+  | "restoreClientSnapshot"
+>;
 
 type UseAppAdminDatabaseScreenPropsArgs = {
   active: boolean;
-  appState: AppStateBundle;
+  appState: AppAdminDatabaseScreenState;
 };
 
 export function useAppAdminDatabaseScreenProps({

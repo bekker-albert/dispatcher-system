@@ -5,6 +5,7 @@ import {
   createDatabaseErrorResponse,
   createDatabaseWriteGuardResponse,
   createUnknownDatabaseActionResponse,
+  isAllowedCorsOrigin,
   json,
 } from "./responses";
 import {
@@ -30,6 +31,30 @@ function getUrlOrigin(value: string | null) {
   }
 }
 
+function getFirstForwardedValue(value: string | null) {
+  return value?.split(",")[0]?.trim() || undefined;
+}
+
+function getRequestOriginCandidates(request: Request) {
+  const candidates = new Set<string>();
+  const requestOrigin = getUrlOrigin(request.url);
+  if (requestOrigin) candidates.add(requestOrigin);
+
+  const forwardedHost = getFirstForwardedValue(request.headers.get("x-forwarded-host"));
+  const host = forwardedHost ?? request.headers.get("host") ?? undefined;
+  if (host) {
+    const requestProtocol = request.url.startsWith("https:") ? "https" : "http";
+    const protocol = getFirstForwardedValue(request.headers.get("x-forwarded-proto")) ?? requestProtocol;
+    candidates.add(`${protocol}://${host}`);
+  }
+
+  return candidates;
+}
+
+function isTrustedWriteOrigin(origin: string | undefined, requestOrigins: Set<string>) {
+  return Boolean(origin && (requestOrigins.has(origin) || isAllowedCorsOrigin(origin)));
+}
+
 function isDatabaseWriteAction(action?: string) {
   const normalizedAction = action?.trim().toLowerCase() ?? "";
   return databaseWriteActionPrefixes.some((prefix) => normalizedAction.startsWith(prefix));
@@ -40,18 +65,18 @@ function isProductionRuntime() {
 }
 
 function hasSameOriginWriteHeaders(request: Request) {
-  const requestOrigin = getUrlOrigin(request.url);
-  if (!requestOrigin) return false;
+  const requestOrigins = getRequestOriginCandidates(request);
+  if (requestOrigins.size === 0) return false;
 
   const originHeader = request.headers.get("origin");
   const origin = getUrlOrigin(originHeader);
-  if (originHeader && origin !== requestOrigin) return false;
+  if (originHeader && !isTrustedWriteOrigin(origin, requestOrigins)) return false;
 
   const refererHeader = request.headers.get("referer");
   const referer = getUrlOrigin(refererHeader);
-  if (refererHeader && referer !== requestOrigin) return false;
+  if (refererHeader && !isTrustedWriteOrigin(referer, requestOrigins)) return false;
 
-  return origin === requestOrigin || referer === requestOrigin;
+  return isTrustedWriteOrigin(origin, requestOrigins) || isTrustedWriteOrigin(referer, requestOrigins);
 }
 
 function shouldRejectDatabaseWriteRequest(action: string | undefined, request: Request) {

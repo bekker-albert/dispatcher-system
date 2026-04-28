@@ -7,9 +7,22 @@ import type { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
 
 type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
 type AppVehicleEditing = ReturnType<typeof useAppVehicleEditing>;
+type AppAdminVehiclesScreenState = Pick<
+  AppStateBundle,
+  | "adminVehiclesEditing"
+  | "setShowAllVehicleRows"
+  | "vehicleRows"
+  | "vehicleFilters"
+  | "vehicleFilterDrafts"
+  | "openVehicleFilter"
+  | "vehicleFilterSearch"
+  | "setVehicleFilterSearch"
+  | "vehicleImportInputRef"
+  | "adminVehicleTableScrollRef"
+>;
 
 type UseAppAdminVehiclesScreenPropsArgs = {
-  appState: AppStateBundle;
+  appState: AppAdminVehiclesScreenState;
   models: AppDerivedModels;
   vehicleEditing: AppVehicleEditing;
 };

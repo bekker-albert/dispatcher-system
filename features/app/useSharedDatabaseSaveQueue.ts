@@ -103,8 +103,8 @@ export function useSharedDatabaseSaveQueue({
         sharedDatabaseSaveQueueRef.current = null;
 
         try {
-          await saveSharedAppStateToDatabase(queuedSave.storage);
           await saveSharedAppSettingsToDatabase(queuedSave.settings);
+          await saveSharedAppStateToDatabase(queuedSave.storage);
         } catch (error) {
           if (!isDatabaseConflictError(error)) {
             sharedDatabaseSaveQueueRef.current = sharedDatabaseSaveQueueRef.current ?? queuedSave;

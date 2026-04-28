@@ -146,6 +146,20 @@ assert.deepEqual(await responseJson(routedResponse), {
   data: { routed: true, action: "save", payload: { id: 7 } },
 });
 
+const proxiedWriteResponse = await routedPost(new Request("http://127.0.0.1:10000/api/database", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    origin: "https://www.aam-dispatch.kz",
+    "x-forwarded-host": "aam-dispatch.kz",
+    "x-forwarded-proto": "https",
+  },
+  body: JSON.stringify({ resource: "fake", action: "save", payload: { id: 9 } }),
+}));
+assert.equal(proxiedWriteResponse.status, 202);
+assert.equal(proxiedWriteResponse.headers.get("Access-Control-Allow-Origin"), "https://www.aam-dispatch.kz");
+assert.deepEqual(routedCalls.at(-1), { action: "save", payload: { id: 9 } });
+
 const rejectedWriteResponse = await routedPost(new Request("https://aam-dispatch.kz/api/database", {
   method: "POST",
   headers: { "Content-Type": "application/json", origin: "https://evil.example" },
@@ -154,7 +168,10 @@ const rejectedWriteResponse = await routedPost(new Request("https://aam-dispatch
 assert.equal(rejectedWriteResponse.status, 403);
 assert.equal(rejectedWriteResponse.headers.get("Vary"), "Origin");
 assert.equal(rejectedWriteResponse.headers.get("Access-Control-Allow-Origin"), null);
-assert.deepEqual(routedCalls, [{ action: "save", payload: { id: 7 } }]);
+assert.deepEqual(routedCalls, [
+  { action: "save", payload: { id: 7 } },
+  { action: "save", payload: { id: 9 } },
+]);
 assert.deepEqual(await responseJson(rejectedWriteResponse), {
   error: "Запись в базу данных отклонена: запрос должен идти с этого же сайта.",
 });

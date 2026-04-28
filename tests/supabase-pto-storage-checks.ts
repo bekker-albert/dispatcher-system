@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   savePtoStateToSupabaseClient,
   type SupabasePtoState,
@@ -11,6 +14,14 @@ import {
   ptoSettingsTable,
   type SupabasePtoClient,
 } from "../lib/supabase/pto-storage";
+
+const testDir = dirname(fileURLToPath(import.meta.url));
+const ptoSnapshotSaveSource = readFileSync(resolve(testDir, "../lib/supabase/pto-snapshot-save.ts"), "utf8");
+const secondFreshnessCheckIndex = ptoSnapshotSaveSource.lastIndexOf("assertSupabasePtoMatchesExpectedUpdatedAt");
+const cleanupIndex = ptoSnapshotSaveSource.indexOf("await deletePtoDayValuesMissingFromState");
+
+assert.equal((ptoSnapshotSaveSource.match(/assertSupabasePtoMatchesExpectedUpdatedAt/g) ?? []).length, 3);
+assert.equal(secondFreshnessCheckIndex > 0 && secondFreshnessCheckIndex < cleanupIndex, true);
 
 type Operation = {
   kind: "upsert" | "select" | "delete";

@@ -14,8 +14,12 @@ const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
 
+const guardedSelectTopTabSource = useAppScreenPropsSource.match(/const guardedSelectTopTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
 const guardedSelectPtoTabSource = useAppScreenPropsSource.match(/const guardedSelectPtoTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
 
+assert.match(guardedSelectTopTabSource, /flushPtoDatabasePendingSave\(\)/);
+assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\)/);
+assert.doesNotMatch(guardedSelectTopTabSource, /if \(canNavigate\) selectTopTab\(tab\)/);
 assert.match(guardedSelectPtoTabSource, /selectPtoTab\(tab\)/);
 assert.doesNotMatch(guardedSelectPtoTabSource, /flushPtoDatabasePendingSave/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /PtoDateEditableTableContainer/);

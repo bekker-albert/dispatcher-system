@@ -71,6 +71,10 @@ export async function savePtoStateToSupabaseClient(
 
   if (settingsError) throw settingsError;
 
+  await assertSupabasePtoMatchesExpectedUpdatedAt(state, options.expectedUpdatedAt, client, {
+    yearScope: options.yearScope,
+  });
+
   await deletePtoDayValuesMissingFromState(dayRecords, client, { yearScope: options.yearScope });
   if (!isYearScopedSave) {
     await deletePtoRowsMissingFromState(rowRecords, client);

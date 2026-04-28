@@ -4,7 +4,6 @@ import { defaultVehicleForm } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
-import { errorToMessage } from "@/lib/utils/normalizers";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 type PendingVehicleFocus = {
@@ -101,19 +100,15 @@ export function useVehicleRowsEditor({
     const vehicle = vehicleRows.find((item) => item.id === id);
     pushVehicleUndoSnapshot();
     setVehicleRows((current) => current.filter((vehicle) => vehicle.id !== id));
-    if (databaseConfigured && databaseLoadedRef.current) {
-      showSaveStatus("saving", "Удаляю технику из базы...");
-      void import("@/lib/data/vehicles")
-        .then(({ deleteVehicleFromDatabase }) => deleteVehicleFromDatabase(id))
-        .then(() => {
-          databaseSaveSnapshotRef.current = JSON.stringify(vehicleRowsRef.current.filter((vehicle) => vehicle.id !== id));
-          showSaveStatus("saved", "Техника удалена из базы.");
-        })
-        .catch((error) => {
-          console.warn("Database vehicle delete failed:", error);
-          showSaveStatus("error", `Техника не удалена из базы: ${errorToMessage(error)}`);
-        });
+
+    if (
+      databaseConfigured
+      && databaseLoadedRef.current
+      && databaseSaveSnapshotRef.current === JSON.stringify(vehicleRowsRef.current)
+    ) {
+      showSaveStatus("saving", "Удаление техники будет сохранено общим списком.");
     }
+
     addAdminLog({
       action: "Удаление",
       section: "Техника",

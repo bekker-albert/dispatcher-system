@@ -8,9 +8,16 @@ import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionPr
 
 type AppReportsModel = ReturnType<typeof useAppReportsModel>;
 type AppRuntimeControllers = ReturnType<typeof useAppRuntimeControllers>;
+type AppReportsScreenState = Pick<
+  AppStateBundle,
+  | "reportArea"
+  | "setReportArea"
+  | "reportReasons"
+  | "reportDate"
+>;
 
 type UseAppReportsScreenPropsArgs = {
-  appState: AppStateBundle;
+  appState: AppReportsScreenState;
   models: AppReportsModel;
   runtime: AppRuntimeControllers;
 };

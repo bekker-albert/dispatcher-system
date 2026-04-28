@@ -9,9 +9,20 @@ import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
 type AppDispatchModels = ReturnType<typeof useAppDerivedModels> & ReturnType<typeof useAppDispatchSummaryModel>;
 type AppNavigation = ReturnType<typeof useAppActiveNavigation>;
+type AppDispatchScreenState = Pick<
+  AppStateBundle,
+  | "dispatchTab"
+  | "reportDate"
+  | "search"
+  | "setSearch"
+  | "areaFilter"
+  | "setAreaFilter"
+  | "dispatchVehicleToAddId"
+  | "setDispatchVehicleToAddId"
+>;
 
 type UseAppDispatchScreenPropsArgs = {
-  appState: AppStateBundle;
+  appState: AppDispatchScreenState;
   models: AppDispatchModels;
   navigation: AppNavigation;
 };

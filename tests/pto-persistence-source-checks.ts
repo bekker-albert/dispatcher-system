@@ -58,7 +58,7 @@ assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false
 assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\s\S]*storage: Record<string, string>;[\s\S]*settings: Record<string, unknown>;[\s\S]*\};/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSaveQueueRef = useRef<SharedDatabaseSaveQueue \| null>\(null\);/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSavingRef = useRef\(false\);/);
-assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppStateToDatabase\(queuedSave\.storage\);[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);/);
+assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);[\s\S]*await saveSharedAppStateToDatabase\(queuedSave\.storage\);/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /conflictRetries/);
 assert.match(sharedDatabaseSaveQueueSource, /let failed = false;/);
 assert.match(sharedDatabaseSaveQueueSource, /if \(!isDatabaseConflictError\(error\)\) \{[\s\S]*sharedDatabaseSaveQueueRef\.current = sharedDatabaseSaveQueueRef\.current \?\? queuedSave;[\s\S]*failed = true;[\s\S]*throw error;/);

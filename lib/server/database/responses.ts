@@ -3,10 +3,28 @@ import { errorToMessage } from "../../utils/normalizers";
 import { databaseConflictCode, isDatabaseConflictResponseError } from "./conflicts";
 import { isDatabasePayloadError } from "./validation";
 
-const corsAllowedOrigins = new Set([
+const defaultCorsAllowedOrigins = [
   "https://aam-dispatch.kz",
   "https://www.aam-dispatch.kz",
-]);
+];
+
+function parseAllowedOrigins(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+export function getCorsAllowedOrigins() {
+  return new Set([
+    ...defaultCorsAllowedOrigins,
+    ...parseAllowedOrigins(process.env.DATABASE_ALLOWED_ORIGINS),
+  ]);
+}
+
+export function isAllowedCorsOrigin(origin: string | undefined) {
+  return Boolean(origin && getCorsAllowedOrigins().has(origin));
+}
 
 export function corsHeaders(request?: Request) {
   const origin = request?.headers.get("origin") ?? "";
@@ -14,7 +32,7 @@ export function corsHeaders(request?: Request) {
     "Vary": "Origin",
   };
 
-  if (corsAllowedOrigins.has(origin)) {
+  if (isAllowedCorsOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
     headers["Access-Control-Allow-Headers"] = "Content-Type";

@@ -20,23 +20,31 @@ type MutableRef<T> = {
   current: T;
 };
 
-export type InitialAppDataLoadOptions = InitialReportStateSetters
-  & InitialPtoStateSetters
-  & InitialAdminStructureStateSetters
-  & InitialNavigationStateSetters
-  & InitialVehicleRowsSetters
-  & InitialDispatchSummaryStateSetters
-  & {
-  defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
-  restoreAdminLogs: (storedLogs: unknown) => void;
+type InitialAppDatabaseRefs = {
   appDatabaseSaveSnapshotRef: MutableRef<string>;
   appSettingsDatabaseLoadedRef: MutableRef<boolean>;
   appSettingsDatabaseSaveSnapshotRef: MutableRef<string>;
   vehiclesDatabaseLoadedRef: MutableRef<boolean>;
   vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
+};
+
+type InitialAppLoadFlags = {
   setPtoDatabaseLoadStarted: Dispatch<SetStateAction<boolean>>;
   setPtoBootstrapLoaded: Dispatch<SetStateAction<boolean>>;
   setAdminDataLoaded: Dispatch<SetStateAction<boolean>>;
+};
+
+export type InitialAppDataLoadOptions = {
+  defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
+  restoreAdminLogs: (storedLogs: unknown) => void;
+  databaseRefs: InitialAppDatabaseRefs;
+  loadFlags: InitialAppLoadFlags;
+  reportSetters: InitialReportStateSetters;
+  ptoSetters: InitialPtoStateSetters;
+  adminStructureSetters: InitialAdminStructureStateSetters;
+  navigationSetters: InitialNavigationStateSetters;
+  vehicleSetters: InitialVehicleRowsSetters;
+  dispatchSetters: InitialDispatchSummaryStateSetters;
 };
 
 export async function runInitialAppDataLoad(
@@ -47,15 +55,30 @@ export async function runInitialAppDataLoad(
   const {
     defaultSubTabs,
     restoreAdminLogs,
+    databaseRefs,
+    loadFlags,
+    reportSetters,
+    ptoSetters,
+    adminStructureSetters,
+    navigationSetters,
+    vehicleSetters,
+    dispatchSetters,
+    isCancelled,
+  } = options;
+  const {
     appDatabaseSaveSnapshotRef,
     appSettingsDatabaseLoadedRef,
     appSettingsDatabaseSaveSnapshotRef,
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
-    hasStoredPtoStateRef,
+  } = databaseRefs;
+  const {
     setPtoDatabaseLoadStarted,
     setPtoBootstrapLoaded,
     setAdminDataLoaded,
+  } = loadFlags;
+  const {
+    hasStoredPtoStateRef,
     setReportCustomers,
     setReportAreaOrder,
     setReportWorkOrder,
@@ -81,18 +104,20 @@ export async function runInitialAppDataLoad(
     setDependencyNodes,
     setDependencyLinks,
     setDependencyLinkForm,
-    isCancelled,
-  } = options;
+  } = {
+    ...reportSetters,
+    ...ptoSetters,
+    ...adminStructureSetters,
+    ...navigationSetters,
+    ...vehicleSetters,
+    ...dispatchSetters,
+  };
 
   try {
     const hasLocalAppState = hasInitialLocalAppState();
     const localStoredPtoState = databaseConfigured ? readInitialStoredAppState({ includePto: true }) : null;
 
     if (databaseConfigured) {
-      if (!isCancelled()) {
-        setPtoDatabaseLoadStarted(true);
-      }
-
       const databaseBootstrapCompleted = await loadInitialAppDatabaseBootstrap({
         hasLocalAppState,
         isCancelled,
@@ -146,8 +171,10 @@ export async function runInitialAppDataLoad(
       hasStoredPtoStateRef.current = false;
     }
 
-    if (!databaseConfigured) {
-      if (!isCancelled()) {
+    if (!isCancelled()) {
+      if (databaseConfigured) {
+        setPtoDatabaseLoadStarted(true);
+      } else {
         setPtoBootstrapLoaded(true);
       }
     }
