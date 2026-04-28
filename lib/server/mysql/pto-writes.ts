@@ -28,6 +28,29 @@ function scopedDateClause(yearScope: string | null | undefined, values: unknown[
   return " AND work_date >= ? AND work_date <= ?";
 }
 
+function chunkValues<T>(values: T[], size = batchSize) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function ptoDayValueDateGroups(rows: PtoPlanRow[]) {
+  const groups = new Map<string, { dates: string[]; rowIds: string[] }>();
+
+  ptoDayValueRecordDates(rows).forEach(({ rowId, dates }) => {
+    if (!rowId) return;
+
+    const key = dates.join("\u0001");
+    const group = groups.get(key) ?? { dates, rowIds: [] };
+    group.rowIds.push(rowId);
+    groups.set(key, group);
+  });
+
+  return Array.from(groups.values());
+}
+
 export async function upsertPtoRows(records: PtoPersistenceRowRecord[], execute: DbExecutor = dbExecute) {
   if (!records.length) return;
 
@@ -135,29 +158,33 @@ export async function deletePtoDayValuesMissingFromState(
   execute: DbExecutor = dbExecute,
   options: DeletePtoDayValuesOptions = {},
 ) {
-  for (const { rowId, dates } of ptoDayValueRecordDates(rows)) {
-    if (!rowId) continue;
+  for (const { rowIds, dates } of ptoDayValueDateGroups(rows)) {
+    for (const rowIdBatch of chunkValues(rowIds)) {
+      const rowPlaceholders = rowIdBatch.map(() => "?").join(", ");
 
-    if (dates.length === 0) {
-      const values: unknown[] = [table, rowId];
+      if (dates.length === 0) {
+        const values: unknown[] = [table, ...rowIdBatch];
+        await execute(
+          `DELETE FROM pto_day_values
+          WHERE table_type = ?
+            AND row_id IN (${rowPlaceholders})${scopedDateClause(options.yearScope, values)}`,
+          values,
+        );
+        continue;
+      }
+
+      const values: unknown[] = [table, ...rowIdBatch];
+      const dateScopeClause = scopedDateClause(options.yearScope, values);
+      const datePlaceholders = dates.map(() => "?").join(", ");
       await execute(
-        `DELETE FROM pto_day_values WHERE table_type = ? AND row_id = ?${scopedDateClause(options.yearScope, values)}`,
-        values,
+        `DELETE FROM pto_day_values
+        WHERE table_type = ?
+          AND row_id IN (${rowPlaceholders})
+          ${dateScopeClause}
+          AND work_date NOT IN (${datePlaceholders})`,
+        [...values, ...dates],
       );
-      continue;
     }
-
-    const values: unknown[] = [table, rowId];
-    const dateScopeClause = scopedDateClause(options.yearScope, values);
-    const placeholders = dates.map(() => "?").join(", ");
-    await execute(
-      `DELETE FROM pto_day_values
-      WHERE table_type = ?
-        AND row_id = ?
-        ${dateScopeClause}
-        AND work_date NOT IN (${placeholders})`,
-      [...values, ...dates],
-    );
   }
 }
 
