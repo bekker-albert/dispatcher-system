@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createEmptyPtoDateModel } from "../features/app/emptyPtoDateModel";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const appPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/AppPrimaryContent.tsx"), "utf8");
@@ -10,6 +11,7 @@ const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto
 const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
 const ptoDateEditableTableBodySource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableBody.tsx"), "utf8");
 const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableRow.tsx"), "utf8");
+const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
@@ -17,6 +19,14 @@ const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/repo
 
 const guardedSelectTopTabSource = useAppScreenPropsSource.match(/const guardedSelectTopTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
 const guardedSelectPtoTabSource = useAppScreenPropsSource.match(/const guardedSelectPtoTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
+const emptyPtoDateModel = createEmptyPtoDateModel("2026");
+
+assert.equal(emptyPtoDateModel.isPtoSection, true);
+assert.equal(emptyPtoDateModel.isPtoDateTab, false);
+assert.equal(emptyPtoDateModel.isPtoBucketsSection, false);
+assert.deepEqual(emptyPtoDateModel.ptoYearTabs, ["2026"]);
+assert.deepEqual(emptyPtoDateModel.activePtoDateRows, []);
+assert.deepEqual(emptyPtoDateModel.allPtoDateRows, []);
 
 assert.match(guardedSelectTopTabSource, /flushPtoDatabasePendingSave\(\)/);
 assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\)/);
@@ -41,6 +51,9 @@ assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
 assert.match(useAppSectionPreloaderSource, /const coreSectionPreloaders = \[/);
 assert.match(useAppSectionPreloaderSource, /runNextPreload\(\);/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /function preloadCoreSections/);
+assert.match(ptoPrimaryContentSource, /createEmptyPtoDateModel\(appState\.ptoPlanYear\)/);
+assert.match(ptoPrimaryContentSource, /function PtoDataPrimaryContent/);
+assert.match(ptoPrimaryContentSource, /if \(!isPtoDateTab && !isPtoBucketsSection\)/);
 assert.match(navigationSelectionHandlersSource, /const selectTopTab = useCallback\(\(tab: TopTab\) => \{\s*startTransition\(\(\) => \{\s*setTopTab\(tab\);\s*\}\);/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridRangeKeys/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridKeyAtOffset/);
