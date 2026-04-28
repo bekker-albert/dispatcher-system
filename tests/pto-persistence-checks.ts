@@ -75,7 +75,7 @@ assert.match(mysqlTransactionSource, /rollback\(\)/);
 assert.match(mysqlTransactionSource, /release\(\)/);
 
 const mysqlFullSaveSource = savePtoStateToMysql.toString();
-assert.match(mysqlFullSaveSource, /dbTransaction/);
+assert.match(mysqlFullSaveSource, /writePtoTransaction/);
 assert.match(mysqlFullSaveSource, /assertMysqlPtoMatchesExpectedUpdatedAt\(state,\s*options\.expectedUpdatedAt,\s*\{[\s\S]*yearScope: options\.yearScope[\s\S]*\}\)/);
 assert.match(mysqlFullSaveSource, /upsertPtoRows\(rowRecords,\s*execute\)/);
 assert.match(mysqlFullSaveSource, /deletePtoDayValuesMissingFromState\("plan",\s*planRows,\s*execute,\s*\{ yearScope: options\.yearScope \}\)/);
@@ -85,16 +85,14 @@ assert.match(mysqlFullSaveSource, /if \(!isYearScopedSave\) \{[\s\S]*deletePtoBu
 assert.match(mysqlFullSaveSource, /deletePtoBucketRowsMissingFromState\(bucketRowRecords,\s*execute\)/);
 
 const mysqlDayWithRowSaveSource = savePtoDayValueWithRowToMysql.toString();
-assert.match(mysqlDayWithRowSaveSource, /dbTransaction/);
+assert.match(mysqlDayWithRowSaveSource, /writePtoTransaction/);
 assert.ok(mysqlDayWithRowSaveSource.indexOf("insertPtoRowsIfMissing") < mysqlDayWithRowSaveSource.indexOf("upsertPtoDayValues"));
 assert.doesNotMatch(mysqlDayWithRowSaveSource, /upsertPtoRows/);
-assert.match(mysqlDayWithRowSaveSource, /touchPtoVersion/);
 
 const mysqlDaysWithRowSaveSource = savePtoDayValuesWithRowToMysql.toString();
-assert.match(mysqlDaysWithRowSaveSource, /dbTransaction/);
+assert.match(mysqlDaysWithRowSaveSource, /writePtoTransaction/);
 assert.ok(mysqlDaysWithRowSaveSource.indexOf("insertPtoRowsIfMissing") < mysqlDaysWithRowSaveSource.indexOf("upsertPtoDayValues"));
 assert.doesNotMatch(mysqlDaysWithRowSaveSource, /upsertPtoRows/);
-assert.match(mysqlDaysWithRowSaveSource, /touchPtoVersion/);
 
 const mysqlYearLoadSource = loadPtoStateFromMysqlForYear.toString();
 assert.match(mysqlYearLoadSource, /ptoYearDateRange/);

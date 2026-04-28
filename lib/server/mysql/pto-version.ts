@@ -16,6 +16,17 @@ export async function touchPtoVersion(execute: DbExecutor) {
     ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP(3)`,
     [ptoVersionMetaKey],
   );
+
+  if (execute.rows) {
+    const records = await execute.rows<PtoVersionRow>(
+      "SELECT updated_at FROM pto_meta WHERE meta_key = ? LIMIT 1",
+      [ptoVersionMetaKey],
+    );
+
+    return toIsoLike(records[0]?.updated_at) ?? null;
+  }
+
+  return await loadPtoVersionUpdatedAt();
 }
 
 export async function loadPtoVersionUpdatedAt() {

@@ -23,6 +23,8 @@ import { DatabasePayloadError } from "../lib/server/database/validation";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const mysqlSchemaSource = readFileSync(resolve(testDir, "../lib/server/mysql/schema.ts"), "utf8");
+const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
+const mysqlPtoVersionSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-version.ts"), "utf8");
 
 assert.match(mysqlSchemaSource, /const schemaVersionMetaKey = "schema:v/);
 assert.match(mysqlSchemaSource, /SELECT meta_key FROM pto_meta WHERE meta_key = \? LIMIT 1/);
@@ -32,6 +34,9 @@ assert.match(mysqlSchemaSource, /ALTER TABLE vehicles ADD INDEX vehicles_sort_in
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_rows ADD INDEX pto_rows_sort_idx \(table_type, sort_index\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_idx \(work_date\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_bucket_rows ADD INDEX pto_bucket_rows_sort_idx \(sort_index\)/);
+assert.doesNotMatch(mysqlPtoCommandsSource, /loadPtoUpdatedAtFromMysql/);
+assert.match(mysqlPtoCommandsSource, /return await touchPtoVersion\(execute\)/);
+assert.match(mysqlPtoVersionSource, /SELECT updated_at FROM pto_meta WHERE meta_key = \? LIMIT 1/);
 
 async function responseJson(response: Response) {
   return await response.json() as { data?: unknown; error?: unknown };

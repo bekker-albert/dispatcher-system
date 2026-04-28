@@ -15,9 +15,8 @@ import {
   type PtoPersistenceSnapshotWriteResult,
   type PtoPersistenceState,
 } from "../../domain/pto/persistence-shared";
-import { dbTransaction } from "./pool";
+import { dbTransaction, type DbExecutor } from "./pool";
 import { assertMysqlPtoMatchesExpectedUpdatedAt as assertFreshMysqlPtoMatchesExpectedUpdatedAt } from "./pto-freshness";
-import { loadPtoUpdatedAtFromMysql } from "./pto-load";
 import { assertPtoVersionMatchesExpectedUpdatedAt, touchPtoVersion } from "./pto-version";
 import {
   deletePtoBucketRowsMissingFromState as deleteMissingPtoBucketRowsFromMysqlState,
@@ -50,6 +49,15 @@ const upsertPtoDayValues = upsertMysqlPtoDayValues;
 const upsertPtoRows = upsertMysqlPtoRows;
 const upsertPtoSettings = upsertMysqlPtoSettings;
 
+async function writePtoTransaction(callback: (execute: DbExecutor) => Promise<void>) {
+  const updatedAt = await dbTransaction(async (execute) => {
+    await callback(execute);
+    return await touchPtoVersion(execute);
+  });
+
+  return { updatedAt };
+}
+
 export async function savePtoStateToMysql(
   state: PtoPersistenceState,
   options: PtoSnapshotWriteOptions = {},
@@ -73,7 +81,7 @@ export async function savePtoStateToMysql(
     ? ptoDayValueRecordsForYear(dayRecords, options.yearScope)
     : dayRecords;
 
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await upsertPtoRows(rowRecords, execute);
     await upsertPtoDayValues(scopedDayRecords, execute);
@@ -90,10 +98,7 @@ export async function savePtoStateToMysql(
       await deletePtoBucketRowsMissingFromState(bucketRowRecords, execute);
     }
     await upsertPtoSettings(state, execute);
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function savePtoDayValueToMysql(
@@ -103,7 +108,7 @@ export async function savePtoDayValueToMysql(
   value: number | null,
   options: PtoInlineWriteOptions = {},
 ) {
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     if (value === null) {
       await execute(
@@ -113,10 +118,7 @@ export async function savePtoDayValueToMysql(
     } else {
       await upsertPtoDayValues([{ table_type: table, row_id: rowId, work_date: day, value }], execute);
     }
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function savePtoDayValueWithRowToMysql(
@@ -126,7 +128,7 @@ export async function savePtoDayValueWithRowToMysql(
   value: number | null,
   options: PtoInlineWriteOptions = {},
 ) {
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await insertPtoRowsIfMissing(ptoRowsToRecords(table, [row]), execute);
     if (value === null) {
@@ -137,10 +139,7 @@ export async function savePtoDayValueWithRowToMysql(
     } else {
       await upsertPtoDayValues([{ table_type: table, row_id: row.id, work_date: day, value }], execute);
     }
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function savePtoDayValuesToMysql(
@@ -150,7 +149,7 @@ export async function savePtoDayValuesToMysql(
 ) {
   const { upsertRecords, deleteValues } = ptoDayValuePatchesToRecords(table, values);
 
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await upsertPtoDayValues(upsertRecords, execute);
 
@@ -160,10 +159,7 @@ export async function savePtoDayValuesToMysql(
         [table, item.rowId, item.day],
       );
     }
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function savePtoDayValuesWithRowToMysql(
@@ -175,7 +171,7 @@ export async function savePtoDayValuesWithRowToMysql(
   const normalizedValues = values.map((item) => ({ ...item, rowId: row.id }));
   const { upsertRecords, deleteValues } = ptoDayValuePatchesToRecords(table, normalizedValues);
 
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await insertPtoRowsIfMissing(ptoRowsToRecords(table, [row]), execute);
     await upsertPtoDayValues(upsertRecords, execute);
@@ -186,10 +182,7 @@ export async function savePtoDayValuesWithRowToMysql(
         [table, row.id, item.day],
       );
     }
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function deletePtoRowsFromMysql(
@@ -201,7 +194,7 @@ export async function deletePtoRowsFromMysql(
 
   const placeholders = rowIds.map(() => "?").join(", ");
 
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await execute(
       `DELETE FROM pto_day_values WHERE table_type = ? AND row_id IN (${placeholders})`,
@@ -211,24 +204,18 @@ export async function deletePtoRowsFromMysql(
       `DELETE FROM pto_rows WHERE table_type = ? AND row_id IN (${placeholders})`,
       [table, ...rowIds],
     );
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function deletePtoYearFromMysql(year: string, options: PtoInlineWriteOptions = {}) {
   const { start, end } = ptoYearDateRange(year);
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await execute(
       "DELETE FROM pto_day_values WHERE work_date >= ? AND work_date <= ?",
       [start, end],
     );
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function savePtoBucketRowToMysql(
@@ -236,24 +223,18 @@ export async function savePtoBucketRowToMysql(
   sortIndex = 0,
   options: PtoInlineWriteOptions = {},
 ) {
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await upsertPtoBucketRows([ptoBucketRowToRecord(row, sortIndex)], execute);
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function deletePtoBucketRowFromMysql(rowKeyValue: string, options: PtoInlineWriteOptions = {}) {
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await execute("DELETE FROM pto_bucket_values WHERE row_key = ?", [rowKeyValue]);
     await execute("DELETE FROM pto_bucket_rows WHERE row_key = ?", [rowKeyValue]);
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function savePtoBucketValueToMysql(
@@ -264,7 +245,7 @@ export async function savePtoBucketValueToMysql(
   const parsed = splitPtoBucketCellKey(cellKey);
   if (!parsed) return;
 
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     if (value === null) {
       await execute(
@@ -275,10 +256,7 @@ export async function savePtoBucketValueToMysql(
       const record = ptoBucketValueToRecord(cellKey, value);
       if (record) await upsertPtoBucketValues([record], execute);
     }
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
 
 export async function deletePtoBucketValuesFromMysql(
@@ -288,7 +266,7 @@ export async function deletePtoBucketValuesFromMysql(
   const pairs = ptoBucketCellKeysToPairs(cellKeys);
   if (pairs.length === 0) return;
 
-  await dbTransaction(async (execute) => {
+  return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     for (const parsed of pairs) {
       await execute(
@@ -296,8 +274,5 @@ export async function deletePtoBucketValuesFromMysql(
         [parsed.rowKey, parsed.equipmentKey],
       );
     }
-    await touchPtoVersion(execute);
   });
-
-  return { updatedAt: await loadPtoUpdatedAtFromMysql() };
 }
