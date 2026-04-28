@@ -129,49 +129,65 @@ export function createReportPrintLayout({
   reportReasons,
   reportHeaderLabel,
 }: ReportPrintLayoutOptions) {
-  const reportPrintRows = groups.flatMap((group) => group.rows);
+  const reportPrintTextValues: Record<ReportPrintTextColumnKey, string[]> = {
+    "work-name": [],
+    "day-reason": [],
+    "year-reason": [],
+  };
+  const reportGroupStartIndexes: number[] = [];
+  let reportBodyRowCount = 0;
+
+  groups.forEach((group) => {
+    reportGroupStartIndexes.push(reportBodyRowCount);
+    reportBodyRowCount += group.rows.length;
+
+    group.rows.forEach((row) => {
+      reportPrintTextValues["work-name"].push(formatReportWorkName(row.name));
+
+      if (delta(row.dayPlan, row.dayFact) < 0) {
+        const rowKey = reportRowDisplayKey(row);
+        reportPrintTextValues["day-reason"].push(
+          reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? row.dayReason,
+        );
+      } else {
+        reportPrintTextValues["day-reason"].push("");
+      }
+
+      reportPrintTextValues["year-reason"].push(
+        delta(row.yearPlan, reportYearFact(row)) < 0
+          ? reportPrintYearReasonText(row, reportDate, reportReasons)
+          : "",
+      );
+    });
+  });
+
   const reportPrintTextColumnWidths = reportFitPrintTextColumnWidths({
     "work-name": reportPrintTextColumnWidth(
       "work-name",
       reportHeaderLabel("work-name", "Вид работ"),
-      reportPrintRows.map((row) => formatReportWorkName(row.name)),
+      reportPrintTextValues["work-name"],
     ),
     "day-reason": reportPrintTextColumnWidth(
       "day-reason",
       reportHeaderLabel("day-reason", "Причина за сутки"),
-      reportPrintRows.map((row) => {
-        if (delta(row.dayPlan, row.dayFact) >= 0) return "";
-        const rowKey = reportRowDisplayKey(row);
-        return reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? row.dayReason;
-      }),
+      reportPrintTextValues["day-reason"],
     ),
     "year-reason": reportPrintTextColumnWidth(
       "year-reason",
       reportHeaderLabel("year-reason", "Причины с накоплением"),
-      reportPrintRows.map((row) => {
-        if (delta(row.yearPlan, reportYearFact(row)) >= 0) return "";
-        return reportPrintYearReasonText(row, reportDate, reportReasons);
-      }),
+      reportPrintTextValues["year-reason"],
     ),
   }, columnKeys);
   const reportPrintColumnWidths: Record<ReportColumnKey, number> = {
     ...reportPrintBaseColumnWidths,
     ...reportPrintTextColumnWidths,
   };
-  const reportBodyRowCount = groups.reduce((sum, group) => sum + group.rows.length, 0);
   const reportLastPrintPageRows = reportBodyRowCount > 0 ? reportPrintLastPageRows(groups) : 0;
   const reportMissingPrintRows = reportBodyRowCount > 0 ? reportPrintRowsPerPage - reportLastPrintPageRows : 0;
   const reportShouldFillPrintRows = reportMissingPrintRows >= 1 && reportMissingPrintRows <= 5;
   const reportPrintFillPaddingMm = reportShouldFillPrintRows
     ? Math.min(0.5, Math.max(0.08, (reportMissingPrintRows * 2.2) / Math.max(reportLastPrintPageRows, 1)))
     : 0;
-  const reportGroupStartIndexes = groups.reduce<{ indexes: number[]; nextIndex: number }>(
-    (acc, group) => ({
-      indexes: [...acc.indexes, acc.nextIndex],
-      nextIndex: acc.nextIndex + group.rows.length,
-    }),
-    { indexes: [], nextIndex: 0 },
-  ).indexes;
 
   return {
     reportBodyRowCount,
