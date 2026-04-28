@@ -2,6 +2,13 @@ import { getMysqlPool } from "./connection";
 import type { RowDataPacket } from "mysql2/promise";
 
 let schemaPromise: Promise<void> | null = null;
+const schemaVersionMetaKey = "schema:v2026-04-29-01";
+const ptoMetaTableStatement = `CREATE TABLE IF NOT EXISTS pto_meta (
+    meta_key VARCHAR(191) NOT NULL,
+    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (meta_key),
+    KEY pto_meta_updated_idx (updated_at)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;
 
 const statements = [
   `CREATE TABLE IF NOT EXISTS vehicles (
@@ -77,12 +84,7 @@ const statements = [
     KEY pto_settings_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  `CREATE TABLE IF NOT EXISTS pto_meta (
-    meta_key VARCHAR(191) NOT NULL,
-    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (meta_key),
-    KEY pto_meta_updated_idx (updated_at)
-  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+  ptoMetaTableStatement,
 
   `CREATE TABLE IF NOT EXISTS pto_bucket_rows (
     row_key VARCHAR(191) NOT NULL,
@@ -159,6 +161,14 @@ async function addMysqlColumnIfMissing(tableName: string, columnName: string, st
 }
 
 async function runMysqlSchemaSetup() {
+  await getMysqlPool().execute(ptoMetaTableStatement);
+
+  const schemaVersionRows = await mysqlRows(
+    "SELECT meta_key FROM pto_meta WHERE meta_key = ? LIMIT 1",
+    [schemaVersionMetaKey],
+  );
+  if (schemaVersionRows.length > 0) return;
+
   for (const statement of statements) {
     await getMysqlPool().execute(statement);
   }
@@ -251,6 +261,11 @@ async function runMysqlSchemaSetup() {
     "pto_bucket_values",
     "pto_bucket_values_row_idx",
     "ALTER TABLE pto_bucket_values ADD INDEX pto_bucket_values_row_idx (row_key)",
+  );
+
+  await getMysqlPool().execute(
+    "INSERT IGNORE INTO pto_meta (meta_key) VALUES (?)",
+    [schemaVersionMetaKey],
   );
 }
 
