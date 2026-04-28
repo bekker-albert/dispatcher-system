@@ -22,6 +22,10 @@ export type SupabaseClientSnapshot = {
   meta: SupabaseClientSnapshotMeta;
 };
 
+export type SaveAppStateOptions = {
+  expectedUpdatedAt?: string | null;
+};
+
 type AppStateRecord = {
   key: string;
   value: {
@@ -36,6 +40,10 @@ type AppStateRecord = {
 const appStateTable = "app_state";
 const mainAppStateKey = "main";
 const clientSnapshotKeyPrefix = "client-snapshot:";
+
+function createAppStateConflictError() {
+  return new Error("Legacy app_state changed in another tab");
+}
 
 function requireSupabase() {
   if (!supabaseConfigured || !supabase) {
@@ -87,22 +95,72 @@ export async function loadAppStateFromSupabase(): Promise<SupabaseAppState | nul
   };
 }
 
-export async function saveAppStateToSupabase(storage: Record<string, string>) {
+export async function saveAppStateToSupabase(
+  storage: Record<string, string>,
+  options: SaveAppStateOptions = {},
+): Promise<SupabaseAppState> {
   if (serverDatabaseConfigured) {
-    await databaseRequest("app-state", "save", { storage });
-    return;
+    return databaseRequest<SupabaseAppState>("app-state", "save", {
+      storage,
+      expectedUpdatedAt: options.expectedUpdatedAt,
+    });
   }
 
   const client = requireSupabase();
+
+  if ("expectedUpdatedAt" in options) {
+    if (options.expectedUpdatedAt) {
+      const updatedAt = new Date().toISOString();
+      const { data, error } = await client
+        .from(appStateTable)
+        .update({
+          value: { storage },
+          updated_at: updatedAt,
+        })
+        .eq("key", mainAppStateKey)
+        .eq("updated_at", options.expectedUpdatedAt)
+        .select("value,updated_at");
+
+      if (error) throw error;
+      if ((data ?? []).length !== 1) throw createAppStateConflictError();
+
+      const record = data[0] as AppStateRecord;
+      return {
+        updatedAt: typeof record.updated_at === "string" ? record.updated_at : updatedAt,
+        storage: normalizeStorage(record.value?.storage),
+      };
+    }
+
+    const updatedAt = new Date().toISOString();
+    const { error } = await client
+      .from(appStateTable)
+      .insert({
+        key: mainAppStateKey,
+        value: { storage },
+        updated_at: updatedAt,
+      });
+
+    if (error) {
+      if ((error as { code?: string }).code === "23505") {
+        throw createAppStateConflictError();
+      }
+      throw error;
+    }
+
+    return { updatedAt, storage };
+  }
+
+  const updatedAt = new Date().toISOString();
   const { error } = await client
     .from(appStateTable)
     .upsert({
       key: mainAppStateKey,
       value: { storage },
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     }, { onConflict: "key" });
 
   if (error) throw error;
+  return { updatedAt, storage };
 }
 
 export async function saveClientAppSnapshotToSupabase(

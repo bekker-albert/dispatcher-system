@@ -20,6 +20,7 @@ type UseAppReportsModelOptions = {
   needsAutoReportRows: boolean;
   needsAdminReportRows: boolean;
   needsDerivedReportRows: boolean;
+  needsAreaShiftScheduleAreas: boolean;
   deferredPtoPlanRows: PtoPlanRow[];
   deferredPtoSurveyRows: PtoPlanRow[];
   deferredPtoOperRows: PtoPlanRow[];
@@ -47,6 +48,7 @@ export function useAppReportsModel({
   needsAutoReportRows,
   needsAdminReportRows,
   needsDerivedReportRows,
+  needsAreaShiftScheduleAreas,
   deferredPtoPlanRows,
   deferredPtoSurveyRows,
   deferredPtoOperRows,
@@ -67,13 +69,17 @@ export function useAppReportsModel({
   reportHeaderLabels,
   reportColumnWidths,
 }: UseAppReportsModelOptions) {
+  const needsVisibleReportRows = needsDerivedReportRows;
+  const needsReportSettingsRows = needsAdminReportRows;
+  const needsReportData = needsVisibleReportRows || needsReportSettingsRows;
+
   const {
     reportBaseRows,
     derivedReportRows,
   } = useReportRowsModel({
-    needsReportRows,
-    needsReportIndexes,
-    needsAutoReportRows,
+    needsReportRows: needsReportRows && needsReportData,
+    needsReportIndexes: needsReportIndexes && needsReportData,
+    needsAutoReportRows: needsAutoReportRows && needsReportData,
     deferredPtoPlanRows,
     deferredPtoSurveyRows,
     deferredPtoOperRows,
@@ -82,7 +88,7 @@ export function useAppReportsModel({
   });
 
   const adminReportSettings = useAdminReportSettingsViewModel({
-    needsAdminReportRows,
+    needsAdminReportRows: needsReportSettingsRows,
     reportCustomers,
     adminReportCustomerId,
     adminReportCustomerSettingsTab,
@@ -94,7 +100,7 @@ export function useAppReportsModel({
   });
 
   const customerReport = useCustomerReportViewModel({
-    needsDerivedReportRows,
+    needsDerivedReportRows: needsVisibleReportRows,
     reportCustomers,
     reportCustomerId,
     derivedReportRows,
@@ -102,6 +108,7 @@ export function useAppReportsModel({
   });
 
   const areaShiftScheduleAreas = useAreaShiftScheduleAreas({
+    active: needsAreaShiftScheduleAreas,
     areaShiftCutoffs,
     reportBaseRows,
     ptoPlanRows: deferredPtoPlanRows,
@@ -113,7 +120,7 @@ export function useAppReportsModel({
 
   const reportColumnLayout = useReportColumnLayout({
     filteredReports: customerReport.filteredReports,
-    needsDerivedReportRows,
+    needsDerivedReportRows: needsVisibleReportRows,
     reportArea,
     reportDate,
     reportHeaderLabels,
@@ -121,6 +128,7 @@ export function useAppReportsModel({
   });
 
   useReportSelectionGuards({
+    active: needsVisibleReportRows,
     reportCustomers,
     reportCustomerId,
     setReportCustomerId,

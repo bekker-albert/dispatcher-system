@@ -19,6 +19,12 @@ const ptoLocalStateKeys = [
   adminStorageKeys.ptoLocalUpdatedAt,
 ] as const;
 
+export const managedClientSnapshotStorageKeys = [
+  ...Object.values(adminStorageKeys),
+  clientIdStorageKey,
+  ptoLocalRecoveryBackupKey,
+] as const;
+
 export function savePtoLocalRecoveryBackup(reason: string, databaseUpdatedAt?: string | null) {
   const entries = Object.fromEntries(
     ptoLocalStateKeys.flatMap((key) => {
@@ -47,18 +53,20 @@ export function getOrCreateClientId() {
 }
 
 export function collectLocalStorageBackup() {
-  const backupKeys = [
-    ...Object.values(adminStorageKeys),
-    clientIdStorageKey,
-    ptoLocalRecoveryBackupKey,
-  ];
-
   return Object.fromEntries(
-    backupKeys.flatMap((key) => {
+    managedClientSnapshotStorageKeys.flatMap((key) => {
       const value = window.localStorage.getItem(key);
       return value === null ? [] : [[key, value] as const];
     }),
   );
+}
+
+export function clientSnapshotStorageSignature(clientId: string, storage: Record<string, string>) {
+  return Object.entries(storage)
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+    .map(([key, value]) => `${key}:${value.length}:${value.slice(0, 12)}:${value.slice(-12)}`)
+    .join("|")
+    .concat(`|client:${clientId}`);
 }
 
 function readSnapshotJson<T>(storage: Record<string, string>, key: string, fallback: T): T {

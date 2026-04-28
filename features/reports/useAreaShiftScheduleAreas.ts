@@ -2,12 +2,13 @@ import { useMemo } from "react";
 
 import { defaultAreaShiftScheduleArea, type AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
 import { sortAreaNamesByOrder } from "@/lib/domain/reports/display";
-import type { ReportRow } from "@/lib/domain/reports/types";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { ReportRow } from "@/lib/domain/reports/types";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 
 type UseAreaShiftScheduleAreasOptions = {
+  active: boolean;
   areaShiftCutoffs: AreaShiftCutoffMap;
   reportBaseRows: ReportRow[];
   ptoPlanRows: PtoPlanRow[];
@@ -18,6 +19,7 @@ type UseAreaShiftScheduleAreasOptions = {
 };
 
 export function useAreaShiftScheduleAreas({
+  active,
   areaShiftCutoffs,
   reportBaseRows,
   ptoPlanRows,
@@ -27,6 +29,8 @@ export function useAreaShiftScheduleAreas({
   reportAreaOrder,
 }: UseAreaShiftScheduleAreasOptions) {
   return useMemo(() => {
+    if (!active) return [defaultAreaShiftScheduleArea];
+
     const allAreas = uniqueSorted([
       defaultAreaShiftScheduleArea,
       ...Object.keys(areaShiftCutoffs),
@@ -42,5 +46,5 @@ export function useAreaShiftScheduleAreas({
       defaultAreaShiftScheduleArea,
       ...sortAreaNamesByOrder(customAreas, reportAreaOrder),
     ];
-  }, [areaShiftCutoffs, ptoOperRows, ptoPlanRows, ptoSurveyRows, reportAreaOrder, reportBaseRows, vehicleRows]);
+  }, [active, areaShiftCutoffs, ptoOperRows, ptoPlanRows, ptoSurveyRows, reportAreaOrder, reportBaseRows, vehicleRows]);
 }

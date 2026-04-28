@@ -1,6 +1,7 @@
 "use client";
 
 import { sharedAppSettingKeys } from "@/lib/domain/app/settings";
+import { createSharedAppSettingsDatabaseSnapshot } from "@/lib/domain/app/shared-settings-snapshot";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { initialAppStorageKeys } from "@/features/app/initialAppStorage";
 
@@ -23,13 +24,30 @@ export async function loadInitialAppDatabaseBootstrap({
   appSettingsDatabaseLoadedRef,
   appSettingsDatabaseSaveSnapshotRef,
 }: InitialAppDatabaseBootstrapOptions) {
-  try {
-    const { loadAppStateFromDatabase } = await import("@/lib/data/app-state");
-    const databaseAppState = await loadAppStateFromDatabase();
+  const [appStateResult, settingsResult] = await Promise.allSettled([
+    (async () => {
+      const { createAppStateSaveCheckpoint, loadAppStateFromDatabase } = await import("@/lib/data/app-state");
+      return {
+        createAppStateSaveCheckpoint,
+        databaseAppState: await loadAppStateFromDatabase(),
+      };
+    })(),
+    (async () => {
+      const { loadAppSettingsFromDatabase } = await import("@/lib/data/settings");
+      return await loadAppSettingsFromDatabase([...sharedAppSettingKeys]);
+    })(),
+  ]);
+
+  if (appStateResult.status === "fulfilled") {
+    const { createAppStateSaveCheckpoint, databaseAppState } = appStateResult.value;
 
     if (isCancelled()) return false;
 
     const databaseStorage = databaseAppState?.storage ?? {};
+    appDatabaseSaveSnapshotRef.current = createAppStateSaveCheckpoint(
+      databaseStorage,
+      databaseAppState?.updatedAt ?? null,
+    );
     const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
     const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
     const databaseUpdatedTime = databaseAppState?.updatedAt ? Date.parse(databaseAppState.updatedAt) : 0;
@@ -49,24 +67,19 @@ export async function loadInitialAppDatabaseBootstrap({
       if (databaseAppState?.updatedAt) {
         window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseAppState.updatedAt);
       }
-      appDatabaseSaveSnapshotRef.current = JSON.stringify(databaseStorage);
     } else if (hasLocalAppState && !localUpdatedAt) {
       window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
     }
-  } catch (error) {
-    console.warn("Legacy app_state is not ready:", error);
+  } else {
+    console.warn("Legacy app_state is not ready:", appStateResult.reason);
   }
 
-  try {
-    const { loadAppSettingsFromDatabase } = await import("@/lib/data/settings");
-    const databaseSettings = await loadAppSettingsFromDatabase([...sharedAppSettingKeys]);
+  if (settingsResult.status === "fulfilled") {
+    const databaseSettings = settingsResult.value;
     appSettingsDatabaseLoadedRef.current = true;
 
     if (isCancelled()) return false;
 
-    const databaseSettingsObject = Object.fromEntries(
-      databaseSettings.map((setting) => [setting.key, setting.value]),
-    );
     const databaseSettingsUpdatedTime = Math.max(
       0,
       ...databaseSettings.map((setting) => (
@@ -90,10 +103,10 @@ export async function loadInitialAppDatabaseBootstrap({
       }
     }
 
-    appSettingsDatabaseSaveSnapshotRef.current = JSON.stringify(databaseSettingsObject);
-  } catch (error) {
+    appSettingsDatabaseSaveSnapshotRef.current = createSharedAppSettingsDatabaseSnapshot(databaseSettings);
+  } else {
     appSettingsDatabaseLoadedRef.current = false;
-    console.warn("App settings table is not ready:", error);
+    console.warn("App settings table is not ready:", settingsResult.reason);
   }
 
   return true;

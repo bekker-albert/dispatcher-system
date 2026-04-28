@@ -1,13 +1,12 @@
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   normalizePtoYearValue,
   removeYearFromPtoRows,
   type PtoPlanRow,
 } from "@/lib/domain/pto/date-table";
 import { uniqueSorted } from "@/lib/utils/text";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type UsePtoYearEditorOptions = {
   ptoYearInput: string;
@@ -24,6 +23,8 @@ type UsePtoYearEditorOptions = {
   setPtoOperRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   setPtoSurveyRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   requestSave: () => void;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  getPtoDatabaseExpectedUpdatedAt: () => string | null;
   addAdminLog: (entry: AdminLogInput) => void;
 };
 
@@ -42,6 +43,8 @@ export function usePtoYearEditor({
   setPtoOperRows,
   setPtoSurveyRows,
   requestSave,
+  markPtoDatabaseInlineWriteSaved,
+  getPtoDatabaseExpectedUpdatedAt,
   addAdminLog,
 }: UsePtoYearEditorOptions) {
   const addPtoYear = useCallback(() => {
@@ -78,8 +81,13 @@ export function usePtoYearEditor({
     setPtoYearInput("");
     setPtoYearDialogOpen(false);
     if (databaseConfigured && databaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ deletePtoYearFromDatabase }) => deletePtoYearFromDatabase(year))
+      void enqueuePtoDatabaseWrite(async () => {
+        const { deletePtoYearFromDatabase } = await import("@/lib/data/pto");
+        const result = await deletePtoYearFromDatabase(year, {
+          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+        });
+        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null);
+      })
         .catch((error) => console.warn("Database PTO year delete failed:", error));
     }
     requestSave();
@@ -92,6 +100,8 @@ export function usePtoYearEditor({
     addAdminLog,
     databaseConfigured,
     databaseLoadedRef,
+    getPtoDatabaseExpectedUpdatedAt,
+    markPtoDatabaseInlineWriteSaved,
     ptoPlanYear,
     ptoYearTabs,
     requestSave,

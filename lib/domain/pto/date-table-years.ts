@@ -1,6 +1,13 @@
 import { uniqueSorted } from "../../utils/text";
 import { defaultPtoPlanMonth, type PtoPlanRow } from "./date-table-types";
 
+export type PtoYearOptionSource = {
+  years: readonly string[];
+  carryoverYears: readonly string[];
+  carryoverManualYears: readonly string[];
+  legacyDailyPlanYears: readonly string[];
+};
+
 export function normalizePtoYearValue(value: string | number) {
   const year = Number(value);
 
@@ -8,38 +15,60 @@ export function normalizePtoYearValue(value: string | number) {
   return String(year);
 }
 
-export function ptoYearOptions(rows: PtoPlanRow[], selectedYear: string, manualYears: string[]) {
+export function ptoYearOptionsFromSources(
+  sources: readonly PtoYearOptionSource[],
+  selectedYear: string,
+  manualYears: string[],
+) {
   const years = new Set<string>([
     selectedYear,
     ...manualYears,
   ].map(normalizePtoYearValue).filter(Boolean));
 
-  rows.forEach((row) => {
-    (row.years ?? []).forEach((year) => {
+  sources.forEach((source) => {
+    source.years.forEach((year) => {
       const normalizedYear = normalizePtoYearValue(year);
       if (normalizedYear) years.add(normalizedYear);
     });
 
-    Object.keys(row.carryovers ?? {}).forEach((year) => {
+    source.carryoverYears.forEach((year) => {
       const normalizedYear = normalizePtoYearValue(year);
       if (normalizedYear) years.add(normalizedYear);
     });
 
-    (row.carryoverManualYears ?? []).forEach((year) => {
+    source.carryoverManualYears.forEach((year) => {
       const normalizedYear = normalizePtoYearValue(year);
       if (normalizedYear) years.add(normalizedYear);
     });
 
-    if ((row.years ?? []).length === 0) {
-      Object.keys(row.dailyPlans).forEach((date) => {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-          years.add(date.slice(0, 4));
-        }
-      });
-    }
+    source.legacyDailyPlanYears.forEach((year) => {
+      const normalizedYear = normalizePtoYearValue(year);
+      if (normalizedYear) years.add(normalizedYear);
+    });
   });
 
   return Array.from(years).sort((a, b) => Number(a) - Number(b));
+}
+
+export function ptoYearOptions(rows: PtoPlanRow[], selectedYear: string, manualYears: string[]) {
+  return ptoYearOptionsFromSources(
+    rows.map((row) => {
+      const years = row.years ?? [];
+
+      return {
+        years,
+        carryoverYears: Object.keys(row.carryovers ?? {}),
+        carryoverManualYears: row.carryoverManualYears ?? [],
+        legacyDailyPlanYears: years.length === 0
+          ? Object.keys(row.dailyPlans)
+              .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+              .map((date) => date.slice(0, 4))
+          : [],
+      };
+    }),
+    selectedYear,
+    manualYears,
+  );
 }
 
 export function normalizeStoredPtoYears(value: unknown) {

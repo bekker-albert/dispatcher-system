@@ -5,11 +5,9 @@ import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import type { PtoRowsSetter } from "@/features/pto/ptoDateTableTypes";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { SubTabConfig } from "@/lib/domain/navigation/tabs";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type UseAppPtoDateEditingOptions = {
   addAdminLog: (entry: AdminLogInput) => void;
@@ -25,6 +23,8 @@ type UseAppPtoDateEditingOptions = {
   ptoTab: string;
   ptoYearInput: string;
   ptoYearTabs: string[];
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  getPtoDatabaseExpectedUpdatedAt: () => string | null;
   requestPtoDatabaseSave: () => void;
   setExpandedPtoMonths: Dispatch<SetStateAction<Record<string, boolean>>>;
   setPtoManualYears: Dispatch<SetStateAction<string[]>>;
@@ -51,6 +51,8 @@ export function useAppPtoDateEditing({
   ptoTab,
   ptoYearInput,
   ptoYearTabs,
+  markPtoDatabaseInlineWriteSaved,
+  getPtoDatabaseExpectedUpdatedAt,
   requestPtoDatabaseSave,
   setExpandedPtoMonths,
   setPtoManualYears,
@@ -72,6 +74,8 @@ export function useAppPtoDateEditing({
     ptoSubTabs,
     databaseConfigured,
     databaseLoadedRef: ptoDatabaseLoadedRef,
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
   });
 
   const {
@@ -91,6 +95,8 @@ export function useAppPtoDateEditing({
     setPtoOperRows,
     setPtoSurveyRows,
     requestSave: requestPtoDatabaseSave,
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
     addAdminLog,
   });
 
@@ -112,6 +118,8 @@ export function useAppPtoDateEditing({
     setPtoOperRows,
     setPtoSurveyRows,
     requestSave: requestPtoDatabaseSave,
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
     addAdminLog,
   });
 
@@ -124,6 +132,7 @@ export function useAppPtoDateEditing({
     ptoPlanRows,
     ptoOperRows,
     ptoSurveyRows,
+    currentPtoRows: ptoTab === "plan" ? ptoPlanRows : ptoTab === "oper" ? ptoOperRows : ptoSurveyRows,
     ptoPlanYear,
     currentPtoTableLabel,
     setPtoPlanRows,
@@ -131,6 +140,7 @@ export function useAppPtoDateEditing({
     setPtoSurveyRows,
     saveDayPatch: savePtoDayPatchToDatabase,
     saveDayPatches: savePtoDayPatchesToDatabase,
+    requestSave: requestPtoDatabaseSave,
     addAdminLog,
   });
 

@@ -2,10 +2,9 @@
 
 import { useAppAdminVehiclesProps } from "@/features/app/useAppAdminVehiclesProps";
 import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import type { useAppVehicleEditing } from "@/features/app/useAppVehicleEditing";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
 type AppVehicleEditing = ReturnType<typeof useAppVehicleEditing>;
 

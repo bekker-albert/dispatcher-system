@@ -13,6 +13,7 @@ export const adminStorageKeys = {
   subTabs: "dispatcher:sub-tabs",
   vehicles: "dispatcher:vehicles",
   vehiclesSeedVersion: "dispatcher:vehicles-seed-version",
+  vehiclesLocalUpdatedAt: "dispatcher:vehicles-local-updated-at",
   ptoYears: "dispatcher:pto-years",
   ptoPlanRows: "dispatcher:pto-plan-rows",
   ptoSurveyRows: "dispatcher:pto-survey-rows",

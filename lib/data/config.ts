@@ -2,7 +2,7 @@ import {
   serverDatabaseConfigured,
   supabaseBackendConfigured,
   supabaseConfigured,
-} from "@/lib/supabase/config";
+} from "../supabase/config";
 
 export { serverDatabaseConfigured, supabaseBackendConfigured };
 

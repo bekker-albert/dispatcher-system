@@ -1,33 +1,12 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
-import type { ReactNode, RefObject } from "react";
 import { Fragment } from "react";
-import { PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
+import { PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
 import { monthToggleStyle, ptoDateTableLayoutStyle, ptoDateTableScrollStyle, ptoPlanTableStyle, ptoStatusBadgeStyle } from "@/features/pto/ptoDateTableStyles";
-import type { PtoMonthGroupView, PtoRowDateTotals, PtoTableColumn } from "@/features/pto/ptoDateTableModel";
-import { normalizePtoCustomerCode, normalizePtoUnit, ptoAutomatedStatus, ptoStatusRowBackground, type PtoPlanRow } from "@/lib/domain/pto/date-table";
-
-type PtoDateReadonlyTableProps = {
-  rows: PtoPlanRow[];
-  showCustomerCode: boolean;
-  showLocation: boolean;
-  ptoPlanYear: string;
-  ptoTab: string;
-  reportDate: string;
-  carryoverHeader: string;
-  displayMonthGroups: PtoMonthGroupView[];
-  tableColumns: PtoTableColumn[];
-  tableMinWidth: number;
-  columnWidthByKey: Map<string, number>;
-  rowHeights: Record<string, number>;
-  scrollRef: RefObject<HTMLDivElement | null>;
-  getEffectiveCarryover: (row: PtoPlanRow) => number;
-  getRowDateTotals: (row: PtoPlanRow) => PtoRowDateTotals;
-  headerLabel: (key: string, fallback: string) => string;
-  onToggleMonth: (month: string) => void;
-  toolbar: ReactNode;
-};
+import type { PtoDateReadonlyTableProps } from "@/features/pto/ptoDateTableTypes";
+import { normalizePtoCustomerCode, normalizePtoUnit, ptoAutomatedStatus, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
+import { statusControlStyle } from "@/shared/ui/statusBadge";
 
 export function PtoDateReadonlyTable({
   rows,
@@ -36,6 +15,7 @@ export function PtoDateReadonlyTable({
   ptoPlanYear,
   ptoTab,
   reportDate,
+  bottomSpacerHeight,
   carryoverHeader,
   displayMonthGroups,
   tableColumns,
@@ -43,6 +23,9 @@ export function PtoDateReadonlyTable({
   columnWidthByKey,
   rowHeights,
   scrollRef,
+  onScroll,
+  tableSpacerColSpan,
+  topSpacerHeight,
   getEffectiveCarryover,
   getRowDateTotals,
   headerLabel,
@@ -53,8 +36,8 @@ export function PtoDateReadonlyTable({
     <div style={ptoDateTableLayoutStyle}>
       {toolbar}
 
-      <div ref={scrollRef} style={ptoDateTableScrollStyle}>
-        <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth, marginRight: 40 }}>
+      <div ref={scrollRef} onScroll={onScroll} style={ptoDateTableScrollStyle}>
+        <table style={{ ...ptoPlanTableStyle, width: tableMinWidth, minWidth: tableMinWidth }}>
           <colgroup>
             {tableColumns.map((column) => (
               <col key={column.key} style={{ width: column.width }} />
@@ -96,6 +79,7 @@ export function PtoDateReadonlyTable({
             </tr>
           </thead>
           <tbody>
+            <PtoVirtualSpacerRow height={topSpacerHeight} colSpan={tableSpacerColSpan} />
             {rows.map((row) => {
               const rowStatus = ptoAutomatedStatus(row, reportDate);
               const effectiveCarryover = getEffectiveCarryover(row);
@@ -114,7 +98,7 @@ export function PtoDateReadonlyTable({
                   <PtoPlanTd align="center">
                     <span
                       title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
-                      style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}
+                      style={{ ...ptoStatusBadgeStyle, ...statusControlStyle(rowStatus) }}
                     >
                       {rowStatus}
                     </span>
@@ -135,6 +119,7 @@ export function PtoDateReadonlyTable({
                 </tr>
               );
             })}
+            <PtoVirtualSpacerRow height={bottomSpacerHeight} colSpan={tableSpacerColSpan} />
           </tbody>
         </table>
       </div>

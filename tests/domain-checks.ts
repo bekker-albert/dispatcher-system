@@ -1,24 +1,17 @@
 import assert from "node:assert/strict";
-import { createPtoDatabaseState, normalizeLoadedPtoDatabaseState, resolvePtoDatabaseLoadResolution, validatePtoDatabaseLoadState } from "../features/pto/ptoPersistenceModel";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSettingKeys } from "../lib/domain/app/settings";
 import { cloneUndoSnapshot, type UndoSnapshot } from "../lib/domain/app/undo";
 import { adminLogLimit, normalizeAdminLogEntry } from "../lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navigation";
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
-import { buildDispatchAiSuggestion, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
+import { buildDispatchAiSuggestion, buildDispatchSummaryRowView, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "../lib/domain/navigation/tabs";
 import { createPtoBucketColumns, createPtoBucketRows, isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketSelectionKey } from "../lib/domain/pto/buckets";
-import { createEmptyPtoDateRow, dateRange, distributeMonthlyTotal, emptyPtoDraftRowFields, insertPtoRowAfter, isPtoDateTableKey, nextDate, normalizePtoCustomerCode, normalizePtoPlanRow, ptoAreaMatches, ptoColumnDefaults, ptoDateTableKeyFromTab, ptoEffectiveCarryover, ptoFieldLogLabel, ptoLinkedRowMatches, ptoLinkedRowSignature, ptoRowFieldDomKey, reorderPtoRows } from "../lib/domain/pto/date-table";
+import { dateRange, distributeMonthlyTotal, emptyPtoDraftRowFields, isPtoDateTableKey, nextDate, normalizePtoCustomerCode, normalizePtoPlanRow, ptoColumnDefaults, ptoDateTableKeyFromTab } from "../lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "../lib/domain/pto/defaults";
 import { createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "../lib/domain/pto/excel";
 import { formatBucketNumber, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "../lib/domain/pto/formatting";
-import { calculatePtoVirtualRows } from "../lib/domain/pto/virtualization";
-import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto, deriveReportRowFromPtoIndex } from "../lib/domain/reports/calculation";
-import { normalizeStoredReportCustomers } from "../lib/domain/reports/customers";
-import { defaultReportCustomerId, defaultReportCustomers, defaultReportRows } from "../lib/domain/reports/defaults";
-import { applyReportFactSourceRows, createReportSummaryRow, delta, formatReportTitleDate, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportRowAutoStatus, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer } from "../lib/domain/reports/display";
-import { reportYearFact } from "../lib/domain/reports/facts";
-import { aggregateReportReasons, reportReasonEntryKey, reportYearReasonValue } from "../lib/domain/reports/reasons";
+import { defaultReportCustomers } from "../lib/domain/reports/defaults";
 import { formatDateInputValue, isStoredReportDateValue, resolveReportDateAreaContext } from "../features/reports/lib/reportDateSelection";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "../lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleFallbackRows, defaultVehicleForm, normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
@@ -28,7 +21,7 @@ import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehic
 import { adminStorageKeys } from "../lib/storage/keys";
 import { createId } from "../lib/utils/id";
 import { parseDecimalInput as parseUtilityDecimalInput } from "../lib/utils/numbers";
-import { mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "../lib/utils/normalizers";
+import { errorToMessage, mergeDefaultsById, normalizeDecimalRecord, normalizeNumberRecord, normalizeStringList, normalizeStringListRecord, normalizeStringRecord } from "../lib/utils/normalizers";
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "../lib/utils/text";
 
 const nbsp = "\u00a0";
@@ -50,6 +43,14 @@ assert.equal(normalizeLookupValue("Уч_Аксу / Карьер"), "аксука
 assert.equal(cleanAreaName("Уч_Акбакай"), "Акбакай");
 assert.deepEqual(uniqueSorted(["Б", "А", "А", " "]), ["А", "Б"]);
 assert.equal(createId().includes("-"), true);
+assert.equal(
+  errorToMessage("PTO data changed in database. Reload before saving inline edits."),
+  "Данные ПТО в базе уже изменились другим пользователем. Обнови страницу перед повторным сохранением.",
+);
+assert.equal(
+  errorToMessage("Could not find the table 'public.app_state' in the schema cache"),
+  "В базе данных не найдена нужная таблица. Проверь структуру базы данных и повтори сохранение.",
+);
 assert.equal(formatDateInputValue(new Date(2026, 3, 5)), "2026-04-05");
 assert.equal(isStoredReportDateValue("2026-04-05"), true);
 assert.equal(isStoredReportDateValue("bad"), false);
@@ -145,370 +146,6 @@ assert.equal(compactTopTabLabel(defaultTopTabs.find((tab) => tab.id === "dispatc
 assert.equal(compactSubTabLabel("pto", { id: "x", label: "Custom", value: "custom", visible: true }), "Custom");
 assert.deepEqual(normalizeStoredCustomTabs([{ id: "c", title: " Custom ", description: " Text ", items: ["a", 1], visible: true }]), [{ id: "c", title: "Custom", description: "Text", items: ["a"], visible: true }]);
 
-assert.equal(
-  aggregateReportReasons(["В связи с отсутствием ГСМ (22 ч.)"]),
-  `В связи с отсутствием ГСМ${nbsp}(22${nbsp}ч.)`,
-);
-
-assert.equal(
-  aggregateReportReasons(["В связи с отсутствием ГСМ (22 ч.,"]),
-  `В связи с отсутствием ГСМ${nbsp}(22${nbsp}ч.)`,
-);
-
-assert.equal(
-  aggregateReportReasons(["Неблагоприятные погодные условия\n(дождь, снег, метель - 10 ч.)"]),
-  `Погодные условия${nbsp}(10${nbsp}ч.)`,
-);
-
-assert.equal(
-  aggregateReportReasons(["Простой ДСК (5 ч.)", "Простой ДСК (3 ч.)"]),
-  `Простой ДСК${nbsp}(8${nbsp}ч.)`,
-);
-
-assert.equal(
-  aggregateReportReasons(["Ремонт транспортировочной техники:\n1 ед. самосвала (6 ч.)"]),
-  `Ремонт транспортировочной техники${nbsp}(6${nbsp}ч.)`,
-);
-
-assert.equal(
-  aggregateReportReasons([
-    "Ремонт транспортировочной техники:\n1 ед. самосвала (6 ч.)\nНеблагоприятные погодные условия\n(дождь, снег - 10 ч.)",
-    "Ремонт транспортировочной техники:\n1 ед. самосвала (3 ч.)",
-  ]),
-  `Ремонт транспортировочной техники${nbsp}(9${nbsp}ч.)\nПогодные условия${nbsp}(10${nbsp}ч.)`,
-);
-
-const reasonRowKey = "аксу::отсыпка";
-const reasonMap = {
-  [reportReasonEntryKey("2026-04-17", reasonRowKey)]: "Ремонт транспортировочной техники:\n1 ед. самосвала (6 ч.)",
-  [reportReasonEntryKey("2026-04-18", reasonRowKey)]: "Неблагоприятные погодные условия\n(дождь - 10 ч.)",
-  [`year:2026-04-18||${reasonRowKey}`]: `Ремонт транспортировочной техники${nbsp}(6${nbsp}ч.)`,
-};
-
-assert.equal(
-  reportYearReasonValue(reasonMap, reasonRowKey, "2026-04-18", "", "2026-01-01"),
-  `Ремонт транспортировочной техники${nbsp}(6${nbsp}ч.)\nПогодные условия${nbsp}(10${nbsp}ч.)`,
-);
-
-const previousYearRow = normalizePtoPlanRow({
-  id: "previous",
-  area: "Уч_Аксу",
-  structure: "Перевозка",
-  unit: "м3",
-  dailyPlans: { "2025-12-31": 40 },
-  years: ["2025"],
-});
-const currentYearRow = normalizePtoPlanRow({
-  id: "current",
-  area: "Аксу",
-  structure: "Перевозка",
-  unit: "м3",
-  dailyPlans: {},
-  years: ["2026"],
-});
-
-assert.equal(ptoEffectiveCarryover(currentYearRow, "2026", [previousYearRow, currentYearRow]), 40);
-assert.equal(ptoAreaMatches("Уч_Аксу", "Аксу"), true);
-assert.equal(ptoLinkedRowMatches(currentYearRow, "missing", ptoLinkedRowSignature(previousYearRow)), true);
-assert.deepEqual(reorderPtoRows([previousYearRow, currentYearRow], "current", "", "previous", "", "before").map((row) => row.id), ["current", "previous"]);
-assert.equal(createEmptyPtoDateRow("Новая", "Аксу", "2026", "new").area, "Уч_Аксу");
-assert.deepEqual(insertPtoRowAfter([previousYearRow], previousYearRow, currentYearRow).map((row) => row.id), ["previous", "current"]);
-assert.equal(ptoFieldLogLabel("carryover"), "Остатки");
-assert.equal(ptoRowFieldDomKey("row", "area"), "row:area");
-const virtualRows = calculatePtoVirtualRows(
-  Array.from({ length: 100 }, (_, index) => ({ id: String(index) })),
-  { "plan:20": 80 },
-  "plan",
-  { top: 900, height: 320 },
-);
-assert.equal(virtualRows.renderedRows.length < 100, true);
-assert.equal(virtualRows.topSpacerHeight > 0, true);
-assert.equal(virtualRows.bottomSpacerHeight > 0, true);
-assert.equal(virtualRows.rowHeights[20], 80);
-
-const emptyPtoDatabaseState = createPtoDatabaseState({
-  manualYears: ["2026"],
-  planRows: [],
-  operRows: [],
-  surveyRows: [],
-  bucketValues: {},
-  bucketRows: [],
-  uiState: { expandedPtoMonths: {} },
-});
-const databasePtoRow = createEmptyPtoDateRow("Database", "Aksu", "2026", "database-row");
-const localPtoRow = createEmptyPtoDateRow("Local", "Aksu", "2026", "local-row");
-const staleDatabasePtoState = {
-  ...emptyPtoDatabaseState,
-  planRows: [databasePtoRow],
-  updatedAt: "2026-04-24T10:00:00.000Z",
-};
-const newerLocalPtoState = {
-  ...emptyPtoDatabaseState,
-  planRows: [localPtoRow],
-};
-
-assert.doesNotThrow(() => validatePtoDatabaseLoadState(staleDatabasePtoState));
-assert.throws(() => validatePtoDatabaseLoadState({ ...staleDatabasePtoState, planRows: undefined as unknown as never }));
-assert.equal(resolvePtoDatabaseLoadResolution({
-  databaseState: null,
-  currentState: newerLocalPtoState,
-  hasStoredPtoState: true,
-  localUpdatedAt: "2026-04-24T12:00:00.000Z",
-  shouldRestoreClientSnapshot: false,
-}).kind, "empty-save-local");
-assert.equal(resolvePtoDatabaseLoadResolution({
-  databaseState: staleDatabasePtoState,
-  currentState: newerLocalPtoState,
-  hasStoredPtoState: true,
-  localUpdatedAt: "2026-04-24T12:00:00.000Z",
-  shouldRestoreClientSnapshot: false,
-}).kind, "keep-local");
-assert.equal(resolvePtoDatabaseLoadResolution({
-  databaseState: staleDatabasePtoState,
-  currentState: newerLocalPtoState,
-  hasStoredPtoState: true,
-  localUpdatedAt: "2026-04-24T09:00:00.000Z",
-  shouldRestoreClientSnapshot: true,
-}).kind, "restore-local");
-assert.equal(resolvePtoDatabaseLoadResolution({
-  databaseState: staleDatabasePtoState,
-  currentState: newerLocalPtoState,
-  hasStoredPtoState: true,
-  localUpdatedAt: "2026-04-24T09:00:00.000Z",
-  shouldRestoreClientSnapshot: false,
-}).kind, "use-database");
-const normalizedLoadedPtoState = normalizeLoadedPtoDatabaseState({
-  ...staleDatabasePtoState,
-  uiState: {
-    ptoTab: "plan",
-    expandedPtoMonths: { "2026-04": true, bad: "x" as unknown as boolean },
-    ptoColumnWidths: { area: 9999, unit: 10 },
-  },
-}, emptyPtoDatabaseState);
-assert.deepEqual(normalizedLoadedPtoState.uiState.expandedPtoMonths, { "2026-04": true });
-assert.equal(normalizedLoadedPtoState.uiState.ptoColumnWidths.area, 800);
-assert.equal(normalizedLoadedPtoState.uiState.ptoColumnWidths.unit, 44);
-
-const planRow = normalizePtoPlanRow({
-  id: "plan",
-  area: "Уч_Аксу",
-  structure: "Подача руды",
-  customerCode: "AA",
-  unit: "Куб",
-  dailyPlans: { "2026-04-18": 100 },
-  years: ["2026"],
-});
-const operRow = normalizePtoPlanRow({
-  id: "oper",
-  area: "Аксу",
-  structure: "Подача руды",
-  unit: "м3",
-  dailyPlans: { "2026-04-18": 80 },
-  years: ["2026"],
-});
-const reportRow = createReportRowFromPtoPlan(planRow);
-const derivedReportRow = deriveReportRowFromPto(reportRow, "2026-04-18", [planRow], [], [operRow]);
-const indexedDerivedReportRow = deriveReportRowFromPtoIndex(
-  reportRow,
-  "2026-04-18",
-  buildReportPtoIndex([planRow], { includeCustomerCode: true }),
-  buildReportPtoIndex([]),
-  buildReportPtoIndex([operRow]),
-);
-
-assert.equal(reportRow.unit, "м3");
-assert.equal(reportRow.customerCode, "AA");
-assert.equal(derivedReportRow.dayPlan, 100);
-assert.equal(derivedReportRow.dayFact, 80);
-assert.equal(derivedReportRow.yearPlan, 100);
-assert.deepEqual(indexedDerivedReportRow, derivedReportRow);
-assert.equal(reportYearFact(derivedReportRow), 80);
-assert.equal(delta(derivedReportRow.dayPlan, derivedReportRow.dayFact), -20);
-
-const surveyCutoffPlanRow = normalizePtoPlanRow({
-  id: "plan-survey-cutoff",
-  area: "Aksu",
-  structure: "Survey Cutoff",
-  unit: "m3",
-  dailyPlans: { "2026-04-24": 1 },
-  years: ["2026"],
-});
-const surveyCutoffOperRow = normalizePtoPlanRow({
-  id: "oper-survey-cutoff",
-  area: "Aksu",
-  structure: "Survey Cutoff",
-  unit: "m3",
-  dailyPlans: Object.fromEntries(dateRange("2026-04-01", "2026-04-24").map((date) => [date, 1])),
-  years: ["2026"],
-});
-const surveyCutoffSurveyRow = normalizePtoPlanRow({
-  id: "survey-survey-cutoff",
-  area: "Aksu",
-  structure: "Survey Cutoff",
-  unit: "m3",
-  dailyPlans: {
-    "2026-04-05": 10,
-    "2026-04-11": 20,
-    "2026-04-15": 30,
-    "2026-04-20": 40,
-    "2026-04-24": 0,
-  },
-  years: ["2026"],
-});
-const surveyCutoffReportRow = createReportRowFromPtoPlan(surveyCutoffPlanRow);
-const surveyCutoffDerivedRow = deriveReportRowFromPtoIndex(
-  surveyCutoffReportRow,
-  "2026-04-24",
-  buildReportPtoIndex([surveyCutoffPlanRow]),
-  buildReportPtoIndex([surveyCutoffSurveyRow]),
-  buildReportPtoIndex([surveyCutoffOperRow]),
-);
-const noSurveyDerivedRow = deriveReportRowFromPtoIndex(
-  surveyCutoffReportRow,
-  "2026-04-24",
-  buildReportPtoIndex([surveyCutoffPlanRow]),
-  buildReportPtoIndex([]),
-  buildReportPtoIndex([surveyCutoffOperRow]),
-);
-
-assert.equal(surveyCutoffDerivedRow.monthSurveyFact, 100);
-assert.equal(surveyCutoffDerivedRow.monthOperFact, 4);
-assert.equal(reportYearFact(surveyCutoffDerivedRow), 104);
-assert.equal(noSurveyDerivedRow.monthSurveyFact, 0);
-assert.equal(noSurveyDerivedRow.monthOperFact, 24);
-assert.equal(reportYearFact(noSurveyDerivedRow), 24);
-const compactPlanWidth = reportAutoColumnWidth("day-plan", "План суточный", ["123 456"]);
-const widePlanWidth = reportAutoColumnWidth("day-plan", "План суточный", ["123 456 789"]);
-const annualRemainingWidth = reportAutoColumnWidth("annual-remaining", "Остаток", ["-2 703 243"]);
-const monthFactWidth = reportAutoColumnWidth("month-fact", "Маркзамер + оперучет", [`123 456${nbsp}789\nмарк 214${nbsp}596`]);
-const dayProductivityWidth = reportAutoColumnWidth("day-productivity", "Произв. техники", [`16 800\n104%`]);
-const monthProductivityWidth = reportAutoColumnWidth("month-productivity", "Произв. накоп.", [`481 768\n104%`]);
-assert.ok(compactPlanWidth <= 78);
-assert.ok(widePlanWidth > compactPlanWidth);
-assert.ok(widePlanWidth <= 78);
-assert.ok(annualRemainingWidth > compactPlanWidth);
-assert.ok(annualRemainingWidth <= 104);
-assert.ok(monthFactWidth > compactPlanWidth);
-assert.ok(monthFactWidth <= 96);
-assert.ok(dayProductivityWidth <= 72);
-assert.ok(monthProductivityWidth <= 78);
-assert.ok(monthProductivityWidth >= dayProductivityWidth);
-assert.ok(reportAutoColumnWidth("unit", "Ед.", ["м3"]) <= 34);
-assert.equal(defaultReportRows.length, 5);
-assert.equal(defaultReportCustomerId, "aa-mining");
-assert.equal(defaultReportCustomers[0].rowKeys.length, defaultReportRows.length);
-assert.equal(defaultReportCustomers[0].ptoCode, "AAM");
-assert.equal(formatReportTitleDate("2026-04-18"), "субботу, 18 апреля 2026 г.");
-assert.equal(reportRowKey({ ...reportRow, customerCode: "" }), "аксу::подачаруды");
-assert.equal(reportRowKey(reportRow), "аксу::подачаруды::aa");
-const aamDuplicateReportRow = { ...reportRow, customerCode: "AAM" };
-const aaDuplicateReportRow = { ...reportRow, customerCode: "AA" };
-const customDuplicateReportRow = { ...reportRow, customerCode: "C4" };
-const aamOtherReportRow = { ...reportRow, name: "Другая работа", customerCode: "AAM" };
-const reportCustomerForPtoCode = (ptoCode: string) => ({
-  ...defaultReportCustomers[0],
-  id: `customer-${ptoCode}`,
-  ptoCode,
-});
-assert.deepEqual(
-  reportRowsForCustomer([aamDuplicateReportRow, aaDuplicateReportRow, aamOtherReportRow], reportCustomerForPtoCode("AAM")).map(reportRowKey),
-  [reportRowKey(aamDuplicateReportRow), reportRowKey(aamOtherReportRow)],
-);
-assert.deepEqual(
-  reportRowsForCustomer([aamDuplicateReportRow, aaDuplicateReportRow, aamOtherReportRow], reportCustomerForPtoCode("AA")).map(reportRowKey),
-  [reportRowKey(aaDuplicateReportRow), reportRowKey(aamOtherReportRow)],
-);
-assert.deepEqual(
-  reportRowsForCustomer([aamDuplicateReportRow, customDuplicateReportRow, aamOtherReportRow], reportCustomerForPtoCode("C4")).map(reportRowKey),
-  [reportRowKey(customDuplicateReportRow), reportRowKey(aamOtherReportRow)],
-);
-assert.equal(
-  createReportSummaryRow({ id: "sum", area: "Аксу", label: "Итого", unit: "м3", rowKeys: [] }, [derivedReportRow])?.dayFact,
-  80,
-);
-
-const factSourceTargetRow = { ...derivedReportRow, area: "Aksu", name: "Target fact row", dayFact: 5, monthFact: 5, monthSurveyFact: 0, monthOperFact: 5, yearFact: 5, yearSurveyFact: 0, yearOperFact: 5, annualFact: 5 };
-const factSourceSourceRow = { ...derivedReportRow, area: "Aksu", name: "Source fact row", dayFact: 12, monthFact: 12, monthSurveyFact: 0, monthOperFact: 12, yearFact: 12, yearSurveyFact: 0, yearOperFact: 12, annualFact: 12 };
-const factSourceRows = applyReportFactSourceRows(
-  [factSourceTargetRow, factSourceSourceRow],
-  { [reportRowKey(factSourceTargetRow)]: [reportRowKey(factSourceSourceRow)] },
-);
-assert.equal(factSourceRows[0].dayFact, 12);
-assert.equal(reportYearFact(factSourceRows[0]), 12);
-assert.equal(factSourceRows[1].dayFact, 12);
-
-const normalizedReportCustomers = normalizeStoredReportCustomers([
-  {
-    id: "customer",
-    label: " Заказчик ",
-    visible: true,
-    autoShowRows: true,
-    rowKeys: ["a", "a"],
-    hiddenRowKeys: ["b", "b"],
-    rowLabels: { a: " Вид работ " },
-    factSourceRowKeys: { a: ["b", "b"] },
-    summaryRows: [{ id: "s", label: " ", unit: "м3", area: "Аксу", rowKeys: ["a", "a"] }],
-    areaOrder: ["Аксу", "Аксу"],
-    workOrder: { Аксу: ["a", "a"] },
-  },
-], [{
-  id: "fallback",
-  label: "Fallback",
-  ptoCode: "AAM",
-  visible: true,
-  autoShowRows: false,
-  rowKeys: [],
-  hiddenRowKeys: [],
-  rowLabels: {},
-  factSourceRowKeys: {},
-  summaryRows: [],
-  areaOrder: [],
-  workOrder: {},
-}]);
-assert.equal(normalizedReportCustomers[0].label, "Заказчик");
-assert.deepEqual(normalizedReportCustomers[0].rowKeys, ["a"]);
-assert.deepEqual(normalizedReportCustomers[0].factSourceRowKeys, { a: ["b"] });
-assert.deepEqual(normalizedReportCustomers[0].summaryRows[0].rowKeys, ["a"]);
-assert.deepEqual(normalizedReportCustomers[0].areaOrder, ["Аксу"]);
-assert.deepEqual(normalizedReportCustomers[0].workOrder, { Аксу: ["a"] });
-assert.deepEqual(
-  Array.from(reportCustomerEffectiveRowKeys({
-    id: "auto",
-    label: "Auto",
-    ptoCode: "AAM",
-    visible: true,
-    autoShowRows: true,
-    rowKeys: ["manual"],
-    hiddenRowKeys: ["b"],
-    rowLabels: {},
-    factSourceRowKeys: {},
-    summaryRows: [],
-    areaOrder: [],
-    workOrder: {},
-  }, new Set(["a", "b", "c"]))),
-  ["a", "c"],
-);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 1, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0 }), true);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 1, monthTotalPlan: 0, monthPlan: 0, monthFact: 0 }), true);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 0, monthTotalPlan: 1, monthPlan: 0, monthFact: 0 }), false);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 1, monthFact: 0 }), true);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 1 }), true);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0 }), false);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0, yearPlan: 0, yearFact: 0, annualPlan: 20 }), false);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0, yearPlan: 10, annualPlan: 20 }), false);
-assert.equal(reportRowHasAutoShowData({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0, yearPlan: 10, annualPlan: 10 }), false);
-assert.equal(reportRowAutoStatus({ dayPlan: 1, dayFact: 1, monthTotalPlan: 1, monthPlan: 1, monthFact: 1 }), "В работе");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 1, monthTotalPlan: 0, monthPlan: 0, monthFact: 0 }), "В работе");
-assert.equal(reportRowAutoStatus({ dayPlan: 1, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0 }), "В работе");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 1, monthPlan: 0, monthFact: 1 }), "В работе");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 1, monthPlan: 0, monthFact: 0 }), "Запланировано");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 1 }), "В работе");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0, yearPlan: 10, annualPlan: 20 }), "Запланировано");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0, yearPlan: 10, annualPlan: 10 }), "Завершена");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0, yearFact: 10 }), "Завершена");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0, yearPlan: 0, yearFact: 0, annualPlan: 0 }), "Пусто");
-assert.equal(reportRowAutoStatus({ dayPlan: 0, dayFact: 0, monthTotalPlan: 0, monthPlan: 0, monthFact: 0 }), "Пусто");
-
 const defaultVehicle = {
   id: 0,
   name: "",
@@ -581,11 +218,19 @@ const importedPtoCustomerRows = createPtoPlanRowsFromImportTable([
 assert.equal(importedPtoRows.length, 1);
 assert.equal(importedPtoRows[0].dailyPlans["2026-04-01"], 1);
 assert.equal(importedPtoCustomerRows[0].customerCode, "AAE");
+const mergeBasePtoRow = normalizePtoPlanRow({
+  id: "merge-base",
+  area: "Aksu",
+  structure: "Ore haulage",
+  unit: "tn",
+  dailyPlans: {},
+  years: ["2026"],
+});
 assert.equal(createPtoPlanExportRows(importedPtoRows, "2026", "Все участки")[1][1], "Аксу");
 assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки")[0][0], "Заказчик");
 assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки")[1][0], "AAE");
 assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки", "oper")[0][1], "Вид работ");
-assert.equal(mergeImportedPtoPlanRows([planRow], importedPtoRows).length, 2);
+assert.equal(mergeImportedPtoPlanRows([mergeBasePtoRow], importedPtoRows).length, 2);
 assert.equal(ensureImportedRowsInLinkedPtoTable([], importedPtoRows, "2026")[0].id, importedPtoRows[0].id);
 assert.equal(normalizePtoCustomerCode(" aae "), "AAE");
 assert.equal(ptoDateTableMeta("oper").label, "Оперучет");
@@ -601,6 +246,10 @@ assert.equal(consolidatedDispatch[0].planVolume, 400);
 assert.equal(consolidatedDispatch[0].trips, 6);
 assert.equal(consolidatedDispatch[0].reason, "Ремонт (2 ч.)");
 assert.equal(normalizeDispatchSummaryRows([{ id: "x", shift: "bad", planVolume: "12,5" }], "2026-04-18")?.[0].planVolume, 12.5);
+assert.deepEqual(
+  buildDispatchSummaryRowView({ ...dayDispatch, planVolume: 500, factVolume: 300, workHours: 6, rentHours: 1, repairHours: 2, downtimeHours: 2 }),
+  { totalHours: 11, productivity: 50, delta: -200, hoursOk: true, isBehindPlan: true },
+);
 assert.equal(buildDispatchAiSuggestion([dayDispatch]).includes("простой 2 ч."), true);
 
 console.log("Domain checks passed");

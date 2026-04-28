@@ -1,48 +1,10 @@
 "use client";
 
-import { useEffect, type Dispatch, type SetStateAction } from "react";
-import { applyInitialAdminStructureState, type InitialAdminStructureStateSetters } from "@/features/admin/structure/applyInitialAdminStructureState";
-import { buildInitialAdminStructureState } from "@/features/admin/structure/initialAdminStructureState";
-import { applyInitialVehicleRows, type InitialVehicleRowsSetters } from "@/features/admin/vehicles/applyInitialVehicleRows";
-import { loadInitialVehicleRows } from "@/features/admin/vehicles/initialVehicleRows";
-import { applyInitialDispatchSummaryRows, type InitialDispatchSummaryStateSetters } from "@/features/dispatch/applyInitialDispatchSummaryState";
-import { buildInitialDispatchSummaryRows } from "@/features/dispatch/initialDispatchSummaryState";
-import { applyInitialNavigationState, type InitialNavigationStateSetters } from "@/features/navigation/applyInitialNavigationState";
-import { buildInitialNavigationState } from "@/features/navigation/initialNavigationState";
-import { applyInitialPtoState, type InitialPtoStateSetters } from "@/features/pto/applyInitialPtoState";
-import { buildInitialPtoState } from "@/features/pto/initialPtoState";
-import { applyInitialReportState, type InitialReportStateSetters } from "@/features/reports/applyInitialReportState";
-import { buildInitialReportState } from "@/features/reports/initialReportState";
-import { createDefaultSubTabs } from "@/lib/domain/navigation/tabs";
-import { databaseConfigured } from "@/lib/data/config";
-import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
-import { hasInitialLocalAppState, readInitialStoredAppState } from "@/features/app/initialAppStorage";
-
-type MutableRef<T> = {
-  current: T;
-};
-
-type InitialAppDataLoadOptions = InitialReportStateSetters
-  & InitialPtoStateSetters
-  & InitialAdminStructureStateSetters
-  & InitialNavigationStateSetters
-  & InitialVehicleRowsSetters
-  & InitialDispatchSummaryStateSetters
-  & {
-  defaultSubTabs: ReturnType<typeof createDefaultSubTabs>;
-  saveClientSnapshotToDatabase: (reason: string) => Promise<void>;
-  restoreAdminLogs: (storedLogs: unknown) => void;
-  appDatabaseSaveSnapshotRef: MutableRef<string>;
-  appSettingsDatabaseLoadedRef: MutableRef<boolean>;
-  appSettingsDatabaseSaveSnapshotRef: MutableRef<string>;
-  vehiclesDatabaseLoadedRef: MutableRef<boolean>;
-  vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
-  setAdminDataLoaded: Dispatch<SetStateAction<boolean>>;
-};
+import { useEffect, useRef } from "react";
+import { runInitialAppDataLoad, type InitialAppDataLoadOptions } from "@/features/app/initialAppDataLoadSteps";
 
 export function useInitialAppDataLoad({
   defaultSubTabs,
-  saveClientSnapshotToDatabase,
   restoreAdminLogs,
   appDatabaseSaveSnapshotRef,
   appSettingsDatabaseLoadedRef,
@@ -50,6 +12,8 @@ export function useInitialAppDataLoad({
   vehiclesDatabaseLoadedRef,
   vehiclesDatabaseSaveSnapshotRef,
   hasStoredPtoStateRef,
+  setPtoDatabaseLoadStarted,
+  setPtoBootstrapLoaded,
   setAdminDataLoaded,
   setReportCustomers,
   setReportAreaOrder,
@@ -77,100 +41,54 @@ export function useInitialAppDataLoad({
   setDependencyLinks,
   setDependencyLinkForm,
 }: InitialAppDataLoadOptions) {
+  const loadStartedRef = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
 
-    queueMicrotask(async () => {
-      try {
-        const hasLocalAppState = hasInitialLocalAppState();
+    queueMicrotask(() => {
+      if (cancelled || loadStartedRef.current) return;
+      loadStartedRef.current = true;
 
-        if (hasLocalAppState && databaseConfigured) {
-          void saveClientSnapshotToDatabase("before-initial-database-load").catch((error) => {
-            console.warn("Database client snapshot save failed:", error);
-          });
-        }
-
-        if (databaseConfigured) {
-          const databaseBootstrapCompleted = await loadInitialAppDatabaseBootstrap({
-            hasLocalAppState,
-            isCancelled: () => cancelled,
-            appDatabaseSaveSnapshotRef,
-            appSettingsDatabaseLoadedRef,
-            appSettingsDatabaseSaveSnapshotRef,
-          });
-          if (!databaseBootstrapCompleted) return;
-        }
-
-        const storedState = readInitialStoredAppState();
-        const initialVehicleRows = await loadInitialVehicleRows({
-          savedVehicles: storedState.savedVehicles,
-          isCancelled: () => cancelled,
-          vehiclesDatabaseLoadedRef,
-          vehiclesDatabaseSaveSnapshotRef,
-        });
-        if (!initialVehicleRows.completed) return;
-
-        const initialPtoState = buildInitialPtoState(storedState);
-
-        const initialReportState = buildInitialReportState(storedState);
-        applyInitialReportState(initialReportState, {
-          setReportCustomers,
-          setReportAreaOrder,
-          setReportWorkOrder,
-          setReportHeaderLabels,
-          setReportColumnWidths,
-          setReportReasons,
-          setAreaShiftCutoffs,
-        });
-
-        const initialNavigationState = buildInitialNavigationState({
-          savedCustomTabs: storedState.savedCustomTabs,
-          savedTopTabs: storedState.savedTopTabs,
-          savedSubTabs: storedState.savedSubTabs,
-          defaultSubTabs,
-        });
-
-        applyInitialNavigationState(initialNavigationState, {
-          setCustomTabs,
-          setTopTabs,
-          setSubTabs,
-        });
-
-        applyInitialVehicleRows(initialVehicleRows.rows, { setVehicleRows });
-
-        const initialDispatchSummaryRows = buildInitialDispatchSummaryRows({
-          savedDispatchSummaryRows: storedState.savedDispatchSummaryRows,
-          preferredReportDate: initialReportState.preferredReportDate,
-          seedVehicleRows: initialVehicleRows.usedSeed ? initialVehicleRows.rows : null,
-        });
-        applyInitialDispatchSummaryRows(initialDispatchSummaryRows, { setDispatchSummaryRows });
-
-        applyInitialPtoState(initialPtoState, {
-          hasStoredPtoStateRef,
-          setPtoManualYears,
-          setPtoPlanRows,
-          setPtoSurveyRows,
-          setPtoOperRows,
-          setPtoColumnWidths,
-          setPtoRowHeights,
-          setPtoHeaderLabels,
-          setPtoBucketValues,
-          setPtoBucketManualRows,
-        });
-
-        const initialAdminStructureState = buildInitialAdminStructureState(storedState);
-        applyInitialAdminStructureState(initialAdminStructureState, {
-          setOrgMembers,
-          setDependencyNodes,
-          setDependencyLinks,
-          setDependencyLinkForm,
-        });
-
-        restoreAdminLogs(storedState.savedAdminLogs);
-      } finally {
-        if (cancelled) return;
-        setAdminDataLoaded(true);
-      }
+      void runInitialAppDataLoad({
+        defaultSubTabs,
+        restoreAdminLogs,
+        appDatabaseSaveSnapshotRef,
+        appSettingsDatabaseLoadedRef,
+        appSettingsDatabaseSaveSnapshotRef,
+        vehiclesDatabaseLoadedRef,
+        vehiclesDatabaseSaveSnapshotRef,
+        hasStoredPtoStateRef,
+        setPtoDatabaseLoadStarted,
+        setPtoBootstrapLoaded,
+        setAdminDataLoaded,
+        setReportCustomers,
+        setReportAreaOrder,
+        setReportWorkOrder,
+        setReportHeaderLabels,
+        setReportColumnWidths,
+        setReportReasons,
+        setAreaShiftCutoffs,
+        setCustomTabs,
+        setTopTabs,
+        setSubTabs,
+        setVehicleRows,
+        setDispatchSummaryRows,
+        setPtoManualYears,
+        setPtoPlanRows,
+        setPtoSurveyRows,
+        setPtoOperRows,
+        setPtoColumnWidths,
+        setPtoRowHeights,
+        setPtoHeaderLabels,
+        setPtoBucketValues,
+        setPtoBucketManualRows,
+        setOrgMembers,
+        setDependencyNodes,
+        setDependencyLinks,
+        setDependencyLinkForm,
+        isCancelled: () => cancelled,
+      });
     });
 
     return () => {
@@ -182,8 +100,8 @@ export function useInitialAppDataLoad({
     appSettingsDatabaseSaveSnapshotRef,
     defaultSubTabs,
     hasStoredPtoStateRef,
+    setPtoDatabaseLoadStarted,
     restoreAdminLogs,
-    saveClientSnapshotToDatabase,
     setAdminDataLoaded,
     setAreaShiftCutoffs,
     setCustomTabs,
@@ -194,6 +112,7 @@ export function useInitialAppDataLoad({
     setOrgMembers,
     setPtoBucketManualRows,
     setPtoBucketValues,
+    setPtoBootstrapLoaded,
     setPtoColumnWidths,
     setPtoHeaderLabels,
     setPtoManualYears,

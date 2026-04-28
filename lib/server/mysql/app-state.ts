@@ -1,4 +1,5 @@
 import type { RowDataPacket } from "mysql2/promise";
+import { DatabaseConflictError } from "../database/conflicts";
 import { dbExecute, dbRows } from "./pool";
 import { parseJson, stringifyJson } from "./json";
 
@@ -22,6 +23,10 @@ export type MysqlClientSnapshot = {
   meta: MysqlClientSnapshotMeta;
 };
 
+export type SaveAppStateOptions = {
+  expectedUpdatedAt?: string | null;
+};
+
 type AppStateRecord = RowDataPacket & {
   state_key: string;
   value: unknown;
@@ -42,6 +47,17 @@ type AppStateValue = {
 
 const mainAppStateKey = "main";
 const clientSnapshotKeyPrefix = "client-snapshot:";
+
+function createAppStateConflictError() {
+  return new DatabaseConflictError("Данные приложения уже изменились в базе. Обновите страницу перед повторным сохранением.");
+}
+
+function expectedUpdatedAtValue(value: string | null | undefined) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date;
+}
 
 function normalizeStorage(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -89,8 +105,31 @@ export async function loadAppStateFromMysql(): Promise<MysqlAppState | null> {
   };
 }
 
-export async function saveAppStateToMysql(storage: Record<string, string>) {
-  await upsertAppState(mainAppStateKey, { storage });
+export async function saveAppStateToMysql(
+  storage: Record<string, string>,
+  options: SaveAppStateOptions = {},
+): Promise<MysqlAppState> {
+  if ("expectedUpdatedAt" in options) {
+    if (options.expectedUpdatedAt) {
+      const result = await dbExecute(
+        `UPDATE app_state
+        SET value = ?, updated_at = CURRENT_TIMESTAMP(3)
+        WHERE state_key = ? AND updated_at = ?`,
+        [stringifyJson({ storage }), mainAppStateKey, expectedUpdatedAtValue(options.expectedUpdatedAt)],
+      );
+      if (result.affectedRows !== 1) throw createAppStateConflictError();
+    } else {
+      const result = await dbExecute(
+        `INSERT IGNORE INTO app_state (state_key, value) VALUES (?, ?)`,
+        [mainAppStateKey, stringifyJson({ storage })],
+      );
+      if (result.affectedRows !== 1) throw createAppStateConflictError();
+    }
+  } else {
+    await upsertAppState(mainAppStateKey, { storage });
+  }
+
+  return await loadAppStateFromMysql() ?? { storage };
 }
 
 export async function saveClientAppSnapshotToMysql(

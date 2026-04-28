@@ -24,10 +24,8 @@ type UseAppReportsSectionPropsOptions = {
   reportReasons: Record<string, string>;
   commitReportDayReason: (rowKey: string, value: string) => void;
   cancelReportDayReasonDraft: (rowKey: string, value: string) => void;
-  updateReportDayReasonDraft: (rowKey: string, value: string) => void;
   commitReportYearReason: (rowKey: string, value: string) => void;
   cancelReportYearReasonDraft: (rowKey: string, value: string) => void;
-  updateReportYearReasonDraft: (rowKey: string, value: string) => void;
 };
 
 export function useAppReportsSectionProps({
@@ -49,10 +47,8 @@ export function useAppReportsSectionProps({
   reportReasons,
   commitReportDayReason,
   cancelReportDayReasonDraft,
-  updateReportDayReasonDraft,
   commitReportYearReason,
   cancelReportYearReasonDraft,
-  updateReportYearReasonDraft,
 }: UseAppReportsSectionPropsOptions): ReportsSectionProps {
   return {
     reportAreaTabs,
@@ -73,9 +69,7 @@ export function useAppReportsSectionProps({
     reportReasons,
     onCommitReportDayReason: commitReportDayReason,
     onCancelReportDayReasonDraft: cancelReportDayReasonDraft,
-    onUpdateReportDayReasonDraft: updateReportDayReasonDraft,
     onCommitReportYearReason: commitReportYearReason,
     onCancelReportYearReasonDraft: cancelReportYearReasonDraft,
-    onUpdateReportYearReasonDraft: updateReportYearReasonDraft,
   };
 }

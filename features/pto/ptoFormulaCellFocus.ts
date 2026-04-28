@@ -1,4 +1,4 @@
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 
 type PtoFormulaFocusCell = Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">;
 

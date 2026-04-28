@@ -1,9 +1,8 @@
 "use client";
 
 import { useVehiclePendingFocus } from "@/features/admin/vehicles/useVehiclePendingFocus";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 
 type UseAppVehicleFocusControllerOptions = {
   appState: AppStateBundle;

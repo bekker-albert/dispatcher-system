@@ -1,18 +1,55 @@
-import type { ChangeEvent, Dispatch, DragEvent, MouseEvent, RefObject, SetStateAction, UIEvent } from "react";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type {
+  ChangeEvent,
+  Dispatch,
+  DragEvent,
+  MouseEvent,
+  ReactNode,
+  RefObject,
+  SetStateAction,
+  UIEvent,
+  UIEventHandler,
+} from "react";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
-import type { PtoMonthGroupView } from "@/features/pto/ptoDateTableModel";
+import type { PtoMonthGroupView, PtoRowDateTotals, PtoTableColumn } from "@/features/pto/ptoDateTableModel";
 import type { PtoDatabaseSaveMode } from "@/features/pto/ptoPersistenceModel";
 import type { PtoDateExcelMetaWithRows } from "@/features/pto/usePtoDateExcelTransfer";
 import type { PtoDateViewport } from "@/features/pto/usePtoDateViewport";
 import type { PtoRowTextField } from "@/features/pto/usePtoRowTextDrafts";
+import type { PtoPersistenceDayValuePatch } from "@/lib/domain/pto/persistence-shared";
 import type { PtoDraftRowFields, PtoDropPosition, PtoPlanRow } from "@/lib/domain/pto/date-table";
 
 export type PtoRowsSetter = Dispatch<SetStateAction<PtoPlanRow[]>>;
+export type PtoDayPatch = PtoPersistenceDayValuePatch;
 
 export type PtoDateTableOptions = {
   showLocation?: boolean;
   editableMonthTotal?: boolean;
+};
+
+export type PtoDateReadonlyTableProps = {
+  rows: PtoPlanRow[];
+  showCustomerCode: boolean;
+  showLocation: boolean;
+  ptoPlanYear: string;
+  ptoTab: string;
+  reportDate: string;
+  bottomSpacerHeight: number;
+  carryoverHeader: string;
+  displayMonthGroups: PtoMonthGroupView[];
+  tableColumns: PtoTableColumn[];
+  tableMinWidth: number;
+  columnWidthByKey: Map<string, number>;
+  rowHeights: Record<string, number>;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  onScroll: UIEventHandler<HTMLDivElement>;
+  tableSpacerColSpan: number;
+  topSpacerHeight: number;
+  getEffectiveCarryover: (row: PtoPlanRow) => number;
+  getRowDateTotals: (row: PtoPlanRow) => PtoRowDateTotals;
+  headerLabel: (key: string, fallback: string) => string;
+  onToggleMonth: (month: string) => void;
+  toolbar: ReactNode;
 };
 
 export type PtoDateOptionMaps = {
@@ -81,12 +118,12 @@ export type PtoDateTableContainerProps = PtoHeaderEditor & {
   setPtoPendingFieldFocus: Dispatch<SetStateAction<{ rowId: string; field: string } | null>>;
   savePtoLocalState: () => void;
   requestPtoDatabaseSave: () => void;
-  savePtoDatabaseChanges: (mode: PtoDatabaseSaveMode) => void | Promise<void>;
+  savePtoDatabaseChanges: (mode: PtoDatabaseSaveMode) => boolean | Promise<boolean>;
   selectPtoArea: (area: string) => void;
   currentPtoDateExcelMeta: () => PtoDateExcelMetaWithRows;
-  exportPtoDateTableToExcel: () => void;
+  exportPtoDateTableToExcel: () => void | Promise<void>;
   openPtoDateImportFilePicker: () => void;
-  importPtoDateTableFromExcel: (event: ChangeEvent<HTMLInputElement>) => void;
+  importPtoDateTableFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   selectPtoPlanYear: (year: string) => void;
   deletePtoYear: () => void;
   addPtoYear: () => void;

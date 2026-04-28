@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type Dispatch, type SetStateAction } from "react";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 import type { VehicleInlineField } from "@/lib/domain/vehicles/grid";
 
 type MutableRef<T> = {
@@ -14,6 +14,8 @@ type VehicleSelectionAnchor = {
 };
 
 type GlobalCellSelectionEffectsOptions = {
+  ptoSelectionActive: boolean;
+  vehicleSelectionActive: boolean;
   ptoSelectionDraggingRef: MutableRef<boolean>;
   vehicleSelectionDraggingRef: MutableRef<boolean>;
   vehicleSelectionAnchorRef: MutableRef<VehicleSelectionAnchor | null>;
@@ -29,14 +31,19 @@ type GlobalCellSelectionEffectsOptions = {
   setPtoSelectedCellKeys: Dispatch<SetStateAction<string[]>>;
 };
 
-const selectableCellSelector = [
+const vehicleCellSelector = [
   "[data-admin-vehicle-cell]",
   "[data-admin-vehicle-input]",
+].join(",");
+
+const ptoCellSelector = [
   "[data-pto-cell-key]",
   "[data-pto-bucket-cell]",
 ].join(",");
 
 export function useGlobalCellSelectionEffects({
+  ptoSelectionActive,
+  vehicleSelectionActive,
   ptoSelectionDraggingRef,
   vehicleSelectionDraggingRef,
   vehicleSelectionAnchorRef,
@@ -52,36 +59,96 @@ export function useGlobalCellSelectionEffects({
   setPtoSelectedCellKeys,
 }: GlobalCellSelectionEffectsOptions) {
   useEffect(() => {
+    if (!ptoSelectionActive && !vehicleSelectionActive) return;
+
     const stopSelectionDrag = () => {
-      ptoSelectionDraggingRef.current = false;
-      vehicleSelectionDraggingRef.current = false;
+      if (ptoSelectionActive) ptoSelectionDraggingRef.current = false;
+      if (vehicleSelectionActive) vehicleSelectionDraggingRef.current = false;
     };
 
     window.addEventListener("mouseup", stopSelectionDrag);
     return () => window.removeEventListener("mouseup", stopSelectionDrag);
-  }, [ptoSelectionDraggingRef, vehicleSelectionDraggingRef]);
+  }, [
+    ptoSelectionActive,
+    ptoSelectionDraggingRef,
+    vehicleSelectionActive,
+    vehicleSelectionDraggingRef,
+  ]);
 
   useEffect(() => {
+    if (vehicleSelectionActive) return;
+
+    vehicleSelectionDraggingRef.current = false;
+    vehicleSelectionAnchorRef.current = null;
+    setActiveVehicleCell((current) => (current === null ? current : null));
+    setVehicleSelectionAnchorCell((current) => (current === null ? current : null));
+    setSelectedVehicleCellKeys((current) => (current.length === 0 ? current : []));
+    setEditingVehicleCell((current) => (current === null ? current : null));
+  }, [
+    setActiveVehicleCell,
+    setEditingVehicleCell,
+    setSelectedVehicleCellKeys,
+    setVehicleSelectionAnchorCell,
+    vehicleSelectionActive,
+    vehicleSelectionAnchorRef,
+    vehicleSelectionDraggingRef,
+  ]);
+
+  useEffect(() => {
+    if (ptoSelectionActive) return;
+
+    ptoSelectionDraggingRef.current = false;
+    setPtoFormulaCell((current) => (current === null ? current : null));
+    setPtoFormulaDraft((current) => (current === "" ? current : ""));
+    setPtoInlineEditCell((current) => (current === null ? current : null));
+    setPtoInlineEditInitialDraft((current) => (current === "" ? current : ""));
+    setPtoSelectionAnchorCell((current) => (current === null ? current : null));
+    setPtoSelectedCellKeys((current) => (current.length === 0 ? current : []));
+  }, [
+    ptoSelectionActive,
+    ptoSelectionDraggingRef,
+    setPtoFormulaCell,
+    setPtoFormulaDraft,
+    setPtoInlineEditCell,
+    setPtoInlineEditInitialDraft,
+    setPtoSelectedCellKeys,
+    setPtoSelectionAnchorCell,
+  ]);
+
+  useEffect(() => {
+    if (!ptoSelectionActive && !vehicleSelectionActive) return;
+
     const clearCellSelectionsOnOutsideClick = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest(selectableCellSelector)) return;
 
-      vehicleSelectionDraggingRef.current = false;
-      vehicleSelectionAnchorRef.current = null;
-      ptoSelectionDraggingRef.current = false;
+      const activeSelectors = [
+        vehicleSelectionActive ? vehicleCellSelector : "",
+        ptoSelectionActive ? ptoCellSelector : "",
+      ].filter(Boolean).join(",");
 
-      setActiveVehicleCell((current) => (current === null ? current : null));
-      setVehicleSelectionAnchorCell((current) => (current === null ? current : null));
-      setSelectedVehicleCellKeys((current) => (current.length === 0 ? current : []));
-      setEditingVehicleCell((current) => (current === null ? current : null));
+      if (activeSelectors && target.closest(activeSelectors)) return;
 
-      setPtoFormulaCell((current) => (current === null ? current : null));
-      setPtoFormulaDraft((current) => (current === "" ? current : ""));
-      setPtoInlineEditCell((current) => (current === null ? current : null));
-      setPtoInlineEditInitialDraft((current) => (current === "" ? current : ""));
-      setPtoSelectionAnchorCell((current) => (current === null ? current : null));
-      setPtoSelectedCellKeys((current) => (current.length === 0 ? current : []));
+      if (vehicleSelectionActive) {
+        vehicleSelectionDraggingRef.current = false;
+        vehicleSelectionAnchorRef.current = null;
+
+        setActiveVehicleCell((current) => (current === null ? current : null));
+        setVehicleSelectionAnchorCell((current) => (current === null ? current : null));
+        setSelectedVehicleCellKeys((current) => (current.length === 0 ? current : []));
+        setEditingVehicleCell((current) => (current === null ? current : null));
+      }
+
+      if (ptoSelectionActive) {
+        ptoSelectionDraggingRef.current = false;
+
+        setPtoFormulaCell((current) => (current === null ? current : null));
+        setPtoFormulaDraft((current) => (current === "" ? current : ""));
+        setPtoInlineEditCell((current) => (current === null ? current : null));
+        setPtoInlineEditInitialDraft((current) => (current === "" ? current : ""));
+        setPtoSelectionAnchorCell((current) => (current === null ? current : null));
+        setPtoSelectedCellKeys((current) => (current.length === 0 ? current : []));
+      }
     };
 
     window.addEventListener("mousedown", clearCellSelectionsOnOutsideClick);
@@ -98,7 +165,9 @@ export function useGlobalCellSelectionEffects({
     setPtoSelectionAnchorCell,
     setSelectedVehicleCellKeys,
     setVehicleSelectionAnchorCell,
+    ptoSelectionActive,
     vehicleSelectionAnchorRef,
+    vehicleSelectionActive,
     vehicleSelectionDraggingRef,
   ]);
 }

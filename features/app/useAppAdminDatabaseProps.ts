@@ -10,6 +10,7 @@ import { clientSnapshotStats } from "@/lib/storage/client-snapshots";
 import type { AdminDatabaseSectionProps } from "@/features/admin/database/AdminDatabaseSection";
 
 type UseAppAdminDatabasePropsOptions = {
+  active: boolean;
   databaseConfigured: boolean;
   ptoPlanRows: PtoPlanRow[];
   ptoOperRows: PtoPlanRow[];
@@ -26,6 +27,7 @@ type UseAppAdminDatabasePropsOptions = {
 };
 
 export function useAppAdminDatabaseProps({
+  active,
   databaseConfigured,
   ptoPlanRows,
   ptoOperRows,
@@ -40,16 +42,20 @@ export function useAppAdminDatabaseProps({
   refreshClientSnapshots,
   restoreClientSnapshot,
 }: UseAppAdminDatabasePropsOptions): AdminDatabaseSectionProps {
+  const ptoMemoryTotal = active
+    ? countPtoStateData({
+        planRows: ptoPlanRows,
+        operRows: ptoOperRows,
+        surveyRows: ptoSurveyRows,
+        bucketRows: ptoBucketManualRows,
+        bucketValues: ptoBucketValues,
+      }).total
+    : 0;
+
   return {
     databaseConfigured,
     databaseProviderLabel: dataProviderLabel,
-    ptoMemoryTotal: countPtoStateData({
-      planRows: ptoPlanRows,
-      operRows: ptoOperRows,
-      surveyRows: ptoSurveyRows,
-      bucketRows: ptoBucketManualRows,
-      bucketValues: ptoBucketValues,
-    }).total,
+    ptoMemoryTotal,
     vehicleCount: vehicleRows.length,
     snapshots: clientSnapshots,
     message: databasePanelMessage,

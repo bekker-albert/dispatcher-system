@@ -1,8 +1,12 @@
-import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-import { calculatePtoVirtualRows, type PtoVirtualViewport } from "@/lib/domain/pto/virtualization";
+import type { PtoPlanRow } from "../../lib/domain/pto/date-table";
+import {
+  calculatePtoVirtualRowsFromLayout,
+  createPtoVirtualRowsLayout,
+  type PtoVirtualRowsLayout,
+  type PtoVirtualViewport,
+} from "../../lib/domain/pto/virtualization";
 
 type PtoDateVirtualRowsViewModelOptions = {
-  editing: boolean;
   rows: PtoPlanRow[];
   rowHeights: Record<string, number>;
   table: string;
@@ -10,26 +14,36 @@ type PtoDateVirtualRowsViewModelOptions = {
 };
 
 export function createPtoDateVirtualRowsViewModel({
-  editing,
   rows,
   rowHeights,
   table,
+  layout,
   viewport,
-}: PtoDateVirtualRowsViewModelOptions) {
-  const virtualRows = editing
-    ? calculatePtoVirtualRows(rows, rowHeights, table, viewport)
-    : null;
+}: Partial<PtoDateVirtualRowsViewModelOptions> & {
+  layout?: PtoVirtualRowsLayout<PtoPlanRow>;
+  viewport: PtoVirtualViewport;
+}) {
+  const virtualRowsLayout = layout ?? createPtoVirtualRowsLayout(rows ?? [], rowHeights ?? {}, table ?? "");
+  const virtualRows = calculatePtoVirtualRowsFromLayout(virtualRowsLayout, viewport);
 
-  const rowOffsets = virtualRows?.rowOffsets ?? [];
-  const virtualRowsTotalHeight = virtualRows?.totalHeight ?? 0;
+  const rowOffsets = virtualRows.rowOffsets;
+  const virtualRowsTotalHeight = virtualRows.totalHeight;
 
   return {
-    renderedRows: virtualRows?.renderedRows ?? rows,
-    filteredRowHeights: virtualRows?.rowHeights ?? [],
+    renderedRows: virtualRows.renderedRows,
+    filteredRowHeights: virtualRows.rowHeights,
     rowOffsetAt: (index: number) => rowOffsets[index] ?? virtualRowsTotalHeight,
-    virtualStartIndex: virtualRows?.startIndex ?? 0,
-    topSpacerHeight: virtualRows?.topSpacerHeight ?? 0,
-    bottomSpacerHeight: virtualRows?.bottomSpacerHeight ?? 0,
+    virtualStartIndex: virtualRows.startIndex,
+    topSpacerHeight: virtualRows.topSpacerHeight,
+    bottomSpacerHeight: virtualRows.bottomSpacerHeight,
     virtualRowsTotalHeight,
   };
+}
+
+export function createPtoDateVirtualRowsLayoutModel({
+  rows,
+  rowHeights,
+  table,
+}: Omit<PtoDateVirtualRowsViewModelOptions, "viewport">) {
+  return createPtoVirtualRowsLayout(rows, rowHeights, table);
 }

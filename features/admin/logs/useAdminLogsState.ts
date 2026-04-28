@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry } from "@/lib/domain/admin/logs";
+import { adminLogLimit, normalizeAdminLogEntry, type AdminLogEntry, type AdminLogInput } from "@/lib/domain/admin/logs";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { createId } from "@/lib/utils/id";
-
-type AdminLogDraft = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 const changeLogActions = new Set([
   "\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435",
@@ -15,14 +13,18 @@ const changeLogActions = new Set([
 ]);
 
 function writeAdminLogsToBrowser(logs: AdminLogEntry[]) {
-  window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(logs));
-  window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+  try {
+    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify(logs));
+    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+  } catch (error) {
+    console.warn("Не удалось сохранить журнал логов в браузере:", error);
+  }
 }
 
 export function useAdminLogsState() {
   const [adminLogs, setAdminLogs] = useState<AdminLogEntry[]>([]);
 
-  const addAdminLog = useCallback((entry: AdminLogDraft) => {
+  const addAdminLog = useCallback((entry: AdminLogInput) => {
     const nextEntry: AdminLogEntry = {
       id: createId(),
       at: new Date().toISOString(),
@@ -60,7 +62,7 @@ export function useAdminLogsState() {
     if (!window.confirm("\u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0436\u0443\u0440\u043d\u0430\u043b \u043b\u043e\u0433\u043e\u0432?")) return;
 
     setAdminLogs([]);
-    window.localStorage.setItem(adminStorageKeys.adminLogs, JSON.stringify([]));
+    writeAdminLogsToBrowser([]);
   }, []);
 
   const lastChangeLog = useMemo(

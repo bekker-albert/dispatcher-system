@@ -6,12 +6,10 @@ import { useAdminVehicleEditMode } from "@/features/admin/vehicles/useAdminVehic
 import { useVehicleExcelTransfer } from "@/features/admin/vehicles/useVehicleExcelTransfer";
 import { useVehicleInlineGridEditor } from "@/features/admin/vehicles/useVehicleInlineGridEditor";
 import { useVehicleRowsEditor } from "@/features/admin/vehicles/useVehicleRowsEditor";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { VehicleFilterKey, VehicleFilters, VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type VehicleCell = {
   id: number;

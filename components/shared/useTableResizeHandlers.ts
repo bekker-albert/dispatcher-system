@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { PtoResizeState } from "@/features/pto/ptoDateInteractionTypes";
 import type { ReportResizeState } from "@/features/reports/lib/reportResizeState";
 
-type AddAdminLog = (entry: Omit<AdminLogEntry, "id" | "at" | "user">) => void;
+type AddAdminLog = (entry: AdminLogInput) => void;
 
 type UseTableResizeHandlersOptions = {
   ptoRowHeights: Record<string, number>;
@@ -30,18 +30,24 @@ export function useTableResizeHandlers({
 }: UseTableResizeHandlersOptions) {
   const ptoResizeStateRef = useRef<PtoResizeState | null>(null);
   const reportResizeStateRef = useRef<ReportResizeState | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
+  const resizePointerRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    const handleResizeMove = (event: MouseEvent) => {
+    const flushResizeMove = () => {
+      resizeFrameRef.current = null;
+      const pointer = resizePointerRef.current;
+      if (!pointer) return;
+
       const resizeState = ptoResizeStateRef.current;
       if (resizeState) {
         if (resizeState.type === "column") {
-          const nextWidth = Math.min(800, Math.max(44, Math.round(resizeState.startWidth + event.clientX - resizeState.startX)));
+          const nextWidth = Math.min(800, Math.max(44, Math.round(resizeState.startWidth + pointer.x - resizeState.startX)));
           setPtoColumnWidths((current) => (current[resizeState.key] === nextWidth ? current : { ...current, [resizeState.key]: nextWidth }));
           return;
         }
 
-        const nextHeight = Math.min(180, Math.max(28, Math.round(resizeState.startHeight + event.clientY - resizeState.startY)));
+        const nextHeight = Math.min(180, Math.max(28, Math.round(resizeState.startHeight + pointer.y - resizeState.startY)));
         setPtoRowHeights((current) => (current[resizeState.key] === nextHeight ? current : { ...current, [resizeState.key]: nextHeight }));
         return;
       }
@@ -49,8 +55,16 @@ export function useTableResizeHandlers({
       const reportResizeState = reportResizeStateRef.current;
       if (!reportResizeState) return;
 
-      const nextWidth = Math.min(520, Math.max(42, Math.round(reportResizeState.startWidth + event.clientX - reportResizeState.startX)));
+      const nextWidth = Math.min(520, Math.max(42, Math.round(reportResizeState.startWidth + pointer.x - reportResizeState.startX)));
       setReportColumnWidths((current) => (current[reportResizeState.key] === nextWidth ? current : { ...current, [reportResizeState.key]: nextWidth }));
+    };
+
+    const handleResizeMove = (event: MouseEvent) => {
+      if (!ptoResizeStateRef.current && !reportResizeStateRef.current) return;
+
+      resizePointerRef.current = { x: event.clientX, y: event.clientY };
+      if (resizeFrameRef.current !== null) return;
+      resizeFrameRef.current = window.requestAnimationFrame(flushResizeMove);
     };
 
     const handleResizeEnd = () => {
@@ -58,6 +72,12 @@ export function useTableResizeHandlers({
       const reportResizeState = reportResizeStateRef.current;
       if (!resizeState && !reportResizeState) return;
 
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+      flushResizeMove();
+      resizePointerRef.current = null;
       ptoResizeStateRef.current = null;
       reportResizeStateRef.current = null;
       clearResizeCursor();
@@ -77,6 +97,10 @@ export function useTableResizeHandlers({
     return () => {
       window.removeEventListener("mousemove", handleResizeMove);
       window.removeEventListener("mouseup", handleResizeEnd);
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
       clearResizeCursor();
     };
   }, [addAdminLog, requestSave, setPtoColumnWidths, setPtoRowHeights, setReportColumnWidths]);

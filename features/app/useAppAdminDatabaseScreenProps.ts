@@ -1,16 +1,17 @@
 "use client";
 
 import { useAppAdminDatabaseProps } from "@/features/app/useAppAdminDatabaseProps";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { databaseConfigured } from "@/lib/data/config";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 
 type UseAppAdminDatabaseScreenPropsArgs = {
+  active: boolean;
   appState: AppStateBundle;
 };
 
 export function useAppAdminDatabaseScreenProps({
+  active,
   appState,
 }: UseAppAdminDatabaseScreenPropsArgs): ReturnType<typeof useAppAdminDatabaseProps> {
   const {
@@ -29,6 +30,7 @@ export function useAppAdminDatabaseScreenProps({
   } = appState;
 
   return useAppAdminDatabaseProps({
+    active,
     databaseConfigured,
     ptoPlanRows,
     ptoOperRows,

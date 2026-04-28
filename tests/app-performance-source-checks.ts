@@ -1,0 +1,41 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const testDir = dirname(fileURLToPath(import.meta.url));
+const appPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/AppPrimaryContent.tsx"), "utf8");
+const navigationSelectionHandlersSource = readFileSync(resolve(testDir, "../features/navigation/useNavigationSelectionHandlers.ts"), "utf8");
+const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto/ptoBucketsGridModel.ts"), "utf8");
+const ptoDateEditableTableBodySource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableBody.tsx"), "utf8");
+const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableRow.tsx"), "utf8");
+const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
+const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
+const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
+const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
+
+const guardedSelectPtoTabSource = useAppScreenPropsSource.match(/const guardedSelectPtoTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
+
+assert.match(guardedSelectPtoTabSource, /selectPtoTab\(tab\)/);
+assert.doesNotMatch(guardedSelectPtoTabSource, /flushPtoDatabasePendingSave/);
+assert.doesNotMatch(useAppSectionPreloaderSource, /PtoDateEditableTableContainer/);
+assert.doesNotMatch(useAppSectionPreloaderSource, /PtoBucketsSection/);
+assert.match(useTableResizeHandlersSource, /requestAnimationFrame\(flushResizeMove\)/);
+assert.match(useTableResizeHandlersSource, /cancelAnimationFrame\(resizeFrameRef\.current\)/);
+assert.match(useReportRowsModelSource, /if \(!needsAutoReportRows \|\| calculatedReportRows\.length === 0\) \{\s*derivedReportRowsCacheRef\.current = new Map\(\);\s*return \[\];\s*\}/);
+assert.match(useReportRowsModelSource, /let reasonIndex: ReturnType<typeof createReportReasonIndex> \| null = null;/);
+assert.match(useReportRowsModelSource, /reasonIndex \?\?= createReportReasonIndex\(reportReasons\)/);
+assert.match(useReportRowsModelSource, /const derivedReportRowsCacheRef = useRef\(new Map<string, CachedDerivedReportRow>\(\)\);/);
+assert.match(useReportRowsModelSource, /previous\?\.base === derivedRow/);
+assert.match(useReportRowsModelSource, /return previous\.output;/);
+assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
+assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
+assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(enabled: boolean\)/);
+assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
+assert.match(navigationSelectionHandlersSource, /const selectTopTab = useCallback\(\(tab: TopTab\) => \{\s*startTransition\(\(\) => \{\s*setTopTab\(tab\);\s*\}\);/);
+assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridRangeKeys/);
+assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridKeyAtOffset/);
+assert.match(ptoBucketsGridModelSource, /rowKeys\.indexOf\(activeCell\.rowKey\)/);
+assert.match(ptoDateEditableTableBodySource, /rowProps\.formulaCellsByRowId\.get\(row\.id\)/);
+assert.match(ptoDateEditableTableBodySource, /rowProps\.formulaCellEditing\(row\.id, cell\.kind, cell\.day \?\? cell\.month\)/);
+assert.match(ptoDateEditableTableRowSource, /export const PtoDateEditableTableRow = memo\(function PtoDateEditableTableRow/);

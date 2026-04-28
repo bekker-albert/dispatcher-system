@@ -1,5 +1,5 @@
 import { isRecord } from "../../utils/normalizers";
-import { buildVehicleDisplayName } from "./import-export";
+import { buildVehicleDisplayName } from "./display-name";
 import type { VehicleRow } from "./types";
 
 export type VehicleSeedRow = {

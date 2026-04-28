@@ -1,13 +1,20 @@
 import type { RowDataPacket } from "mysql2/promise";
 import { normalizeVehicleRow } from "../../domain/vehicles/defaults";
 import type { VehicleRow } from "../../domain/vehicles/types";
-import { dbExecute, dbRows } from "./pool";
+import { DatabaseConflictError } from "../database/conflicts";
+import { dbExecute, dbRows, dbTransaction, type DbExecutor } from "./pool";
 import { parseJson, stringifyJson, toIsoLike } from "./json";
 
 export type MysqlVehiclesState = {
   updatedAt?: string;
   rows: VehicleRow[];
 };
+
+export type VehicleSnapshotWriteOptions = {
+  expectedSnapshot?: VehicleRow[] | null;
+};
+
+export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
 
 type VehicleRecord = RowDataPacket & {
   vehicle_id: number | string;
@@ -43,24 +50,15 @@ function recordToVehicle(record: VehicleRecord): VehicleRow {
   });
 }
 
-export async function loadVehiclesFromMysql(): Promise<MysqlVehiclesState | null> {
-  const records = await dbRows<VehicleRecord>(
-    `SELECT * FROM vehicles ORDER BY sort_index ASC, vehicle_id ASC`,
-  );
-
-  if (records.length === 0) return null;
-
-  return {
-    updatedAt: records
-      .map((record) => toIsoLike(record.updated_at))
-      .filter((value): value is string => Boolean(value))
-      .sort()
-      .at(-1),
-    rows: records.map(recordToVehicle),
-  };
+function vehicleSnapshotIds(rows: VehicleRow[]) {
+  return Array.from(new Set(rows.map((vehicle) => vehicle.id)));
 }
 
-export async function saveVehiclesToMysql(rows: VehicleRow[]) {
+function vehicleSnapshotKey(rows: VehicleRow[]) {
+  return JSON.stringify(rows.map((vehicle) => normalizeVehicleRow(vehicle)));
+}
+
+async function upsertVehiclesToMysql(rows: VehicleRow[], execute: DbExecutor = dbExecute) {
   if (rows.length === 0) return;
 
   for (let index = 0; index < rows.length; index += batchSize) {
@@ -80,7 +78,7 @@ export async function saveVehiclesToMysql(rows: VehicleRow[]) {
       stringifyJson(vehicle),
     ]);
 
-    await dbExecute(
+    await execute(
       `INSERT INTO vehicles (
         vehicle_id, sort_index, visible, category, equipment_type, brand, model,
         plate_number, garage_number, owner, data
@@ -102,9 +100,79 @@ export async function saveVehiclesToMysql(rows: VehicleRow[]) {
   }
 }
 
-export async function replaceVehiclesInMysql(rows: VehicleRow[]) {
-  await dbExecute("DELETE FROM vehicles");
-  await saveVehiclesToMysql(rows);
+async function deleteVehiclesMissingFromMysqlSnapshot(rows: VehicleRow[], execute: DbExecutor = dbExecute) {
+  const vehicleIds = vehicleSnapshotIds(rows);
+
+  if (vehicleIds.length === 0) {
+    await execute("DELETE FROM vehicles");
+    return;
+  }
+
+  const placeholders = vehicleIds.map(() => "?").join(", ");
+  await execute(
+    `DELETE FROM vehicles
+    WHERE vehicle_id NOT IN (${placeholders})`,
+    vehicleIds,
+  );
+}
+
+function createVehiclesConflictError() {
+  return new DatabaseConflictError("Список техники уже изменился в базе. Обновите страницу перед повторным сохранением.");
+}
+
+async function loadVehicleRecordsFromMysql(execute?: DbExecutor, lockForUpdate = false) {
+  const sql = `SELECT * FROM vehicles ORDER BY sort_index ASC, vehicle_id ASC${lockForUpdate ? " FOR UPDATE" : ""}`;
+  return execute?.rows
+    ? await execute.rows<VehicleRecord>(sql)
+    : await dbRows<VehicleRecord>(sql);
+}
+
+async function loadVehiclesFromMysqlWithExecutor(execute?: DbExecutor, lockForUpdate = false): Promise<MysqlVehiclesState | null> {
+  const records = await loadVehicleRecordsFromMysql(execute, lockForUpdate);
+
+  if (records.length === 0) return null;
+
+  return {
+    updatedAt: records
+      .map((record) => toIsoLike(record.updated_at))
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .at(-1),
+    rows: records.map(recordToVehicle),
+  };
+}
+
+async function assertMysqlVehiclesMatchExpectedSnapshot(
+  expectedSnapshot: VehicleRow[] | null | undefined,
+  execute?: DbExecutor,
+) {
+  if (!Array.isArray(expectedSnapshot)) return;
+
+  const current = await loadVehiclesFromMysqlWithExecutor(execute, Boolean(execute));
+  const currentRows = current?.rows ?? [];
+
+  if (vehicleSnapshotKey(currentRows) !== vehicleSnapshotKey(expectedSnapshot)) {
+    throw createVehiclesConflictError();
+  }
+}
+
+export async function loadVehiclesFromMysql(): Promise<MysqlVehiclesState | null> {
+  return await loadVehiclesFromMysqlWithExecutor();
+}
+
+export async function saveVehiclesToMysql(rows: VehicleRow[], options: VehicleSnapshotWriteOptions = {}) {
+  await dbTransaction(async (execute) => {
+    await assertMysqlVehiclesMatchExpectedSnapshot(options.expectedSnapshot, execute);
+    await upsertVehiclesToMysql(rows, execute);
+  });
+}
+
+export async function replaceVehiclesInMysql(rows: VehicleRow[], options: VehicleSnapshotReplaceOptions = {}) {
+  await dbTransaction(async (execute) => {
+    await assertMysqlVehiclesMatchExpectedSnapshot(options.expectedSnapshot, execute);
+    await upsertVehiclesToMysql(rows, execute);
+    await deleteVehiclesMissingFromMysqlSnapshot(rows, execute);
+  });
 }
 
 export async function deleteVehicleFromMysql(id: number) {

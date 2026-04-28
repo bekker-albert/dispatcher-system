@@ -23,7 +23,7 @@ export function useAppDeferredData<TPtoRow, TVehicleRow>({
   const deferredPtoSurveyRows = useDeferredValue(ptoSurveyRows);
   const deferredPtoOperRows = useDeferredValue(ptoOperRows);
   const deferredVehicleRows = useDeferredValue(vehicleRows);
-  const renderedTopTab = useDeferredValue(topTab);
+  const renderedTopTab = topTab;
   const needsReportRows = renderedTopTab === "reports"
     || (renderedTopTab === "admin" && adminSection === "reports");
   const needsDerivedReportRows = renderedTopTab === "reports";

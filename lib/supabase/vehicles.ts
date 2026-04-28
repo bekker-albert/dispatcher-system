@@ -9,6 +9,12 @@ export type SupabaseVehiclesState = {
   rows: VehicleRow[];
 };
 
+export type VehicleSnapshotWriteOptions = {
+  expectedSnapshot?: VehicleRow[] | null;
+};
+
+export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
+
 type VehicleRecord = {
   vehicle_id: number | string;
   sort_index: number | null;
@@ -34,6 +40,8 @@ function requireSupabase() {
 
   return supabase;
 }
+
+type SupabaseVehiclesClient = ReturnType<typeof requireSupabase>;
 
 function vehicleToRecord(vehicle: VehicleRow, sortIndex: number): VehicleRecord {
   return {
@@ -70,6 +78,51 @@ function recordToVehicle(record: VehicleRecord): VehicleRow {
   });
 }
 
+function vehicleSnapshotIds(rows: VehicleRow[]) {
+  return Array.from(new Set(rows.map((vehicle) => vehicle.id)));
+}
+
+function vehicleSnapshotKey(rows: VehicleRow[]) {
+  return JSON.stringify(rows.map((vehicle) => normalizeVehicleRow(vehicle)));
+}
+
+async function upsertVehiclesToSupabase(client: SupabaseVehiclesClient, records: VehicleRecord[]) {
+  if (records.length === 0) return;
+
+  for (let index = 0; index < records.length; index += batchSize) {
+    const batch = records.slice(index, index + batchSize);
+    const { error } = await client
+      .from(vehiclesTable)
+      .upsert(batch, { onConflict: "vehicle_id" });
+    if (error) throw error;
+  }
+}
+
+async function deleteVehiclesMissingFromSupabaseSnapshot(client: SupabaseVehiclesClient, vehicleIds: number[]) {
+  const { error } = vehicleIds.length === 0
+    ? await client
+      .from(vehiclesTable)
+      .delete()
+      .not("vehicle_id", "is", null)
+    : await client
+      .from(vehiclesTable)
+      .delete()
+      .not("vehicle_id", "in", `(${vehicleIds.join(",")})`);
+
+  if (error) throw error;
+}
+
+async function assertSupabaseVehiclesMatchExpectedSnapshot(expectedSnapshot: VehicleRow[] | null | undefined) {
+  if (!Array.isArray(expectedSnapshot)) return;
+
+  const current = await loadVehiclesFromSupabase();
+  const currentRows = current?.rows ?? [];
+
+  if (vehicleSnapshotKey(currentRows) !== vehicleSnapshotKey(expectedSnapshot)) {
+    throw new Error("Vehicle list changed in database. Reload before replacing it.");
+  }
+}
+
 export async function loadVehiclesFromSupabase(): Promise<SupabaseVehiclesState | null> {
   if (serverDatabaseConfigured) {
     return databaseRequest<SupabaseVehiclesState | null>("vehicles", "load");
@@ -97,39 +150,34 @@ export async function loadVehiclesFromSupabase(): Promise<SupabaseVehiclesState 
   };
 }
 
-export async function saveVehiclesToSupabase(rows: VehicleRow[]) {
+export async function saveVehiclesToSupabase(rows: VehicleRow[], options: VehicleSnapshotWriteOptions = {}) {
   if (serverDatabaseConfigured) {
-    await databaseRequest("vehicles", "save", { rows });
+    await databaseRequest("vehicles", "save", { rows, expectedSnapshot: options.expectedSnapshot });
     return;
   }
+
+  await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
 
   const records = rows.map(vehicleToRecord);
-  if (records.length === 0) return;
   const client = requireSupabase();
 
-  for (let index = 0; index < records.length; index += batchSize) {
-    const batch = records.slice(index, index + batchSize);
-    const { error } = await client
-      .from(vehiclesTable)
-      .upsert(batch, { onConflict: "vehicle_id" });
-    if (error) throw error;
-  }
+  await upsertVehiclesToSupabase(client, records);
 }
 
-export async function replaceVehiclesInSupabase(rows: VehicleRow[]) {
+export async function replaceVehiclesInSupabase(rows: VehicleRow[], options: VehicleSnapshotReplaceOptions = {}) {
   if (serverDatabaseConfigured) {
-    await databaseRequest("vehicles", "replace", { rows });
+    await databaseRequest("vehicles", "replace", { rows, expectedSnapshot: options.expectedSnapshot });
     return;
   }
 
-  const client = requireSupabase();
-  const { error: deleteError } = await client
-    .from(vehiclesTable)
-    .delete()
-    .gte("vehicle_id", 0);
+  await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
 
-  if (deleteError) throw deleteError;
-  await saveVehiclesToSupabase(rows);
+  const records = rows.map(vehicleToRecord);
+  const vehicleIds = vehicleSnapshotIds(rows);
+  const client = requireSupabase();
+
+  await upsertVehiclesToSupabase(client, records);
+  await deleteVehiclesMissingFromSupabaseSnapshot(client, vehicleIds);
 }
 
 export async function deleteVehicleFromSupabase(id: number) {

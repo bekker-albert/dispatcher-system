@@ -5,8 +5,34 @@ import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
+import { createVehicleRowsSaveQueue, type VehicleRowsSaveQueue } from "./vehicleRowsSaveQueue";
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
+
+function copyVehicleRows(rows: VehicleRow[]) {
+  return rows.map((vehicle) => ({ ...vehicle }));
+}
+
+function saveVehicleRowsLocalBackup(snapshot: string, updatedAt: string) {
+  try {
+    window.localStorage.setItem(adminStorageKeys.vehicles, snapshot);
+    window.localStorage.setItem(adminStorageKeys.vehiclesLocalUpdatedAt, updatedAt);
+    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt);
+  } catch (error) {
+    console.warn("Vehicle local backup failed:", error);
+  }
+}
+
+function parseExpectedVehicleSnapshot(snapshot: string) {
+  if (!snapshot) return null;
+
+  try {
+    const value = JSON.parse(snapshot);
+    return Array.isArray(value) ? value as VehicleRow[] : null;
+  } catch {
+    return null;
+  }
+}
 
 type VehicleRowsPersistenceOptions = {
   adminDataLoaded: boolean;
@@ -30,6 +56,11 @@ export function useVehicleRowsPersistence({
   showSaveStatus,
 }: VehicleRowsPersistenceOptions) {
   const vehicleSaveTimerRef = useRef<number | null>(null);
+  const databaseSaveQueueRef = useRef<VehicleRowsSaveQueue | null>(null);
+
+  if (databaseSaveQueueRef.current === null) {
+    databaseSaveQueueRef.current = createVehicleRowsSaveQueue();
+  }
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -39,22 +70,33 @@ export function useVehicleRowsPersistence({
     }
 
     vehicleSaveTimerRef.current = window.setTimeout(() => {
-      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
-      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+      const rowsSnapshot = copyVehicleRows(vehicleRowsRef.current);
+      const snapshot = JSON.stringify(rowsSnapshot);
+      const localUpdatedAt = new Date().toISOString();
+
+      saveVehicleRowsLocalBackup(snapshot, localUpdatedAt);
       if (databaseConfigured && databaseLoadedRef.current) {
-        const snapshot = JSON.stringify(vehicleRowsRef.current);
         if (snapshot !== databaseSaveSnapshotRef.current) {
+          const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
+
           showSaveStatus("saving", "\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u044e \u0442\u0435\u0445\u043d\u0438\u043a\u0443...");
-          void import("@/lib/data/vehicles")
-            .then(({ saveVehiclesToDatabase }) => saveVehiclesToDatabase(vehicleRowsRef.current))
-            .then(() => {
+          databaseSaveQueueRef.current?.enqueue(async (isLatest) => {
+            try {
+              const { replaceVehiclesInDatabase } = await import("@/lib/data/vehicles");
+              if (!isLatest()) return;
+
+              await replaceVehiclesInDatabase(rowsSnapshot, { expectedSnapshot });
+              if (!isLatest() || snapshot !== JSON.stringify(vehicleRowsRef.current)) return;
+
               databaseSaveSnapshotRef.current = snapshot;
               showSaveStatus("saved", "\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430.");
-            })
-            .catch((error) => {
+            } catch (error) {
               console.warn("Database vehicles save failed:", error);
-              showSaveStatus("error", `\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430: ${errorToMessage(error)}`);
-            });
+              if (isLatest() && snapshot === JSON.stringify(vehicleRowsRef.current)) {
+                showSaveStatus("error", `\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430: ${errorToMessage(error)}`);
+              }
+            }
+          });
         }
       }
       requestClientSnapshotSave("vehicles-save");
@@ -86,8 +128,7 @@ export function useVehicleRowsPersistence({
         window.clearTimeout(vehicleSaveTimerRef.current);
         vehicleSaveTimerRef.current = null;
       }
-      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(vehicleRowsRef.current));
-      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+      saveVehicleRowsLocalBackup(JSON.stringify(vehicleRowsRef.current), new Date().toISOString());
     };
 
     window.addEventListener("pagehide", flushVehicleRows);

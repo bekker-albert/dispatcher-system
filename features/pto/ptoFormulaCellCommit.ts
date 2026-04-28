@@ -1,4 +1,4 @@
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 import type { PtoRowsSetter } from "@/features/pto/ptoDateTableTypes";
 import { parseDecimalInput } from "@/lib/domain/pto/formatting";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";

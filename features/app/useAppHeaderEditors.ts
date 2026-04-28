@@ -3,9 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useEditableHeaderLabels } from "@/components/shared/useEditableHeaderLabels";
 import { useReportHeaderActions } from "@/features/reports/useReportHeaderActions";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
-
-type AdminLogDraft = Omit<AdminLogEntry, "id" | "at" | "user">;
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 
 type UseAppHeaderEditorsOptions = {
   ptoHeaderLabels: Record<string, string>;
@@ -20,7 +18,7 @@ type UseAppHeaderEditorsOptions = {
   setEditingReportHeaderKey: Dispatch<SetStateAction<string | null>>;
   setReportHeaderDraft: Dispatch<SetStateAction<string>>;
   requestPtoDatabaseSave: () => void;
-  addAdminLog: (entry: AdminLogDraft) => void;
+  addAdminLog: (entry: AdminLogInput) => void;
 };
 
 export function useAppHeaderEditors({

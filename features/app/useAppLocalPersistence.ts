@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import {
-  collectSharedAppSettingsFromBrowserStorage,
   collectSharedAppStorageFromBrowserStorage,
+  type SharedAppStorageWriteResult,
   writeSharedAppStateToBrowserStorage,
 } from "@/features/app/sharedAppStorage";
-import { databaseConfigured } from "@/lib/data/config";
-import { errorToMessage } from "@/lib/utils/normalizers";
+import { useSharedDatabaseSaveQueue } from "@/features/app/useSharedDatabaseSaveQueue";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
@@ -60,26 +59,32 @@ export function useAppLocalPersistence({
   adminLogs,
 }: AppLocalPersistenceOptions) {
   const appStateSaveTimerRef = useRef<number | null>(null);
+  const appStateSerializedByKeyRef = useRef<Record<string, string>>({});
+  const appStateLocalBaselineInitializedRef = useRef(false);
+  const enqueueSharedDatabaseSave = useSharedDatabaseSaveQueue({
+    appDatabaseSaveSnapshotRef,
+    appSettingsDatabaseLoadedRef,
+    appSettingsDatabaseSaveSnapshotRef,
+    showSaveStatus,
+  });
 
-  const saveAppLocalState = useCallback(() => {
-    writeSharedAppStateToBrowserStorage({
-      reportCustomers,
-      reportAreaOrder,
-      reportWorkOrder,
-      reportHeaderLabels,
-      reportColumnWidths,
-      reportReasons,
-      areaShiftCutoffs,
-      customTabs,
-      topTabs,
-      subTabs,
-      dispatchSummaryRows,
-      orgMembers,
-      dependencyNodes,
-      dependencyLinks,
-      adminLogs,
-    });
-  }, [
+  const createCurrentSharedState = useCallback(() => ({
+    reportCustomers,
+    reportAreaOrder,
+    reportWorkOrder,
+    reportHeaderLabels,
+    reportColumnWidths,
+    reportReasons,
+    areaShiftCutoffs,
+    customTabs,
+    topTabs,
+    subTabs,
+    dispatchSummaryRows,
+    orgMembers,
+    dependencyNodes,
+    dependencyLinks,
+    adminLogs,
+  }), [
     adminLogs,
     areaShiftCutoffs,
     customTabs,
@@ -97,62 +102,34 @@ export function useAppLocalPersistence({
     topTabs,
   ]);
 
-  const saveSharedAppStateToDatabase = useCallback(async () => {
-    if (!databaseConfigured) return;
-
-    const storage = collectSharedAppStorageFromBrowserStorage();
-    const snapshot = JSON.stringify(storage);
-    if (snapshot === appDatabaseSaveSnapshotRef.current) return;
-
-    showSaveStatus("saving", "Сохраняю общие данные...");
-
-    try {
-      const { saveAppStateToDatabase } = await import("@/lib/data/app-state");
-      await saveAppStateToDatabase(storage);
-      appDatabaseSaveSnapshotRef.current = snapshot;
-      showSaveStatus("saved", "Общие данные сохранены.");
-    } catch (error) {
-      showSaveStatus("error", `Общие данные не сохранены: ${errorToMessage(error)}`);
-      throw error;
-    }
-  }, [appDatabaseSaveSnapshotRef, showSaveStatus]);
-
-  const saveSharedAppSettingsToDatabase = useCallback(async () => {
-    if (!databaseConfigured || !appSettingsDatabaseLoadedRef.current) return;
-
-    const settings = collectSharedAppSettingsFromBrowserStorage();
-    const snapshot = JSON.stringify(settings);
-    if (snapshot === appSettingsDatabaseSaveSnapshotRef.current) return;
-
-    showSaveStatus("saving", "Сохраняю настройки...");
-
-    try {
-      const { saveAppSettingsToDatabase } = await import("@/lib/data/settings");
-      await saveAppSettingsToDatabase(settings);
-      appSettingsDatabaseSaveSnapshotRef.current = snapshot;
-      showSaveStatus("saved", "Настройки сохранены.");
-    } catch (error) {
-      showSaveStatus("error", `Настройки не сохранены: ${errorToMessage(error)}`);
-      throw error;
-    }
-  }, [appSettingsDatabaseLoadedRef, appSettingsDatabaseSaveSnapshotRef, showSaveStatus]);
+  const saveAppLocalState = useCallback(() => {
+    return writeSharedAppStateToBrowserStorage(
+      createCurrentSharedState(),
+      appStateSerializedByKeyRef.current,
+    );
+  }, [
+    createCurrentSharedState,
+  ]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
+
+    if (!appStateLocalBaselineInitializedRef.current) {
+      appStateSerializedByKeyRef.current = collectSharedAppStorageFromBrowserStorage();
+      appStateLocalBaselineInitializedRef.current = true;
+    }
 
     if (appStateSaveTimerRef.current !== null) {
       window.clearTimeout(appStateSaveTimerRef.current);
     }
 
     appStateSaveTimerRef.current = window.setTimeout(() => {
-      saveAppLocalState();
-      void saveSharedAppStateToDatabase().catch((error) => {
-        console.warn("Database app_state save failed:", error);
-      });
-      void saveSharedAppSettingsToDatabase().catch((error) => {
-        console.warn("Database app_settings save failed:", error);
-      });
-      requestClientSnapshotSave("app-state-save");
+      const savedLocalState: SharedAppStorageWriteResult = saveAppLocalState();
+
+      if (savedLocalState.changedKeys.length > 0) {
+        enqueueSharedDatabaseSave(savedLocalState);
+        requestClientSnapshotSave("app-state-save");
+      }
       appStateSaveTimerRef.current = null;
     }, 300);
 
@@ -164,10 +141,9 @@ export function useAppLocalPersistence({
     };
   }, [
     adminDataLoaded,
+    enqueueSharedDatabaseSave,
     requestClientSnapshotSave,
     saveAppLocalState,
-    saveSharedAppSettingsToDatabase,
-    saveSharedAppStateToDatabase,
   ]);
 
   // Pagehide only flushes browser storage. Server writes stay debounced above

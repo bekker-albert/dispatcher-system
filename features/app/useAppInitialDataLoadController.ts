@@ -2,9 +2,8 @@
 
 import { defaultSubTabs } from "@/features/app/appDefaults";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 
 type UseAppInitialDataLoadControllerOptions = {
   appState: AppStateBundle;
@@ -15,7 +14,6 @@ export function useAppInitialDataLoadController({
 }: UseAppInitialDataLoadControllerOptions) {
   useInitialAppDataLoad({
     defaultSubTabs,
-    saveClientSnapshotToDatabase: appState.saveClientSnapshotToDatabase,
     restoreAdminLogs: appState.restoreAdminLogs,
     appDatabaseSaveSnapshotRef: appState.appDatabaseSaveSnapshotRef,
     appSettingsDatabaseLoadedRef: appState.appSettingsDatabaseLoadedRef,
@@ -23,6 +21,8 @@ export function useAppInitialDataLoadController({
     vehiclesDatabaseLoadedRef: appState.vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef: appState.vehiclesDatabaseSaveSnapshotRef,
     hasStoredPtoStateRef: appState.hasStoredPtoStateRef,
+    setPtoDatabaseLoadStarted: appState.setPtoDatabaseLoadStarted,
+    setPtoBootstrapLoaded: appState.setPtoBootstrapLoaded,
     setAdminDataLoaded: appState.setAdminDataLoaded,
     setReportCustomers: appState.setReportCustomers,
     setReportAreaOrder: appState.setReportAreaOrder,

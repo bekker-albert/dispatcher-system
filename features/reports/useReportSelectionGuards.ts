@@ -6,6 +6,7 @@ import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
 
 type ReportSelectionGuardsOptions = {
+  active: boolean;
   reportCustomers: ReportCustomerConfig[];
   reportCustomerId: string;
   setReportCustomerId: Dispatch<SetStateAction<string>>;
@@ -15,6 +16,7 @@ type ReportSelectionGuardsOptions = {
 };
 
 export function useReportSelectionGuards({
+  active,
   reportCustomers,
   reportCustomerId,
   setReportCustomerId,
@@ -23,18 +25,22 @@ export function useReportSelectionGuards({
   setReportArea,
 }: ReportSelectionGuardsOptions) {
   useEffect(() => {
+    if (!active) return;
+
     const visibleCustomers = reportCustomers.filter((customer) => customer.visible);
     if (visibleCustomers.some((customer) => customer.id === reportCustomerId)) return;
 
     setReportCustomerId(visibleCustomers[0]?.id ?? reportCustomers[0]?.id ?? defaultReportCustomerId);
-  }, [reportCustomerId, reportCustomers, setReportCustomerId]);
+  }, [active, reportCustomerId, reportCustomers, setReportCustomerId]);
 
   useEffect(() => {
+    if (!active) return;
+
     const hasArea = reportAreaTabs.some((area) => (
       normalizeLookupValue(area) === normalizeLookupValue(reportArea)
     ));
     if (hasArea) return;
 
     setReportArea("Все участки");
-  }, [reportArea, reportAreaTabs, setReportArea]);
+  }, [active, reportArea, reportAreaTabs, setReportArea]);
 }

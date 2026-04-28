@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
-import type { PtoFormulaCellWithoutScope } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCellWithoutScope } from "@/features/pto/ptoDateFormulaTypes";
 import { formatPtoCellNumber, formatPtoFormulaNumber } from "@/lib/domain/pto/formatting";
 
 type PtoDateFormulaInputProps = {

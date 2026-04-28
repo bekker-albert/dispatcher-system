@@ -16,6 +16,8 @@ export type AdminLogEntry = {
   rowsCount?: number;
 };
 
+export type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
+
 export function normalizeAdminLogEntry(value: unknown): AdminLogEntry | null {
   if (!isRecord(value)) return null;
 

@@ -17,6 +17,9 @@ Use this checklist before every commit.
 - Existing working flows still work.
 - Save/load behavior was not changed accidentally.
 - Database writes are explicit and provider-neutral through `lib/data/*` where possible.
+- Next.js API routes stay thin; request routing and server database behavior belong in `lib/server/*`.
+- PTO storage adapters reuse `lib/domain/pto/persistence-shared.ts` for row/day/bucket mapping.
+- Report formulas stay in focused domain modules such as `pto-index`, `pto-facts`, and `row-normalization`; compatibility files must not start growing new logic again.
 - User-entered production data is not replaced by seed/mock data.
 - Keyboard behavior remains consistent for spreadsheet-like tables.
 
@@ -60,6 +63,16 @@ npm run refactor:ai -- --mode review --include-diff --task "Review current refac
 ```
 
 If a check was not run, the final response must say why.
+
+## Background Agents
+
+For large work, use agents in pairs where useful:
+
+- One implementation agent with a clear write set.
+- One read-only review agent for the same area.
+- No overlapping write access unless the second agent is explicitly read-only.
+- Main thread must still run the final verification and inspect the result.
+- Agents must not commit, push, deploy, or touch production data.
 
 ## Final Report Format
 

@@ -1,11 +1,33 @@
-import { reportReasonEntryKey, reportYearReasonOverrideKey } from "@/lib/domain/reports/reasons";
-import type { ReportRow } from "@/lib/domain/reports/types";
-import { delta, formatReportWorkName } from "@/lib/domain/reports/display";
-import { reportYearFact } from "@/lib/domain/reports/facts";
-import { reportRowDisplayKey } from "@/lib/domain/reports/display";
+import { reportColumnKeys, type ReportColumnKey } from "../../lib/domain/reports/columns";
+import { delta, formatReportWorkName, reportRowDisplayKey } from "../../lib/domain/reports/display";
+import { reportYearFact } from "../../lib/domain/reports/facts";
+import { reportReasonEntryKey, reportYearReasonTextWithManualOverride } from "../../lib/domain/reports/reasons";
+import type { ReportRow } from "../../lib/domain/reports/types";
 
 const reportPrintRowsPerPage = 42;
-const reportPrintTextColumnBudget = 582;
+const reportPrintPageWidthBudget = 1400;
+const reportPrintBaseColumnWidths: Record<ReportColumnKey, number> = {
+  area: 54,
+  "work-name": 180,
+  unit: 24,
+  "day-plan": 42,
+  "day-fact": 42,
+  "day-delta": 38,
+  "day-productivity": 48,
+  "day-reason": 175,
+  "month-total-plan": 48,
+  "month-plan": 48,
+  "month-fact": 58,
+  "month-delta": 42,
+  "month-productivity": 48,
+  "year-plan": 52,
+  "year-fact": 62,
+  "year-delta": 46,
+  "year-reason": 190,
+  "annual-plan": 54,
+  "annual-fact": 54,
+  "annual-remaining": 58,
+};
 const reportPrintTextColumnBounds = {
   "work-name": { min: 150, max: 225, base: 118, char: 4.2 },
   "day-reason": { min: 145, max: 230, base: 118, char: 3.8 },
@@ -15,6 +37,7 @@ const reportPrintTextColumnBounds = {
 type ReportPrintTextColumnKey = keyof typeof reportPrintTextColumnBounds;
 
 type ReportPrintLayoutOptions = {
+  columnKeys?: readonly ReportColumnKey[];
   groups: Array<{ area: string; rows: ReportRow[] }>;
   reportDate: string;
   reportReasons: Record<string, string>;
@@ -41,11 +64,24 @@ function reportPrintTextColumnWidth(key: ReportPrintTextColumnKey, header: strin
   return reportClampWidth(Math.round(bounds.base + score * bounds.char), bounds.min, bounds.max);
 }
 
-function reportFitPrintTextColumnWidths(widths: Record<ReportPrintTextColumnKey, number>) {
-  const totalWidth = widths["work-name"] + widths["day-reason"] + widths["year-reason"];
-  if (totalWidth <= reportPrintTextColumnBudget) return widths;
+function reportPrintTextColumnBudget(columnKeys: readonly ReportColumnKey[]) {
+  const fixedWidth = columnKeys.reduce((sum, key) => (
+    key in reportPrintTextColumnBounds ? sum : sum + reportPrintBaseColumnWidths[key]
+  ), 0);
+  const minTextWidth = (Object.keys(reportPrintTextColumnBounds) as ReportPrintTextColumnKey[]).reduce(
+    (sum, key) => sum + reportPrintTextColumnBounds[key].min,
+    0,
+  );
 
-  const extraWidth = totalWidth - reportPrintTextColumnBudget;
+  return Math.max(minTextWidth, reportPrintPageWidthBudget - fixedWidth);
+}
+
+function reportFitPrintTextColumnWidths(widths: Record<ReportPrintTextColumnKey, number>, columnKeys: readonly ReportColumnKey[]) {
+  const totalWidth = widths["work-name"] + widths["day-reason"] + widths["year-reason"];
+  const textColumnBudget = reportPrintTextColumnBudget(columnKeys);
+  if (totalWidth <= textColumnBudget) return widths;
+
+  const extraWidth = totalWidth - textColumnBudget;
   const shrinkable = (Object.keys(widths) as ReportPrintTextColumnKey[]).reduce(
     (sum, key) => sum + Math.max(0, widths[key] - reportPrintTextColumnBounds[key].min),
     0,
@@ -61,7 +97,33 @@ function reportFitPrintTextColumnWidths(widths: Record<ReportPrintTextColumnKey,
   }, { ...widths });
 }
 
+function reportPrintLastPageRows(groups: Array<{ rows: ReportRow[] }>) {
+  return groups.reduce((pageRows, group) => {
+    const groupRows = group.rows.length;
+    if (groupRows <= 0) return pageRows;
+
+    if (groupRows > reportPrintRowsPerPage) {
+      const firstPageCapacity = pageRows > 0 ? reportPrintRowsPerPage - pageRows : 0;
+      const remainingRows = groupRows - firstPageCapacity;
+      const remainder = remainingRows % reportPrintRowsPerPage;
+      return remainder === 0 ? reportPrintRowsPerPage : remainder;
+    }
+
+    return pageRows > 0 && pageRows + groupRows > reportPrintRowsPerPage
+      ? groupRows
+      : pageRows + groupRows;
+  }, 0);
+}
+
+function reportPrintYearReasonText(row: ReportRow, reportDate: string, reportReasons: Record<string, string>) {
+  const rowKey = reportRowDisplayKey(row);
+  if (!rowKey.startsWith("summary:")) return row.yearReason;
+
+  return reportYearReasonTextWithManualOverride(reportReasons, rowKey, reportDate, row.yearReason);
+}
+
 export function createReportPrintLayout({
+  columnKeys = reportColumnKeys,
   groups,
   reportDate,
   reportReasons,
@@ -88,13 +150,16 @@ export function createReportPrintLayout({
       reportHeaderLabel("year-reason", "Причины с накоплением"),
       reportPrintRows.map((row) => {
         if (delta(row.yearPlan, reportYearFact(row)) >= 0) return "";
-        const rowKey = reportRowDisplayKey(row);
-        return reportReasons[reportYearReasonOverrideKey(reportDate, rowKey)] ?? row.yearReason;
+        return reportPrintYearReasonText(row, reportDate, reportReasons);
       }),
     ),
-  });
+  }, columnKeys);
+  const reportPrintColumnWidths: Record<ReportColumnKey, number> = {
+    ...reportPrintBaseColumnWidths,
+    ...reportPrintTextColumnWidths,
+  };
   const reportBodyRowCount = groups.reduce((sum, group) => sum + group.rows.length, 0);
-  const reportLastPrintPageRows = reportBodyRowCount > 0 ? (reportBodyRowCount % reportPrintRowsPerPage || reportPrintRowsPerPage) : 0;
+  const reportLastPrintPageRows = reportBodyRowCount > 0 ? reportPrintLastPageRows(groups) : 0;
   const reportMissingPrintRows = reportBodyRowCount > 0 ? reportPrintRowsPerPage - reportLastPrintPageRows : 0;
   const reportShouldFillPrintRows = reportMissingPrintRows >= 1 && reportMissingPrintRows <= 5;
   const reportPrintFillPaddingMm = reportShouldFillPrintRows
@@ -111,6 +176,7 @@ export function createReportPrintLayout({
   return {
     reportBodyRowCount,
     reportGroupStartIndexes,
+    reportPrintColumnWidths,
     reportLastPrintPageRows,
     reportPrintFillPaddingMm,
     reportPrintTextColumnWidths,

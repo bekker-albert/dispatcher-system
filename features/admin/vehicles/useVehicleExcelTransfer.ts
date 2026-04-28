@@ -1,15 +1,22 @@
 import { useCallback, type ChangeEvent, type Dispatch, type RefObject, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import { defaultVehicleForm } from "@/lib/domain/vehicles/defaults";
-import { createVehicleExportRows, parseVehicleImportFile } from "@/lib/domain/vehicles/import-export";
 import type { VehicleFilterKey, VehicleFilters } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
-import { createXlsxBlob } from "@/lib/utils/xlsx";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
+function parseExpectedVehicleSnapshot(snapshot: string) {
+  if (!snapshot) return null;
+
+  try {
+    const value = JSON.parse(snapshot);
+    return Array.isArray(value) ? value as VehicleRow[] : null;
+  } catch {
+    return null;
+  }
+}
 
 type UseVehicleExcelTransferOptions = {
   vehicleRows: VehicleRow[];
@@ -50,6 +57,7 @@ export function useVehicleExcelTransfer({
     if (!file) return;
 
     try {
+      const { parseVehicleImportFile } = await import("@/lib/domain/vehicles/import-export");
       const importedVehicles = await parseVehicleImportFile(file, defaultVehicleForm);
       if (!importedVehicles.length) {
         window.alert("В выбранном файле не найден список техники.");
@@ -66,9 +74,11 @@ export function useVehicleExcelTransfer({
       window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
       window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
       if (databaseConfigured && databaseLoadedRef.current) {
+        const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
+
         showSaveStatus("saving", "Сохраняю загруженную технику...");
         void import("@/lib/data/vehicles")
-          .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles))
+          .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles, { expectedSnapshot }))
           .then(() => {
             databaseSaveSnapshotRef.current = JSON.stringify(importedVehicles);
             showSaveStatus("saved", "Загруженная техника сохранена.");
@@ -101,7 +111,11 @@ export function useVehicleExcelTransfer({
     showSaveStatus,
   ]);
 
-  const exportVehiclesToExcel = useCallback(() => {
+  const exportVehiclesToExcel = useCallback(async () => {
+    const [{ createVehicleExportRows }, { createXlsxBlob }] = await Promise.all([
+      import("@/lib/domain/vehicles/import-export"),
+      import("@/lib/utils/xlsx"),
+    ]);
     const blob = createXlsxBlob(createVehicleExportRows(vehicleRows));
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

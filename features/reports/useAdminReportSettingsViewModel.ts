@@ -49,16 +49,19 @@ export function useAdminReportSettingsViewModel({
   ), [needsAdminReportRows, reportAreaOrder, reportBaseRows, reportWorkOrder]);
 
   const derivedReportRowsByKey = useMemo(() => (
-    new Map(derivedReportRows.map((row) => [reportRowKey(row), row]))
-  ), [derivedReportRows]);
+    needsAdminReportRows
+      ? new Map(derivedReportRows.map((row) => [reportRowKey(row), row]))
+      : new Map<string, ReportRow>()
+  ), [derivedReportRows, needsAdminReportRows]);
 
   const reportAutoRowKeysForCustomer = useCallback((customer: ReportCustomerConfig) => (
+    !needsAdminReportRows ? new Set<string>() :
     new Set(
       reportRowsForCustomer(derivedReportRows, customer)
         .filter(reportRowHasAutoShowData)
         .map(reportRowKey),
     )
-  ), [derivedReportRows]);
+  ), [derivedReportRows, needsAdminReportRows]);
 
   const activeAdminReportBaseRows = useMemo(() => (
     needsAdminReportRows
@@ -75,22 +78,30 @@ export function useAdminReportSettingsViewModel({
   ), [activeAdminReportCustomer, needsAdminReportRows, reportAutoRowKeysForCustomer]);
 
   const activeAdminReportVisibleRowKeys = useMemo(() => (
-    reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys)
-  ), [activeAdminAutoReportRowKeys, activeAdminReportCustomer]);
+    needsAdminReportRows
+      ? reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys)
+      : new Set<string>()
+  ), [activeAdminAutoReportRowKeys, activeAdminReportCustomer, needsAdminReportRows]);
 
-  const activeAdminReportSummarySourceRowKeys = useMemo(() => new Set(
-    activeAdminReportCustomer.summaryRows.flatMap((summary) => [
-      ...summary.rowKeys,
-      ...(summary.planRowKey?.trim() ? [summary.planRowKey] : []),
-    ]),
-  ), [activeAdminReportCustomer.summaryRows]);
+  const activeAdminReportSummarySourceRowKeys = useMemo(() => (
+    needsAdminReportRows
+      ? new Set(
+          activeAdminReportCustomer.summaryRows.flatMap((summary) => [
+            ...summary.rowKeys,
+            ...(summary.planRowKey?.trim() ? [summary.planRowKey] : []),
+          ]),
+        )
+      : new Set<string>()
+  ), [activeAdminReportCustomer.summaryRows, needsAdminReportRows]);
 
-  const activeAdminReportVisibleRows = useMemo(() => (
-    activeAdminReportBaseRows.filter((row) => {
+  const activeAdminReportVisibleRows = useMemo(() => {
+    if (!needsAdminReportRows) return [];
+
+    return activeAdminReportBaseRows.filter((row) => {
       const rowKey = reportRowKey(row);
       return activeAdminReportVisibleRowKeys.has(rowKey) && !activeAdminReportSummarySourceRowKeys.has(rowKey);
-    })
-  ), [activeAdminReportBaseRows, activeAdminReportSummarySourceRowKeys, activeAdminReportVisibleRowKeys]);
+    });
+  }, [activeAdminReportBaseRows, activeAdminReportSummarySourceRowKeys, activeAdminReportVisibleRowKeys, needsAdminReportRows]);
 
   const activeAdminReportOrderRows = useMemo(() => {
     if (!needsAdminReportRows) return [];
@@ -133,14 +144,16 @@ export function useAdminReportSettingsViewModel({
   ), [activeAdminReportBaseRows, activeAdminReportCustomer.areaOrder, needsAdminReportRows]);
 
   const activeAdminReportRowsByKey = useMemo(() => (
-    new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]))
-  ), [activeAdminReportBaseRows]);
+    needsAdminReportRows
+      ? new Map(activeAdminReportBaseRows.map((row) => [reportRowKey(row), row]))
+      : new Map<string, ReportRow>()
+  ), [activeAdminReportBaseRows, needsAdminReportRows]);
 
   const editingReportFactSourceRow = useMemo(() => (
-    editingReportFactSourceRowKey
+    needsAdminReportRows && editingReportFactSourceRowKey
       ? activeAdminReportRowsByKey.get(editingReportFactSourceRowKey) ?? null
       : null
-  ), [activeAdminReportRowsByKey, editingReportFactSourceRowKey]);
+  ), [activeAdminReportRowsByKey, editingReportFactSourceRowKey, needsAdminReportRows]);
 
   const editingReportFactSourceOptions = useMemo(() => {
     if (!editingReportFactSourceRow) return [];

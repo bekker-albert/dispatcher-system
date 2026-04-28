@@ -1,5 +1,8 @@
 import { findTableColumn, parseTableImportFile } from "../../utils/xlsx";
+import { buildVehicleDisplayName } from "./display-name";
 import type { VehicleRow } from "./types";
+
+export { buildVehicleDisplayName };
 
 const vehicleExportHeaders = [
   "Показ",
@@ -13,17 +16,6 @@ const vehicleExportHeaders = [
   "VIN",
   "Собственник",
 ];
-
-export function buildVehicleDisplayName(vehicle: Pick<VehicleRow, "name" | "brand" | "model" | "garageNumber" | "plateNumber">) {
-  const title = [vehicle.brand, vehicle.model].map((value) => value.trim()).filter(Boolean).join(" ");
-  const garageNumber = vehicle.garageNumber.trim();
-  const plateNumber = vehicle.plateNumber.trim();
-  const numberBlock = garageNumber && plateNumber
-    ? `${garageNumber}(${plateNumber})`
-    : garageNumber || (plateNumber ? `(${plateNumber})` : "");
-
-  return [title, numberBlock].filter(Boolean).join(" - ") || vehicle.name.trim() || "Без названия";
-}
 
 function vehicleFuelCalcTypeFromCategory(vehicleType: string): VehicleRow["fuelCalcType"] {
   return ["Транспортировочная", "Легковая", "Пассажирская"].includes(vehicleType) ? "Пробег" : "Моточасы";

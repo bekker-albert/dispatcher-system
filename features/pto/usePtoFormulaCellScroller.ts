@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
 import { ptoDateVirtualDefaultRowHeight, ptoDateVirtualHeaderOffset } from "@/lib/domain/pto/virtualization";
 

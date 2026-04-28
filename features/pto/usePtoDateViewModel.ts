@@ -4,14 +4,33 @@ import { formatMonthName } from "@/lib/domain/pto/formatting";
 import {
   isPtoDateTableKey,
   monthDays,
-  ptoYearOptions,
+  ptoYearOptionsFromSources,
   yearMonths,
   type PtoPlanRow,
 } from "@/lib/domain/pto/date-table";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
+import {
+  createPtoAreaLookupSourceBundle,
+  createPtoBucketAreaLookupSourceBundle,
+  createPtoDateLookupSourceBundle,
+  type PtoAreaLookupSource,
+  type PtoDateLookupSource,
+} from "./ptoDateLookupModel";
 
 const allAreasLabel = "Все участки";
+
+function useStablePtoDateLookupSources(bundle: { sources: PtoDateLookupSource[]; signature: string }) {
+  // The signature intentionally excludes numeric cell values, so lookup maps
+  // do not rebuild on every plan/fact/survey cell edit.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => bundle.sources, [bundle.signature]);
+}
+
+function useStablePtoAreaLookupSources(bundle: { sources: PtoAreaLookupSource[]; signature: string }) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => bundle.sources, [bundle.signature]);
+}
 
 type UsePtoDateViewModelOptions = {
   renderedTopTab: string;
@@ -60,32 +79,46 @@ export function usePtoDateViewModel({
       : activePtoDateRows
   ), [activePtoDateRows, deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
 
-  const ptoYearTabs = useMemo(() => (
-    isPtoDateTab ? ptoYearOptions(activePtoDateRows, ptoPlanYear, ptoManualYears) : [ptoPlanYear]
-  ), [activePtoDateRows, isPtoDateTab, ptoManualYears, ptoPlanYear]);
+  const activePtoDateLookupSources = useStablePtoDateLookupSources(
+    useMemo(() => createPtoDateLookupSourceBundle(activePtoDateRows), [activePtoDateRows]),
+  );
+  const allPtoAreaLookupSources = useStablePtoAreaLookupSources(
+    useMemo(() => createPtoAreaLookupSourceBundle(allPtoDateRows), [allPtoDateRows]),
+  );
+  const ptoBucketAreaLookupSources = useStablePtoAreaLookupSources(
+    useMemo(() => (
+      isPtoBucketsSection ? createPtoBucketAreaLookupSourceBundle(ptoBucketManualRows) : { sources: [], signature: "" }
+    ), [isPtoBucketsSection, ptoBucketManualRows]),
+  );
 
-  const ptoYearMonths = useMemo(() => yearMonths(ptoPlanYear), [ptoPlanYear]);
+  const ptoYearTabs = useMemo(() => (
+    isPtoDateTab ? ptoYearOptionsFromSources(activePtoDateLookupSources, ptoPlanYear, ptoManualYears) : [ptoPlanYear]
+  ), [activePtoDateLookupSources, isPtoDateTab, ptoManualYears, ptoPlanYear]);
+
+  const ptoYearMonths = useMemo(() => (
+    isPtoSection ? yearMonths(ptoPlanYear) : []
+  ), [isPtoSection, ptoPlanYear]);
 
   const ptoMonthGroups = useMemo(() => (
-    ptoYearMonths.map((month) => ({
+    isPtoSection ? ptoYearMonths.map((month) => ({
       month,
       label: formatMonthName(month),
       days: monthDays(month),
       expanded: expandedPtoMonths[month] === true,
-    }))
-  ), [expandedPtoMonths, ptoYearMonths]);
+    })) : []
+  ), [expandedPtoMonths, isPtoSection, ptoYearMonths]);
 
   const ptoAreaTabs = useMemo(() => (
     isPtoSection
       ? [
           allAreasLabel,
           ...uniqueSorted([
-            ...allPtoDateRows.map((row) => cleanAreaName(row.area)),
-            ...(isPtoBucketsSection ? ptoBucketManualRows.map((row) => cleanAreaName(row.area)) : []),
+            ...allPtoAreaLookupSources.map((source) => cleanAreaName(source.area)),
+            ...(isPtoBucketsSection ? ptoBucketAreaLookupSources.map((source) => cleanAreaName(source.area)) : []),
           ]),
         ]
       : [allAreasLabel]
-  ), [allPtoDateRows, isPtoBucketsSection, isPtoSection, ptoBucketManualRows]);
+  ), [allPtoAreaLookupSources, isPtoBucketsSection, isPtoSection, ptoBucketAreaLookupSources]);
 
   const ptoDateOptionMaps = useMemo(() => {
     const allAreasKey = "__all__";
@@ -110,11 +143,11 @@ export function usePtoDateViewModel({
       };
     }
 
-    activePtoDateRows.forEach((row) => {
-      const area = cleanAreaName(row.area).trim();
+    activePtoDateLookupSources.forEach((source) => {
+      const area = cleanAreaName(source.area).trim();
       const areaKey = normalizeLookupValue(area);
-      const location = row.location.trim();
-      const structure = row.structure.trim();
+      const location = source.location.trim();
+      const structure = source.structure.trim();
       const areaKeys = [allAreasKey, areaKey].filter(Boolean);
 
       areaKeys.forEach((key) => {
@@ -134,7 +167,7 @@ export function usePtoDateViewModel({
       structuresByArea: normalizeMap(structuresByArea),
       structuresByAreaLocation: normalizeMap(structuresByAreaLocation),
     };
-  }, [activePtoDateRows, isPtoDateTab]);
+  }, [activePtoDateLookupSources, isPtoDateTab]);
 
   return {
     isPtoSection,

@@ -57,9 +57,10 @@ export function CompactTd({ children }: { children: ReactNode }) {
 
 const sectionCardStyle: CSSProperties = {
   background: "#ffffff",
-  borderRadius: 18,
+  border: "1px solid #e2e8f0",
+  borderRadius: 8,
   padding: 20,
-  boxShadow: "0 4px 16px rgba(15,23,42,0.06)",
+  boxShadow: "none",
   marginBottom: 20,
 };
 

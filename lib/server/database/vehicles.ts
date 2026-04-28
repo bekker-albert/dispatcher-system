@@ -1,0 +1,41 @@
+import type { VehicleRow } from "../../domain/vehicles/types";
+import { payloadRecord } from "./payload";
+import type { DatabaseResourceHandler } from "./types";
+import { requirePayloadArray, requirePayloadNumber } from "./validation";
+
+function vehicleRowsFromPayload(value: unknown) {
+  return requirePayloadArray<VehicleRow>(value, "rows");
+}
+
+function expectedVehicleSnapshotFromPayload(value: unknown) {
+  return Array.isArray(value) ? value as VehicleRow[] : undefined;
+}
+
+export const handleVehiclesDatabaseAction: DatabaseResourceHandler = async ({
+  action,
+  payload,
+  json,
+}) => {
+  const vehicles = await import("../mysql/vehicles");
+  const record = payloadRecord(payload);
+
+  if (action === "load") return json(await vehicles.loadVehiclesFromMysql());
+  if (action === "save") {
+    await vehicles.saveVehiclesToMysql(vehicleRowsFromPayload(record.rows), {
+      expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
+    });
+    return json({ ok: true });
+  }
+  if (action === "replace") {
+    await vehicles.replaceVehiclesInMysql(vehicleRowsFromPayload(record.rows), {
+      expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
+    });
+    return json({ ok: true });
+  }
+  if (action === "delete") {
+    await vehicles.deleteVehicleFromMysql(requirePayloadNumber(record.id, "id"));
+    return json({ ok: true });
+  }
+
+  return undefined;
+};

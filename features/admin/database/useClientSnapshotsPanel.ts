@@ -4,7 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs } from "@/lib/domain/app/settings";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { databaseConfigured } from "@/lib/data/config";
-import { clientSnapshotRestoreFlagKey, collectLocalStorageBackup, getOrCreateClientId } from "@/lib/storage/client-snapshots";
+import {
+  clientSnapshotRestoreFlagKey,
+  clientSnapshotStorageSignature,
+  collectLocalStorageBackup,
+  getOrCreateClientId,
+  managedClientSnapshotStorageKeys,
+} from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
@@ -32,8 +38,8 @@ export function useClientSnapshotsPanel({ active, showSaveStatus }: ClientSnapsh
     const storage = collectLocalStorageBackup();
     if (Object.keys(storage).length === 0) return;
 
-    const snapshot = JSON.stringify({ clientId, storage });
-    if (snapshot === clientSnapshotSaveSnapshotRef.current) return;
+    const snapshotSignature = clientSnapshotStorageSignature(clientId, storage);
+    if (snapshotSignature === clientSnapshotSaveSnapshotRef.current) return;
 
     const { saveClientAppSnapshotToDatabase } = await import("@/lib/data/app-state");
     await saveClientAppSnapshotToDatabase(clientId, storage, {
@@ -41,7 +47,7 @@ export function useClientSnapshotsPanel({ active, showSaveStatus }: ClientSnapsh
       userAgent: window.navigator.userAgent,
       url: window.location.href,
     });
-    clientSnapshotSaveSnapshotRef.current = snapshot;
+    clientSnapshotSaveSnapshotRef.current = snapshotSignature;
   }, []);
 
   const requestClientSnapshotSave = useCallback((reason = "auto") => {
@@ -104,6 +110,9 @@ export function useClientSnapshotsPanel({ active, showSaveStatus }: ClientSnapsh
   }, [refreshClientSnapshots, saveClientSnapshotToDatabase]);
 
   const restoreClientSnapshot = useCallback((snapshot: DataClientSnapshot) => {
+    managedClientSnapshotStorageKeys.forEach((key) => {
+      window.localStorage.removeItem(key);
+    });
     Object.entries(snapshot.storage).forEach(([key, value]) => {
       window.localStorage.setItem(key, value);
     });

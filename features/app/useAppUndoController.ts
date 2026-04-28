@@ -1,9 +1,8 @@
 "use client";
 
 import { useAppUndoHistory } from "@/features/app/useAppUndoHistory";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 
 type UseAppUndoControllerOptions = {
   appState: AppStateBundle;

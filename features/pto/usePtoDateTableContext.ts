@@ -1,18 +1,17 @@
 import { useCallback, type RefObject } from "react";
-import { ptoDateTableKeyFromTab, type PtoDateTableKey } from "@/lib/domain/pto/date-table";
+import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import { ptoDateTableKeyFromTab, type PtoDateTableKey, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { SubTabConfig } from "@/lib/domain/navigation/tabs";
-
-type PtoDayPatch = {
-  rowId: string;
-  day: string;
-  value: number | null;
-};
+import type { PtoDayPatch } from "@/features/pto/ptoDateTableTypes";
+import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
 
 type UsePtoDateTableContextOptions = {
   ptoTab: string;
   ptoSubTabs: SubTabConfig[];
   databaseConfigured: boolean;
   databaseLoadedRef: RefObject<boolean>;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
+  getPtoDatabaseExpectedUpdatedAt: () => string | null;
 };
 
 export function usePtoDateTableContext({
@@ -20,6 +19,8 @@ export function usePtoDateTableContext({
   ptoSubTabs,
   databaseConfigured,
   databaseLoadedRef,
+  markPtoDatabaseInlineWriteSaved,
+  getPtoDatabaseExpectedUpdatedAt,
 }: UsePtoDateTableContextOptions) {
   const currentPtoTableLabel = useCallback(() => (
     ptoSubTabs.find((tab) => tab.value === ptoTab)?.label ?? ptoTab
@@ -29,23 +30,41 @@ export function usePtoDateTableContext({
     ptoDateTableKeyFromTab(ptoTab)
   ), [ptoTab]);
 
-  const savePtoDayPatchToDatabase = useCallback((rowId: string, day: string, value: number | null) => {
+  const savePtoDayPatchToDatabase = useCallback((row: PtoPlanRow, day: string, value: number | null) => {
     const table = currentPtoDateTableKey();
     if (!table || !databaseConfigured || !databaseLoadedRef.current) return;
 
-    void import("@/lib/data/pto")
-      .then(({ savePtoDayValueToDatabase }) => savePtoDayValueToDatabase(table, rowId, day, value))
+    void enqueuePtoDatabaseWrite(async () => {
+      const { savePtoDayValueWithRowToDatabase } = await import("@/lib/data/pto");
+      const result = await savePtoDayValueWithRowToDatabase(table, row, day, value, {
+        expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+      });
+      markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+        kind: "day-values",
+        table,
+        values: [{ rowId: row.id, day, value }],
+      });
+    })
       .catch((error) => console.warn("Database PTO day save failed:", error));
-  }, [currentPtoDateTableKey, databaseConfigured, databaseLoadedRef]);
+  }, [currentPtoDateTableKey, databaseConfigured, databaseLoadedRef, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved]);
 
-  const savePtoDayPatchesToDatabase = useCallback((values: PtoDayPatch[]) => {
+  const savePtoDayPatchesToDatabase = useCallback((row: PtoPlanRow, values: PtoDayPatch[]) => {
     const table = currentPtoDateTableKey();
     if (!table || !databaseConfigured || !databaseLoadedRef.current || values.length === 0) return;
 
-    void import("@/lib/data/pto")
-      .then(({ savePtoDayValuesToDatabase }) => savePtoDayValuesToDatabase(table, values))
+    void enqueuePtoDatabaseWrite(async () => {
+      const { savePtoDayValuesWithRowToDatabase } = await import("@/lib/data/pto");
+      const result = await savePtoDayValuesWithRowToDatabase(table, row, values, {
+        expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+      });
+      markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+        kind: "day-values",
+        table,
+        values,
+      });
+    })
       .catch((error) => console.warn("Database PTO day batch save failed:", error));
-  }, [currentPtoDateTableKey, databaseConfigured, databaseLoadedRef]);
+  }, [currentPtoDateTableKey, databaseConfigured, databaseLoadedRef, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved]);
 
   return {
     currentPtoTableLabel,

@@ -7,7 +7,6 @@ type ReportReasonTextareaProps = {
   placeholder: string;
   onCommit: (value: string) => void;
   onCancel?: (value: string) => void;
-  onDraftChange?: (value: string) => void;
 };
 
 function syncReportReasonTextareaHeight(element: HTMLTextAreaElement | null) {
@@ -22,11 +21,11 @@ export function ReportReasonTextarea({
   placeholder,
   onCommit,
   onCancel,
-  onDraftChange,
 }: ReportReasonTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedRef = useRef(false);
   const cancelNextBlurRef = useRef(false);
+  const skipNextBlurCommitRef = useRef(false);
   const editInitialValueRef = useRef(value);
   const [draft, setDraft] = useState(value);
 
@@ -64,60 +63,72 @@ export function ReportReasonTextarea({
   }
 
   return (
-    <textarea
-      ref={textareaRef}
-      className="report-reason-input"
-      value={draft}
-      rows={1}
-      onFocus={() => {
-        focusedRef.current = true;
-        editInitialValueRef.current = value;
-      }}
-      onBlur={(event) => {
-        if (cancelNextBlurRef.current) {
-          cancelNextBlurRef.current = false;
-          event.currentTarget.value = editInitialValueRef.current;
-          syncReportReasonTextareaHeight(event.currentTarget);
-          return;
-        }
+    <>
+      <textarea
+        ref={textareaRef}
+        className="report-reason-input"
+        value={draft}
+        rows={1}
+        onFocus={() => {
+          focusedRef.current = true;
+          editInitialValueRef.current = value;
+        }}
+        onBlur={(event) => {
+          if (skipNextBlurCommitRef.current) {
+            skipNextBlurCommitRef.current = false;
+            syncReportReasonTextareaHeight(event.currentTarget);
+            return;
+          }
 
-        commitTextarea(event.currentTarget.value);
-      }}
-      onInput={(event) => {
-        syncReportReasonTextareaHeight(event.currentTarget);
-        onDraftChange?.(event.currentTarget.value);
-      }}
-      onChange={(event) => {
-        setDraft(event.target.value);
-      }}
-      onKeyDown={(event) => {
-        event.stopPropagation();
+          if (cancelNextBlurRef.current) {
+            cancelNextBlurRef.current = false;
+            event.currentTarget.value = editInitialValueRef.current;
+            syncReportReasonTextareaHeight(event.currentTarget);
+            return;
+          }
 
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
           commitTextarea(event.currentTarget.value);
-          event.currentTarget.blur();
-        }
-
-        if (event.key === "Escape") {
-          event.preventDefault();
-          event.currentTarget.value = editInitialValueRef.current;
-          cancelTextarea();
+        }}
+        onInput={(event) => {
           syncReportReasonTextareaHeight(event.currentTarget);
-          event.currentTarget.blur();
-        }
+        }}
+        onChange={(event) => {
+          setDraft(event.target.value);
+        }}
+        onKeyDown={(event) => {
+          event.stopPropagation();
 
-        if (event.key === "Delete" && event.ctrlKey) {
-          event.preventDefault();
-          event.currentTarget.value = "";
-          syncReportReasonTextareaHeight(event.currentTarget);
-          commitTextarea("");
-          event.currentTarget.blur();
-        }
-      }}
-      placeholder={placeholder}
-      style={reportReasonTextareaStyle}
-    />
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            commitTextarea(event.currentTarget.value);
+            skipNextBlurCommitRef.current = true;
+            event.currentTarget.blur();
+          }
+
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.currentTarget.value = editInitialValueRef.current;
+            cancelTextarea();
+            syncReportReasonTextareaHeight(event.currentTarget);
+            event.currentTarget.blur();
+          }
+
+          if (event.key === "Delete" && event.ctrlKey) {
+            event.preventDefault();
+            event.currentTarget.value = "";
+            syncReportReasonTextareaHeight(event.currentTarget);
+            commitTextarea("");
+            skipNextBlurCommitRef.current = true;
+            event.currentTarget.blur();
+          }
+        }}
+        placeholder={placeholder}
+        style={reportReasonTextareaStyle}
+      />
+      <div className="report-reason-print-value" aria-hidden="true" style={reportReasonPrintValueStyle}>
+        {draft}
+      </div>
+    </>
   );
 }
 
@@ -142,4 +153,14 @@ const reportReasonTextareaStyle: CSSProperties = {
   textAlign: "center",
   verticalAlign: "middle",
   whiteSpace: "pre-wrap",
+};
+
+const reportReasonPrintValueStyle: CSSProperties = {
+  display: "none",
+  fontFamily: "inherit",
+  fontSize: "inherit",
+  lineHeight: 1.08,
+  textAlign: "center",
+  whiteSpace: "pre-wrap",
+  width: "100%",
 };

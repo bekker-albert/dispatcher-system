@@ -2,14 +2,13 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
 import { usePtoDateViewport } from "@/features/pto/usePtoDateViewport";
 
 type UsePtoDateViewportResetOptions = {
   renderedTopTab: string;
   isPtoDateTab: boolean;
-  ptoDateEditing: boolean;
   resetKey: string;
   measureKey: string;
   setPtoDateEditing: Dispatch<SetStateAction<boolean>>;
@@ -23,7 +22,6 @@ type UsePtoDateViewportResetOptions = {
 export function usePtoDateViewportReset({
   renderedTopTab,
   isPtoDateTab,
-  ptoDateEditing,
   resetKey,
   measureKey,
   setPtoDateEditing,
@@ -36,7 +34,7 @@ export function usePtoDateViewportReset({
   const isPtoDateSectionOpen = renderedTopTab === "pto" && isPtoDateTab;
 
   const viewportState = usePtoDateViewport({
-    active: isPtoDateSectionOpen && ptoDateEditing,
+    active: isPtoDateSectionOpen,
     resetKey,
     measureKey,
   });

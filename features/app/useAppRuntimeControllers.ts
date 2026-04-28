@@ -6,11 +6,10 @@ import { useAppPtoPersistenceController } from "@/features/app/useAppPtoPersiste
 import { useAppReportReasonEditing } from "@/features/app/useAppReportReasonEditing";
 import { useAppSharedPersistenceController } from "@/features/app/useAppSharedPersistenceController";
 import { useAppTableInteractionEffects } from "@/features/app/useAppTableInteractionEffects";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { useAppUndoController } from "@/features/app/useAppUndoController";
 import { useAppVehicleFocusController } from "@/features/app/useAppVehicleFocusController";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 
 type UseAppRuntimeControllersArgs = {
   appState: AppStateBundle;
@@ -58,6 +57,8 @@ export function useAppRuntimeControllers({
     ptoPlanRows,
     ptoOperRows,
     ptoSurveyRows,
+    topTab,
+    adminSection,
   } = appState;
 
   const {
@@ -72,7 +73,10 @@ export function useAppRuntimeControllers({
   useAppInitialDataLoadController({ appState });
 
   const {
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
     savePtoDatabaseChanges,
+    flushPtoDatabasePendingSave,
     requestPtoDatabaseSave,
     savePtoLocalState,
   } = useAppPtoPersistenceController({
@@ -105,6 +109,8 @@ export function useAppRuntimeControllers({
   });
 
   const tableInteractionEffects = useAppTableInteractionEffects({
+    ptoSelectionActive: topTab === "pto",
+    vehicleSelectionActive: topTab === "admin" && adminSection === "vehicles",
     ptoRowHeights,
     setPtoColumnWidths,
     setPtoRowHeights,
@@ -134,7 +140,10 @@ export function useAppRuntimeControllers({
   return {
     pushVehicleUndoSnapshot,
     resetUndoHistoryForExternalRestore,
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
     savePtoDatabaseChanges,
+    flushPtoDatabasePendingSave,
     requestPtoDatabaseSave,
     savePtoLocalState,
     ...reportReasonEditing,

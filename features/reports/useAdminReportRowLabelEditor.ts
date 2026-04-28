@@ -1,13 +1,11 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   reportCustomerEffectiveRowKeys,
   reportRowKey,
   reportRowsForCustomer,
 } from "@/lib/domain/reports/display";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type UseAdminReportRowLabelEditorOptions = {
   reportCustomers: ReportCustomerConfig[];

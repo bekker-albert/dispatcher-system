@@ -3,6 +3,10 @@ import { adminStorageKeys } from "../../storage/keys";
 export const clientSnapshotSaveDelayMs = 1500;
 export const clientSnapshotAutoMinIntervalMs = 120000;
 
+export type SaveAppSettingsOptions = {
+  expectedUpdatedAt?: Record<string, string | null | undefined>;
+};
+
 export const sharedAppSettingKeys = [
   adminStorageKeys.reportCustomers,
   adminStorageKeys.reportAreaOrder,

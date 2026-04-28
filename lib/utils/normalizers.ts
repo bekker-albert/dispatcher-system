@@ -70,6 +70,12 @@ function localizeErrorText(message: string) {
   const lower = normalized.toLowerCase();
 
   if (!normalized) return "";
+  if (lower.includes("pto data changed in database") || lower.includes("reload before saving")) {
+    return "Данные ПТО в базе уже изменились другим пользователем. Обнови страницу перед повторным сохранением.";
+  }
+  if (lower.includes("could not find the table") && lower.includes("schema cache")) {
+    return "В базе данных не найдена нужная таблица. Проверь структуру базы данных и повтори сохранение.";
+  }
   if (lower === "failed to fetch" || lower.includes("networkerror")) {
     return "Нет соединения с сервером. Проверь интернет или доступность сайта.";
   }

@@ -3,16 +3,16 @@
 import type { DispatchSectionProps } from "@/features/dispatch/DispatchSection";
 import type { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
 import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
+import type { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
-type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
+type AppDispatchModels = ReturnType<typeof useAppDerivedModels> & ReturnType<typeof useAppDispatchSummaryModel>;
 type AppNavigation = ReturnType<typeof useAppActiveNavigation>;
 
 type UseAppDispatchScreenPropsArgs = {
   appState: AppStateBundle;
-  models: AppDerivedModels;
+  models: AppDispatchModels;
   navigation: AppNavigation;
 };
 

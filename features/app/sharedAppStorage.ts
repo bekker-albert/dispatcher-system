@@ -1,5 +1,5 @@
-import { sharedAppSettingKeys } from "@/lib/domain/app/settings";
-import { adminStorageKeys } from "@/lib/storage/keys";
+import { sharedAppSettingKeys } from "../../lib/domain/app/settings";
+import { adminStorageKeys } from "../../lib/storage/keys";
 
 export type SharedAppStorageState = {
   reportCustomers: unknown;
@@ -17,6 +17,13 @@ export type SharedAppStorageState = {
   dependencyNodes: unknown;
   dependencyLinks: unknown;
   adminLogs: unknown;
+};
+
+export type SharedAppStorageWriteResult = {
+  storage: Record<string, string>;
+  settings: Record<string, unknown>;
+  changedKeys: string[];
+  failedLocalKeys: string[];
 };
 
 const sharedAppStateEntries = [
@@ -37,11 +44,74 @@ const sharedAppStateEntries = [
   [adminStorageKeys.adminLogs, "adminLogs"],
 ] as const satisfies ReadonlyArray<readonly [string, keyof SharedAppStorageState]>;
 
-export function writeSharedAppStateToBrowserStorage(state: SharedAppStorageState) {
-  for (const [storageKey, stateKey] of sharedAppStateEntries) {
-    window.localStorage.setItem(storageKey, JSON.stringify(state[stateKey]));
+function stringifyStorageValue(value: unknown) {
+  return JSON.stringify(value) ?? "null";
+}
+
+export function serializeSharedAppState(state: SharedAppStorageState) {
+  return Object.fromEntries(
+    sharedAppStateEntries.map(([storageKey, stateKey]) => [
+      storageKey,
+      stringifyStorageValue(state[stateKey]),
+    ] as const),
+  );
+}
+
+export function parseSharedAppSettingsFromSerializedStorage(storage: Record<string, string>) {
+  return Object.fromEntries(
+    sharedAppSettingKeys.flatMap((key) => {
+      const value = storage[key];
+      if (value === undefined) return [];
+
+      try {
+        return [[key, JSON.parse(value)] as const];
+      } catch {
+        return [];
+      }
+    }),
+  );
+}
+
+export function writeSharedAppStateToBrowserStorage(
+  state: SharedAppStorageState,
+  lastSerializedByKey?: Record<string, string>,
+): SharedAppStorageWriteResult {
+  const storage = serializeSharedAppState(state);
+  const changedKeys: string[] = [];
+  const failedLocalKeys: string[] = [];
+
+  for (const [storageKey] of sharedAppStateEntries) {
+    const serialized = storage[storageKey];
+    if (lastSerializedByKey?.[storageKey] === serialized) continue;
+
+    try {
+      window.localStorage.setItem(storageKey, serialized);
+    } catch (error) {
+      console.warn("Shared app local storage write failed:", storageKey, error);
+      failedLocalKeys.push(storageKey);
+    }
+
+    if (lastSerializedByKey && !failedLocalKeys.includes(storageKey)) {
+      lastSerializedByKey[storageKey] = serialized;
+    }
+    changedKeys.push(storageKey);
   }
-  window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+
+  if (changedKeys.length > 0) {
+    try {
+      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+    } catch (error) {
+      console.warn("Shared app local timestamp write failed:", error);
+      failedLocalKeys.push(adminStorageKeys.appLocalUpdatedAt);
+    }
+  }
+
+  return {
+    storage,
+    settings: parseSharedAppSettingsFromSerializedStorage(storage),
+    changedKeys,
+    failedLocalKeys,
+  };
 }
 
 export function collectSharedAppStorageFromBrowserStorage() {

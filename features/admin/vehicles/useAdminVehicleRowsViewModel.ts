@@ -12,6 +12,10 @@ import {
 } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
+const emptyVehicleRows: VehicleRow[] = [];
+const emptyVehicleFilterOptions: string[] = [];
+const emptyVehicleAutocompleteOptions: Partial<Record<VehicleFilterKey, string[]>> = {};
+
 type UseAdminVehicleRowsViewModelOptions = {
   active: boolean;
   adminVehiclesEditing: boolean;
@@ -62,14 +66,14 @@ export function useAdminVehicleRowsViewModel({
             .filter((column) => vehicleAutocompleteFilterKeys.includes(column.key))
             .map((column) => [column.key, createVehicleFilterOptions(deferredVehicleRows, column)]),
         ) as Partial<Record<VehicleFilterKey, string[]>>
-      : {}
+      : emptyVehicleAutocompleteOptions
   ), [active, adminVehiclesEditing, deferredVehicleRows]);
 
   const activeVehicleFilterOptions = useMemo(() => {
-    if (!active || !openVehicleFilter) return [];
+    if (!active || !openVehicleFilter) return emptyVehicleFilterOptions;
 
     const column = vehicleFilterColumns.find((item) => item.key === openVehicleFilter);
-    if (!column) return [];
+    if (!column) return emptyVehicleFilterOptions;
 
     const rowsForColumn = deferredVehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns, column.key));
     const options = createVehicleFilterOptions(rowsForColumn, column);
@@ -82,7 +86,7 @@ export function useAdminVehicleRowsViewModel({
   const filteredVehicleRows = useMemo(() => (
     active
       ? vehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns))
-      : []
+      : emptyVehicleRows
   ), [active, vehicleFilters, vehicleRows]);
 
   useEffect(() => {
@@ -115,9 +119,13 @@ export function useAdminVehicleRowsViewModel({
     };
   }, [active, adminVehiclesEditing, filteredVehicleRows.length, setVehiclePreviewRowLimit, showAllVehicleRows, tableScrollRef]);
 
-  const visibleVehicleRows = showAllVehicleRows
-    ? filteredVehicleRows
-    : filteredVehicleRows.slice(0, vehiclePreviewRowLimit);
+  const visibleVehicleRows = active
+    ? (
+        showAllVehicleRows
+          ? filteredVehicleRows
+          : filteredVehicleRows.slice(0, vehiclePreviewRowLimit)
+      )
+    : emptyVehicleRows;
   const hiddenVehicleRowsCount = Math.max(filteredVehicleRows.length - visibleVehicleRows.length, 0);
 
   const activeVehicleFilterCount = useMemo(() => (

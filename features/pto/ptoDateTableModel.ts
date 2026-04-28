@@ -1,6 +1,11 @@
 import {
+  ptoCarryoverIsManual,
   ptoColumnDefaults,
-  ptoEffectiveCarryover,
+  ptoCustomerPlanRowSignature,
+  ptoLinkedRowSignature,
+  ptoRowHasYear,
+  ptoStoredCarryover,
+  ptoYearTotal,
   type PtoPlanRow,
 } from "@/lib/domain/pto/date-table";
 
@@ -68,15 +73,77 @@ export function createPtoRowDateTotalsGetter(year: string) {
 }
 
 export function createPtoEffectiveCarryoverGetter(rows: PtoPlanRow[], year: string) {
-  const cache = new Map<string, number>();
+  const effectiveCache = new Map<string, number>();
+  const totalCache = new Map<string, number>();
+  const rowsByYearAndSignature = new Map<string, Map<string, PtoPlanRow[]>>();
 
-  return (row: PtoPlanRow) => {
-    const cached = cache.get(row.id);
+  const indexedRowsForYear = (targetYear: string) => {
+    const cached = rowsByYearAndSignature.get(targetYear);
+    if (cached) return cached;
+
+    const nextIndex = new Map<string, PtoPlanRow[]>();
+
+    rows.forEach((row) => {
+      if (!ptoRowHasYear(row, targetYear)) return;
+
+      const signature = row.customerCode
+        ? `customer:${ptoCustomerPlanRowSignature(row)}`
+        : `linked:${ptoLinkedRowSignature(row)}`;
+      if (signature.endsWith(":")) return;
+
+      const currentRows = nextIndex.get(signature) ?? [];
+      currentRows.push(row);
+      nextIndex.set(signature, currentRows);
+    });
+
+    rowsByYearAndSignature.set(targetYear, nextIndex);
+    return nextIndex;
+  };
+
+  const totalWithCarryover = (row: PtoPlanRow, targetYear: string): number => {
+    const cacheKey = `${row.id}:${targetYear}`;
+    const cached = totalCache.get(cacheKey);
     if (cached !== undefined) return cached;
 
-    const value = ptoEffectiveCarryover(row, year, rows);
-    cache.set(row.id, value);
+    const value = Math.round((effectiveCarryover(row, targetYear) + ptoYearTotal(row, targetYear)) * 1000000) / 1000000;
+    totalCache.set(cacheKey, value);
     return value;
+  };
+
+  const automaticCarryover = (row: PtoPlanRow, targetYear: string) => {
+    const numericYear = Number(targetYear);
+    if (!Number.isFinite(numericYear)) return 0;
+
+    const rowSignature = ptoLinkedRowSignature(row);
+    if (!rowSignature) return 0;
+
+    const previousYear = String(numericYear - 1);
+    const signature = row.customerCode
+      ? `customer:${ptoCustomerPlanRowSignature(row)}`
+      : `linked:${rowSignature}`;
+
+    return (indexedRowsForYear(previousYear).get(signature) ?? [])
+      .reduce((sum, item) => sum + totalWithCarryover(item, previousYear), 0);
+  };
+
+  const effectiveCarryover = (row: PtoPlanRow, targetYear: string): number => {
+    const cacheKey = `${row.id}:${targetYear}`;
+    const cached = effectiveCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+
+    const value = ptoCarryoverIsManual(row, targetYear)
+      ? ptoStoredCarryover(row, targetYear)
+      : automaticCarryover(row, targetYear);
+
+    effectiveCache.set(cacheKey, value);
+    return value;
+  };
+
+  return (row: PtoPlanRow) => {
+    const cached = effectiveCache.get(`${row.id}:${year}`);
+    if (cached !== undefined) return cached;
+
+    return effectiveCarryover(row, year);
   };
 }
 

@@ -1,8 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type UseAdminReportFactSourceEditorOptions = {
   setReportCustomers: Dispatch<SetStateAction<ReportCustomerConfig[]>>;

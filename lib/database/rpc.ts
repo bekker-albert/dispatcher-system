@@ -1,15 +1,20 @@
-import { errorToMessage } from "@/lib/utils/normalizers";
+import { errorToMessage } from "../utils/normalizers";
 
 export type DatabaseResource = "status" | "vehicles" | "settings" | "app-state" | "pto";
 
 export type DatabaseAction =
   | "status"
   | "load"
+  | "load-year"
+  | "load-buckets"
+  | "load-updated-at"
   | "save"
   | "replace"
   | "delete"
   | "save-day"
+  | "save-day-with-row"
   | "save-days"
+  | "save-days-with-row"
   | "delete-year"
   | "save-bucket-row"
   | "delete-bucket-row"
@@ -21,17 +26,12 @@ export type DatabaseAction =
 type DatabaseResponse<T> = {
   data?: T;
   error?: unknown;
+  code?: string;
 };
 
 const databaseRequestTimeoutMs = 30000;
 
 function databaseApiUrl() {
-  if (typeof window === "undefined") return "/api/database";
-
-  if (window.location.hostname === "aam-dispatch.kz") {
-    return "https://www.aam-dispatch.kz/api/database";
-  }
-
   return "/api/database";
 }
 
@@ -66,7 +66,11 @@ export async function databaseRequest<T>(
   const body = await response.json().catch(() => ({})) as DatabaseResponse<T>;
 
   if (!response.ok) {
-    throw new Error(body.error ? errorToMessage(body.error) : `Database request failed: ${response.status}`);
+    const message = body.error ? errorToMessage(body.error) : `Database request failed: ${response.status}`;
+    throw Object.assign(new Error(message), {
+      code: body.code,
+      status: response.status,
+    });
   }
 
   return body.data as T;

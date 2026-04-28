@@ -1,6 +1,7 @@
-import { useRef, type Dispatch, type SetStateAction } from "react";
+import { useCallback } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
-import { reportReasonEntryKey, reportYearReasonOverrideKey } from "@/lib/domain/reports/reasons";
+import { reportReasonEmptyOverride, reportReasonEntryKey, reportYearReasonOverrideKey } from "@/lib/domain/reports/reasons";
 
 type UseReportReasonDraftsOptions = {
   reportDate: string;
@@ -13,76 +14,45 @@ export function useReportReasonDrafts({
   setReportReasons,
   requestSave,
 }: UseReportReasonDraftsOptions) {
-  const draftTimerRef = useRef<number | null>(null);
-
-  function clearDraftTimer() {
-    if (draftTimerRef.current !== null) {
-      window.clearTimeout(draftTimerRef.current);
-      draftTimerRef.current = null;
-    }
-  }
-
-  function upsertReason(key: string, value: string, normalize = false) {
+  const upsertReason = useCallback((key: string, value: string, normalize = false, emptyValue = "") => {
     const nextValue = normalize ? value.trim() : value;
 
     setReportReasons((current) => {
       const next = { ...current };
       if (nextValue !== "") {
         next[key] = nextValue;
+      } else if (emptyValue) {
+        next[key] = emptyValue;
       } else {
         delete next[key];
       }
 
       return next;
     });
-  }
+  }, [setReportReasons]);
 
-  function commitReportDayReason(rowKey: string, value: string) {
-    clearDraftTimer();
+  const commitReportDayReason = useCallback(function commitReportDayReason(rowKey: string, value: string) {
     upsertReason(reportReasonEntryKey(reportDate, rowKey), value);
     window.setTimeout(requestSave, 0);
-  }
+  }, [reportDate, requestSave, upsertReason]);
 
-  function commitReportYearReason(rowKey: string, value: string) {
-    clearDraftTimer();
-    upsertReason(reportYearReasonOverrideKey(reportDate, rowKey), value, true);
+  const commitReportYearReason = useCallback(function commitReportYearReason(rowKey: string, value: string) {
+    upsertReason(reportYearReasonOverrideKey(reportDate, rowKey), value, true, reportReasonEmptyOverride);
     window.setTimeout(requestSave, 0);
-  }
+  }, [reportDate, requestSave, upsertReason]);
 
-  function updateReportDayReasonDraft(rowKey: string, value: string) {
-    clearDraftTimer();
+  const cancelReportDayReasonDraft = useCallback(function cancelReportDayReasonDraft() {
+    // Esc is a local cancel only. Parent state must not be changed.
+  }, []);
 
-    draftTimerRef.current = window.setTimeout(() => {
-      upsertReason(reportReasonEntryKey(reportDate, rowKey), value);
-      draftTimerRef.current = null;
-    }, 180);
-  }
-
-  function updateReportYearReasonDraft(rowKey: string, value: string) {
-    clearDraftTimer();
-
-    draftTimerRef.current = window.setTimeout(() => {
-      upsertReason(reportYearReasonOverrideKey(reportDate, rowKey), value, true);
-      draftTimerRef.current = null;
-    }, 180);
-  }
-
-  function cancelReportDayReasonDraft(rowKey: string, value: string) {
-    clearDraftTimer();
-    upsertReason(reportReasonEntryKey(reportDate, rowKey), value);
-  }
-
-  function cancelReportYearReasonDraft(rowKey: string, value: string) {
-    clearDraftTimer();
-    upsertReason(reportYearReasonOverrideKey(reportDate, rowKey), value, true);
-  }
+  const cancelReportYearReasonDraft = useCallback(function cancelReportYearReasonDraft() {
+    // Esc is a local cancel only. Parent state must not be changed.
+  }, []);
 
   return {
     commitReportDayReason,
     cancelReportDayReasonDraft,
-    updateReportDayReasonDraft,
     commitReportYearReason,
     cancelReportYearReasonDraft,
-    updateReportYearReasonDraft,
   };
 }

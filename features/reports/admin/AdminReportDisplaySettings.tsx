@@ -1,9 +1,9 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { ptoStatusControlStyle } from "@/features/pto/PtoDateTableParts";
 import { reportRowAutoStatus, reportRowKey } from "@/lib/domain/reports/display";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
+import { statusControlStyle } from "@/shared/ui/statusBadge";
 import { ReportFactSourceCell, ReportFactSourceModal } from "./ReportFactSourcePicker";
 
 type AdminReportDisplaySettingsProps = {
@@ -77,7 +77,7 @@ export default function AdminReportDisplaySettings({
                   <td style={nameTdStyle}>{row.name}</td>
                   <td style={{ ...tdStyle, textAlign: "center" }}>{row.unit}</td>
                   <td style={{ ...tdStyle, textAlign: "center" }}>
-                    <span style={{ ...ptoStatusBadgeStyle, ...ptoStatusControlStyle(rowStatus) }}>{rowStatus}</span>
+                    <span style={{ ...ptoStatusBadgeStyle, ...statusControlStyle(rowStatus) }}>{rowStatus}</span>
                   </td>
                   <td style={tdStyle}>
                     <ReportFactSourceCell

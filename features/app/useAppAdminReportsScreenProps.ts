@@ -2,16 +2,15 @@
 
 import type { useAppAdminReportEditors } from "@/features/app/useAppAdminReportEditors";
 import { useAppAdminReportsProps } from "@/features/app/useAppAdminReportsProps";
-import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { useAppReportsModel } from "@/features/app/useAppReportsModel";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
-type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
+type AppReportsModel = ReturnType<typeof useAppReportsModel>;
 type AppAdminReportEditors = ReturnType<typeof useAppAdminReportEditors>;
 
 type UseAppAdminReportsScreenPropsArgs = {
   appState: AppStateBundle;
-  models: AppDerivedModels;
+  models: AppReportsModel;
   adminReportEditors: AppAdminReportEditors;
 };
 

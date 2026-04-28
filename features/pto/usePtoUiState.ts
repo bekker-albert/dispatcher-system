@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 import { emptyPtoDraftRowFields } from "@/lib/domain/pto/date-table";
 
 export function usePtoUiState() {

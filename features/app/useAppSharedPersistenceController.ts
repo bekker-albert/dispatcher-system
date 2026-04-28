@@ -1,9 +1,8 @@
 "use client";
 
 import { useAppSharedPersistence } from "@/features/app/useAppSharedPersistence";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 
 type UseAppSharedPersistenceControllerOptions = {
   appState: AppStateBundle;

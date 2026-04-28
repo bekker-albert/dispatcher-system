@@ -4,12 +4,12 @@ import type { Dispatch, SetStateAction } from "react";
 
 import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummaryEditor";
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
-type AddAdminLog = (entry: Omit<AdminLogEntry, "id" | "at" | "user">) => void;
+type AddAdminLog = (entry: AdminLogInput) => void;
 
 type UseAppDispatchSummaryModelOptions = {
   active: boolean;

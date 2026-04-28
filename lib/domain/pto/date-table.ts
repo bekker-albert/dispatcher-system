@@ -31,8 +31,10 @@ export {
   normalizeStoredPtoYears,
   ptoRowHasYear,
   ptoYearOptions,
+  ptoYearOptionsFromSources,
   previousPtoYearLabel,
   removeYearFromPtoRows,
+  type PtoYearOptionSource,
 } from "./date-table-years";
 
 export {

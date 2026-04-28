@@ -6,6 +6,7 @@ import type { VehicleFilterKey, VehicleFilters } from "@/lib/domain/vehicles/gri
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
 type UseVehicleFilterMenuOptions = {
+  active: boolean;
   openVehicleFilter: VehicleFilterKey | null;
   vehicleFilters: VehicleFilters;
   vehicleFilterDrafts: VehicleFilters;
@@ -17,6 +18,7 @@ type UseVehicleFilterMenuOptions = {
 };
 
 export function useVehicleFilterMenu({
+  active,
   openVehicleFilter,
   vehicleFilters,
   vehicleFilterDrafts,
@@ -27,15 +29,17 @@ export function useVehicleFilterMenu({
   setVehicleFilterDrafts,
 }: UseVehicleFilterMenuOptions) {
   useEffect(() => {
-    if (!openVehicleFilter) return undefined;
+    if (!active || !openVehicleFilter) return undefined;
 
     const closeVehicleFilter = () => setOpenVehicleFilter(null);
     window.addEventListener("click", closeVehicleFilter);
 
     return () => window.removeEventListener("click", closeVehicleFilter);
-  }, [openVehicleFilter, setOpenVehicleFilter]);
+  }, [active, openVehicleFilter, setOpenVehicleFilter]);
 
   const openVehicleFilterMenu = useCallback((key: VehicleFilterKey) => {
+    if (!active) return;
+
     if (openVehicleFilter === key) {
       setOpenVehicleFilter(null);
       return;
@@ -54,9 +58,10 @@ export function useVehicleFilterMenu({
       return nextDrafts;
     });
     setOpenVehicleFilter(key);
-  }, [openVehicleFilter, setOpenVehicleFilter, setVehicleFilterDrafts, vehicleFilters]);
+  }, [active, openVehicleFilter, setOpenVehicleFilter, setVehicleFilterDrafts, vehicleFilters]);
 
   const getVehicleFilterOptionsForKey = useCallback((key: VehicleFilterKey) => {
+    if (!active) return [];
     if (openVehicleFilter === key) return activeVehicleFilterOptions;
 
     const column = vehicleFilterColumns.find((item) => item.key === key);
@@ -68,9 +73,11 @@ export function useVehicleFilterMenu({
 
     return Array.from(new Set([...options, ...selectedValues]))
       .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
-  }, [activeVehicleFilterOptions, openVehicleFilter, vehicleFilters, vehicleRows]);
+  }, [active, activeVehicleFilterOptions, openVehicleFilter, vehicleFilters, vehicleRows]);
 
   const toggleVehicleFilterDraftValue = useCallback((key: VehicleFilterKey, value: string) => {
+    if (!active) return;
+
     const allOptions = getVehicleFilterOptionsForKey(key);
 
     setVehicleFilterDrafts((current) => {
@@ -94,24 +101,30 @@ export function useVehicleFilterMenu({
 
       return nextDrafts;
     });
-  }, [getVehicleFilterOptionsForKey, setVehicleFilterDrafts]);
+  }, [active, getVehicleFilterOptionsForKey, setVehicleFilterDrafts]);
 
   const selectAllVehicleFilterDraftValues = useCallback((key: VehicleFilterKey) => {
+    if (!active) return;
+
     setVehicleFilterDrafts((current) => {
       const nextDrafts = { ...current };
       delete nextDrafts[key];
       return nextDrafts;
     });
-  }, [setVehicleFilterDrafts]);
+  }, [active, setVehicleFilterDrafts]);
 
   const deselectAllVehicleFilterDraftValues = useCallback((key: VehicleFilterKey) => {
+    if (!active) return;
+
     setVehicleFilterDrafts((current) => ({
       ...current,
       [key]: [],
     }));
-  }, [setVehicleFilterDrafts]);
+  }, [active, setVehicleFilterDrafts]);
 
   const applyVehicleFilter = useCallback((key: VehicleFilterKey) => {
+    if (!active) return;
+
     const draftValues = vehicleFilterDrafts[key];
 
     setVehicleFilters((current) => {
@@ -126,13 +139,15 @@ export function useVehicleFilterMenu({
       return nextFilters;
     });
     setOpenVehicleFilter(null);
-  }, [setOpenVehicleFilter, setVehicleFilters, vehicleFilterDrafts]);
+  }, [active, setOpenVehicleFilter, setVehicleFilters, vehicleFilterDrafts]);
 
   const clearAllVehicleFilters = useCallback(() => {
+    if (!active) return;
+
     setVehicleFilters({});
     setVehicleFilterDrafts({});
     setOpenVehicleFilter(null);
-  }, [setOpenVehicleFilter, setVehicleFilterDrafts, setVehicleFilters]);
+  }, [active, setOpenVehicleFilter, setVehicleFilterDrafts, setVehicleFilters]);
 
   return {
     openVehicleFilterMenu,

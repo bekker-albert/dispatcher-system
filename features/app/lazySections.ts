@@ -16,6 +16,14 @@ export const AdminNavigationSection = dynamic(() => import("../admin/navigation/
   ssr: false,
 });
 
+export const AdminStructureSection = dynamic(() => import("../admin/structure/AdminStructureSection").then((module) => module.AdminStructureSection), {
+  ssr: false,
+});
+
+export const AdminAiSection = dynamic(() => import("../admin/ai/AdminAiSection").then((module) => module.AdminAiSection), {
+  ssr: false,
+});
+
 export const DispatchSection = dynamic(() => import("../dispatch/DispatchSection"), {
   ssr: false,
 });

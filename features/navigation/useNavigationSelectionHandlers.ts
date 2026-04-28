@@ -17,7 +17,9 @@ export function useNavigationSelectionHandlers({
   setPtoAreaFilter,
 }: NavigationSelectionHandlersOptions) {
   const selectTopTab = useCallback((tab: TopTab) => {
-    setTopTab(tab);
+    startTransition(() => {
+      setTopTab(tab);
+    });
   }, [setTopTab]);
 
   const selectPtoTab = useCallback((tab: string) => {

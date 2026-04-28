@@ -1,18 +1,17 @@
 "use client";
 
 import type { ReportsSectionProps } from "@/features/reports/ReportsSection";
-import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
+import type { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import type { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionProps";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
-type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
+type AppReportsModel = ReturnType<typeof useAppReportsModel>;
 type AppRuntimeControllers = ReturnType<typeof useAppRuntimeControllers>;
 
 type UseAppReportsScreenPropsArgs = {
   appState: AppStateBundle;
-  models: AppDerivedModels;
+  models: AppReportsModel;
   runtime: AppRuntimeControllers;
 };
 
@@ -46,10 +45,8 @@ export function useAppReportsScreenProps({
     startReportColumnResize,
     commitReportDayReason,
     cancelReportDayReasonDraft,
-    updateReportDayReasonDraft,
     commitReportYearReason,
     cancelReportYearReasonDraft,
-    updateReportYearReasonDraft,
   } = runtime;
 
   return useAppReportsSectionProps({
@@ -71,9 +68,7 @@ export function useAppReportsScreenProps({
     reportReasons,
     commitReportDayReason,
     cancelReportDayReasonDraft,
-    updateReportDayReasonDraft,
     commitReportYearReason,
     cancelReportYearReasonDraft,
-    updateReportYearReasonDraft,
   });
 }

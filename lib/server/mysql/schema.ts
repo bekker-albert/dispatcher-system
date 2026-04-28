@@ -1,4 +1,5 @@
 import { getMysqlPool } from "./connection";
+import type { RowDataPacket } from "mysql2/promise";
 
 let schemaPromise: Promise<void> | null = null;
 
@@ -17,14 +18,16 @@ const statements = [
     data JSON NOT NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (vehicle_id),
-    KEY vehicles_sort_index_idx (sort_index)
+    KEY vehicles_sort_index_idx (sort_index),
+    KEY vehicles_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS app_settings (
     setting_key VARCHAR(191) NOT NULL,
     value JSON NOT NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (setting_key)
+    PRIMARY KEY (setting_key),
+    KEY app_settings_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS app_state (
@@ -51,7 +54,8 @@ const statements = [
     sort_index INT NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (table_type, row_id),
-    KEY pto_rows_sort_idx (table_type, sort_index)
+    KEY pto_rows_sort_idx (table_type, sort_index),
+    KEY pto_rows_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS pto_day_values (
@@ -61,14 +65,23 @@ const statements = [
     value DECIMAL(20, 6) NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (table_type, row_id, work_date),
-    KEY pto_day_values_date_idx (work_date)
+    KEY pto_day_values_date_idx (work_date),
+    KEY pto_day_values_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS pto_settings (
     setting_key VARCHAR(191) NOT NULL,
     value JSON NOT NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (setting_key)
+    PRIMARY KEY (setting_key),
+    KEY pto_settings_updated_idx (updated_at)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS pto_meta (
+    meta_key VARCHAR(191) NOT NULL,
+    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (meta_key),
+    KEY pto_meta_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS pto_bucket_rows (
@@ -79,7 +92,8 @@ const statements = [
     sort_index INT NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (row_key),
-    KEY pto_bucket_rows_sort_idx (sort_index)
+    KEY pto_bucket_rows_sort_idx (sort_index),
+    KEY pto_bucket_rows_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS pto_bucket_values (
@@ -87,7 +101,9 @@ const statements = [
     equipment_key VARCHAR(191) NOT NULL,
     value DECIMAL(20, 6) NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (row_key, equipment_key)
+    PRIMARY KEY (row_key, equipment_key),
+    KEY pto_bucket_values_row_idx (row_key),
+    KEY pto_bucket_values_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS audit_logs (
@@ -102,39 +118,148 @@ const statements = [
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 ];
 
+async function executeIgnoringMysqlError(statement: string, ignoredCode: string) {
+  try {
+    await getMysqlPool().execute(statement);
+  } catch (error) {
+    if (!(
+      error
+      && typeof error === "object"
+      && "code" in error
+      && (error as { code?: string }).code === ignoredCode
+    )) {
+      throw error;
+    }
+  }
+}
+
+async function mysqlRows<T extends RowDataPacket = RowDataPacket>(sql: string, values: unknown[] = []) {
+  const [rows] = await getMysqlPool().query<T[]>(sql, values);
+  return rows;
+}
+
+async function mysqlIndexExists(tableName: string, indexName: string) {
+  const rows = await mysqlRows(`SHOW INDEX FROM \`${tableName}\` WHERE Key_name = ?`, [indexName]);
+  return rows.length > 0;
+}
+
+async function mysqlColumnExists(tableName: string, columnName: string) {
+  const rows = await mysqlRows(`SHOW COLUMNS FROM \`${tableName}\` LIKE ?`, [columnName]);
+  return rows.length > 0;
+}
+
+async function addMysqlIndexIfMissing(tableName: string, indexName: string, statement: string) {
+  if (await mysqlIndexExists(tableName, indexName)) return;
+  await executeIgnoringMysqlError(statement, "ER_DUP_KEYNAME");
+}
+
+async function addMysqlColumnIfMissing(tableName: string, columnName: string, statement: string) {
+  if (await mysqlColumnExists(tableName, columnName)) return;
+  await executeIgnoringMysqlError(statement, "ER_DUP_FIELDNAME");
+}
+
+async function runMysqlSchemaSetup() {
+  for (const statement of statements) {
+    await getMysqlPool().execute(statement);
+  }
+
+  await addMysqlIndexIfMissing(
+    "app_state",
+    "app_state_updated_idx",
+    "ALTER TABLE app_state ADD INDEX app_state_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "vehicles",
+    "vehicles_sort_index_idx",
+    "ALTER TABLE vehicles ADD INDEX vehicles_sort_index_idx (sort_index)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "vehicles",
+    "vehicles_updated_idx",
+    "ALTER TABLE vehicles ADD INDEX vehicles_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "app_settings",
+    "app_settings_updated_idx",
+    "ALTER TABLE app_settings ADD INDEX app_settings_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_rows",
+    "pto_rows_sort_idx",
+    "ALTER TABLE pto_rows ADD INDEX pto_rows_sort_idx (table_type, sort_index)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_rows",
+    "pto_rows_updated_idx",
+    "ALTER TABLE pto_rows ADD INDEX pto_rows_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_day_values",
+    "pto_day_values_date_idx",
+    "ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_idx (work_date)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_day_values",
+    "pto_day_values_updated_idx",
+    "ALTER TABLE pto_day_values ADD INDEX pto_day_values_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_settings",
+    "pto_settings_updated_idx",
+    "ALTER TABLE pto_settings ADD INDEX pto_settings_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_meta",
+    "pto_meta_updated_idx",
+    "ALTER TABLE pto_meta ADD INDEX pto_meta_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_bucket_rows",
+    "pto_bucket_rows_sort_idx",
+    "ALTER TABLE pto_bucket_rows ADD INDEX pto_bucket_rows_sort_idx (sort_index)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_bucket_rows",
+    "pto_bucket_rows_updated_idx",
+    "ALTER TABLE pto_bucket_rows ADD INDEX pto_bucket_rows_updated_idx (updated_at)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_bucket_values",
+    "pto_bucket_values_updated_idx",
+    "ALTER TABLE pto_bucket_values ADD INDEX pto_bucket_values_updated_idx (updated_at)",
+  );
+
+  await addMysqlColumnIfMissing(
+    "pto_rows",
+    "customer_code",
+    "ALTER TABLE pto_rows ADD COLUMN customer_code VARCHAR(32) NULL AFTER structure",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_bucket_values",
+    "pto_bucket_values_row_idx",
+    "ALTER TABLE pto_bucket_values ADD INDEX pto_bucket_values_row_idx (row_key)",
+  );
+}
+
 export async function ensureMysqlSchema() {
   if (!schemaPromise) {
-    schemaPromise = (async () => {
-      for (const statement of statements) {
-        await getMysqlPool().execute(statement);
-      }
-
-      try {
-        await getMysqlPool().execute("ALTER TABLE app_state ADD INDEX app_state_updated_idx (updated_at)");
-      } catch (error) {
-        if (!(
-          error
-          && typeof error === "object"
-          && "code" in error
-          && (error as { code?: string }).code === "ER_DUP_KEYNAME"
-        )) {
-          throw error;
-        }
-      }
-
-      try {
-        await getMysqlPool().execute("ALTER TABLE pto_rows ADD COLUMN customer_code VARCHAR(32) NULL AFTER structure");
-      } catch (error) {
-        if (!(
-          error
-          && typeof error === "object"
-          && "code" in error
-          && (error as { code?: string }).code === "ER_DUP_FIELDNAME"
-        )) {
-          throw error;
-        }
-      }
-    })();
+    schemaPromise = runMysqlSchemaSetup().catch((error) => {
+      schemaPromise = null;
+      throw error;
+    });
   }
 
   return schemaPromise;

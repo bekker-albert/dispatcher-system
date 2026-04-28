@@ -1,5 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   reportCustomerUsesSummaryRows,
   reportRowKey,
@@ -7,8 +7,6 @@ import {
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
 import { createId } from "@/lib/utils/id";
 import { normalizeLookupValue } from "@/lib/utils/text";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type SummaryEditableField = Exclude<keyof ReportSummaryRowConfig, "id" | "rowKeys">;
 

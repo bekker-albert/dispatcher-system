@@ -5,12 +5,12 @@ import type { Dispatch, RefObject, SetStateAction } from "react";
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
 import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
-type AddAdminLog = (entry: Omit<AdminLogEntry, "id" | "at" | "user">) => void;
+type AddAdminLog = (entry: AdminLogInput) => void;
 type PtoRowsSetter = Dispatch<SetStateAction<PtoPlanRow[]>>;
 
 type UseAppPtoSupplementalTablesOptions = {
@@ -34,6 +34,8 @@ type UseAppPtoSupplementalTablesOptions = {
   setPtoBucketManualRows: Dispatch<SetStateAction<PtoBucketRow[]>>;
   databaseConfigured: boolean;
   ptoDatabaseLoadedRef: RefObject<boolean>;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  getPtoDatabaseExpectedUpdatedAt: () => string | null;
   requestPtoDatabaseSave: () => void;
   addAdminLog: AddAdminLog;
 };
@@ -59,6 +61,8 @@ export function useAppPtoSupplementalTables({
   setPtoBucketManualRows,
   databaseConfigured,
   ptoDatabaseLoadedRef,
+  markPtoDatabaseInlineWriteSaved,
+  getPtoDatabaseExpectedUpdatedAt,
   requestPtoDatabaseSave,
   addAdminLog,
 }: UseAppPtoSupplementalTablesOptions) {
@@ -109,6 +113,8 @@ export function useAppPtoSupplementalTables({
     setPtoBucketManualRows,
     databaseConfigured,
     ptoDatabaseLoadedRef,
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
     requestSave: requestPtoDatabaseSave,
     addAdminLog,
   });

@@ -4,6 +4,8 @@ import {
   replaceVehiclesInSupabase as replaceVehiclesInBackend,
   saveVehiclesToSupabase as saveVehiclesToBackend,
   type SupabaseVehiclesState as BackendVehiclesState,
+  type VehicleSnapshotReplaceOptions,
+  type VehicleSnapshotWriteOptions,
 } from "@/lib/supabase/vehicles";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
@@ -13,12 +15,12 @@ export function loadVehiclesFromDatabase() {
   return loadVehiclesFromBackend();
 }
 
-export function saveVehiclesToDatabase(rows: VehicleRow[]) {
-  return saveVehiclesToBackend(rows);
+export function saveVehiclesToDatabase(rows: VehicleRow[], options?: VehicleSnapshotWriteOptions) {
+  return saveVehiclesToBackend(rows, options);
 }
 
-export function replaceVehiclesInDatabase(rows: VehicleRow[]) {
-  return replaceVehiclesInBackend(rows);
+export function replaceVehiclesInDatabase(rows: VehicleRow[], options?: VehicleSnapshotReplaceOptions) {
+  return replaceVehiclesInBackend(rows, options);
 }
 
 export function deleteVehicleFromDatabase(id: number) {

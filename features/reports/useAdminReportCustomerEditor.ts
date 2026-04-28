@@ -1,5 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import { normalizePtoCustomerCode } from "@/lib/domain/pto/date-table";
 import { defaultReportCustomerId } from "@/lib/domain/reports/defaults";
 import {
@@ -12,8 +12,6 @@ import { createId } from "@/lib/utils/id";
 import { normalizeLookupValue } from "@/lib/utils/text";
 
 type ReportCustomerPatch = Partial<Pick<ReportCustomerConfig, "label" | "ptoCode" | "visible" | "autoShowRows">>;
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type UseAdminReportCustomerEditorOptions = {
   reportCustomers: ReportCustomerConfig[];

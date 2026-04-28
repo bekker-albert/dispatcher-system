@@ -3,10 +3,8 @@ import { useAdminReportCustomerEditor } from "@/features/reports/useAdminReportC
 import { useAdminReportFactSourceEditor } from "@/features/reports/useAdminReportFactSourceEditor";
 import { useAdminReportRowLabelEditor } from "@/features/reports/useAdminReportRowLabelEditor";
 import { useAdminReportSummaryRowsEditor } from "@/features/reports/useAdminReportSummaryRowsEditor";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type UseAppAdminReportEditorsOptions = {
   activeAdminReportAreaOptions: string[];

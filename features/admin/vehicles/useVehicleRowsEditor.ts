@@ -1,13 +1,11 @@
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import { defaultVehicleForm } from "@/lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { errorToMessage } from "@/lib/utils/normalizers";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type PendingVehicleFocus = {
   id: number;

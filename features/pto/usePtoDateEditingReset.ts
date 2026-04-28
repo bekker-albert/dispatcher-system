@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type Dispatch, type SetStateAction } from "react";
-import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaModel";
+import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
 import type { PtoDropTarget } from "@/features/pto/ptoDateInteractionTypes";
 
 type PtoDateEditingResetOptions = {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useAppPtoPersistence } from "@/features/app/useAppPtoPersistence";
-import type { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import type { AppStateBundle } from "@/features/app/AppStateBundle";
+import { databaseConfigured } from "@/lib/data/config";
 
-type AppStateBundle = ReturnType<typeof useAppStateBundle>;
 
 type UseAppPtoPersistenceControllerOptions = {
   appState: AppStateBundle;
@@ -14,8 +14,12 @@ export function useAppPtoPersistenceController({
   appState,
   resetUndoHistoryForExternalRestore,
 }: UseAppPtoPersistenceControllerOptions) {
+  const ptoPersistenceEnabled = appState.adminDataLoaded
+    && (!databaseConfigured || appState.ptoDatabaseReady);
+
   return useAppPtoPersistence({
-    adminDataLoaded: appState.adminDataLoaded,
+    ptoDatabaseLoadEnabled: appState.ptoDatabaseLoadStarted || appState.ptoBootstrapLoaded,
+    ptoPersistenceEnabled,
     ptoSaveRevision: appState.ptoSaveRevision,
     ptoManualYears: appState.ptoManualYears,
     ptoPlanRows: appState.ptoPlanRows,

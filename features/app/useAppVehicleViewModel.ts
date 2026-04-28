@@ -60,6 +60,7 @@ export function useAppVehicleViewModel({
   });
 
   const vehicleFilterMenu = useVehicleFilterMenu({
+    active,
     openVehicleFilter,
     vehicleFilters,
     vehicleFilterDrafts,

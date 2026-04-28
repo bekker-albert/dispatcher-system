@@ -1,6 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   createDispatchSummaryRow,
   type DispatchShift,
@@ -12,7 +12,7 @@ import { parseDecimalInput } from "@/lib/utils/numbers";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
-type AddAdminLog = (entry: Omit<AdminLogEntry, "id" | "at" | "user">) => void;
+type AddAdminLog = (entry: AdminLogInput) => void;
 
 type UseDispatchSummaryEditorOptions = {
   isDailyDispatchShift: boolean;

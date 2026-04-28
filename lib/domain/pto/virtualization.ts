@@ -21,20 +21,65 @@ export type PtoVirtualRowsResult<T> = {
   totalHeight: number;
 };
 
+export type PtoVirtualRowsLayout<T> = {
+  rows: T[];
+  rowHeights: number[];
+  rowOffsets: number[];
+  totalHeight: number;
+};
+
 export const ptoDateVirtualDefaultRowHeight = 34;
 export const ptoDateVirtualHeaderOffset = 76;
 export const ptoDateVirtualOverscanPx = ptoDateVirtualDefaultRowHeight * 10;
 
-export function calculatePtoVirtualRows<T extends { id: string }>(
+function findFirstRowAfterWindowTop(
+  rowOffsets: number[],
+  rowHeights: number[],
+  windowTop: number,
+) {
+  let low = 0;
+  let high = rowOffsets.length;
+
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    const rowBottom = rowOffsets[middle] + rowHeights[middle];
+    if (rowBottom < windowTop) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+}
+
+function findFirstRowAtOrAfterWindowBottom(
+  rowOffsets: number[],
+  windowBottom: number,
+  startIndex: number,
+) {
+  let low = startIndex;
+  let high = rowOffsets.length;
+
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (rowOffsets[middle] < windowBottom) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+}
+
+export function createPtoVirtualRowsLayout<T extends { id: string }>(
   rows: T[],
   rowHeightsByKey: Record<string, number>,
   tableKey: string,
-  viewport: PtoVirtualViewport,
   options: PtoVirtualRowsOptions = {},
-): PtoVirtualRowsResult<T> {
+): PtoVirtualRowsLayout<T> {
   const defaultRowHeight = options.defaultRowHeight ?? ptoDateVirtualDefaultRowHeight;
-  const headerOffset = options.headerOffset ?? ptoDateVirtualHeaderOffset;
-  const overscanPx = options.overscanPx ?? ptoDateVirtualOverscanPx;
   const maxRowHeight = options.maxRowHeight ?? 260;
   const rowHeights = rows.map((row) => {
     const customHeight = rowHeightsByKey[`${tableKey}:${row.id}`];
@@ -48,25 +93,30 @@ export function calculatePtoVirtualRows<T extends { id: string }>(
     totalHeight += height;
   });
 
+  return {
+    rows,
+    rowHeights,
+    rowOffsets,
+    totalHeight,
+  };
+}
+
+export function calculatePtoVirtualRowsFromLayout<T>(
+  layout: PtoVirtualRowsLayout<T>,
+  viewport: PtoVirtualViewport,
+  options: PtoVirtualRowsOptions = {},
+): PtoVirtualRowsResult<T> {
+  const headerOffset = options.headerOffset ?? ptoDateVirtualHeaderOffset;
+  const overscanPx = options.overscanPx ?? ptoDateVirtualOverscanPx;
+  const { rows, rowHeights, rowOffsets, totalHeight } = layout;
   const rowOffsetAt = (index: number) => rowOffsets[index] ?? totalHeight;
   const windowTop = Math.max(0, viewport.top - headerOffset - overscanPx);
   const windowBottom = Math.max(
     windowTop + overscanPx,
     viewport.top - headerOffset + viewport.height + overscanPx,
   );
-  let startIndex = 0;
-
-  while (
-    startIndex < rows.length
-    && rowOffsets[startIndex] + rowHeights[startIndex] < windowTop
-  ) {
-    startIndex += 1;
-  }
-
-  let endIndex = startIndex;
-  while (endIndex < rows.length && rowOffsets[endIndex] < windowBottom) {
-    endIndex += 1;
-  }
+  const startIndex = findFirstRowAfterWindowTop(rowOffsets, rowHeights, windowTop);
+  const endIndex = findFirstRowAtOrAfterWindowBottom(rowOffsets, windowBottom, startIndex);
 
   return {
     renderedRows: rows.slice(startIndex, endIndex),
@@ -78,4 +128,18 @@ export function calculatePtoVirtualRows<T extends { id: string }>(
     bottomSpacerHeight: Math.max(0, totalHeight - rowOffsetAt(endIndex)),
     totalHeight,
   };
+}
+
+export function calculatePtoVirtualRows<T extends { id: string }>(
+  rows: T[],
+  rowHeightsByKey: Record<string, number>,
+  tableKey: string,
+  viewport: PtoVirtualViewport,
+  options: PtoVirtualRowsOptions = {},
+): PtoVirtualRowsResult<T> {
+  return calculatePtoVirtualRowsFromLayout(
+    createPtoVirtualRowsLayout(rows, rowHeightsByKey, tableKey, options),
+    viewport,
+    options,
+  );
 }

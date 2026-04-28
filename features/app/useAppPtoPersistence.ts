@@ -1,12 +1,14 @@
 "use client";
 
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import { useRef, type Dispatch, type RefObject, type SetStateAction } from "react";
 
 import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
+import { usePtoUiStateDatabaseSync } from "@/features/pto/usePtoUiStateDatabaseSync";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
+import { databaseConfigured } from "@/lib/data/config";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
@@ -18,7 +20,8 @@ type MutableRef<T> = {
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type UseAppPtoPersistenceOptions = {
-  adminDataLoaded: boolean;
+  ptoDatabaseLoadEnabled: boolean;
+  ptoPersistenceEnabled: boolean;
   ptoSaveRevision: number;
   ptoManualYears: string[];
   ptoPlanRows: PtoPlanRow[];
@@ -61,7 +64,8 @@ type UseAppPtoPersistenceOptions = {
 };
 
 export function useAppPtoPersistence({
-  adminDataLoaded,
+  ptoDatabaseLoadEnabled,
+  ptoPersistenceEnabled,
   ptoSaveRevision,
   ptoManualYears,
   ptoPlanRows,
@@ -120,26 +124,39 @@ export function useAppPtoPersistence({
     ptoHeaderLabels,
   });
   const ptoDatabaseStateRef = useSyncedRef(ptoDatabaseState);
+  const ptoDatabaseLoadedYearRef = useRef<string | null>(null);
+  const ptoDatabaseLoadedBucketsYearRef = useRef<string | null>(null);
+  const ptoDatabaseFullSaveNextRef = useRef(false);
 
   const {
     ptoDatabaseSaveSnapshotRef,
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
     savePtoDatabaseChanges,
+    flushPtoDatabasePendingSave,
     requestPtoDatabaseSave,
   } = usePtoDatabaseSave({
-    adminDataLoaded,
+    adminDataLoaded: ptoPersistenceEnabled,
     ptoSaveRevision,
     ptoDatabaseStateRef,
     ptoDatabaseLoadedRef,
+    ptoDatabaseLoadedYearRef,
+    ptoDatabaseFullSaveNextRef,
     setPtoDatabaseMessage,
     setPtoSaveRevision,
     showSaveStatus,
   });
 
   usePtoDatabaseLoad({
-    adminDataLoaded,
+    adminDataLoaded: ptoDatabaseLoadEnabled,
+    ptoTab,
+    ptoPlanYear,
     ptoDatabaseStateRef,
     hasStoredPtoStateRef,
     ptoDatabaseLoadedRef,
+    ptoDatabaseLoadedYearRef,
+    ptoDatabaseLoadedBucketsYearRef,
+    ptoDatabaseFullSaveNextRef,
     ptoDatabaseSaveSnapshotRef,
     resetUndoHistoryForExternalRestore,
     showSaveStatus,
@@ -163,8 +180,20 @@ export function useAppPtoPersistence({
     setPtoHeaderLabels,
   });
 
+  usePtoUiStateDatabaseSync({
+    adminDataLoaded: ptoPersistenceEnabled,
+    ptoDatabaseLoadedRef,
+    ptoDatabaseLoadedYearRef,
+    ptoTab,
+    ptoPlanYear,
+    ptoAreaFilter,
+    expandedPtoMonths,
+    requestPtoDatabaseSave,
+  });
+
   const { savePtoLocalState } = usePtoLocalPersistence({
-    adminDataLoaded,
+    adminDataLoaded: ptoPersistenceEnabled,
+    skipUntilDatabaseLoaded: databaseConfigured,
     ptoDatabaseStateRef,
     ptoDatabaseLoadedRef,
     hasStoredPtoStateRef,
@@ -178,10 +207,17 @@ export function useAppPtoPersistence({
     ptoHeaderLabels,
     ptoBucketValues,
     ptoBucketManualRows,
+    ptoTab,
+    ptoPlanYear,
+    ptoAreaFilter,
+    expandedPtoMonths,
   });
 
   return {
+    markPtoDatabaseInlineWriteSaved,
+    getPtoDatabaseExpectedUpdatedAt,
     savePtoDatabaseChanges,
+    flushPtoDatabasePendingSave,
     requestPtoDatabaseSave,
     savePtoLocalState,
   };

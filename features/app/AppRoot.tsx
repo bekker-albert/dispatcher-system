@@ -3,7 +3,7 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
 import { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
-import { useAppFeatureControllers } from "@/features/app/useAppFeatureControllers";
+import { useAppNavigationControllers } from "@/features/app/useAppNavigationControllers";
 import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import { useAppScreenProps } from "@/features/app/useAppScreenProps";
@@ -19,15 +19,9 @@ export default function App() {
 
   const runtime = useAppRuntimeControllers({ appState, databaseConfigured });
   const models = useAppDerivedModels({ appState });
-
   const {
     navigation,
-    ptoDateViewport,
-    adminReportEditors,
-    ptoDateEditingHandlers,
-    vehicleEditing,
-    ptoSupplementalTables,
-  } = useAppFeatureControllers({ appState, models, runtime });
+  } = useAppNavigationControllers({ appState, models });
 
   const {
     appHeaderProps,
@@ -37,11 +31,6 @@ export default function App() {
     models,
     runtime,
     navigation,
-    ptoDateViewport,
-    adminReportEditors,
-    ptoDateEditing: ptoDateEditingHandlers,
-    vehicleEditing,
-    ptoSupplementalTables,
   });
 
   return (

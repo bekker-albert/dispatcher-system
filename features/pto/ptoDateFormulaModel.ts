@@ -1,21 +1,13 @@
-import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-import type { PtoMonthGroupView, PtoRowDateTotals } from "@/features/pto/ptoDateTableModel";
-import { editableGridArrowOffset, toggleEditableGridSelectionKey, type EditableGridArrowKey } from "@/shared/editable-grid/selection";
-
-export type PtoFormulaCell = {
-  table: string;
-  year: string;
-  rowId: string;
-  kind: "carryover" | "month" | "day";
-  label: string;
-  day?: string;
-  month?: string;
-  days?: string[];
-  editable?: boolean;
-};
-
-export type PtoFormulaCellWithoutScope = Omit<PtoFormulaCell, "table" | "year">;
-export type PtoFormulaCellTemplate = Omit<PtoFormulaCell, "table" | "year" | "rowId">;
+import type { PtoPlanRow } from "../../lib/domain/pto/date-table";
+import type { PtoMonthGroupView } from "./ptoDateTableModel";
+import { ptoFormulaCellKey, ptoFormulaTemplateKey } from "./ptoDateFormulaKeys";
+import type {
+  PtoFormulaCell,
+  PtoFormulaCellIdentity,
+  PtoFormulaCellTemplate,
+  PtoFormulaCellValueContext,
+  PtoFormulaCellWithoutScope,
+} from "./ptoDateFormulaTypes";
 
 type PtoDateFormulaModelOptions = {
   table: string;
@@ -26,24 +18,6 @@ type PtoDateFormulaModelOptions = {
   editableMonthTotal: boolean;
   carryoverHeader: string;
   selectedCellKeys: string[];
-};
-
-type PtoFormulaCellValueContext = {
-  rowById: Map<string, PtoPlanRow>;
-  getEffectiveCarryover: (row: PtoPlanRow) => number;
-  getRowDateTotals: (row: PtoPlanRow) => PtoRowDateTotals;
-};
-
-type PtoFormulaCellFromSelectionKey = (key: string) => PtoFormulaCellWithoutScope | null;
-
-type ResolvePtoFormulaMoveTargetOptions = {
-  activeCell: PtoFormulaCell | null;
-  key: EditableGridArrowKey;
-  rowIndexById: Map<string, number>;
-  templateIndexByKey: Map<string, number>;
-  templates: PtoFormulaCellTemplate[];
-  filteredRows: PtoPlanRow[];
-  formulaCellFromTemplate: (rowId: string, template: PtoFormulaCellTemplate) => PtoFormulaCellWithoutScope;
 };
 
 function createPtoFormulaCellTemplates(
@@ -74,19 +48,11 @@ function createPtoFormulaCellTemplates(
   ];
 }
 
-export function ptoFormulaCellKey(cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) {
-  return `${cell.rowId}:${cell.kind}:${cell.month ?? cell.day ?? ""}`;
-}
-
-export function ptoFormulaTemplateKey(cell: Pick<PtoFormulaCell, "kind" | "day" | "month">) {
-  return `${cell.kind}:${cell.month ?? cell.day ?? ""}`;
-}
-
 function ptoFormulaCellFromParts(
   rowId: string,
   kind: PtoFormulaCell["kind"],
   key?: string,
-): Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month"> {
+): PtoFormulaCellIdentity {
   return {
     rowId,
     kind,
@@ -113,7 +79,7 @@ export function createPtoDateFormulaModel({
     row,
     cells: formulaCellTemplates.map((template) => formulaCellFromTemplate(row.id, template)),
   }));
-  const formulaCellDomKey = (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => (
+  const formulaCellDomKey = (cell: PtoFormulaCellIdentity) => (
     `${table}:${year}:${ptoFormulaCellKey(cell)}`
   );
   const formulaSelectionKey = formulaCellDomKey;
@@ -121,6 +87,7 @@ export function createPtoDateFormulaModel({
   const formulaSelectionScope = `${table}:${year}:`;
   const selectedFormulaCellKeys = new Set(selectedCellKeys.filter((key) => key.startsWith(formulaSelectionScope)));
   const formulaTemplateIndexByKey = new Map(formulaCellTemplates.map((cell, index) => [ptoFormulaTemplateKey(cell), index] as const));
+  const formulaTemplateByKey = new Map(formulaCellTemplates.map((cell) => [ptoFormulaTemplateKey(cell), cell] as const));
   const formulaRowIndexById = new Map(filteredRows.map((row, index) => [row.id, index] as const));
   const formulaCellFromSelectionKey = (key: string): PtoFormulaCellWithoutScope | null => {
     if (!key.startsWith(formulaSelectionScope)) return null;
@@ -128,10 +95,7 @@ export function createPtoDateFormulaModel({
     const [rowId, kind, value = ""] = key.slice(formulaSelectionScope.length).split(":");
     if (!rowId || !formulaRowIndexById.has(rowId)) return null;
 
-    const template = formulaCellTemplates.find((cell) => (
-      cell.kind === kind
-        && (kind === "month" ? cell.month === value : kind === "day" ? cell.day === value : value === "")
-    ));
+    const template = formulaTemplateByKey.get(`${kind}:${value}`);
 
     return template ? formulaCellFromTemplate(rowId, template) : null;
   };
@@ -183,6 +147,7 @@ export function createPtoDateFormulaModel({
     formulaCellTemplates,
     formulaTemplateKey: ptoFormulaTemplateKey,
     formulaTemplateIndexByKey,
+    formulaTemplateByKey,
     formulaRowIndexById,
     formulaCellFromTemplate,
     formulaCellFromSelectionKey,
@@ -192,7 +157,7 @@ export function createPtoDateFormulaModel({
 }
 
 export function getPtoFormulaCellValue(
-  cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">,
+  cell: PtoFormulaCellIdentity,
   { rowById, getEffectiveCarryover, getRowDateTotals }: PtoFormulaCellValueContext,
 ) {
   const row = rowById.get(cell.rowId);
@@ -219,70 +184,4 @@ export function ptoFormulaCellMatches(
     && cell.table === table
     && cell.year === year
     && (kind === "month" ? cell.month === key : kind === "day" ? cell.day === key : true);
-}
-
-export function withPtoFormulaScope(
-  cell: PtoFormulaCellWithoutScope,
-  table: string,
-  year: string,
-): PtoFormulaCell {
-  return { ...cell, table, year };
-}
-
-export function resolvePtoFormulaAnchor(
-  anchorCell: PtoFormulaCell | null,
-  table: string,
-  year: string,
-  targetCell: PtoFormulaCell,
-) {
-  return anchorCell?.table === table && anchorCell.year === year ? anchorCell : targetCell;
-}
-
-export function togglePtoFormulaSelectionKeys(currentKeys: string[], selectionScope: string, targetKey: string) {
-  const scopedKeys = currentKeys.filter((key) => key.startsWith(selectionScope));
-  return toggleEditableGridSelectionKey(scopedKeys, targetKey);
-}
-
-export function selectedPtoFormulaCells(
-  selectedKeys: Set<string>,
-  formulaCellFromSelectionKey: PtoFormulaCellFromSelectionKey,
-) {
-  return Array.from(selectedKeys)
-    .map((key) => formulaCellFromSelectionKey(key))
-    .filter((formulaCell): formulaCell is PtoFormulaCellWithoutScope => formulaCell !== null);
-}
-
-export function resolvePtoFormulaMoveTarget({
-  activeCell,
-  key,
-  rowIndexById,
-  templateIndexByKey,
-  templates,
-  filteredRows,
-  formulaCellFromTemplate,
-}: ResolvePtoFormulaMoveTargetOptions) {
-  if (!activeCell || templates.length === 0) return null;
-
-  const offset = editableGridArrowOffset(key);
-  const currentRowIndex = rowIndexById.get(activeCell.rowId);
-  const currentColumnIndex = templateIndexByKey.get(ptoFormulaTemplateKey(activeCell));
-  if (currentRowIndex === undefined || currentColumnIndex === undefined) return null;
-
-  const nextRowIndex = Math.min(filteredRows.length - 1, Math.max(0, currentRowIndex + offset.rowOffset));
-  const nextColumnIndex = Math.min(templates.length - 1, Math.max(0, currentColumnIndex + offset.columnOffset));
-  const nextRow = filteredRows[nextRowIndex];
-  const nextTemplate = templates[nextColumnIndex];
-
-  return nextRow && nextTemplate ? formulaCellFromTemplate(nextRow.id, nextTemplate) : null;
-}
-
-export function resolvePtoFormulaActiveAfterClear(
-  activeCell: PtoFormulaCell | null,
-  targetCells: PtoFormulaCellWithoutScope[],
-  table: string,
-  year: string,
-) {
-  return activeCell && targetCells.some((targetCell) => ptoFormulaCellKey(targetCell) === ptoFormulaCellKey(activeCell))
-    ? activeCell
-    : withPtoFormulaScope(targetCells[0], table, year);
 }

@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type DragEvent, type RefObject, type SetStateAction } from "react";
-import type { AdminLogEntry } from "@/lib/domain/admin/logs";
+import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   createEmptyPtoDateRow,
   insertPtoRowAfter,
@@ -11,8 +12,6 @@ import {
 } from "@/lib/domain/pto/date-table";
 import { createId } from "@/lib/utils/id";
 import { cleanAreaName } from "@/lib/utils/text";
-
-type AdminLogInput = Omit<AdminLogEntry, "id" | "at" | "user">;
 
 type UsePtoLinkedRowsEditorOptions = {
   ptoTab: string;
@@ -26,6 +25,8 @@ type UsePtoLinkedRowsEditorOptions = {
   setPtoOperRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   setPtoSurveyRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   requestSave: () => void;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  getPtoDatabaseExpectedUpdatedAt: () => string | null;
   addAdminLog: (entry: AdminLogInput) => void;
 };
 
@@ -41,6 +42,8 @@ export function usePtoLinkedRowsEditor({
   setPtoOperRows,
   setPtoSurveyRows,
   requestSave,
+  markPtoDatabaseInlineWriteSaved,
+  getPtoDatabaseExpectedUpdatedAt,
   addAdminLog,
 }: UsePtoLinkedRowsEditorOptions) {
   const addLinkedPtoDateRow = useCallback((overrides: Partial<PtoPlanRow> = {}, insertAfterRow?: PtoPlanRow) => {
@@ -86,8 +89,13 @@ export function usePtoLinkedRowsEditor({
       setPtoSurveyRows(removeRow);
     }
     if (databaseConfigured && databaseLoadedRef.current) {
-      void import("@/lib/data/pto")
-        .then(({ deletePtoRowsFromDatabase }) => deletePtoRowsFromDatabase(table, [row.id]))
+      void enqueuePtoDatabaseWrite(async () => {
+        const { deletePtoRowsFromDatabase } = await import("@/lib/data/pto");
+        const result = await deletePtoRowsFromDatabase(table, [row.id], {
+          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+        });
+        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null);
+      })
         .catch((error) => console.warn("Database PTO row delete failed:", error));
     }
     requestSave();
@@ -96,7 +104,7 @@ export function usePtoLinkedRowsEditor({
       section: "ПТО",
       details: `Удалена строка из ${currentPtoTableLabel()}: ${rowName}.`,
     });
-  }, [addAdminLog, currentPtoDateTableKey, currentPtoTableLabel, databaseConfigured, databaseLoadedRef, requestSave, setPtoOperRows, setPtoPlanRows, setPtoSurveyRows]);
+  }, [addAdminLog, currentPtoDateTableKey, currentPtoTableLabel, databaseConfigured, databaseLoadedRef, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoOperRows, setPtoPlanRows, setPtoSurveyRows]);
 
   const getPtoDropPosition = useCallback((event: DragEvent<HTMLTableRowElement>): PtoDropPosition => {
     const bounds = event.currentTarget.getBoundingClientRect();
