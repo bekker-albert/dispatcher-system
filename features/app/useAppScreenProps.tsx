@@ -63,10 +63,8 @@ export function useAppScreenProps({
 
   const guardedSelectTopTab = useCallback((tab: typeof topTab) => {
     if (tab === topTab) return;
-    void runtime.flushPtoDatabasePendingSave().then(
-      () => selectTopTab(tab),
-      () => selectTopTab(tab),
-    );
+    selectTopTab(tab);
+    void runtime.flushPtoDatabasePendingSave();
   }, [runtime, selectTopTab, topTab]);
 
   const guardedSelectPtoTab = useCallback((tab: string) => {

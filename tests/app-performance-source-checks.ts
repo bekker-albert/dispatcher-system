@@ -19,6 +19,7 @@ const guardedSelectPtoTabSource = useAppScreenPropsSource.match(/const guardedSe
 
 assert.match(guardedSelectTopTabSource, /flushPtoDatabasePendingSave\(\)/);
 assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\)/);
+assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\);\s*void runtime\.flushPtoDatabasePendingSave\(\);/);
 assert.doesNotMatch(guardedSelectTopTabSource, /if \(canNavigate\) selectTopTab\(tab\)/);
 assert.match(guardedSelectPtoTabSource, /selectPtoTab\(tab\)/);
 assert.doesNotMatch(guardedSelectPtoTabSource, /flushPtoDatabasePendingSave/);

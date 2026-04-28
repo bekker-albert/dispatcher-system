@@ -14,7 +14,7 @@ import { buildInitialReportState } from "@/features/reports/initialReportState";
 import { databaseConfigured } from "@/lib/data/config";
 import { createDefaultSubTabs } from "@/lib/domain/navigation/tabs";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
-import { hasInitialLocalAppState, readInitialStoredAppState } from "@/features/app/initialAppStorage";
+import { hasInitialLocalAppState, readInitialStoredAppState, readInitialStoredPtoState } from "@/features/app/initialAppStorage";
 
 type MutableRef<T> = {
   current: T;
@@ -115,44 +115,46 @@ export async function runInitialAppDataLoad(
 
   try {
     const hasLocalAppState = hasInitialLocalAppState();
-    const localStoredPtoState = databaseConfigured ? readInitialStoredAppState({ includePto: true }) : null;
+    let storedState = readInitialStoredAppState({ includePto: !databaseConfigured });
 
-    if (databaseConfigured) {
-      const databaseBootstrapCompleted = await loadInitialAppDatabaseBootstrap({
-        hasLocalAppState,
-        isCancelled,
-        appDatabaseSaveSnapshotRef,
-        appSettingsDatabaseLoadedRef,
-        appSettingsDatabaseSaveSnapshotRef,
+    const applySharedState = (state: typeof storedState) => {
+      const initialReportState = buildInitialReportState(state);
+
+      applyInitialReportState(initialReportState, {
+        setReportCustomers,
+        setReportAreaOrder,
+        setReportWorkOrder,
+        setReportHeaderLabels,
+        setReportColumnWidths,
+        setReportReasons,
+        setAreaShiftCutoffs,
       });
-      if (!databaseBootstrapCompleted) return;
-    }
 
-    const storedState = readInitialStoredAppState({ includePto: !databaseConfigured });
-    const initialReportState = buildInitialReportState(storedState);
+      applyInitialNavigationState(buildInitialNavigationState({
+        savedCustomTabs: state.savedCustomTabs,
+        savedTopTabs: state.savedTopTabs,
+        savedSubTabs: state.savedSubTabs,
+        defaultSubTabs,
+      }), {
+        setCustomTabs,
+        setTopTabs,
+        setSubTabs,
+      });
 
-    applyInitialReportState(initialReportState, {
-      setReportCustomers,
-      setReportAreaOrder,
-      setReportWorkOrder,
-      setReportHeaderLabels,
-      setReportColumnWidths,
-      setReportReasons,
-      setAreaShiftCutoffs,
-    });
+      applyInitialAdminStructureState(buildInitialAdminStructureState(state), {
+        setOrgMembers,
+        setDependencyNodes,
+        setDependencyLinks,
+        setDependencyLinkForm,
+      });
 
-    applyInitialNavigationState(buildInitialNavigationState({
-      savedCustomTabs: storedState.savedCustomTabs,
-      savedTopTabs: storedState.savedTopTabs,
-      savedSubTabs: storedState.savedSubTabs,
-      defaultSubTabs,
-    }), {
-      setCustomTabs,
-      setTopTabs,
-      setSubTabs,
-    });
+      restoreAdminLogs(state.savedAdminLogs);
 
-    const localInitialPtoState = buildInitialPtoState(localStoredPtoState ?? storedState);
+      return initialReportState;
+    };
+
+    let initialReportState = applySharedState(storedState);
+    const localInitialPtoState = buildInitialPtoState(databaseConfigured ? readInitialStoredPtoState() : storedState);
 
     if (!databaseConfigured || localInitialPtoState.hasSavedPtoState) {
       applyInitialPtoState(localInitialPtoState, {
@@ -171,22 +173,22 @@ export async function runInitialAppDataLoad(
       hasStoredPtoStateRef.current = false;
     }
 
-    if (!isCancelled()) {
-      if (databaseConfigured) {
-        setPtoDatabaseLoadStarted(true);
-      } else {
-        setPtoBootstrapLoaded(true);
-      }
+    if (databaseConfigured) {
+      const databaseBootstrapCompleted = await loadInitialAppDatabaseBootstrap({
+        hasLocalAppState,
+        isCancelled,
+        appDatabaseSaveSnapshotRef,
+        appSettingsDatabaseLoadedRef,
+        appSettingsDatabaseSaveSnapshotRef,
+      });
+      if (!databaseBootstrapCompleted) return;
+
+      storedState = readInitialStoredAppState({ includePto: false });
+      initialReportState = applySharedState(storedState);
+      if (!isCancelled()) setPtoDatabaseLoadStarted(true);
+    } else if (!isCancelled()) {
+      setPtoBootstrapLoaded(true);
     }
-
-    applyInitialAdminStructureState(buildInitialAdminStructureState(storedState), {
-      setOrgMembers,
-      setDependencyNodes,
-      setDependencyLinks,
-      setDependencyLinkForm,
-    });
-
-    restoreAdminLogs(storedState.savedAdminLogs);
 
     const initialVehicleRows = await loadInitialVehicleRows({
       savedVehicles: storedState.savedVehicles,
