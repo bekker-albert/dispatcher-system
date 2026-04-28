@@ -43,8 +43,12 @@ export function usePtoBucketsGridEditing({
     startDraft,
   } = usePtoBucketsCellDraft({ editingMode, onCommitValue });
 
-  const rowKeys = useMemo(() => rows.map((row) => row.key), [rows]);
-  const columnKeys = useMemo(() => columns.map((column) => column.key), [columns]);
+  const rowKeys = useMemo(() => (
+    editingMode ? rows.map((row) => row.key) : []
+  ), [editingMode, rows]);
+  const columnKeys = useMemo(() => (
+    editingMode ? columns.map((column) => column.key) : []
+  ), [columns, editingMode]);
   const {
     activeCell,
     clearSelection,

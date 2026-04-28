@@ -121,6 +121,7 @@ export function usePtoDateFormulaController({
   const formulaCellEditing = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
     ptoFormulaCellMatches(activeInlineEditCell, ptoTab, ptoPlanYear, rowId, kind, key)
   );
+  const formulaRowEditing = (rowId: string) => activeInlineEditCell?.rowId === rowId;
 
   const {
     clearSelectedFormulaCells,
@@ -196,6 +197,7 @@ export function usePtoDateFormulaController({
     formulaCellActive,
     formulaCellDomKey,
     formulaCellEditing,
+    formulaRowEditing,
     formulaCellSelected,
     formulaCellsByRowId,
     formulaInputDisabled,

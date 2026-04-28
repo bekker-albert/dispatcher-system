@@ -67,6 +67,7 @@ export type PtoDateEditableTableBodyProps = Pick<
   | "formulaCellActive"
   | "formulaCellDomKey"
   | "formulaCellEditing"
+  | "formulaRowEditing"
   | "formulaCellSelected"
   | "formulaCellsByRowId"
   | "handleFormulaCellKeyDown"

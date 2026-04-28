@@ -9,6 +9,7 @@ export function createInactivePtoDateFormulaController() {
     formulaCellActive: () => false,
     formulaCellDomKey: () => "",
     formulaCellEditing: () => false,
+    formulaRowEditing: () => false,
     formulaCellSelected: () => false,
     formulaCellsByRowId: new Map<string, PtoFormulaCellWithoutScope[]>(),
     formulaInputDisabled: true,

@@ -27,10 +27,7 @@ export function PtoDateEditableTableBody(props: PtoDateEditableTableBodyProps) {
           key={row.id}
           {...rowProps}
           ptoFormulaDraft={
-            rowProps.ptoDateEditing
-            && (rowProps.formulaCellsByRowId.get(row.id) ?? []).some((cell) => (
-              rowProps.formulaCellEditing(row.id, cell.kind, cell.day ?? cell.month)
-            ))
+            rowProps.ptoDateEditing && rowProps.formulaRowEditing(row.id)
               ? rowProps.ptoFormulaDraft
               : ""
           }
