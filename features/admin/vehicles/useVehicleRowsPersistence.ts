@@ -57,10 +57,15 @@ export function useVehicleRowsPersistence({
 }: VehicleRowsPersistenceOptions) {
   const vehicleSaveTimerRef = useRef<number | null>(null);
   const databaseSaveQueueRef = useRef<VehicleRowsSaveQueue | null>(null);
+  const vehicleRowsVersionRef = useRef(0);
 
   if (databaseSaveQueueRef.current === null) {
     databaseSaveQueueRef.current = createVehicleRowsSaveQueue();
   }
+
+  useEffect(() => {
+    vehicleRowsVersionRef.current += 1;
+  }, [vehicleRows]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
@@ -72,6 +77,7 @@ export function useVehicleRowsPersistence({
     vehicleSaveTimerRef.current = window.setTimeout(() => {
       const rowsSnapshot = copyVehicleRows(vehicleRowsRef.current);
       const snapshot = JSON.stringify(rowsSnapshot);
+      const snapshotVersion = vehicleRowsVersionRef.current;
       const localUpdatedAt = new Date().toISOString();
 
       saveVehicleRowsLocalBackup(snapshot, localUpdatedAt);
@@ -86,13 +92,13 @@ export function useVehicleRowsPersistence({
               if (!isLatest()) return;
 
               await replaceVehiclesInDatabase(rowsSnapshot, { expectedSnapshot });
-              if (!isLatest() || snapshot !== JSON.stringify(vehicleRowsRef.current)) return;
+              if (!isLatest() || snapshotVersion !== vehicleRowsVersionRef.current) return;
 
               databaseSaveSnapshotRef.current = snapshot;
               showSaveStatus("saved", "\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430.");
             } catch (error) {
               console.warn("Database vehicles save failed:", error);
-              if (isLatest() && snapshot === JSON.stringify(vehicleRowsRef.current)) {
+              if (isLatest() && snapshotVersion === vehicleRowsVersionRef.current) {
                 showSaveStatus("error", `\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430: ${errorToMessage(error)}`);
               }
             }

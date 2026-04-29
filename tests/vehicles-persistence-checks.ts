@@ -9,6 +9,7 @@ const databaseVehiclesSource = readFileSync(resolve(testDir, "../lib/server/data
 const mysqlVehiclesSource = readFileSync(resolve(testDir, "../lib/server/mysql/vehicles.ts"), "utf8");
 const supabaseVehiclesSource = readFileSync(resolve(testDir, "../lib/supabase/vehicles.ts"), "utf8");
 const vehicleRowsEditorSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleRowsEditor.ts"), "utf8");
+const vehicleRowsPersistenceSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleRowsPersistence.ts"), "utf8");
 
 function exportedFunctionSource(source: string, name: string) {
   const start = source.indexOf(`export async function ${name}`);
@@ -59,4 +60,7 @@ assert.match(dataVehiclesSource, /replaceVehiclesInDatabase\(rows: VehicleRow\[]
 assert.match(databaseVehiclesSource, /function expectedVehicleSnapshotFromPayload/);
 assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSnapshotFromPayload\(record\.expectedSnapshot\)/g) ?? []).length, 2);
 assert.doesNotMatch(vehicleRowsEditorSource, /deleteVehicleFromDatabase/);
+assert.match(vehicleRowsPersistenceSource, /const vehicleRowsVersionRef = useRef\(0\);/);
+assert.match(vehicleRowsPersistenceSource, /const snapshotVersion = vehicleRowsVersionRef\.current;/);
+assert.doesNotMatch(vehicleRowsPersistenceSource, /JSON\.stringify\(vehicleRowsRef\.current\)\) return;/);
 assert.match(vehicleRowsEditorSource, /Удаление техники будет сохранено общим списком/);
