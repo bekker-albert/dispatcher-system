@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { vehicleFilterOptionLabel } from "@/lib/domain/vehicles/filtering";
 import { normalizeLookupValue } from "@/lib/utils/text";
 
@@ -40,11 +41,17 @@ export function AdminVehicleFilterMenu({
   onApply,
   onClose,
 }: AdminVehicleFilterMenuProps) {
-  const normalizedSearch = normalizeLookupValue(search);
-  const visibleOptions = options.filter((option) => (
-    !normalizedSearch || normalizeLookupValue(vehicleFilterOptionLabel(option)).includes(normalizedSearch)
-  ));
-  const selectedSet = new Set(draftSelectedValues ?? []);
+  const visibleOptions = useMemo(() => {
+    const normalizedSearch = normalizeLookupValue(search);
+
+    return options.flatMap((option) => {
+      const label = vehicleFilterOptionLabel(option);
+      const matchesSearch = !normalizedSearch || normalizeLookupValue(label).includes(normalizedSearch);
+
+      return matchesSearch ? [{ option, label }] : [];
+    });
+  }, [options, search]);
+  const selectedSet = useMemo(() => new Set(draftSelectedValues ?? []), [draftSelectedValues]);
   const isDraftActive = draftSelectedValues !== undefined;
 
   return (
@@ -63,14 +70,14 @@ export function AdminVehicleFilterMenu({
         <button onClick={onApply} style={adminVehicleFilterLinkButtonStyle} type="button">Применить</button>
       </div>
       <div style={adminVehicleFilterOptionsStyle}>
-        {visibleOptions.length ? visibleOptions.map((option) => (
+        {visibleOptions.length ? visibleOptions.map(({ option, label: optionLabel }) => (
           <label key={option || "__empty"} style={adminVehicleFilterOptionStyle}>
             <input
               checked={!isDraftActive || selectedSet.has(option)}
               onChange={() => onToggleValue(option)}
               type="checkbox"
             />
-            <span title={vehicleFilterOptionLabel(option)}>{vehicleFilterOptionLabel(option)}</span>
+            <span title={optionLabel}>{optionLabel}</span>
           </label>
         )) : (
           <div style={adminVehicleFilterEmptyStyle}>Нет значений</div>

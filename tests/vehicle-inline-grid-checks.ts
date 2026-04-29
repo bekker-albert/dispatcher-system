@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   collectSelectedVehicleFieldsById,
   createVehicleGridKeys,
@@ -20,6 +23,9 @@ import {
 } from "../lib/domain/vehicles/filtering";
 import type { VehicleRow } from "../lib/domain/vehicles/types";
 import { adminStorageKeys } from "../lib/storage/keys";
+
+const testDir = dirname(fileURLToPath(import.meta.url));
+const adminVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleFilterMenu.tsx"), "utf8");
 
 const rows = [
   { id: 1 },
@@ -130,6 +136,9 @@ const vehicleFilterSets = createVehicleFilterSets({ brand: ["Howo"] });
 assert.equal(vehicleMatchesFilterSets(vehicleRows[0], vehicleFilterSets, vehicleFilterColumns), true);
 assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns), false);
 assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns, "brand"), true);
+assert.match(adminVehicleFilterMenuSource, /const visibleOptions = useMemo\(\(\) => \{/);
+assert.match(adminVehicleFilterMenuSource, /const selectedSet = useMemo\(\(\) => new Set\(draftSelectedValues \?\? \[\]\), \[draftSelectedValues\]\);/);
+assert.match(adminVehicleFilterMenuSource, /vehicleFilterOptionLabel\(option\);/);
 
 const vehicleClearFields = new Map([[10, new Set(["brand", "owner"] as const)]]);
 const clearedVehicleRows = clearVehicleInlineFields(vehicleRows, vehicleClearFields);
