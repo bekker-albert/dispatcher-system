@@ -19,6 +19,7 @@ import type { usePtoDateViewportRefresh } from "../features/pto/ptoDateViewportM
 const testDir = dirname(fileURLToPath(import.meta.url));
 const ptoDateTableModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateTableModel.ts"), "utf8");
 const ptoDateRowsColumnsModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateRowsColumnsModel.ts"), "utf8");
+const ptoDateReadonlyTableSource = readFileSync(resolve(testDir, "../features/pto/PtoDateReadonlyTable.tsx"), "utf8");
 
 type PtoDateContainerModelCoverage = {
   editableProps: typeof createPtoDateEditableProps;
@@ -105,3 +106,5 @@ assert.match(ptoDateTableModelSource, /const rowsByYearAndSignature = new Map<st
 assert.match(ptoDateTableModelSource, /const indexedRowsForYear = \(targetYear: string\) => \{/);
 assert.match(ptoDateTableModelSource, /const totalWithCarryover = \(row: PtoPlanRow, targetYear: string\): number => \{/);
 assert.match(ptoDateRowsColumnsModelSource, /const virtualRowsModel = useMemo\(\(\) => createPtoDateVirtualRowsViewModel\(\{/);
+assert.match(ptoDateReadonlyTableSource, /const PtoDateReadonlyRow = memo\(function PtoDateReadonlyRow/);
+assert.match(ptoDateReadonlyTableSource, /<PtoDateReadonlyRow[\s\S]*row=\{row\}/);

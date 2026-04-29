@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 import { PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
 import { monthToggleStyle, ptoDateTableLayoutStyle, ptoDateTableScrollStyle, ptoPlanTableStyle, ptoStatusBadgeStyle } from "@/features/pto/ptoDateTableStyles";
 import type { PtoDateReadonlyTableProps } from "@/features/pto/ptoDateTableTypes";
@@ -80,45 +80,20 @@ export function PtoDateReadonlyTable({
           </thead>
           <tbody>
             <PtoVirtualSpacerRow height={topSpacerHeight} colSpan={tableSpacerColSpan} />
-            {rows.map((row) => {
-              const rowStatus = ptoAutomatedStatus(row, reportDate);
-              const effectiveCarryover = getEffectiveCarryover(row);
-              const rowDateTotals = getRowDateTotals(row);
-              const rowHeightKey = `${ptoTab}:${row.id}`;
-              const rowHeight = rowHeights[rowHeightKey];
-              const rowYearTotalWithCarryover = Math.round(((rowDateTotals.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
-
-              return (
-                <tr key={row.id} style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}>
-                  {showCustomerCode ? <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoCustomerCode(row.customerCode)} align="center" /></PtoPlanTd> : null}
-                  <PtoPlanTd><PtoReadonlyTextCell value={row.area} /></PtoPlanTd>
-                  {showLocation ? <PtoPlanTd><PtoReadonlyTextCell value={row.location} /></PtoPlanTd> : null}
-                  <PtoPlanTd><PtoReadonlyTextCell value={row.structure} /></PtoPlanTd>
-                  <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoUnit(row.unit)} align="center" /></PtoPlanTd>
-                  <PtoPlanTd align="center">
-                    <span
-                      title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
-                      style={{ ...ptoStatusBadgeStyle, ...statusControlStyle(rowStatus) }}
-                    >
-                      {rowStatus}
-                    </span>
-                  </PtoPlanTd>
-                  <PtoPlanTd align="center"><PtoReadonlyNumberCell value={effectiveCarryover} /></PtoPlanTd>
-                  <PtoPlanTd align="center"><PtoReadonlyNumberCell value={rowYearTotalWithCarryover} bold /></PtoPlanTd>
-                  {displayMonthGroups.map((group) => {
-                    const monthValue = rowDateTotals.monthTotals.get(group.month)?.value;
-                    return (
-                      <Fragment key={`${row.id}-${group.month}-readonly`}>
-                        <PtoPlanTd align="center"><PtoReadonlyNumberCell value={monthValue} bold /></PtoPlanTd>
-                        {group.expanded && group.days.map((day) => (
-                          <PtoPlanTd key={`${row.id}-${day}-readonly`} align="center"><PtoReadonlyNumberCell value={row.dailyPlans[day]} /></PtoPlanTd>
-                        ))}
-                      </Fragment>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+            {rows.map((row) => (
+              <PtoDateReadonlyRow
+                key={row.id}
+                displayMonthGroups={displayMonthGroups}
+                getEffectiveCarryover={getEffectiveCarryover}
+                getRowDateTotals={getRowDateTotals}
+                ptoTab={ptoTab}
+                reportDate={reportDate}
+                row={row}
+                rowHeights={rowHeights}
+                showCustomerCode={showCustomerCode}
+                showLocation={showLocation}
+              />
+            ))}
             <PtoVirtualSpacerRow height={bottomSpacerHeight} colSpan={tableSpacerColSpan} />
           </tbody>
         </table>
@@ -126,3 +101,67 @@ export function PtoDateReadonlyTable({
     </div>
   );
 }
+
+type PtoDateReadonlyRowProps = Pick<
+  PtoDateReadonlyTableProps,
+  | "displayMonthGroups"
+  | "getEffectiveCarryover"
+  | "getRowDateTotals"
+  | "ptoTab"
+  | "reportDate"
+  | "rowHeights"
+  | "showCustomerCode"
+  | "showLocation"
+> & {
+  row: PtoDateReadonlyTableProps["rows"][number];
+};
+
+const PtoDateReadonlyRow = memo(function PtoDateReadonlyRow({
+  displayMonthGroups,
+  getEffectiveCarryover,
+  getRowDateTotals,
+  ptoTab,
+  reportDate,
+  row,
+  rowHeights,
+  showCustomerCode,
+  showLocation,
+}: PtoDateReadonlyRowProps) {
+  const rowStatus = ptoAutomatedStatus(row, reportDate);
+  const effectiveCarryover = getEffectiveCarryover(row);
+  const rowDateTotals = getRowDateTotals(row);
+  const rowHeightKey = `${ptoTab}:${row.id}`;
+  const rowHeight = rowHeights[rowHeightKey];
+  const rowYearTotalWithCarryover = Math.round(((rowDateTotals.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
+
+  return (
+    <tr style={{ background: ptoStatusRowBackground(rowStatus), ...(rowHeight ? { height: rowHeight } : null) }}>
+      {showCustomerCode ? <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoCustomerCode(row.customerCode)} align="center" /></PtoPlanTd> : null}
+      <PtoPlanTd><PtoReadonlyTextCell value={row.area} /></PtoPlanTd>
+      {showLocation ? <PtoPlanTd><PtoReadonlyTextCell value={row.location} /></PtoPlanTd> : null}
+      <PtoPlanTd><PtoReadonlyTextCell value={row.structure} /></PtoPlanTd>
+      <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoUnit(row.unit)} align="center" /></PtoPlanTd>
+      <PtoPlanTd align="center">
+        <span
+          title="Статус рассчитывается по рабочей дате и заполненным значениям месяца"
+          style={{ ...ptoStatusBadgeStyle, ...statusControlStyle(rowStatus) }}
+        >
+          {rowStatus}
+        </span>
+      </PtoPlanTd>
+      <PtoPlanTd align="center"><PtoReadonlyNumberCell value={effectiveCarryover} /></PtoPlanTd>
+      <PtoPlanTd align="center"><PtoReadonlyNumberCell value={rowYearTotalWithCarryover} bold /></PtoPlanTd>
+      {displayMonthGroups.map((group) => {
+        const monthValue = rowDateTotals.monthTotals.get(group.month)?.value;
+        return (
+          <Fragment key={`${row.id}-${group.month}-readonly`}>
+            <PtoPlanTd align="center"><PtoReadonlyNumberCell value={monthValue} bold /></PtoPlanTd>
+            {group.expanded && group.days.map((day) => (
+              <PtoPlanTd key={`${row.id}-${day}-readonly`} align="center"><PtoReadonlyNumberCell value={row.dailyPlans[day]} /></PtoPlanTd>
+            ))}
+          </Fragment>
+        );
+      })}
+    </tr>
+  );
+});
