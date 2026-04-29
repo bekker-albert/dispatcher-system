@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 
-import type { DispatchSectionProps, DispatchTotals } from "@/features/dispatch/DispatchSection";
+import type { DispatchSectionProps, DispatchTotals, DispatchVehicleSelectOption } from "@/features/dispatch/DispatchSection";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
@@ -21,6 +21,7 @@ type UseAppDispatchSectionPropsOptions = {
   dispatchVehicleToAddId: string;
   setDispatchVehicleToAddId: Dispatch<SetStateAction<string>>;
   dispatchVehicleOptions: VehicleRow[];
+  dispatchVehicleSelectOptions: DispatchVehicleSelectOption[];
   addSelectedDispatchVehicle: () => void;
   addFilteredVehiclesToDispatchSummary: () => void;
   dispatchAiSuggestion: string;
@@ -49,6 +50,7 @@ export function useAppDispatchSectionProps({
   dispatchVehicleToAddId,
   setDispatchVehicleToAddId,
   dispatchVehicleOptions,
+  dispatchVehicleSelectOptions,
   addSelectedDispatchVehicle,
   addFilteredVehiclesToDispatchSummary,
   dispatchAiSuggestion,
@@ -77,6 +79,7 @@ export function useAppDispatchSectionProps({
     dispatchVehicleToAddId,
     onDispatchVehicleToAddIdChange: setDispatchVehicleToAddId,
     dispatchVehicleOptions,
+    dispatchVehicleSelectOptions,
     onAddSelectedDispatchVehicle: addSelectedDispatchVehicle,
     onAddFilteredVehiclesToDispatchSummary: addFilteredVehiclesToDispatchSummary,
     dispatchAiSuggestion,

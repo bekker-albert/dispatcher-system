@@ -1,8 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
-import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import { SectionCard } from "@/shared/ui/layout";
 import { blockStyle, dispatchSuggestionStyle } from "@/features/dispatch/dispatchSectionStyles";
 import { DispatchSummaryDatalists } from "@/features/dispatch/DispatchSummaryDatalists";
@@ -10,9 +7,9 @@ import { DispatchSummaryHeader } from "@/features/dispatch/DispatchSummaryHeader
 import { DispatchSummaryStats } from "@/features/dispatch/DispatchSummaryStats";
 import { DispatchSummaryTable } from "@/features/dispatch/DispatchSummaryTable";
 import { DispatchSummaryToolbar } from "@/features/dispatch/DispatchSummaryToolbar";
-import type { DispatchSectionProps, DispatchTotals } from "@/features/dispatch/dispatchSectionTypes";
+import type { DispatchSectionProps, DispatchTotals, DispatchVehicleSelectOption } from "@/features/dispatch/dispatchSectionTypes";
 
-export type { DispatchSectionProps, DispatchTotals };
+export type { DispatchSectionProps, DispatchTotals, DispatchVehicleSelectOption };
 
 export default function DispatchSection({
   activeDispatchSubtabLabel,
@@ -29,7 +26,7 @@ export default function DispatchSection({
   dispatchAreaOptions,
   dispatchVehicleToAddId,
   onDispatchVehicleToAddIdChange,
-  dispatchVehicleOptions,
+  dispatchVehicleSelectOptions,
   onAddSelectedDispatchVehicle,
   onAddFilteredVehiclesToDispatchSummary,
   dispatchAiSuggestion,
@@ -42,11 +39,6 @@ export default function DispatchSection({
   dispatchWorkTypeOptions,
   dispatchExcavatorOptions,
 }: DispatchSectionProps) {
-  const vehicleSelectOptions = useMemo(
-    () => dispatchVehicleOptions.map((vehicle) => ({ value: String(vehicle.id), label: buildVehicleDisplayName(vehicle) })),
-    [dispatchVehicleOptions],
-  );
-
   return (
     <SectionCard title={activeDispatchSubtabLabel}>
       {dispatchTab.startsWith("custom:") ? (
@@ -73,7 +65,7 @@ export default function DispatchSection({
             onDispatchVehicleToAddIdChange={onDispatchVehicleToAddIdChange}
             onSearchChange={onSearchChange}
             search={search}
-            vehicleSelectOptions={vehicleSelectOptions}
+            vehicleSelectOptions={dispatchVehicleSelectOptions}
           />
 
           <div style={dispatchSuggestionStyle}>
@@ -83,7 +75,7 @@ export default function DispatchSection({
           <DispatchSummaryTable
             isDailyDispatchShift={isDailyDispatchShift}
             rows={filteredDispatchSummaryRows}
-            vehicleSelectOptions={vehicleSelectOptions}
+            vehicleSelectOptions={dispatchVehicleSelectOptions}
             onDeleteDispatchSummaryRow={onDeleteDispatchSummaryRow}
             onUpdateDispatchSummaryNumber={onUpdateDispatchSummaryNumber}
             onUpdateDispatchSummaryText={onUpdateDispatchSummaryText}

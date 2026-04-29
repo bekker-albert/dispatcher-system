@@ -82,13 +82,18 @@ export function useDispatchSummaryViewModel({
       : []),
   ], [active, dispatchSummaryRows, reportBaseRows, vehicleRows]);
 
-  const dispatchVehicleOptions = useMemo(() => (
+  const sortedVehicleSearchRecords = useMemo(() => (
     active
       ? [...vehicleSearchRecords]
           .sort((left, right) => left.displayName.localeCompare(right.displayName, "ru"))
-          .map(({ vehicle }) => vehicle)
       : []
   ), [active, vehicleSearchRecords]);
+  const dispatchVehicleOptions = useMemo(() => (
+    sortedVehicleSearchRecords.map(({ vehicle }) => vehicle)
+  ), [sortedVehicleSearchRecords]);
+  const dispatchVehicleSelectOptions = useMemo(() => (
+    sortedVehicleSearchRecords.map(({ vehicle, displayName }) => ({ value: String(vehicle.id), label: displayName }))
+  ), [sortedVehicleSearchRecords]);
 
   const dispatchLocationOptions = useMemo(() => uniqueSorted([
     ...(active ? vehicleRows.map((vehicle) => vehicle.location) : []),
@@ -164,6 +169,7 @@ export function useDispatchSummaryViewModel({
     isDailyDispatchShift,
     dispatchAreaOptions,
     dispatchVehicleOptions,
+    dispatchVehicleSelectOptions,
     dispatchLocationOptions,
     dispatchWorkTypeOptions,
     dispatchExcavatorOptions,

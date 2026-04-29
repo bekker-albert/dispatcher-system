@@ -38,6 +38,7 @@ export type DispatchSectionProps = {
   dispatchVehicleToAddId: string;
   onDispatchVehicleToAddIdChange: (value: string) => void;
   dispatchVehicleOptions: VehicleRow[];
+  dispatchVehicleSelectOptions: DispatchVehicleSelectOption[];
   onAddSelectedDispatchVehicle: () => void;
   onAddFilteredVehiclesToDispatchSummary: () => void;
   dispatchAiSuggestion: string;
