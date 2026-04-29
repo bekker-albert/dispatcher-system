@@ -14,6 +14,7 @@ const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
+const useAppAdminDatabasePropsSource = readFileSync(resolve(testDir, "../features/app/useAppAdminDatabaseProps.ts"), "utf8");
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
@@ -59,6 +60,9 @@ assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
 assert.match(useAppSectionPreloaderSource, /const coreSectionPreloaders = \[/);
 assert.match(useAppSectionPreloaderSource, /runNextPreload\(\);/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /function preloadCoreSections/);
+assert.match(useAppAdminDatabasePropsSource, /const ptoMemoryTotal = useMemo\(\(\) => \(/);
+assert.match(useAppAdminDatabasePropsSource, /const clientSnapshotStatsByKey = useMemo\(\(\) => new Map\(/);
+assert.match(useAppAdminDatabasePropsSource, /clientSnapshotStatsByKey\.get\(snapshot\.key\) \?\? clientSnapshotStats\(snapshot\)/);
 assert.match(ptoPrimaryContentSource, /createEmptyPtoDateModel\(appState\.ptoPlanYear\)/);
 assert.match(ptoPrimaryContentSource, /function PtoDataPrimaryContent/);
 assert.match(ptoPrimaryContentSource, /if \(!isPtoDateTab && !isPtoBucketsSection\)/);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { dataProviderLabel } from "@/lib/data/config";
 import { countPtoStateData } from "@/lib/domain/pto/state-stats";
@@ -42,15 +43,24 @@ export function useAppAdminDatabaseProps({
   refreshClientSnapshots,
   restoreClientSnapshot,
 }: UseAppAdminDatabasePropsOptions): AdminDatabaseSectionProps {
-  const ptoMemoryTotal = active
-    ? countPtoStateData({
-        planRows: ptoPlanRows,
-        operRows: ptoOperRows,
-        surveyRows: ptoSurveyRows,
-        bucketRows: ptoBucketManualRows,
-        bucketValues: ptoBucketValues,
-      }).total
-    : 0;
+  const ptoMemoryTotal = useMemo(() => (
+    active
+      ? countPtoStateData({
+          planRows: ptoPlanRows,
+          operRows: ptoOperRows,
+          surveyRows: ptoSurveyRows,
+          bucketRows: ptoBucketManualRows,
+          bucketValues: ptoBucketValues,
+        }).total
+      : 0
+  ), [active, ptoBucketManualRows, ptoBucketValues, ptoOperRows, ptoPlanRows, ptoSurveyRows]);
+
+  const clientSnapshotStatsByKey = useMemo(() => new Map(
+    clientSnapshots.map((snapshot) => [snapshot.key, clientSnapshotStats(snapshot)]),
+  ), [clientSnapshots]);
+  const getSnapshotStats = useCallback((snapshot: DataClientSnapshot) => (
+    clientSnapshotStatsByKey.get(snapshot.key) ?? clientSnapshotStats(snapshot)
+  ), [clientSnapshotStatsByKey]);
 
   return {
     databaseConfigured,
@@ -60,7 +70,7 @@ export function useAppAdminDatabaseProps({
     snapshots: clientSnapshots,
     message: databasePanelMessage,
     loading: databasePanelLoading,
-    getSnapshotStats: clientSnapshotStats,
+    getSnapshotStats,
     onCreateSnapshot: createClientSnapshotNow,
     onRefreshSnapshots: refreshClientSnapshots,
     onRestoreSnapshot: restoreClientSnapshot,
