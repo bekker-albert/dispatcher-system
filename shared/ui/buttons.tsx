@@ -27,33 +27,12 @@ export function TopButton({
   deleteLabel,
   onDelete,
 }: TopButtonProps) {
-  const buttonStyle: CSSProperties = {
-    appearance: "none",
-    WebkitAppearance: "none",
-    WebkitTapHighlightColor: "transparent",
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: active ? "#0f172a" : "#cbd5e1",
-    background: active ? "#0f172a" : "#ffffff",
-    color: active ? "#ffffff" : "#0f172a",
-    borderRadius: 8,
-    padding: "7px 10px",
-    fontFamily: "inherit",
-    fontSize: 13,
-    fontWeight: 700,
-    lineHeight: 1.2,
-    cursor: "pointer",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    outline: "none",
-    boxShadow: "none",
-    userSelect: "none",
-  };
+  const buttonStyle = active ? topButtonActiveStyle : topButtonInactiveStyle;
+  const groupStyle = active ? topButtonGroupActiveStyle : topButtonGroupInactiveStyle;
 
   if (showDelete && onDelete) {
     return (
-      <span style={{ ...buttonStyle, padding: 0, cursor: "default" }}>
+      <span style={groupStyle}>
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -109,7 +88,7 @@ export function IconButton({ label, onClick, children, disabled = false }: IconB
         onClick();
         event.currentTarget.blur();
       }}
-      style={disabled ? { ...iconButtonStyle, cursor: "not-allowed", opacity: 0.45 } : iconButtonStyle}
+      style={disabled ? iconButtonDisabledStyle : iconButtonStyle}
       type="button"
     >
       {children}
@@ -129,7 +108,7 @@ export function MiniIconButton({ label, onClick, children, disabled = false }: I
         onClick();
         event.currentTarget.blur();
       }}
-      style={disabled ? { ...miniIconButtonStyle, cursor: "not-allowed", opacity: 0.4 } : miniIconButtonStyle}
+      style={disabled ? miniIconButtonDisabledStyle : miniIconButtonStyle}
       type="button"
     >
       {children}
@@ -167,6 +146,53 @@ const tabInlineDeleteButtonStyle: CSSProperties = {
   padding: "0 8px",
 };
 
+const topButtonBaseStyle: CSSProperties = {
+  appearance: "none",
+  WebkitAppearance: "none",
+  WebkitTapHighlightColor: "transparent",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderRadius: 8,
+  padding: "7px 10px",
+  fontFamily: "inherit",
+  fontSize: 13,
+  fontWeight: 700,
+  lineHeight: 1.2,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  outline: "none",
+  boxShadow: "none",
+  userSelect: "none",
+};
+
+const topButtonActiveStyle: CSSProperties = {
+  ...topButtonBaseStyle,
+  borderColor: "#0f172a",
+  background: "#0f172a",
+  color: "#ffffff",
+};
+
+const topButtonInactiveStyle: CSSProperties = {
+  ...topButtonBaseStyle,
+  borderColor: "#cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
+};
+
+const topButtonGroupActiveStyle: CSSProperties = {
+  ...topButtonActiveStyle,
+  padding: 0,
+  cursor: "default",
+};
+
+const topButtonGroupInactiveStyle: CSSProperties = {
+  ...topButtonInactiveStyle,
+  padding: 0,
+  cursor: "default",
+};
+
 const iconButtonStyle: CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
@@ -187,6 +213,12 @@ const iconButtonStyle: CSSProperties = {
   userSelect: "none",
 };
 
+const iconButtonDisabledStyle: CSSProperties = {
+  ...iconButtonStyle,
+  cursor: "not-allowed",
+  opacity: 0.45,
+};
+
 const miniIconButtonStyle: CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
@@ -205,4 +237,10 @@ const miniIconButtonStyle: CSSProperties = {
   outline: "none",
   boxShadow: "none",
   userSelect: "none",
+};
+
+const miniIconButtonDisabledStyle: CSSProperties = {
+  ...miniIconButtonStyle,
+  cursor: "not-allowed",
+  opacity: 0.4,
 };

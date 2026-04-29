@@ -15,6 +15,8 @@ const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/P
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
 const useAppAdminDatabasePropsSource = readFileSync(resolve(testDir, "../features/app/useAppAdminDatabaseProps.ts"), "utf8");
+const sharedButtonsSource = readFileSync(resolve(testDir, "../shared/ui/buttons.tsx"), "utf8");
+const sharedNavigationSource = readFileSync(resolve(testDir, "../shared/ui/navigation.tsx"), "utf8");
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
@@ -63,6 +65,11 @@ assert.doesNotMatch(useAppSectionPreloaderSource, /function preloadCoreSections/
 assert.match(useAppAdminDatabasePropsSource, /const ptoMemoryTotal = useMemo\(\(\) => \(/);
 assert.match(useAppAdminDatabasePropsSource, /const clientSnapshotStatsByKey = useMemo\(\(\) => new Map\(/);
 assert.match(useAppAdminDatabasePropsSource, /clientSnapshotStatsByKey\.get\(snapshot\.key\) \?\? clientSnapshotStats\(snapshot\)/);
+assert.match(sharedButtonsSource, /const topButtonActiveStyle: CSSProperties = \{/);
+assert.match(sharedButtonsSource, /const topButtonGroupInactiveStyle: CSSProperties = \{/);
+assert.doesNotMatch(sharedButtonsSource, /const buttonStyle: CSSProperties = \{/);
+assert.match(sharedNavigationSource, /style=\{active \? headerSubtabButtonActiveStyle : headerSubtabButtonStyle\}/);
+assert.doesNotMatch(sharedNavigationSource, /style=\{\{[\s\S]*headerSubtabButtonStyle/);
 assert.match(ptoPrimaryContentSource, /createEmptyPtoDateModel\(appState\.ptoPlanYear\)/);
 assert.match(ptoPrimaryContentSource, /function PtoDataPrimaryContent/);
 assert.match(ptoPrimaryContentSource, /if \(!isPtoDateTab && !isPtoBucketsSection\)/);

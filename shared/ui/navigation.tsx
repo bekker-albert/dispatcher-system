@@ -15,10 +15,7 @@ export function HeaderSubButton({ active, onClick, label }: HeaderSubButtonProps
         onClick();
         event.currentTarget.blur();
       }}
-      style={{
-        ...headerSubtabButtonStyle,
-        ...(active ? headerSubtabButtonActiveStyle : null),
-      }}
+      style={active ? headerSubtabButtonActiveStyle : headerSubtabButtonStyle}
     >
       {label}
     </button>
@@ -47,6 +44,7 @@ const headerSubtabButtonStyle: CSSProperties = {
 };
 
 const headerSubtabButtonActiveStyle: CSSProperties = {
+  ...headerSubtabButtonStyle,
   background: "#0f172a",
   borderColor: "#0f172a",
   color: "#ffffff",
