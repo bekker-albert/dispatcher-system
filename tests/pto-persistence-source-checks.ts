@@ -17,6 +17,7 @@ const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features
 const ptoDateRowValueEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateRowValueEditor.ts"), "utf8");
 const ptoDateTableContextSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateTableContext.ts"), "utf8");
 const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
+const mysqlPtoFreshnessSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-freshness.ts"), "utf8");
 const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase/pto-commands.ts"), "utf8");
 const supabasePtoFreshnessSource = readFileSync(resolve(testDir, "../lib/supabase/pto-freshness.ts"), "utf8");
 
@@ -87,6 +88,11 @@ assert.match(mysqlPtoCommandsSource, /type PtoInlineWriteOptions = Pick<PtoSnaps
 assert.match(mysqlPtoCommandsSource, /const inlineDeleteBatchSize = 250;/);
 assert.match(mysqlPtoCommandsSource, /DELETE FROM pto_day_values[\s\S]*AND \(row_id, work_date\) IN/);
 assert.match(mysqlPtoCommandsSource, /DELETE FROM pto_bucket_values[\s\S]*WHERE \(row_key, equipment_key\) IN/);
+assert.match(mysqlPtoFreshnessSource, /function mysqlUpdatedAfterExpectedClause/);
+assert.match(mysqlPtoFreshnessSource, /return ` \$\{prefix\} updated_at > \?`;/);
+assert.match(mysqlPtoFreshnessSource, /const freshCurrentRecords = currentRecords\.filter/);
+assert.match(mysqlPtoFreshnessSource, /if \(freshCurrentRecords\.length === 0\) return;/);
+assert.match(mysqlPtoFreshnessSource, /for \(const record of freshCurrentRecords\)/);
 assert.match(mysqlPtoCommandsSource, /savePtoDayValueWithRowToMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);[\s\S]*await insertPtoRowsIfMissing/);
 assert.match(mysqlPtoCommandsSource, /savePtoDayValuesWithRowToMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);[\s\S]*await insertPtoRowsIfMissing/);
 assert.match(mysqlPtoCommandsSource, /deletePtoRowsFromMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);/);

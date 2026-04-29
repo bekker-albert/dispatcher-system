@@ -1,5 +1,4 @@
 import {
-  ptoDayValueRecordsForYear,
   ptoManualYearsKey,
   ptoStateFromPersistenceRecords,
   ptoUiStateKey,
@@ -84,7 +83,7 @@ export async function loadPtoStateFromMysqlForYear(
 
   return ptoStateFromMysqlRecords({
     ptoRows,
-    ptoDayValues: ptoDayValueRecordsForYear(ptoDayValues, year, toDateKey),
+    ptoDayValues,
     ptoSettings,
     ptoBucketRows,
     ptoBucketValues,

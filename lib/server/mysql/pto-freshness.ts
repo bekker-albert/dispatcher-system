@@ -36,6 +36,20 @@ function mysqlRecordUpdatedAfterExpected(updatedAt: string | null | undefined, e
   return Number.isFinite(currentTime) && Number.isFinite(expectedTime) && currentTime > expectedTime;
 }
 
+function mysqlUpdatedAfterExpectedClause(
+  expectedUpdatedAt: string | null,
+  params: unknown[],
+  prefix: "WHERE" | "AND",
+) {
+  if (expectedUpdatedAt === null) return "";
+
+  const expectedDate = new Date(expectedUpdatedAt);
+  if (!Number.isFinite(expectedDate.getTime())) return "";
+
+  params.push(expectedDate);
+  return ` ${prefix} updated_at > ?`;
+}
+
 function assertFreshMysqlRecordsMatch<CurrentRecord extends { updated_at?: string | null }, NextRecord>(
   currentRecords: CurrentRecord[],
   nextRecords: NextRecord[],
@@ -45,15 +59,18 @@ function assertFreshMysqlRecordsMatch<CurrentRecord extends { updated_at?: strin
   getCurrentComparableValue: (record: CurrentRecord) => string,
   getNextComparableValue: (record: NextRecord) => string,
 ) {
+  const freshCurrentRecords = currentRecords.filter((record) => (
+    mysqlRecordUpdatedAfterExpected(record.updated_at, expectedUpdatedAt)
+  ));
+  if (freshCurrentRecords.length === 0) return;
+
   const nextRecordsByKey = new Map(
     nextRecords
       .map((record) => [getNextKey(record), getNextComparableValue(record)] as const)
       .filter((entry): entry is [string, string] => Boolean(entry[0])),
   );
 
-  for (const record of currentRecords) {
-    if (!mysqlRecordUpdatedAfterExpected(record.updated_at, expectedUpdatedAt)) continue;
-
+  for (const record of freshCurrentRecords) {
     const key = getCurrentKey(record);
     if (!key || nextRecordsByKey.get(key) !== getCurrentComparableValue(record)) {
       throw new DatabaseConflictError(ptoSnapshotConflictMessage);
@@ -79,20 +96,33 @@ export async function assertMysqlPtoMatchesExpectedUpdatedAt(
     { setting_key: ptoUiStateKey, value: state.uiState ?? {}, updated_at: null },
   ];
   const yearScope = options.yearScope;
-  const dayValueQuery = yearScope
-    ? `SELECT * FROM pto_day_values
-      WHERE work_date >= ? AND work_date <= ?`
-    : "SELECT * FROM pto_day_values";
-  const dayValueParams = yearScope
+  const rowParams: unknown[] = [];
+  const rowQuery = `SELECT * FROM pto_rows${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, rowParams, "WHERE")}`;
+  const dayValueParams: unknown[] = yearScope
     ? [ptoYearDateRange(yearScope).start, ptoYearDateRange(yearScope).end]
     : [];
+  const dayValueFreshnessClause = mysqlUpdatedAfterExpectedClause(
+    expectedUpdatedAt,
+    dayValueParams,
+    yearScope ? "AND" : "WHERE",
+  );
+  const currentDayValueQuery = yearScope
+    ? `SELECT * FROM pto_day_values
+      WHERE work_date >= ? AND work_date <= ?${dayValueFreshnessClause}`
+    : `SELECT * FROM pto_day_values${dayValueFreshnessClause}`;
+  const settingParams: unknown[] = [ptoManualYearsKey, ptoUiStateKey];
+  const settingQuery = `SELECT * FROM pto_settings WHERE setting_key IN (?, ?)${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, settingParams, "AND")}`;
+  const bucketRowParams: unknown[] = [];
+  const bucketRowQuery = `SELECT * FROM pto_bucket_rows${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, bucketRowParams, "WHERE")}`;
+  const bucketValueParams: unknown[] = [];
+  const bucketValueQuery = `SELECT * FROM pto_bucket_values${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, bucketValueParams, "WHERE")}`;
   const includeBuckets = !yearScope;
   const [currentRows, currentDayValues, currentSettings, currentBucketRows, currentBucketValues] = await Promise.all([
-    dbRows<PtoRowRecord>("SELECT * FROM pto_rows"),
-    dbRows<PtoDayValueRecord>(dayValueQuery, dayValueParams),
-    dbRows<PtoSettingRecord>("SELECT * FROM pto_settings WHERE setting_key IN (?, ?)", [ptoManualYearsKey, ptoUiStateKey]),
-    includeBuckets ? dbRows<PtoBucketRowRecord>("SELECT * FROM pto_bucket_rows") : Promise.resolve([]),
-    includeBuckets ? dbRows<PtoBucketValueRecord>("SELECT * FROM pto_bucket_values") : Promise.resolve([]),
+    dbRows<PtoRowRecord>(rowQuery, rowParams),
+    dbRows<PtoDayValueRecord>(currentDayValueQuery, dayValueParams),
+    dbRows<PtoSettingRecord>(settingQuery, settingParams),
+    includeBuckets ? dbRows<PtoBucketRowRecord>(bucketRowQuery, bucketRowParams) : Promise.resolve([]),
+    includeBuckets ? dbRows<PtoBucketValueRecord>(bucketValueQuery, bucketValueParams) : Promise.resolve([]),
   ]);
 
   assertFreshMysqlRecordsMatch(

@@ -99,7 +99,7 @@ assert.match(mysqlYearLoadSource, /ptoYearDateRange/);
 assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
 assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_day_values[\s\S]*WHERE work_date >= \? AND work_date <= \?/);
 assert.match(mysqlYearLoadSource, /\[start,\s*end\]/);
-assert.match(mysqlYearLoadSource, /ptoDayValueRecordsForYear/);
+assert.doesNotMatch(mysqlYearLoadSource, /ptoDayValueRecordsForYear/);
 assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_bucket_rows ORDER BY sort_index ASC/);
 
 const ptoRow = {
