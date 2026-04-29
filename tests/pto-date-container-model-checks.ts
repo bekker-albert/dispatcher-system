@@ -18,6 +18,7 @@ import type { usePtoDateViewportRefresh } from "../features/pto/ptoDateViewportM
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const ptoDateTableModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateTableModel.ts"), "utf8");
+const ptoDateRowsColumnsModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateRowsColumnsModel.ts"), "utf8");
 
 type PtoDateContainerModelCoverage = {
   editableProps: typeof createPtoDateEditableProps;
@@ -103,3 +104,4 @@ assert.notEqual(
 assert.match(ptoDateTableModelSource, /const rowsByYearAndSignature = new Map<string, Map<string, PtoPlanRow\[]>>\(\);/);
 assert.match(ptoDateTableModelSource, /const indexedRowsForYear = \(targetYear: string\) => \{/);
 assert.match(ptoDateTableModelSource, /const totalWithCarryover = \(row: PtoPlanRow, targetYear: string\): number => \{/);
+assert.match(ptoDateRowsColumnsModelSource, /const virtualRowsModel = useMemo\(\(\) => createPtoDateVirtualRowsViewModel\(\{/);

@@ -77,10 +77,10 @@ export function usePtoDateRowsColumnsModel({
     rowHeights: ptoRowHeights,
     table: ptoTab,
   }), [ptoRowHeights, ptoTab, tableModel.filteredRows]);
-  const virtualRowsModel = createPtoDateVirtualRowsViewModel({
+  const virtualRowsModel = useMemo(() => createPtoDateVirtualRowsViewModel({
     layout: virtualRowsLayout,
     viewport: ptoDateViewport,
-  });
+  }), [ptoDateViewport, virtualRowsLayout]);
 
   return {
     ...tableModel,
