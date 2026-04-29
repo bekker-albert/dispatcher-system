@@ -17,6 +17,7 @@ const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
+const useDispatchSummaryViewModelSource = readFileSync(resolve(testDir, "../features/dispatch/useDispatchSummaryViewModel.ts"), "utf8");
 
 const guardedSelectTopTabSource = useAppScreenPropsSource.match(/const guardedSelectTopTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
 const guardedSelectPtoTabSource = useAppScreenPropsSource.match(/const guardedSelectPtoTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
@@ -45,6 +46,9 @@ assert.match(useReportRowsModelSource, /reasonIndex \?\?= createReportReasonInde
 assert.match(useReportRowsModelSource, /const derivedReportRowsCacheRef = useRef\(new Map<string, CachedDerivedReportRow>\(\)\);/);
 assert.match(useReportRowsModelSource, /previous\?\.base === derivedRow/);
 assert.match(useReportRowsModelSource, /return previous\.output;/);
+assert.match(useDispatchSummaryViewModelSource, /const normalizedDispatchSearch = useMemo\(\(\) => search\.trim\(\)\.toLowerCase\(\), \[search\]\);/);
+assert.match(useDispatchSummaryViewModelSource, /const vehicleSearchRecords = useMemo/);
+assert.equal((useDispatchSummaryViewModelSource.match(/buildVehicleDisplayName\(vehicle\)/g) ?? []).length, 1);
 assert.match(useReportColumnLayoutSource, /createEmptyReportColumnValueLists/);
 assert.match(useReportColumnLayoutSource, /valuesByKey\[key\]\.push\(textRow\[key\]\)/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows\.map\(\(row\) => row\[key\]\)/);

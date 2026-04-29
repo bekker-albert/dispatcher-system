@@ -32,23 +32,41 @@ export function useDispatchSummaryViewModel({
   dispatchSummaryRows,
   reportBaseRows,
 }: UseDispatchSummaryViewModelOptions) {
+  const normalizedDispatchSearch = useMemo(() => search.trim().toLowerCase(), [search]);
+  const vehicleSearchRecords = useMemo(() => (
+    !active
+      ? []
+      : vehicleRows
+          .filter((vehicle) => vehicle.visible !== false)
+          .map((vehicle) => {
+            const displayName = buildVehicleDisplayName(vehicle);
+
+            return {
+              vehicle,
+              displayName,
+              searchText: [
+                displayName,
+                vehicle.area,
+                vehicle.location,
+                vehicle.workType,
+                vehicle.excavator,
+              ].join(" ").toLowerCase(),
+            };
+          })
+  ), [active, vehicleRows]);
+
   const filteredDispatch = useMemo(() => {
     if (!active) return [];
 
-    return vehicleRows.filter((vehicle) => {
-      if (vehicle.visible === false) return false;
-      const areaOk = areaFilter === "Все участки" || vehicle.area === areaFilter;
-      const normalizedSearch = search.trim().toLowerCase();
-      const textOk = normalizedSearch === "" || [
-        buildVehicleDisplayName(vehicle),
-        vehicle.area,
-        vehicle.location,
-        vehicle.workType,
-        vehicle.excavator,
-      ].join(" ").toLowerCase().includes(normalizedSearch);
-      return areaOk && textOk;
-    });
-  }, [active, areaFilter, search, vehicleRows]);
+    return vehicleSearchRecords
+      .filter(({ vehicle, searchText }) => {
+        const areaOk = areaFilter === "Все участки" || vehicle.area === areaFilter;
+        const textOk = normalizedDispatchSearch === "" || searchText.includes(normalizedDispatchSearch);
+
+        return areaOk && textOk;
+      })
+      .map(({ vehicle }) => vehicle);
+  }, [active, areaFilter, normalizedDispatchSearch, vehicleSearchRecords]);
 
   const currentDispatchShift = dispatchShiftFromTab(dispatchTab);
   const isDailyDispatchShift = currentDispatchShift === "daily";
@@ -66,11 +84,11 @@ export function useDispatchSummaryViewModel({
 
   const dispatchVehicleOptions = useMemo(() => (
     active
-      ? vehicleRows
-          .filter((vehicle) => vehicle.visible !== false)
-          .sort((left, right) => buildVehicleDisplayName(left).localeCompare(buildVehicleDisplayName(right), "ru"))
+      ? [...vehicleSearchRecords]
+          .sort((left, right) => left.displayName.localeCompare(right.displayName, "ru"))
+          .map(({ vehicle }) => vehicle)
       : []
-  ), [active, vehicleRows]);
+  ), [active, vehicleSearchRecords]);
 
   const dispatchLocationOptions = useMemo(() => uniqueSorted([
     ...(active ? vehicleRows.map((vehicle) => vehicle.location) : []),
@@ -97,11 +115,9 @@ export function useDispatchSummaryViewModel({
   ), [active, currentDispatchShift, dispatchSummaryRows, isDailyDispatchShift, reportDate]);
 
   const filteredDispatchSummaryRows = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
     return currentDispatchSummaryRows.filter((row) => {
       const areaOk = areaFilter === "Все участки" || normalizeLookupValue(row.area) === normalizeLookupValue(areaFilter);
-      const textOk = normalizedSearch === "" || [
+      const textOk = normalizedDispatchSearch === "" || [
         row.vehicleName,
         row.area,
         row.location,
@@ -109,11 +125,11 @@ export function useDispatchSummaryViewModel({
         row.excavator,
         row.reason,
         row.comment,
-      ].join(" ").toLowerCase().includes(normalizedSearch);
+      ].join(" ").toLowerCase().includes(normalizedDispatchSearch);
 
       return areaOk && textOk;
     });
-  }, [areaFilter, currentDispatchSummaryRows, search]);
+  }, [areaFilter, currentDispatchSummaryRows, normalizedDispatchSearch]);
 
   const dispatchSummaryTotals = useMemo(() => {
     const totals = filteredDispatchSummaryRows.reduce((result, row) => ({
