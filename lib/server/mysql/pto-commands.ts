@@ -36,6 +36,7 @@ export type PtoSnapshotWriteResult = PtoPersistenceSnapshotWriteResult;
 
 type PtoDayValuePatch = PtoPersistenceDayValuePatch;
 type PtoInlineWriteOptions = Pick<PtoSnapshotWriteOptions, "expectedUpdatedAt">;
+const inlineDeleteBatchSize = 250;
 
 const assertMysqlPtoMatchesExpectedUpdatedAt = assertFreshMysqlPtoMatchesExpectedUpdatedAt;
 const deletePtoBucketRowsMissingFromState = deleteMissingPtoBucketRowsFromMysqlState;
@@ -56,6 +57,48 @@ async function writePtoTransaction(callback: (execute: DbExecutor) => Promise<vo
   });
 
   return { updatedAt };
+}
+
+function chunkInlineDeletes<T>(values: T[]) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += inlineDeleteBatchSize) {
+    chunks.push(values.slice(index, index + inlineDeleteBatchSize));
+  }
+  return chunks;
+}
+
+async function deletePtoDayValuePatches(
+  table: PtoDateTableKey,
+  values: PtoDayValuePatch[],
+  execute: DbExecutor,
+) {
+  for (const batch of chunkInlineDeletes(values)) {
+    if (batch.length === 0) continue;
+
+    const placeholders = batch.map(() => "(?, ?)").join(", ");
+    await execute(
+      `DELETE FROM pto_day_values
+      WHERE table_type = ?
+        AND (row_id, work_date) IN (${placeholders})`,
+      [table, ...batch.flatMap((item) => [item.rowId, item.day])],
+    );
+  }
+}
+
+async function deletePtoBucketValuePairs(
+  pairs: Array<{ rowKey: string; equipmentKey: string }>,
+  execute: DbExecutor,
+) {
+  for (const batch of chunkInlineDeletes(pairs)) {
+    if (batch.length === 0) continue;
+
+    const placeholders = batch.map(() => "(?, ?)").join(", ");
+    await execute(
+      `DELETE FROM pto_bucket_values
+      WHERE (row_key, equipment_key) IN (${placeholders})`,
+      batch.flatMap((item) => [item.rowKey, item.equipmentKey]),
+    );
+  }
 }
 
 export async function savePtoStateToMysql(
@@ -152,13 +195,7 @@ export async function savePtoDayValuesToMysql(
   return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await upsertPtoDayValues(upsertRecords, execute);
-
-    for (const item of deleteValues) {
-      await execute(
-        "DELETE FROM pto_day_values WHERE table_type = ? AND row_id = ? AND work_date = ?",
-        [table, item.rowId, item.day],
-      );
-    }
+    await deletePtoDayValuePatches(table, deleteValues, execute);
   });
 }
 
@@ -175,13 +212,7 @@ export async function savePtoDayValuesWithRowToMysql(
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await insertPtoRowsIfMissing(ptoRowsToRecords(table, [row]), execute);
     await upsertPtoDayValues(upsertRecords, execute);
-
-    for (const item of deleteValues) {
-      await execute(
-        "DELETE FROM pto_day_values WHERE table_type = ? AND row_id = ? AND work_date = ?",
-        [table, row.id, item.day],
-      );
-    }
+    await deletePtoDayValuePatches(table, deleteValues, execute);
   });
 }
 
@@ -268,11 +299,6 @@ export async function deletePtoBucketValuesFromMysql(
 
   return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
-    for (const parsed of pairs) {
-      await execute(
-        "DELETE FROM pto_bucket_values WHERE row_key = ? AND equipment_key = ?",
-        [parsed.rowKey, parsed.equipmentKey],
-      );
-    }
+    await deletePtoBucketValuePairs(pairs, execute);
   });
 }

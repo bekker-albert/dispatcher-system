@@ -84,6 +84,9 @@ assert.match(supabasePtoCommandsSource, /supabasePtoInlineWriteResult\(client\)/
 assert.match(supabasePtoFreshnessSource, /export async function assertSupabasePtoInlineMatchesExpectedUpdatedAt/);
 assert.match(supabasePtoFreshnessSource, /export async function loadSupabasePtoCurrentUpdatedAt/);
 assert.match(mysqlPtoCommandsSource, /type PtoInlineWriteOptions = Pick<PtoSnapshotWriteOptions, "expectedUpdatedAt">;/);
+assert.match(mysqlPtoCommandsSource, /const inlineDeleteBatchSize = 250;/);
+assert.match(mysqlPtoCommandsSource, /DELETE FROM pto_day_values[\s\S]*AND \(row_id, work_date\) IN/);
+assert.match(mysqlPtoCommandsSource, /DELETE FROM pto_bucket_values[\s\S]*WHERE \(row_key, equipment_key\) IN/);
 assert.match(mysqlPtoCommandsSource, /savePtoDayValueWithRowToMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);[\s\S]*await insertPtoRowsIfMissing/);
 assert.match(mysqlPtoCommandsSource, /savePtoDayValuesWithRowToMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);[\s\S]*await insertPtoRowsIfMissing/);
 assert.match(mysqlPtoCommandsSource, /deletePtoRowsFromMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);/);
