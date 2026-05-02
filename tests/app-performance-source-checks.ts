@@ -19,6 +19,7 @@ const ptoBucketsTableRowSource = readFileSync(resolve(testDir, "../features/pto/
 const ptoBucketsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoBucketsPrimaryContent.tsx"), "utf8");
 const useAppPtoSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoSupplementalTables.ts"), "utf8");
 const useAppPtoBucketSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoBucketSupplementalTables.ts"), "utf8");
+const usePtoBucketsViewModelSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsViewModel.ts"), "utf8");
 const usePtoDateViewModelSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateViewModel.ts"), "utf8");
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const ptoDataPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoDataPrimaryContent.tsx"), "utf8");
@@ -141,6 +142,11 @@ assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsViewModel/)
 assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsEditor/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsViewModel/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsEditor/);
+assert.match(usePtoBucketsViewModelSource, /ptoBucketRowLookupSourcesSignature\(bucketRowSources\)/);
+assert.match(usePtoBucketsViewModelSource, /ptoBucketManualRowsSignature\(manualRows\)/);
+assert.match(usePtoBucketsViewModelSource, /ptoBucketVehicleColumnsSignature\(vehicleRows\)/);
+assert.match(usePtoBucketsViewModelSource, /createPtoBucketRows\(stableBucketRowSources, stableManualRows, areaFilter\)/);
+assert.match(usePtoBucketsViewModelSource, /createPtoBucketColumns\(stableVehicleRows\)/);
 assert.match(ptoDateTableViewModelSource, /const emptyPtoRowById = new Map<string, PtoPlanRow>\(\);/);
 assert.match(ptoDateTableViewModelSource, /const rowById = ptoDateEditing \? new Map\(rows\.map\(\(row\) => \[row\.id, row\] as const\)\) : emptyPtoRowById;/);
 assert.match(usePtoDateViewModelSource, /ptoDateEditing: boolean;/);

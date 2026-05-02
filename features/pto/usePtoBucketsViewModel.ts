@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { createPtoBucketColumns, createPtoBucketRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
-import type { PtoBucketRowLookupSource } from "./ptoDateLookupModel";
+import { ptoBucketRowLookupSourcesSignature, type PtoBucketRowLookupSource } from "./ptoDateLookupModel";
 
 type UsePtoBucketsViewModelOptions = {
   active: boolean;
@@ -12,6 +12,36 @@ type UsePtoBucketsViewModelOptions = {
   vehicleRows: VehicleRow[];
 };
 
+function ptoBucketManualRowsSignature(rows: readonly PtoBucketRow[]) {
+  return rows.map((row) => [row.key, row.area, row.structure, row.source ?? ""].join("\u001f")).join("\u001e");
+}
+
+function ptoBucketVehicleColumnsSignature(rows: readonly VehicleRow[]) {
+  return rows.map((row) => [
+    row.id,
+    row.visible === false ? "0" : "1",
+    row.vehicleType,
+    row.brand,
+    row.model,
+    row.name,
+  ].join("\u001f")).join("\u001e");
+}
+
+function useStableBucketRowSources(sources: PtoBucketRowLookupSource[], signature: string) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => sources, [signature]);
+}
+
+function useStableManualRows(rows: PtoBucketRow[], signature: string) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => rows, [signature]);
+}
+
+function useStableVehicleRows(rows: VehicleRow[], signature: string) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => rows, [signature]);
+}
+
 export function usePtoBucketsViewModel({
   active,
   bucketRowSources,
@@ -19,17 +49,24 @@ export function usePtoBucketsViewModel({
   areaFilter,
   vehicleRows,
 }: UsePtoBucketsViewModelOptions) {
+  const bucketRowSourcesSignature = useMemo(() => ptoBucketRowLookupSourcesSignature(bucketRowSources), [bucketRowSources]);
+  const manualRowsSignature = useMemo(() => ptoBucketManualRowsSignature(manualRows), [manualRows]);
+  const vehicleColumnsSignature = useMemo(() => ptoBucketVehicleColumnsSignature(vehicleRows), [vehicleRows]);
+  const stableBucketRowSources = useStableBucketRowSources(bucketRowSources, bucketRowSourcesSignature);
+  const stableManualRows = useStableManualRows(manualRows, manualRowsSignature);
+  const stableVehicleRows = useStableVehicleRows(vehicleRows, vehicleColumnsSignature);
+
   const ptoBucketRows = useMemo(() => {
     if (!active) return [];
 
-    return createPtoBucketRows(bucketRowSources, manualRows, areaFilter);
-  }, [active, areaFilter, bucketRowSources, manualRows]);
+    return createPtoBucketRows(stableBucketRowSources, stableManualRows, areaFilter);
+  }, [active, areaFilter, stableBucketRowSources, stableManualRows]);
 
   const ptoBucketColumns = useMemo(() => {
     if (!active) return [];
 
-    return createPtoBucketColumns(vehicleRows);
-  }, [active, vehicleRows]);
+    return createPtoBucketColumns(stableVehicleRows);
+  }, [active, stableVehicleRows]);
 
   return {
     ptoBucketRows,
