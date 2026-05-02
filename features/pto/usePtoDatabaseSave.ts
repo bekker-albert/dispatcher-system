@@ -84,7 +84,8 @@ export function usePtoDatabaseSave({
       return false;
     }
 
-    const snapshotToSave = serializePtoDatabaseState(ptoDatabaseStateRef.current);
+    const stateToSave = ptoDatabaseStateRef.current;
+    const snapshotToSave = serializePtoDatabaseState(stateToSave);
     if (ptoDatabaseSaveShouldSkip(mode, snapshotToSave, ptoDatabaseSaveSnapshotRef.current)) {
       setPtoDatabaseMessage(ptoDatabaseMessages.alreadySaved);
       return true;
@@ -110,11 +111,14 @@ export function usePtoDatabaseSave({
 
     try {
       const savePromise = enqueuePtoDatabaseWrite(async () => {
-        const snapshotAtWrite = serializePtoDatabaseState(ptoDatabaseStateRef.current);
+        const stateAtWrite = ptoDatabaseStateRef.current;
+        const snapshotAtWrite = stateAtWrite === stateToSave
+          ? snapshotToSave
+          : serializePtoDatabaseState(stateAtWrite);
         const baseline = readPtoDatabaseSaveBaseline(ptoDatabaseSaveSnapshotRef.current);
         const saveAllYears = ptoDatabaseFullSaveNextRef.current;
-        const saved = await savePtoDatabaseSnapshot(ptoDatabaseStateRef.current, baseline.expectedUpdatedAt, {
-          yearScope: saveAllYears ? undefined : ptoDatabaseStateRef.current.uiState.ptoPlanYear,
+        const saved = await savePtoDatabaseSnapshot(stateAtWrite, baseline.expectedUpdatedAt, {
+          yearScope: saveAllYears ? undefined : stateAtWrite.uiState.ptoPlanYear,
         });
         return createPtoDatabaseSaveBaseline(snapshotAtWrite, saved?.updatedAt ?? null);
       });

@@ -55,7 +55,10 @@ assert.match(ptoDatabaseSaveSource, /let suppressQueuedRetry = false;/);
 assert.match(ptoDatabaseSaveSource, /if \(isDatabaseConflictError\(error\)\) \{[\s\S]*suppressQueuedRetry = true;[\s\S]*ptoDatabaseSaveQueuedRef\.current = false;[\s\S]*setPtoDatabaseMessage\(ptoDatabaseMessages\.conflict\);/);
 assert.match(ptoDatabaseSaveSource, /if \(!suppressQueuedRetry && ptoDatabaseSaveQueuedRef\.current\) \{/);
 assert.match(ptoDatabaseSaveSource, /const saveAllYears = ptoDatabaseFullSaveNextRef\.current;/);
-assert.match(ptoDatabaseSaveSource, /yearScope: saveAllYears \? undefined : ptoDatabaseStateRef\.current\.uiState\.ptoPlanYear/);
+assert.match(ptoDatabaseSaveSource, /const stateToSave = ptoDatabaseStateRef\.current;/);
+assert.match(ptoDatabaseSaveSource, /const stateAtWrite = ptoDatabaseStateRef\.current;/);
+assert.match(ptoDatabaseSaveSource, /stateAtWrite === stateToSave[\s\S]*\? snapshotToSave[\s\S]*: serializePtoDatabaseState\(stateAtWrite\)/);
+assert.match(ptoDatabaseSaveSource, /yearScope: saveAllYears \? undefined : stateAtWrite\.uiState\.ptoPlanYear/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false;/);
 
 assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\s\S]*storage: Record<string, string>;[\s\S]*settings: Record<string, unknown>;[\s\S]*\};/);
