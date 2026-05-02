@@ -67,6 +67,17 @@ const summary = reportDisplay.createReportSummaryRow({ id: "sum-1", label: "Ит
 assert.equal(summary?.displayKey, "summary:sum-1");
 assert.equal(summary?.dayPlan, 10);
 
+const orderedReportRows = reportDisplay.sortReportRowsByAreaOrder([
+  normalizeReportRow({ area: "Аксу", name: "Вторая работа", unit: "м3" }),
+  normalizeReportRow({ area: "Аксу", name: "Первая работа", unit: "м3" }),
+], ["Аксу"], {
+  Аксу: [
+    reportDisplay.reportRowDisplayKey(normalizeReportRow({ area: "Аксу", name: "Первая работа", unit: "м3" })),
+    reportDisplay.reportRowDisplayKey(normalizeReportRow({ area: "Аксу", name: "Вторая работа", unit: "м3" })),
+  ],
+});
+assert.deepEqual(orderedReportRows.map((row) => row.name), ["Первая работа", "Вторая работа"]);
+
 const emptyIndex = buildReportPtoIndex([]);
 const ptoStatus = reportDisplay.reportPtoDateStatusFromIndexes(reportRow, "2026-04-12", emptyIndex, emptyIndex, emptyIndex);
 assert.equal(ptoStatus.planHasDateValue, false);

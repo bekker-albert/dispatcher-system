@@ -9,25 +9,73 @@ function reportReasonSummary(rows: ReportRow[], field: "dayReason" | "yearReason
   return aggregateReportReasons(rows.map((row) => row[field]).filter(Boolean));
 }
 
+function createLookupRankMap(values: readonly string[], options: { normalize?: boolean } = {}) {
+  const { normalize = true } = options;
+  const rankMap = new Map<string, number>();
+
+  values.forEach((value, index) => {
+    const key = normalize ? normalizeLookupValue(value) : value;
+    if (!rankMap.has(key)) rankMap.set(key, index);
+  });
+
+  return rankMap;
+}
+
+function createReportRowSums(rows: ReportRow[]) {
+  return rows.reduce((sums, row) => {
+    sums.dayPlan += row.dayPlan;
+    sums.dayFact += row.dayFact;
+    sums.dayProductivity += row.dayProductivity || row.dayFact;
+    sums.monthTotalPlan += row.monthTotalPlan;
+    sums.monthPlan += row.monthPlan;
+    sums.monthFact += reportMonthFact(row);
+    sums.monthSurveyFact += row.monthSurveyFact;
+    sums.monthOperFact += row.monthOperFact;
+    sums.monthProductivity += row.monthProductivity || reportMonthFact(row);
+    sums.yearPlan += row.yearPlan;
+    sums.yearFact += reportYearFact(row);
+    sums.yearSurveyFact += row.yearSurveyFact;
+    sums.yearOperFact += row.yearOperFact;
+    sums.annualPlan += row.annualPlan;
+    sums.annualFact += reportAnnualFact(row);
+    return sums;
+  }, {
+    dayPlan: 0,
+    dayFact: 0,
+    dayProductivity: 0,
+    monthTotalPlan: 0,
+    monthPlan: 0,
+    monthFact: 0,
+    monthSurveyFact: 0,
+    monthOperFact: 0,
+    monthProductivity: 0,
+    yearPlan: 0,
+    yearFact: 0,
+    yearSurveyFact: 0,
+    yearOperFact: 0,
+    annualPlan: 0,
+    annualFact: 0,
+  });
+}
+
 export function createReportFactSourceRow(row: ReportRow, sourceRows: ReportRow[]): ReportRow {
   if (sourceRows.length === 0) return row;
-
-  const sum = (selector: (sourceRow: ReportRow) => number) => sourceRows.reduce((total, sourceRow) => total + selector(sourceRow), 0);
+  const sums = createReportRowSums(sourceRows);
 
   return normalizeReportRow({
     ...row,
-    dayFact: sum((sourceRow) => sourceRow.dayFact),
-    dayProductivity: sum((sourceRow) => sourceRow.dayProductivity || sourceRow.dayFact),
+    dayFact: sums.dayFact,
+    dayProductivity: sums.dayProductivity,
     dayReason: reportReasonSummary(sourceRows, "dayReason"),
-    monthFact: sum(reportMonthFact),
-    monthSurveyFact: sum((sourceRow) => sourceRow.monthSurveyFact),
-    monthOperFact: sum((sourceRow) => sourceRow.monthOperFact),
-    monthProductivity: sum((sourceRow) => sourceRow.monthProductivity || reportMonthFact(sourceRow)),
-    yearFact: sum(reportYearFact),
-    yearSurveyFact: sum((sourceRow) => sourceRow.yearSurveyFact),
-    yearOperFact: sum((sourceRow) => sourceRow.yearOperFact),
+    monthFact: sums.monthFact,
+    monthSurveyFact: sums.monthSurveyFact,
+    monthOperFact: sums.monthOperFact,
+    monthProductivity: sums.monthProductivity,
+    yearFact: sums.yearFact,
+    yearSurveyFact: sums.yearSurveyFact,
+    yearOperFact: sums.yearOperFact,
     yearReason: reportReasonSummary(sourceRows, "yearReason"),
-    annualFact: sum(reportAnnualFact),
+    annualFact: sums.annualFact,
   });
 }
 
@@ -51,9 +99,9 @@ export function createReportSummaryRow(config: ReportSummaryRowConfig, rows: Rep
   const rowAreas = uniqueSorted(rows.map((row) => row.area));
   const unit = config.unit.trim() || planSourceRow?.unit || rowUnits[0] || "";
   const area = config.area.trim() || (rowAreas.length === 1 ? rowAreas[0] : "Итого");
-  const sum = (selector: (row: ReportRow) => number) => rows.reduce((total, row) => total + selector(row), 0);
+  const sums = createReportRowSums(rows);
   const planValue = (field: "dayPlan" | "monthTotalPlan" | "monthPlan" | "yearPlan" | "annualPlan") => (
-    planSourceRow ? planSourceRow[field] : sum((row) => row[field])
+    planSourceRow ? planSourceRow[field] : sums[field]
   );
 
   return {
@@ -62,35 +110,33 @@ export function createReportSummaryRow(config: ReportSummaryRowConfig, rows: Rep
       name: config.label.trim() || "Итоговая строка",
       unit,
       dayPlan: planValue("dayPlan"),
-      dayFact: sum((row) => row.dayFact),
-      dayProductivity: sum((row) => row.dayProductivity || row.dayFact),
+      dayFact: sums.dayFact,
+      dayProductivity: sums.dayProductivity,
       dayReason: reportReasonSummary(rows, "dayReason"),
       monthTotalPlan: planValue("monthTotalPlan"),
       monthPlan: planValue("monthPlan"),
-      monthFact: sum(reportMonthFact),
-      monthSurveyFact: sum((row) => row.monthSurveyFact),
-      monthOperFact: sum((row) => row.monthOperFact),
-      monthProductivity: sum((row) => row.monthProductivity || reportMonthFact(row)),
+      monthFact: sums.monthFact,
+      monthSurveyFact: sums.monthSurveyFact,
+      monthOperFact: sums.monthOperFact,
+      monthProductivity: sums.monthProductivity,
       yearPlan: planValue("yearPlan"),
-      yearFact: sum(reportYearFact),
-      yearSurveyFact: sum((row) => row.yearSurveyFact),
-      yearOperFact: sum((row) => row.yearOperFact),
+      yearFact: sums.yearFact,
+      yearSurveyFact: sums.yearSurveyFact,
+      yearOperFact: sums.yearOperFact,
       yearReason: reportReasonSummary(rows, "yearReason"),
       annualPlan: planValue("annualPlan"),
-      annualFact: sum(reportAnnualFact),
+      annualFact: sums.annualFact,
     }),
     displayKey: `summary:${config.id}`,
   };
 }
 
 export function sortAreaNamesByOrder(areas: string[], order: string[]) {
-  const orderedKeys = order.map(normalizeLookupValue);
+  const areaOrderRank = createLookupRankMap(order);
 
   return [...areas].sort((a, b) => {
-    const aIndex = orderedKeys.indexOf(normalizeLookupValue(a));
-    const bIndex = orderedKeys.indexOf(normalizeLookupValue(b));
-    const aRank = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
-    const bRank = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+    const aRank = areaOrderRank.get(normalizeLookupValue(a)) ?? Number.MAX_SAFE_INTEGER;
+    const bRank = areaOrderRank.get(normalizeLookupValue(b)) ?? Number.MAX_SAFE_INTEGER;
 
     return aRank - bRank || a.localeCompare(b, "ru");
   });
@@ -99,18 +145,17 @@ export function sortAreaNamesByOrder(areas: string[], order: string[]) {
 export function sortReportRowsByAreaOrder(rows: ReportRow[], order: string[], workOrder: Record<string, string[]> = {}) {
   const sortedAreas = sortAreaNamesByOrder(uniqueSorted(rows.map((row) => row.area)), order);
   const areaRank = new Map(sortedAreas.map((area, index) => [normalizeLookupValue(area), index]));
+  const workRankByArea = new Map(
+    Object.entries(workOrder).map(([area, rowKeys]) => [normalizeLookupValue(area), createLookupRankMap(rowKeys, { normalize: false })]),
+  );
 
   return [...rows].sort((a, b) => {
     const aAreaKey = normalizeLookupValue(a.area);
     const bAreaKey = normalizeLookupValue(b.area);
     const aRank = areaRank.get(aAreaKey) ?? Number.MAX_SAFE_INTEGER;
     const bRank = areaRank.get(bAreaKey) ?? Number.MAX_SAFE_INTEGER;
-    const aWorkOrder = workOrder[aAreaKey] ?? [];
-    const bWorkOrder = workOrder[bAreaKey] ?? [];
-    const aWorkIndex = aWorkOrder.indexOf(reportRowDisplayKey(a));
-    const bWorkIndex = bWorkOrder.indexOf(reportRowDisplayKey(b));
-    const aWorkRank = aWorkIndex === -1 ? Number.MAX_SAFE_INTEGER : aWorkIndex;
-    const bWorkRank = bWorkIndex === -1 ? Number.MAX_SAFE_INTEGER : bWorkIndex;
+    const aWorkRank = workRankByArea.get(aAreaKey)?.get(reportRowDisplayKey(a)) ?? Number.MAX_SAFE_INTEGER;
+    const bWorkRank = workRankByArea.get(bAreaKey)?.get(reportRowDisplayKey(b)) ?? Number.MAX_SAFE_INTEGER;
 
     return aRank - bRank || aWorkRank - bWorkRank || a.name.localeCompare(b.name, "ru");
   });
