@@ -1,17 +1,16 @@
 import { useMemo, useRef } from "react";
 
 import {
-  buildReportPtoIndex,
-  createReportRowFromPtoPlan,
-  deriveReportRowFromPtoIndex,
-  reportReasonAccumulationStartDateFromIndexes,
-} from "@/lib/domain/reports/calculation";
+  createReportBaseRows,
+  createReportPtoIndexes,
+  createReportReasonAccumulationStartDateByRowKey,
+  deriveReportRowsFromPtoIndexes,
+} from "@/lib/domain/reports/rows-model";
 import { delta, reportRowKey } from "@/lib/domain/reports/display";
 import { reportYearFact } from "@/lib/domain/reports/facts";
 import { createReportReasonIndex, reportReasonEntryKey, reportYearReasonValueFromIndex } from "@/lib/domain/reports/reasons";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
-import { cleanAreaName } from "@/lib/utils/text";
 
 type UseReportRowsModelOptions = {
   needsReportRows: boolean;
@@ -46,63 +45,25 @@ export function useReportRowsModel({
   const reportBaseRows = useMemo(() => {
     if (!needsReportRows) return [];
 
-    const rowsByKey = new Map<string, ReportRow>();
-    const plannedBaseKeys = new Set(
-      deferredPtoPlanRows
-        .filter((row) => row.structure.trim())
-        .map((row) => reportRowKey({ area: cleanAreaName(row.area), name: row.structure })),
-    );
-
-    deferredPtoPlanRows.forEach((row) => {
-      if (!row.structure.trim()) return;
-
-      const reportRow = createReportRowFromPtoPlan(row);
-      const key = reportRowKey(reportRow);
-      if (!rowsByKey.has(key)) rowsByKey.set(key, reportRow);
-    });
-
-    [...deferredPtoSurveyRows, ...deferredPtoOperRows].forEach((row) => {
-      if (!row.structure.trim()) return;
-
-      const baseKey = reportRowKey({ area: cleanAreaName(row.area), name: row.structure });
-      if (plannedBaseKeys.has(baseKey)) return;
-
-      const reportRow = createReportRowFromPtoPlan(row);
-      const key = reportRowKey(reportRow);
-      if (!rowsByKey.has(key)) rowsByKey.set(key, reportRow);
-    });
-
-    return Array.from(rowsByKey.values()).sort((a, b) => (
-      a.area.localeCompare(b.area, "ru") || a.name.localeCompare(b.name, "ru")
-    ));
+    return createReportBaseRows(deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows);
   }, [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, needsReportRows]);
 
   const reportPtoIndexes = useMemo(() => (
     needsReportIndexes
-      ? {
-          plan: buildReportPtoIndex(deferredPtoPlanRows, { includeCustomerCode: true }),
-          survey: buildReportPtoIndex(deferredPtoSurveyRows),
-          oper: buildReportPtoIndex(deferredPtoOperRows),
-        }
+      ? createReportPtoIndexes(deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows)
       : null
   ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, needsReportIndexes]);
 
   const calculatedReportRows = useMemo(() => (
-    needsAutoReportRows && reportPtoIndexes ? reportBaseRows.map((row) => (
-      deriveReportRowFromPtoIndex(row, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper)
-    )) : []
+    needsAutoReportRows && reportPtoIndexes
+      ? deriveReportRowsFromPtoIndexes(reportBaseRows, reportDate, reportPtoIndexes)
+      : []
   ), [needsAutoReportRows, reportBaseRows, reportDate, reportPtoIndexes]);
 
   const reasonAccumulationStartDateByRowKey = useMemo(() => {
     if (!needsAutoReportRows || !needsReportReasons || !reportPtoIndexes) return new Map<string, string>();
 
-    return new Map(calculatedReportRows.flatMap((derivedRow) => {
-      const rowKey = reportRowKey(derivedRow);
-      const yearDelta = delta(derivedRow.yearPlan, reportYearFact(derivedRow));
-      return yearDelta < 0
-        ? [[rowKey, reportReasonAccumulationStartDateFromIndexes(derivedRow, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper)] as const]
-        : [];
-    }));
+    return createReportReasonAccumulationStartDateByRowKey(calculatedReportRows, reportDate, reportPtoIndexes);
   }, [calculatedReportRows, needsAutoReportRows, needsReportReasons, reportDate, reportPtoIndexes]);
 
   const derivedReportRows = useMemo(() => {

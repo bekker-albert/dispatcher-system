@@ -5,9 +5,11 @@ import { deriveReportRowFromPtoIndex } from "../lib/domain/reports/pto-facts";
 import { buildReportPtoIndex as buildReportPtoIndexDirect } from "../lib/domain/reports/pto-index";
 import { normalizeReportRow as normalizeReportRowDirect } from "../lib/domain/reports/row-normalization";
 import { reportColumnKeys } from "../lib/domain/reports/columns";
+import { createReportBaseRows } from "../lib/domain/reports/rows-model";
 import { reportReasonEntryKey, reportYearReasonOverrideKey } from "../lib/domain/reports/reasons";
 import { createReportBodyLayout, createReportPrintLayout } from "../features/reports/reportPrintLayout";
 import { createReportRowDisplayViewModel } from "../features/reports/reportRowDisplayViewModel";
+import { normalizePtoPlanRow } from "../lib/domain/pto/date-table";
 import type { ReportRow } from "../lib/domain/reports/types";
 
 const expectedDisplayExports = [
@@ -84,6 +86,16 @@ assert.equal(ptoStatus.planHasDateValue, false);
 
 const derivedRow = deriveReportRowFromPtoIndex(reportRow, "2026-04-12", emptyIndex, emptyIndex, emptyIndex);
 assert.equal(derivedRow.dayPlan, 10);
+
+const reportBaseRows = createReportBaseRows(
+  [normalizePtoPlanRow({ area: "Aksu", structure: "Planned work", unit: "m3" })],
+  [
+    normalizePtoPlanRow({ area: "Aksu", structure: "Planned work", unit: "m3" }),
+    normalizePtoPlanRow({ area: "Aksu", structure: "Fact-only work", unit: "m3" }),
+  ],
+  [],
+);
+assert.deepEqual(reportBaseRows.map((row) => row.name), ["Fact-only work", "Planned work"]);
 
 const reportRowDisplayKey = reportDisplay.reportRowDisplayKey(reportRow);
 const rowView = createReportRowDisplayViewModel({
