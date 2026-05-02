@@ -30,10 +30,18 @@ export function usePtoUiStateDatabaseSync({
     expandedPtoMonths,
   }), [expandedPtoMonths, ptoAreaFilter, ptoPlanYear, ptoTab]);
   const previousUiStateSignatureRef = useRef(uiStateSignature);
+  const databaseLoadedForUiStateRef = useRef(false);
 
   useEffect(() => {
     const currentYearLoaded = ptoDatabaseLoadedYearRef.current === ptoPlanYear;
     if (!adminDataLoaded || !ptoDatabaseLoadedRef.current || !currentYearLoaded) {
+      previousUiStateSignatureRef.current = uiStateSignature;
+      databaseLoadedForUiStateRef.current = false;
+      return;
+    }
+
+    if (!databaseLoadedForUiStateRef.current) {
+      databaseLoadedForUiStateRef.current = true;
       previousUiStateSignatureRef.current = uiStateSignature;
       return;
     }

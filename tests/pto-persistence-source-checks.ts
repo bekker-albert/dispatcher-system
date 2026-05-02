@@ -27,6 +27,9 @@ const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase
 const supabasePtoFreshnessSource = readFileSync(resolve(testDir, "../lib/supabase/pto-freshness.ts"), "utf8");
 
 assert.match(ptoUiStateDatabaseSyncSource, /export function usePtoUiStateDatabaseSync/);
+assert.match(ptoUiStateDatabaseSyncSource, /const databaseLoadedForUiStateRef = useRef\(false\);/);
+assert.match(ptoUiStateDatabaseSyncSource, /databaseLoadedForUiStateRef\.current = false;/);
+assert.match(ptoUiStateDatabaseSyncSource, /if \(!databaseLoadedForUiStateRef\.current\) \{[\s\S]*databaseLoadedForUiStateRef\.current = true;[\s\S]*previousUiStateSignatureRef\.current = uiStateSignature;[\s\S]*return;[\s\S]*\}/);
 assert.match(appPtoPersistenceSource, /import \{ usePtoUiStateDatabaseSync \} from "@\/features\/pto\/usePtoUiStateDatabaseSync";/);
 assert.match(appPtoPersistenceSource, /usePtoDatabaseLoad\(\{[\s\S]*adminDataLoaded: ptoDatabaseLoadEnabled,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceSource, /usePtoDatabaseSave\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*\}\);/);
