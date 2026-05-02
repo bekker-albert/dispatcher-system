@@ -17,13 +17,19 @@ type InitialAppDatabaseBootstrapOptions = {
   appSettingsDatabaseSaveSnapshotRef: MutableRef<string>;
 };
 
+export type InitialAppDatabaseBootstrapResult = {
+  completed: boolean;
+  storageChanged: boolean;
+};
+
 export async function loadInitialAppDatabaseBootstrap({
   hasLocalAppState,
   isCancelled,
   appDatabaseSaveSnapshotRef,
   appSettingsDatabaseLoadedRef,
   appSettingsDatabaseSaveSnapshotRef,
-}: InitialAppDatabaseBootstrapOptions) {
+}: InitialAppDatabaseBootstrapOptions): Promise<InitialAppDatabaseBootstrapResult> {
+  let storageChanged = false;
   const [
     { createAppStateSaveCheckpoint },
     { loadInitialAppBootstrapFromDatabase },
@@ -48,7 +54,7 @@ export async function loadInitialAppDatabaseBootstrap({
   if (appStateResult.status === "fulfilled") {
     const { createAppStateSaveCheckpoint, databaseAppState } = appStateResult.value;
 
-    if (isCancelled()) return false;
+    if (isCancelled()) return { completed: false, storageChanged };
 
     const databaseStorage = databaseAppState?.storage ?? {};
     appDatabaseSaveSnapshotRef.current = createAppStateSaveCheckpoint(
@@ -74,6 +80,7 @@ export async function loadInitialAppDatabaseBootstrap({
       if (databaseAppState?.updatedAt) {
         window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseAppState.updatedAt);
       }
+      storageChanged = true;
     } else if (hasLocalAppState && !localUpdatedAt) {
       window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
     }
@@ -85,7 +92,7 @@ export async function loadInitialAppDatabaseBootstrap({
     const databaseSettings = settingsResult.value;
     appSettingsDatabaseLoadedRef.current = true;
 
-    if (isCancelled()) return false;
+    if (isCancelled()) return { completed: false, storageChanged };
 
     const databaseSettingsUpdatedTime = Math.max(
       0,
@@ -108,6 +115,7 @@ export async function loadInitialAppDatabaseBootstrap({
       if (databaseSettingsUpdatedTime > 0) {
         window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date(databaseSettingsUpdatedTime).toISOString());
       }
+      storageChanged = true;
     }
 
     appSettingsDatabaseSaveSnapshotRef.current = createSharedAppSettingsDatabaseSnapshot(databaseSettings);
@@ -116,5 +124,5 @@ export async function loadInitialAppDatabaseBootstrap({
     console.warn("App settings table is not ready:", settingsResult.reason);
   }
 
-  return true;
+  return { completed: true, storageChanged };
 }

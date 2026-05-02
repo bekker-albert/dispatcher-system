@@ -174,17 +174,19 @@ export async function runInitialAppDataLoad(
     }
 
     if (databaseConfigured) {
-      const databaseBootstrapCompleted = await loadInitialAppDatabaseBootstrap({
+      const databaseBootstrap = await loadInitialAppDatabaseBootstrap({
         hasLocalAppState,
         isCancelled,
         appDatabaseSaveSnapshotRef,
         appSettingsDatabaseLoadedRef,
         appSettingsDatabaseSaveSnapshotRef,
       });
-      if (!databaseBootstrapCompleted) return;
+      if (!databaseBootstrap.completed) return;
 
-      storedState = readInitialStoredAppState({ includePto: false });
-      initialReportState = applySharedState(storedState);
+      if (databaseBootstrap.storageChanged) {
+        storedState = readInitialStoredAppState({ includePto: false });
+        initialReportState = applySharedState(storedState);
+      }
       if (!isCancelled()) setPtoDatabaseLoadStarted(true);
     } else if (!isCancelled()) {
       setPtoBootstrapLoaded(true);

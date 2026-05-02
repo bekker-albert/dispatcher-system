@@ -6,6 +6,8 @@ import { createEmptyPtoDateModel } from "../features/app/emptyPtoDateModel";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const appPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/AppPrimaryContent.tsx"), "utf8");
+const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features/app/initialAppDataLoadSteps.ts"), "utf8");
+const initialAppDatabaseBootstrapSource = readFileSync(resolve(testDir, "../features/app/initialAppDatabaseBootstrap.ts"), "utf8");
 const navigationSelectionHandlersSource = readFileSync(resolve(testDir, "../features/navigation/useNavigationSelectionHandlers.ts"), "utf8");
 const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto/ptoBucketsGridModel.ts"), "utf8");
 const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
@@ -73,6 +75,8 @@ assert.doesNotMatch(reportTableBodySource, /const rowKey = reportRowDisplayKey\(
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /const ptoTabNeedsDatabase = isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets";/);
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
+assert.match(initialAppDatabaseBootstrapSource, /storageChanged: boolean/);
+assert.match(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged\) \{\s*storedState = readInitialStoredAppState\(\{ includePto: false \}\);\s*initialReportState = applySharedState\(storedState\);\s*\}/);
 assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(enabled: boolean\)/);
 assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
 assert.match(useAppSectionPreloaderSource, /const coreSectionPreloaders = \[/);
