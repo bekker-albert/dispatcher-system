@@ -1,12 +1,16 @@
 import type { CSSProperties } from "react";
 
 export const adminVehicleColumnWidths = [46, 165, 190, 100, 120, 112, 96, 96, 170, 180, 34];
+export const adminVehicleVirtualRowHeight = 30;
+export const adminVehicleVirtualOverscanRows = 8;
+export const adminVehicleVirtualizationThreshold = 80;
 
 export const adminVehicleTableScrollStyle: CSSProperties = {
   overflow: "auto",
   border: "1px solid #e2e8f0",
   borderRadius: 8,
   background: "#ffffff",
+  maxHeight: "calc(100vh - 260px)",
 };
 
 export const adminVehicleTableStyle: CSSProperties = {
@@ -58,6 +62,12 @@ export const adminVehicleEmptyRowStyle: CSSProperties = {
   color: "#64748b",
   padding: "14px 10px",
   textAlign: "center",
+};
+
+export const adminVehicleSpacerCellStyle: CSSProperties = {
+  padding: 0,
+  borderBottom: 0,
+  height: 0,
 };
 
 export const adminVehicleNumberTdStyle: CSSProperties = {

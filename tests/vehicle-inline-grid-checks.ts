@@ -10,6 +10,7 @@ import {
   vehicleCellRangeKeys,
   vehicleKeyStartsInlineEdit,
 } from "../features/admin/vehicles/vehicleInlineGridModel";
+import { createAdminVehicleVirtualRows } from "../features/admin/vehicles/adminVehicleVirtualRows";
 import {
   clearVehicleInlineFields,
   vehicleInlineCellValue,
@@ -25,6 +26,7 @@ import type { VehicleRow } from "../lib/domain/vehicles/types";
 import { adminStorageKeys } from "../lib/storage/keys";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
+const adminVehiclesTableSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehiclesTable.tsx"), "utf8");
 const adminVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleFilterMenu.tsx"), "utf8");
 
 const rows = [
@@ -97,6 +99,21 @@ assert.equal(vehicleKeyStartsInlineEdit("manufactureYear", "A"), false);
 assert.equal(vehicleKeyStartsInlineEdit("manufactureYear", "."), false);
 assert.equal(vehicleKeyStartsInlineEdit("brand", "Enter"), false);
 assert.equal(vehicleKeyStartsInlineEdit("brand", ""), false);
+assert.match(adminVehiclesTableSource, /createAdminVehicleVirtualRows\(visibleVehicleRows, vehicleRowsViewport, !adminVehiclesEditing\)/);
+assert.match(adminVehiclesTableSource, /onScroll=\{scheduleVehicleRowsViewportUpdate\}/);
+assert.match(adminVehiclesTableSource, /virtualVehicleRows\.topSpacerHeight/);
+
+const virtualSourceRows = Array.from({ length: 120 }, (_, index) => index);
+assert.deepEqual(
+  createAdminVehicleVirtualRows(virtualSourceRows, { height: 120, scrollTop: 600 }, false),
+  { rows: virtualSourceRows, topSpacerHeight: 0, bottomSpacerHeight: 0 },
+);
+
+const virtualVehicleRows = createAdminVehicleVirtualRows(virtualSourceRows, { height: 120, scrollTop: 600 }, true);
+assert.equal(virtualVehicleRows.rows[0], 12);
+assert.equal(virtualVehicleRows.topSpacerHeight, 360);
+assert.equal(virtualVehicleRows.rows.length < virtualSourceRows.length, true);
+assert.equal(virtualVehicleRows.bottomSpacerHeight > 0, true);
 
 const vehicleRows = [
   {

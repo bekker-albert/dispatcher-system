@@ -1,11 +1,15 @@
-import type { ReactNode, RefObject } from "react";
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { VehicleFilterKey, VehicleFilters, VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { AdminVehicleFilterHeader } from "./AdminVehicleFilterHeader";
 import { AdminVehicleTableRow, type VehicleCellShellProps } from "./AdminVehicleTableRow";
+import { createAdminVehicleVirtualRows } from "./adminVehicleVirtualRows";
 import {
   adminVehicleColumnWidths,
   adminVehicleEmptyRowStyle,
+  adminVehicleSpacerCellStyle,
   adminVehicleTableScrollStyle,
   adminVehicleTableStyle,
   adminVehicleThStyle,
@@ -64,8 +68,55 @@ export function AdminVehiclesTable({
   onVehicleCellChange: (id: number, field: VehicleInlineField, value: string) => void;
   onDeleteVehicle: (id: number) => void;
 }) {
+  const viewportFrameRef = useRef<number | null>(null);
+  const [vehicleRowsViewport, setVehicleRowsViewport] = useState({ height: 520, scrollTop: 0 });
+
+  const updateVehicleRowsViewport = useCallback(() => {
+    const element = adminVehicleTableScrollRef.current;
+    if (!element) return;
+
+    const nextViewport = {
+      height: element.clientHeight || 520,
+      scrollTop: element.scrollTop,
+    };
+
+    setVehicleRowsViewport((current) => (
+      current.height === nextViewport.height && current.scrollTop === nextViewport.scrollTop
+        ? current
+        : nextViewport
+    ));
+  }, [adminVehicleTableScrollRef]);
+
+  const scheduleVehicleRowsViewportUpdate = useCallback(() => {
+    if (viewportFrameRef.current !== null) return;
+
+    viewportFrameRef.current = window.requestAnimationFrame(() => {
+      viewportFrameRef.current = null;
+      updateVehicleRowsViewport();
+    });
+  }, [updateVehicleRowsViewport]);
+
+  useEffect(() => {
+    updateVehicleRowsViewport();
+    window.addEventListener("resize", updateVehicleRowsViewport);
+
+    return () => {
+      window.removeEventListener("resize", updateVehicleRowsViewport);
+
+      if (viewportFrameRef.current !== null) {
+        window.cancelAnimationFrame(viewportFrameRef.current);
+        viewportFrameRef.current = null;
+      }
+    };
+  }, [updateVehicleRowsViewport, visibleVehicleRows.length]);
+
+  const virtualVehicleRows = useMemo(() => (
+    createAdminVehicleVirtualRows(visibleVehicleRows, vehicleRowsViewport, !adminVehiclesEditing)
+  ), [adminVehiclesEditing, vehicleRowsViewport, visibleVehicleRows]);
+  const columnSpan = vehicleFilterColumns.length + 1;
+
   return (
-    <div ref={adminVehicleTableScrollRef} style={adminVehicleTableScrollStyle}>
+    <div ref={adminVehicleTableScrollRef} onScroll={scheduleVehicleRowsViewportUpdate} style={adminVehicleTableScrollStyle}>
       <table style={adminVehicleTableStyle}>
         <colgroup>
           {adminVehicleColumnWidths.map((width, index) => (
@@ -97,7 +148,12 @@ export function AdminVehiclesTable({
           </tr>
         </thead>
         <tbody>
-          {visibleVehicleRows.map((vehicle) => (
+          {virtualVehicleRows.topSpacerHeight > 0 ? (
+            <tr aria-hidden>
+              <td colSpan={columnSpan} style={{ ...adminVehicleSpacerCellStyle, height: virtualVehicleRows.topSpacerHeight }} />
+            </tr>
+          ) : null}
+          {virtualVehicleRows.rows.map((vehicle) => (
             <AdminVehicleTableRow
               key={vehicle.id}
               adminVehiclesEditing={adminVehiclesEditing}
@@ -108,9 +164,14 @@ export function AdminVehiclesTable({
               onDeleteVehicle={onDeleteVehicle}
             />
           ))}
+          {virtualVehicleRows.bottomSpacerHeight > 0 ? (
+            <tr aria-hidden>
+              <td colSpan={columnSpan} style={{ ...adminVehicleSpacerCellStyle, height: virtualVehicleRows.bottomSpacerHeight }} />
+            </tr>
+          ) : null}
           {filteredVehicleRowsCount === 0 ? (
             <tr>
-              <td colSpan={11} style={adminVehicleEmptyRowStyle}>Нет техники по выбранным фильтрам</td>
+              <td colSpan={columnSpan} style={adminVehicleEmptyRowStyle}>Нет техники по выбранным фильтрам</td>
             </tr>
           ) : null}
         </tbody>
