@@ -1,18 +1,29 @@
-import {
-  loadAppStateFromSupabase as loadAppStateFromBackend,
-  loadClientAppSnapshotsFromSupabase as loadClientAppSnapshotsFromBackend,
-  saveAppStateToSupabase as saveAppStateToBackend,
-  saveClientAppSnapshotToSupabase as saveClientAppSnapshotToBackend,
-  type SaveAppStateOptions as BackendSaveAppStateOptions,
-  type SupabaseAppState as BackendAppState,
-  type SupabaseClientSnapshot as BackendClientSnapshot,
-  type SupabaseClientSnapshotMeta as BackendClientSnapshotMeta,
-} from "../supabase/app-state";
+import { databaseRequest } from "../database/rpc";
+import { serverDatabaseConfigured } from "./config";
 
-export type DataAppState = BackendAppState;
-export type DataClientSnapshot = BackendClientSnapshot;
-export type DataClientSnapshotMeta = BackendClientSnapshotMeta;
-export type SaveAppStateOptions = BackendSaveAppStateOptions;
+export type DataAppState = {
+  updatedAt?: string;
+  storage: Record<string, string>;
+};
+
+export type DataClientSnapshotMeta = {
+  reason: string;
+  userAgent?: string;
+  url?: string;
+};
+
+export type DataClientSnapshot = {
+  key: string;
+  clientId: string;
+  savedAt?: string;
+  updatedAt?: string;
+  storage: Record<string, string>;
+  meta: DataClientSnapshotMeta;
+};
+
+export type SaveAppStateOptions = {
+  expectedUpdatedAt?: string | null;
+};
 
 export type DataAppStateSaveCheckpoint = {
   storage: Record<string, string>;
@@ -82,15 +93,32 @@ export function parseAppStateSaveCheckpoint(checkpoint: string): DataAppStateSav
   }
 }
 
+async function loadSupabaseAppStateAdapter() {
+  return import("../supabase/app-state");
+}
+
 export function loadAppStateFromDatabase() {
-  return loadAppStateFromBackend();
+  if (serverDatabaseConfigured) {
+    return databaseRequest<DataAppState | null>("app-state", "load");
+  }
+
+  return loadSupabaseAppStateAdapter()
+    .then(({ loadAppStateFromSupabase }) => loadAppStateFromSupabase());
 }
 
 export function saveAppStateToDatabase(
   storage: Record<string, string>,
   options: SaveAppStateOptions = {},
 ) {
-  return saveAppStateToBackend(storage, options);
+  if (serverDatabaseConfigured) {
+    return databaseRequest<DataAppState>("app-state", "save", {
+      storage,
+      expectedUpdatedAt: options.expectedUpdatedAt,
+    });
+  }
+
+  return loadSupabaseAppStateAdapter()
+    .then(({ saveAppStateToSupabase }) => saveAppStateToSupabase(storage, options));
 }
 
 export function saveClientAppSnapshotToDatabase(
@@ -98,9 +126,19 @@ export function saveClientAppSnapshotToDatabase(
   storage: Record<string, string>,
   meta: DataClientSnapshotMeta,
 ) {
-  return saveClientAppSnapshotToBackend(clientId, storage, meta);
+  if (serverDatabaseConfigured) {
+    return databaseRequest("app-state", "save-client-snapshot", { clientId, storage, meta });
+  }
+
+  return loadSupabaseAppStateAdapter()
+    .then(({ saveClientAppSnapshotToSupabase }) => saveClientAppSnapshotToSupabase(clientId, storage, meta));
 }
 
 export function loadClientAppSnapshotsFromDatabase() {
-  return loadClientAppSnapshotsFromBackend();
+  if (serverDatabaseConfigured) {
+    return databaseRequest<DataClientSnapshot[]>("app-state", "load-client-snapshots");
+  }
+
+  return loadSupabaseAppStateAdapter()
+    .then(({ loadClientAppSnapshotsFromSupabase }) => loadClientAppSnapshotsFromSupabase());
 }
