@@ -121,10 +121,6 @@ const statements = [
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 ];
 
-type SchemaVersionRow = RowDataPacket & {
-  meta_key: string;
-};
-
 async function executeIgnoringMysqlError(statement: string, ignoredCode: string) {
   try {
     await getMysqlPool().execute(statement);
@@ -155,14 +151,6 @@ async function mysqlColumnExists(tableName: string, columnName: string) {
   return rows.length > 0;
 }
 
-async function mysqlSchemaVersionExists() {
-  const rows = await mysqlRows<SchemaVersionRow>(
-    "SELECT meta_key FROM pto_meta WHERE meta_key = ? LIMIT 1",
-    [schemaVersionMetaKey],
-  );
-  return rows.length > 0;
-}
-
 async function addMysqlIndexIfMissing(tableName: string, indexName: string, statement: string) {
   if (await mysqlIndexExists(tableName, indexName)) return;
   await executeIgnoringMysqlError(statement, "ER_DUP_KEYNAME");
@@ -175,7 +163,6 @@ async function addMysqlColumnIfMissing(tableName: string, columnName: string, st
 
 async function runMysqlSchemaSetup() {
   await getMysqlPool().execute(ptoMetaTableStatement);
-  if (await mysqlSchemaVersionExists()) return;
 
   for (const statement of statements) {
     await getMysqlPool().execute(statement);
