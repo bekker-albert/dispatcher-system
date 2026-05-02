@@ -3,22 +3,14 @@
 import dynamic from "next/dynamic";
 import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTypes";
 import { createEmptyPtoDateModel } from "@/features/app/emptyPtoDateModel";
-import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import type { AppPtoModels } from "@/features/app/appPtoScreenPropsTypes";
-import { usePtoDateEditingGlobalReset } from "@/features/app/usePtoDateEditingGlobalReset";
 import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
 
 type PtoPrimaryContentProps = Pick<AppPrimaryContentProps, "appState" | "models" | "runtime" | "navigation">;
 
-const PtoDatePrimaryContent = dynamic(
-  () => import("@/features/app/PtoDatePrimaryContent")
-    .then((module) => module.PtoDatePrimaryContent),
-  { ssr: false },
-);
-
-const PtoBucketsPrimaryContent = dynamic(
-  () => import("@/features/app/PtoBucketsPrimaryContent")
-    .then((module) => module.PtoBucketsPrimaryContent),
+const PtoDataPrimaryContent = dynamic(
+  () => import("@/features/app/PtoDataPrimaryContent")
+    .then((module) => module.PtoDataPrimaryContent),
   { ssr: false },
 );
 
@@ -54,50 +46,4 @@ export function PtoPrimaryContent({
       navigation={navigation}
     />
   );
-}
-
-function PtoDataPrimaryContent({
-  appState,
-  models,
-  runtime,
-  navigation,
-}: PtoPrimaryContentProps) {
-  const {
-    ptoTab,
-    ptoPlanYear,
-    ptoManualYears,
-    expandedPtoMonths,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    ptoBucketManualRows,
-  } = appState;
-
-  const ptoDateModel = useAppPtoDateModel({
-    renderedTopTab: models.renderedTopTab,
-    ptoTab,
-    ptoPlanYear,
-    ptoManualYears,
-    expandedPtoMonths,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    deferredPtoPlanRows: models.deferredPtoPlanRows,
-    deferredPtoOperRows: models.deferredPtoOperRows,
-    deferredPtoSurveyRows: models.deferredPtoSurveyRows,
-    ptoBucketManualRows,
-  });
-  const ptoModels: AppPtoModels = { ...models, ...ptoDateModel };
-
-  usePtoDateEditingGlobalReset({ appState, models: ptoModels });
-
-  if (ptoDateModel.isPtoDateTab) {
-    return <PtoDatePrimaryContent appState={appState} models={ptoModels} runtime={runtime} navigation={navigation} />;
-  }
-
-  if (ptoDateModel.isPtoBucketsSection) {
-    return <PtoBucketsPrimaryContent appState={appState} models={ptoModels} runtime={runtime} navigation={navigation} />;
-  }
-
-  return <PtoStaticPrimaryContent appState={appState} models={ptoModels} navigation={navigation} />;
 }
