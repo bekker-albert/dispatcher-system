@@ -34,6 +34,7 @@ export function PtoDataPrimaryContent({
 }: PtoDataPrimaryContentProps) {
   const {
     ptoTab,
+    ptoDateEditing,
     ptoPlanYear,
     ptoManualYears,
     expandedPtoMonths,
@@ -46,6 +47,7 @@ export function PtoDataPrimaryContent({
   const ptoDateModel = useAppPtoDateModel({
     renderedTopTab: models.renderedTopTab,
     ptoTab,
+    ptoDateEditing,
     ptoPlanYear,
     ptoManualYears,
     expandedPtoMonths,

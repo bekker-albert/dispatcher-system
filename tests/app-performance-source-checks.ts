@@ -18,6 +18,7 @@ const ptoBucketsTableRowSource = readFileSync(resolve(testDir, "../features/pto/
 const ptoBucketsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoBucketsPrimaryContent.tsx"), "utf8");
 const useAppPtoSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoSupplementalTables.ts"), "utf8");
 const useAppPtoBucketSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoBucketSupplementalTables.ts"), "utf8");
+const usePtoDateViewModelSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateViewModel.ts"), "utf8");
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const ptoDataPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoDataPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
@@ -122,3 +123,6 @@ assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsViewModel/)
 assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsEditor/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsViewModel/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsEditor/);
+assert.match(usePtoDateViewModelSource, /ptoDateEditing: boolean;/);
+assert.match(usePtoDateViewModelSource, /isPtoDateTab \? yearMonths\(ptoPlanYear\) : \[\]/);
+assert.match(usePtoDateViewModelSource, /if \(!isPtoDateTab \|\| !ptoDateEditing\) \{/);

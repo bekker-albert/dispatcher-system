@@ -7,6 +7,7 @@ import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 type UseAppPtoDateModelOptions = {
   renderedTopTab: string;
   ptoTab: string;
+  ptoDateEditing: boolean;
   ptoPlanYear: string;
   ptoManualYears: string[];
   expandedPtoMonths: Record<string, boolean>;

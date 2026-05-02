@@ -41,6 +41,7 @@ function useStablePtoBucketRowLookupSources(bundle: { sources: PtoBucketRowLooku
 type UsePtoDateViewModelOptions = {
   renderedTopTab: string;
   ptoTab: string;
+  ptoDateEditing: boolean;
   ptoPlanYear: string;
   ptoManualYears: string[];
   expandedPtoMonths: Record<string, boolean>;
@@ -56,6 +57,7 @@ type UsePtoDateViewModelOptions = {
 export function usePtoDateViewModel({
   renderedTopTab,
   ptoTab,
+  ptoDateEditing,
   ptoPlanYear,
   ptoManualYears,
   expandedPtoMonths,
@@ -114,17 +116,17 @@ export function usePtoDateViewModel({
   ), [activePtoDateLookupSources, isPtoDateTab, ptoManualYears, ptoPlanYear]);
 
   const ptoYearMonths = useMemo(() => (
-    isPtoSection ? yearMonths(ptoPlanYear) : []
-  ), [isPtoSection, ptoPlanYear]);
+    isPtoDateTab ? yearMonths(ptoPlanYear) : []
+  ), [isPtoDateTab, ptoPlanYear]);
 
   const ptoMonthGroups = useMemo(() => (
-    isPtoSection ? ptoYearMonths.map((month) => ({
+    isPtoDateTab ? ptoYearMonths.map((month) => ({
       month,
       label: formatMonthName(month),
       days: monthDays(month),
       expanded: expandedPtoMonths[month] === true,
     })) : []
-  ), [expandedPtoMonths, isPtoSection, ptoYearMonths]);
+  ), [expandedPtoMonths, isPtoDateTab, ptoYearMonths]);
 
   const ptoAreaTabs = useMemo(() => (
     isPtoSection
@@ -152,7 +154,7 @@ export function usePtoDateViewModel({
       map.set(key, values);
     };
 
-    if (!isPtoDateTab) {
+    if (!isPtoDateTab || !ptoDateEditing) {
       return {
         allAreasKey,
         locationsByArea: new Map<string, string[]>(),
@@ -185,7 +187,7 @@ export function usePtoDateViewModel({
       structuresByArea: normalizeMap(structuresByArea),
       structuresByAreaLocation: normalizeMap(structuresByAreaLocation),
     };
-  }, [activePtoDateLookupSources, isPtoDateTab]);
+  }, [activePtoDateLookupSources, isPtoDateTab, ptoDateEditing]);
 
   return {
     isPtoSection,
