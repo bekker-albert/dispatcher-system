@@ -36,13 +36,16 @@ assert.match(mysqlSchemaSource, /INSERT IGNORE INTO pto_meta \(meta_key\) VALUES
 assert.match(mysqlSchemaSource, /ALTER TABLE vehicles ADD INDEX vehicles_sort_index_idx \(sort_index\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_rows ADD INDEX pto_rows_sort_idx \(table_type, sort_index\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_idx \(work_date\)/);
+assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_row_idx \(work_date, table_type, row_id\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_bucket_rows ADD INDEX pto_bucket_rows_sort_idx \(sort_index\)/);
 assert.doesNotMatch(mysqlPtoCommandsSource, /loadPtoUpdatedAtFromMysql/);
 assert.match(mysqlPtoCommandsSource, /return await touchPtoVersion\(execute\)/);
 assert.match(mysqlPtoVersionSource, /SELECT updated_at FROM pto_meta WHERE meta_key = \? LIMIT 1/);
 assert.match(mysqlPtoLoadSource, /FROM pto_rows AS rows_for_year/);
+assert.match(mysqlPtoLoadSource, /WITH values_for_year AS \(/);
 assert.match(mysqlPtoLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
-assert.match(mysqlPtoLoadSource, /EXISTS \(\s*SELECT 1\s*FROM pto_day_values AS values_for_year/);
+assert.match(mysqlPtoLoadSource, /LEFT JOIN values_for_year/);
+assert.doesNotMatch(mysqlPtoLoadSource, /EXISTS \(\s*SELECT 1\s*FROM pto_day_values AS values_for_year/);
 assert.doesNotMatch(mysqlPtoLoadSource, /loadPtoStateFromMysqlForYear[\s\S]*SELECT \* FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
 
 async function responseJson(response: Response) {
