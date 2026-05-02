@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { reportRowDisplayKey } from "@/lib/domain/reports/display";
 import { reportReasonEntryKey, reportYearReasonTextWithManualOverride } from "@/lib/domain/reports/reasons";
 import type { ReportRow } from "@/lib/domain/reports/types";
@@ -38,6 +38,7 @@ type ReportTableBodyRowProps = {
   reportLastPrintPageRows: number;
   reportShouldFillPrintRows: boolean;
   row: ReportRow;
+  rowKey: string;
   rowIndexInGroup: number;
   rowPrintIndex: number;
   showDayProductivity: boolean;
@@ -51,12 +52,26 @@ type ReportTableBodyRowProps = {
 
 const emptyReportReasons: Record<string, string> = {};
 
-function reportTableYearReasonText(row: ReportRow, reportDate: string, reportReasons: Record<string, string>) {
-  const rowKey = reportRowDisplayKey(row);
+function reportTableYearReasonText(row: ReportRow, rowKey: string, reportDate: string, reportReasons: Record<string, string>) {
   if (!rowKey.startsWith("summary:")) return row.yearReason;
 
   return reportYearReasonTextWithManualOverride(reportReasons, rowKey, reportDate, row.yearReason);
 }
+
+type ReportTableBodyRowDescriptor = {
+  dayReasonText?: string;
+  groupRowCount: number;
+  row: ReportRow;
+  rowIndexInGroup: number;
+  rowKey: string;
+  rowPrintIndex: number;
+  yearReasonText?: string;
+};
+
+type ReportTableBodyGroupDescriptor = {
+  area: string;
+  rows: ReportTableBodyRowDescriptor[];
+};
 
 const ReportTableBodyRow = memo(function ReportTableBodyRow({
   dayReasonText,
@@ -66,6 +81,7 @@ const ReportTableBodyRow = memo(function ReportTableBodyRow({
   reportLastPrintPageRows,
   reportShouldFillPrintRows,
   row,
+  rowKey,
   rowIndexInGroup,
   rowPrintIndex,
   showDayProductivity,
@@ -85,6 +101,7 @@ const ReportTableBodyRow = memo(function ReportTableBodyRow({
     reportReasons: emptyReportReasons,
     reportShouldFillPrintRows,
     row,
+    rowKey,
     rowIndexInGroup,
     rowPrintIndex,
     yearReasonText,
@@ -171,38 +188,57 @@ export function ReportTableBody({
   onCommitReportYearReason,
   onCancelReportYearReasonDraft,
 }: ReportTableBodyProps) {
+  const bodyGroups = useMemo(() => (
+    filteredReportAreaGroups.map((group, groupIndex): ReportTableBodyGroupDescriptor => {
+      const groupStartIndex = reportGroupStartIndexes[groupIndex] ?? 0;
+      const groupRowCount = group.rows.length;
+
+      return {
+        area: group.area,
+        rows: group.rows.map((row, index) => {
+          const rowPrintIndex = groupStartIndex + index;
+          const rowKey = reportRowDisplayKey(row);
+
+          return {
+            dayReasonText: reportReasons[reportReasonEntryKey(reportDate, rowKey)],
+            groupRowCount,
+            row,
+            rowIndexInGroup: index,
+            rowKey,
+            rowPrintIndex,
+            yearReasonText: reportTableYearReasonText(row, rowKey, reportDate, reportReasons),
+          };
+        }),
+      };
+    })
+  ), [filteredReportAreaGroups, reportDate, reportGroupStartIndexes, reportReasons]);
+
   return (
     <>
-      {filteredReportAreaGroups.map((group, groupIndex) => (
+      {bodyGroups.map((group) => (
         <tbody key={group.area} className="report-print-area-group">
-          {group.rows.map((row, index) => {
-            const rowPrintIndex = (reportGroupStartIndexes[groupIndex] ?? 0) + index;
-            const rowKey = reportRowDisplayKey(row);
-            const dayReasonText = reportReasons[reportReasonEntryKey(reportDate, rowKey)];
-            const yearReasonText = reportTableYearReasonText(row, reportDate, reportReasons);
-
-            return (
-              <ReportTableBodyRow
-                key={rowKey}
-                dayReasonText={dayReasonText}
-                groupRowCount={group.rows.length}
-                reportBodyRowCount={reportBodyRowCount}
-                reportDate={reportDate}
-                reportLastPrintPageRows={reportLastPrintPageRows}
-                reportShouldFillPrintRows={reportShouldFillPrintRows}
-                row={row}
-                rowIndexInGroup={index}
-                rowPrintIndex={rowPrintIndex}
-                showDayProductivity={showDayProductivity}
-                showMonthProductivity={showMonthProductivity}
-                yearReasonText={yearReasonText}
-                onCommitReportDayReason={onCommitReportDayReason}
-                onCancelReportDayReasonDraft={onCancelReportDayReasonDraft}
-                onCommitReportYearReason={onCommitReportYearReason}
-                onCancelReportYearReasonDraft={onCancelReportYearReasonDraft}
-              />
-            );
-          })}
+          {group.rows.map((rowDescriptor) => (
+            <ReportTableBodyRow
+              key={rowDescriptor.rowKey}
+              dayReasonText={rowDescriptor.dayReasonText}
+              groupRowCount={rowDescriptor.groupRowCount}
+              reportBodyRowCount={reportBodyRowCount}
+              reportDate={reportDate}
+              reportLastPrintPageRows={reportLastPrintPageRows}
+              reportShouldFillPrintRows={reportShouldFillPrintRows}
+              row={rowDescriptor.row}
+              rowKey={rowDescriptor.rowKey}
+              rowIndexInGroup={rowDescriptor.rowIndexInGroup}
+              rowPrintIndex={rowDescriptor.rowPrintIndex}
+              showDayProductivity={showDayProductivity}
+              showMonthProductivity={showMonthProductivity}
+              yearReasonText={rowDescriptor.yearReasonText}
+              onCommitReportDayReason={onCommitReportDayReason}
+              onCancelReportDayReasonDraft={onCancelReportDayReasonDraft}
+              onCommitReportYearReason={onCommitReportYearReason}
+              onCancelReportYearReasonDraft={onCancelReportYearReasonDraft}
+            />
+          ))}
         </tbody>
       ))}
       <tbody>

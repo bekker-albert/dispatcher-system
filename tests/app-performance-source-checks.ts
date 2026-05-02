@@ -19,6 +19,7 @@ const sharedButtonsSource = readFileSync(resolve(testDir, "../shared/ui/buttons.
 const sharedNavigationSource = readFileSync(resolve(testDir, "../shared/ui/navigation.tsx"), "utf8");
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
+const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
 const useDispatchSummaryViewModelSource = readFileSync(resolve(testDir, "../features/dispatch/useDispatchSummaryViewModel.ts"), "utf8");
 const dispatchSectionSource = readFileSync(resolve(testDir, "../features/dispatch/DispatchSection.tsx"), "utf8");
@@ -60,6 +61,9 @@ assert.match(useReportColumnLayoutSource, /createEmptyReportColumnValueLists/);
 assert.match(useReportColumnLayoutSource, /valuesByKey\[key\]\.push\(textRow\[key\]\)/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows\.map\(\(row\) => row\[key\]\)/);
+assert.match(reportTableBodySource, /const bodyGroups = useMemo/);
+assert.match(reportTableBodySource, /rowKey=\{rowDescriptor\.rowKey\}/);
+assert.doesNotMatch(reportTableBodySource, /const rowKey = reportRowDisplayKey\(row\);\s*const dayReasonText/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
 assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(enabled: boolean\)/);

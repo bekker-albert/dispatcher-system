@@ -60,6 +60,7 @@ export type CreateReportRowDisplayViewModelInput = {
   reportReasons: Record<string, string>;
   reportShouldFillPrintRows: boolean;
   row: ReportRow;
+  rowKey?: string;
   rowIndexInGroup: number;
   rowPrintIndex: number;
   yearReasonText?: string;
@@ -104,6 +105,7 @@ export function createReportRowDisplayViewModel({
   reportReasons,
   reportShouldFillPrintRows,
   row,
+  rowKey: providedRowKey,
   rowIndexInGroup,
   rowPrintIndex,
   yearReasonText,
@@ -115,7 +117,7 @@ export function createReportRowDisplayViewModel({
   const monthDelta = createDeltaViewModel(row.monthPlan, monthFactValue);
   const yearDelta = createDeltaViewModel(row.yearPlan, yearFactValue);
   const annualRemaining = createDeltaViewModel(row.annualPlan, annualFactValue);
-  const rowKey = reportRowDisplayKey(row);
+  const rowKey = providedRowKey ?? reportRowDisplayKey(row);
   const dayReasonKey = reportReasonEntryKey(reportDate, rowKey);
   const yearReasonKey = reportYearReasonOverrideKey(reportDate, rowKey);
   const showAreaCell = rowIndexInGroup === 0;
