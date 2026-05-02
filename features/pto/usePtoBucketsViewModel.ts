@@ -2,7 +2,8 @@ import { useMemo } from "react";
 
 import {
   createPtoBucketColumnsModel,
-  createPtoBucketRows,
+  createPtoBucketRowsModel,
+  ptoBucketRowsSignature,
   type PtoBucketColumn,
   type PtoBucketRow,
 } from "@/lib/domain/pto/buckets";
@@ -24,11 +25,7 @@ const inactivePtoBucketColumnsModel = {
   signature: "",
 };
 
-function ptoBucketManualRowsSignature(rows: readonly PtoBucketRow[]) {
-  return rows.map((row) => [row.key, row.area, row.structure, row.source ?? ""].join("\u001f")).join("\u001e");
-}
-
-function useStableManualRows(rows: PtoBucketRow[], signature: string) {
+function useStableBucketRows(rows: PtoBucketRow[], signature: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => rows, [signature]);
 }
@@ -46,15 +43,15 @@ export function usePtoBucketsViewModel({
   vehicleRows,
 }: UsePtoBucketsViewModelOptions) {
   const manualRowsSignature = useMemo(() => (
-    active ? ptoBucketManualRowsSignature(manualRows) : ""
+    active ? ptoBucketRowsSignature(manualRows) : ""
   ), [active, manualRows]);
-  const stableManualRows = useStableManualRows(active ? manualRows : emptyPtoBucketRows, manualRowsSignature);
+  const stableManualRows = useStableBucketRows(active ? manualRows : emptyPtoBucketRows, manualRowsSignature);
 
-  const ptoBucketRows = useMemo(() => {
-    if (!active) return [];
+  const ptoBucketRowsModel = useMemo(() => (
+    active ? createPtoBucketRowsModel(bucketRowSources, stableManualRows, areaFilter) : { rows: emptyPtoBucketRows, signature: "" }
+  ), [active, areaFilter, bucketRowSources, stableManualRows]);
 
-    return createPtoBucketRows(bucketRowSources, stableManualRows, areaFilter);
-  }, [active, areaFilter, bucketRowSources, stableManualRows]);
+  const ptoBucketRows = useStableBucketRows(ptoBucketRowsModel.rows, ptoBucketRowsModel.signature);
 
   const ptoBucketColumnsModel = useMemo(() => (
     active ? createPtoBucketColumnsModel(vehicleRows) : inactivePtoBucketColumnsModel

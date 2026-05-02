@@ -20,6 +20,11 @@ export type PtoBucketColumnsModel = {
   signature: string;
 };
 
+export type PtoBucketRowsModel = {
+  rows: PtoBucketRow[];
+  signature: string;
+};
+
 export type PtoBucketCell = {
   rowKey: string;
   equipmentKey: string;
@@ -83,6 +88,23 @@ export function createPtoBucketRows(
 
   return Array.from(rowsByKey.values())
     .filter((row) => ptoAreaMatchesForBucket(row.area, areaFilter));
+}
+
+export function ptoBucketRowsSignature(rows: readonly PtoBucketRow[]) {
+  return rows.map((row) => [row.key, row.area, row.structure, row.source ?? ""].join("\u001f")).join("\u001e");
+}
+
+export function createPtoBucketRowsModel(
+  sourceRows: Array<Pick<PtoPlanRow, "area" | "structure">>,
+  manualRows: PtoBucketRow[],
+  areaFilter: string,
+): PtoBucketRowsModel {
+  const rows = createPtoBucketRows(sourceRows, manualRows, areaFilter);
+
+  return {
+    rows,
+    signature: ptoBucketRowsSignature(rows),
+  };
 }
 
 export function createPtoBucketColumns(vehicles: VehicleRow[]) {

@@ -6,7 +6,7 @@ import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navi
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, buildDispatchSummaryRowView, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "../lib/domain/navigation/tabs";
-import { createPtoBucketColumns, createPtoBucketRows, isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketSelectionKey } from "../lib/domain/pto/buckets";
+import { createPtoBucketColumns, createPtoBucketRows, createPtoBucketRowsModel, isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketRowsSignature, ptoBucketSelectionKey } from "../lib/domain/pto/buckets";
 import { dateRange, distributeMonthlyTotal, emptyPtoDraftRowFields, isPtoDateTableKey, nextDate, normalizePtoCustomerCode, normalizePtoPlanRow, ptoColumnDefaults, ptoDateTableKeyFromTab } from "../lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "../lib/domain/pto/defaults";
 import { createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "../lib/domain/pto/excel";
@@ -101,6 +101,13 @@ assert.deepEqual(
   ).map((row) => row.key),
   ["аксу:подача", "акбакай:временная"],
 );
+const ptoBucketRowsModel = createPtoBucketRowsModel(
+  [{ area: "Aksu", structure: "Ore" }],
+  [{ key: ptoBucketRowKey("Akbakai", "Temp"), area: "Akbakai", structure: "Temp", source: "manual" }],
+  "Aksu",
+);
+assert.equal(ptoBucketRowsModel.rows.length, 1);
+assert.equal(ptoBucketRowsModel.signature, ptoBucketRowsSignature(ptoBucketRowsModel.rows));
 assert.deepEqual(
   createPtoBucketColumns([
     normalizeVehicleRow({ ...defaultVehicleForm, id: 9001, vehicleType: "Экскаватор", brand: "CAT", model: "390", name: "CAT 390" }),
