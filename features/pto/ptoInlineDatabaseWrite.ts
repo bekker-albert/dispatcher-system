@@ -26,8 +26,11 @@ export function enqueuePtoInlineDatabaseWrite<T>({
   write,
   onSaved,
 }: PtoInlineDatabaseWriteOptions<T>) {
-  void enqueuePtoDatabaseWrite(write)
-    .then(onSaved)
+  void enqueuePtoDatabaseWrite(async () => {
+    const result = await write();
+    onSaved(result);
+    return result;
+  })
     .catch((error) => {
       showSaveStatus("error", inlineWriteErrorMessage(label, error));
       console.warn(`Database PTO inline write failed (${label}):`, error);

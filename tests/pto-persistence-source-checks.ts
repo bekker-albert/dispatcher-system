@@ -81,6 +81,8 @@ assert.match(ptoDateTableContextSource, /kind: "day-values"/);
 assert.match(ptoInlineDatabaseWriteSource, /export function enqueuePtoInlineDatabaseWrite/);
 assert.match(ptoInlineDatabaseWriteSource, /isDatabaseConflictError/);
 assert.match(ptoInlineDatabaseWriteSource, /showSaveStatus\("error", inlineWriteErrorMessage\(label, error\)\)/);
+assert.match(ptoInlineDatabaseWriteSource, /const result = await write\(\);[\s\S]*onSaved\(result\);[\s\S]*return result;/);
+assert.doesNotMatch(ptoInlineDatabaseWriteSource, /\.then\(onSaved\)/);
 assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "ячейка дня"[\s\S]*showSaveStatus[\s\S]*savePtoDayValueWithRowToDatabase/);
 assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "значения месяца"[\s\S]*showSaveStatus[\s\S]*savePtoDayValuesWithRowToDatabase/);
 assert.match(ptoLinkedRowsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление строки"[\s\S]*deletePtoRowsFromDatabase/);
