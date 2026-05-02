@@ -23,8 +23,8 @@ type UseCustomerReportViewModelOptions = {
   reportArea: string;
 };
 
-const reportAllAreasTab = "Р’СЃРµ СѓС‡Р°СЃС‚РєРё";
-const reportSummaryAreaLabel = "РС‚РѕРіРѕ";
+const reportAllAreasTab = "Все участки";
+const reportSummaryAreaLabel = "Итого";
 
 function createReportAreaGroups(rows: ReportRow[]) {
   const groups: Array<{ area: string; normalizedArea: string; rows: ReportRow[] }> = [];
