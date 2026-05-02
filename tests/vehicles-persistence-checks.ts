@@ -29,8 +29,9 @@ assert.match(mysqlSaveSource, /await upsertVehiclesToMysql\(rows,\s*execute\);/)
 assert.doesNotMatch(mysqlSaveSource, /deleteVehiclesMissingFromMysqlSnapshot/);
 assert.match(
   mysqlVehiclesSource,
-  /async function deleteVehiclesMissingFromMysqlSnapshot[\s\S]*if \(vehicleIds\.length === 0\) \{[\s\S]*DELETE FROM vehicles[\s\S]*WHERE vehicle_id NOT IN/,
+  /async function deleteVehiclesMissingFromMysqlSnapshot[\s\S]*SELECT vehicle_id FROM vehicles[\s\S]*DELETE FROM vehicles WHERE vehicle_id IN/,
 );
+assert.doesNotMatch(mysqlVehiclesSource, /WHERE vehicle_id NOT IN/);
 
 const mysqlReplaceSource = exportedFunctionSource(mysqlVehiclesSource, "replaceVehiclesInMysql");
 assert.match(mysqlReplaceSource, /assertMysqlVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot,\s*execute\)/);

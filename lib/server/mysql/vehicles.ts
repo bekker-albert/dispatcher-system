@@ -32,7 +32,12 @@ type VehicleRecord = RowDataPacket & {
   updated_at?: string | null;
 };
 
+type VehicleIdRecord = RowDataPacket & {
+  vehicle_id: number | string;
+};
+
 const batchSize = 250;
+const deleteBatchSize = 250;
 
 function recordToVehicle(record: VehicleRecord): VehicleRow {
   const data = parseJson<Partial<VehicleRow>>(record.data, {});
@@ -114,12 +119,21 @@ async function deleteVehiclesMissingFromMysqlSnapshot(rows: VehicleRow[], execut
     return;
   }
 
-  const placeholders = vehicleIds.map(() => "?").join(", ");
-  await execute(
-    `DELETE FROM vehicles
-    WHERE vehicle_id NOT IN (${placeholders})`,
-    vehicleIds,
-  );
+  const expectedIds = new Set(vehicleIds);
+  const records = execute.rows
+    ? await execute.rows<VehicleIdRecord>("SELECT vehicle_id FROM vehicles")
+    : await dbRows<VehicleIdRecord>("SELECT vehicle_id FROM vehicles");
+  const staleIds = records
+    .map((record) => Number(record.vehicle_id))
+    .filter((id) => Number.isFinite(id) && !expectedIds.has(id));
+
+  for (let index = 0; index < staleIds.length; index += deleteBatchSize) {
+    const batch = staleIds.slice(index, index + deleteBatchSize);
+    if (batch.length === 0) continue;
+
+    const placeholders = batch.map(() => "?").join(", ");
+    await execute(`DELETE FROM vehicles WHERE vehicle_id IN (${placeholders})`, batch);
+  }
 }
 
 function createVehiclesConflictError() {
