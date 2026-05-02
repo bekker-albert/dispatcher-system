@@ -6,6 +6,7 @@ import {
   resolvePtoBucketCellByOffset,
   resolvePtoBucketKeyboardAction,
 } from "../features/pto/ptoBucketsGridModel";
+import { createPtoAreaAndBucketRowLookupSourceBundle } from "../features/pto/ptoDateLookupModel";
 
 const rowKeys = ["row-a", "row-b", "row-c"];
 const columnKeys = ["eq-1", "eq-2", "eq-3"];
@@ -14,6 +15,23 @@ assert.deepEqual(createPtoBucketGridKeys(rowKeys, columnKeys), [
   ["row-a::eq-1", "row-a::eq-2", "row-a::eq-3"],
   ["row-b::eq-1", "row-b::eq-2", "row-b::eq-3"],
   ["row-c::eq-1", "row-c::eq-2", "row-c::eq-3"],
+]);
+
+const lookupBundle = createPtoAreaAndBucketRowLookupSourceBundle([
+  [
+    { area: "Аксу", structure: "Подача руды" },
+    { area: "Аксу", structure: "Подача руды" },
+  ],
+  [
+    { area: "Аксу", structure: "Подача руды" },
+    { area: "Аксу", structure: "Отсыпка" },
+  ],
+]);
+
+assert.deepEqual(lookupBundle.areaSources, [{ area: "Аксу" }]);
+assert.deepEqual(lookupBundle.bucketRowSources, [
+  { area: "Аксу", structure: "Подача руды" },
+  { area: "Аксу", structure: "Отсыпка" },
 ]);
 
 assert.deepEqual(

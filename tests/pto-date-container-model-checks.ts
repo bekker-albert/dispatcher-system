@@ -103,7 +103,7 @@ assert.notEqual(
   ptoBucketRowLookupSourcesSignature(createPtoBucketRowLookupSources(lookupChangedStructureRows)),
 );
 const combinedLookupBundle = createPtoAreaAndBucketRowLookupSourceBundle([lookupBaseRows, lookupChangedStructureRows]);
-assert.deepEqual(combinedLookupBundle.areaSources.map((source) => source.area), [lookupBaseRows[0].area, lookupChangedStructureRows[0].area]);
+assert.deepEqual(combinedLookupBundle.areaSources.map((source) => source.area), [lookupBaseRows[0].area]);
 assert.deepEqual(combinedLookupBundle.bucketRowSources.map((source) => source.structure), [lookupBaseRows[0].structure, lookupChangedStructureRows[0].structure]);
 
 assert.match(ptoDateTableModelSource, /const rowsByYearAndSignature = new Map<string, Map<string, PtoPlanRow\[]>>\(\);/);

@@ -93,20 +93,29 @@ export function createPtoAreaLookupSourceBundle(rows: readonly PtoPlanRow[]): Lo
 }
 
 export function createPtoAreaAndBucketRowLookupSourceBundle(
-  rowGroups: readonly (readonly PtoPlanRow[])[],
+  rowGroups: readonly (readonly Pick<PtoPlanRow, "area" | "structure">[])[],
 ): PtoAreaAndBucketRowLookupSourceBundle {
   const areaSources: PtoAreaLookupSource[] = [];
   const areaSignatureParts: string[] = [];
   const bucketRowSources: PtoBucketRowLookupSource[] = [];
   const bucketRowSignatureParts: string[] = [];
+  const areaKeys = new Set<string>();
+  const bucketRowKeys = new Set<string>();
 
   rowGroups.forEach((rows) => {
     rows.forEach((row) => {
-      areaSources.push({ area: row.area });
-      areaSignatureParts.push(row.area);
+      if (!areaKeys.has(row.area)) {
+        areaKeys.add(row.area);
+        areaSources.push({ area: row.area });
+        areaSignatureParts.push(row.area);
+      }
 
-      bucketRowSources.push({ area: row.area, structure: row.structure });
-      bucketRowSignatureParts.push([row.area, row.structure].join("\u001f"));
+      const bucketRowKey = [row.area, row.structure].join("\u001f");
+      if (!bucketRowKeys.has(bucketRowKey)) {
+        bucketRowKeys.add(bucketRowKey);
+        bucketRowSources.push({ area: row.area, structure: row.structure });
+        bucketRowSignatureParts.push(bucketRowKey);
+      }
     });
   });
 
