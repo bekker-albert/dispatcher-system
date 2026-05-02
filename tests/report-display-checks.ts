@@ -8,6 +8,7 @@ import { reportColumnKeys } from "../lib/domain/reports/columns";
 import { createReportBaseRows } from "../lib/domain/reports/rows-model";
 import { reportReasonEntryKey, reportYearReasonOverrideKey } from "../lib/domain/reports/reasons";
 import { createReportBodyLayout, createReportPrintLayout } from "../features/reports/reportPrintLayout";
+import { createReportColumnTextModel } from "../features/reports/reportColumnTextModel";
 import { createReportRowDisplayViewModel } from "../features/reports/reportRowDisplayViewModel";
 import { normalizePtoPlanRow } from "../lib/domain/pto/date-table";
 import type { ReportRow } from "../lib/domain/reports/types";
@@ -64,6 +65,10 @@ const reportRow = normalizeReportRow({
 assert.equal(reportDisplay.reportRowKey(reportRow), "аксу::перевозкаруды");
 assert.equal(reportDisplay.formatReportDate("2026-04-12"), "воскресенье, 12 апреля 2026 г.");
 assert.equal(typeof reportDisplay.reportAutoColumnWidth("day-plan", "План", ["10"]), "number");
+const reportColumnTextModel = createReportColumnTextModel([reportRow], ["area", "day-productivity"], true);
+assert.deepEqual(Object.keys(reportColumnTextModel.valuesByKey), ["area", "day-productivity"]);
+assert.deepEqual(reportColumnTextModel.valuesByKey.area, ["Аксу"]);
+assert.equal(reportColumnTextModel.valuesByKey["day-productivity"]?.[0], "8\n80%");
 
 const summary = reportDisplay.createReportSummaryRow({ id: "sum-1", label: "Итого", unit: "м3", area: "Аксу", rowKeys: [] }, [reportRow]);
 assert.equal(summary?.displayKey, "summary:sum-1");

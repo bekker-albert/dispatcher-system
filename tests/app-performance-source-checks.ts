@@ -36,6 +36,7 @@ const sharedButtonsSource = readFileSync(resolve(testDir, "../shared/ui/buttons.
 const sharedNavigationSource = readFileSync(resolve(testDir, "../shared/ui/navigation.tsx"), "utf8");
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
+const reportColumnTextModelSource = readFileSync(resolve(testDir, "../features/reports/reportColumnTextModel.ts"), "utf8");
 const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
 const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
 const reportPrintLayoutSource = readFileSync(resolve(testDir, "../features/reports/reportPrintLayout.ts"), "utf8");
@@ -90,8 +91,10 @@ assert.match(useDispatchSummaryViewModelSource, /const dispatchVehicleSelectOpti
 assert.equal((useDispatchSummaryViewModelSource.match(/buildVehicleDisplayName\(vehicle\)/g) ?? []).length, 1);
 assert.doesNotMatch(dispatchSectionSource, /buildVehicleDisplayName/);
 assert.doesNotMatch(dispatchSectionSource, /useMemo/);
-assert.match(useReportColumnLayoutSource, /createEmptyReportColumnValueLists/);
-assert.match(useReportColumnLayoutSource, /valuesByKey\[key\]\.push\(textRow\[key\]\)/);
+assert.match(useReportColumnLayoutSource, /createReportColumnTextModel\(filteredReports, visibleReportColumnKeys, needsDerivedReportRows\)/);
+assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnKeys\.forEach\(\(key\) => \{/);
+assert.match(reportColumnTextModelSource, /createEmptyReportColumnValueLists\(columnKeys/);
+assert.match(reportColumnTextModelSource, /valuesByKey\[key\]\?\.push\(reportColumnTextValue\(row, key, facts\)\)/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows\.map\(\(row\) => row\[key\]\)/);
 assert.match(reportTableBodySource, /const bodyGroups = useMemo/);
