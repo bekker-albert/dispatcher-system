@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type DragEvent, type RefObject, type SetStateAction } from "react";
-import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import { enqueuePtoInlineDatabaseWrite } from "@/features/pto/ptoInlineDatabaseWrite";
 import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
+import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   createEmptyPtoDateRow,
@@ -13,6 +14,8 @@ import {
 } from "@/lib/domain/pto/date-table";
 import { createId } from "@/lib/utils/id";
 import { cleanAreaName } from "@/lib/utils/text";
+
+type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type UsePtoLinkedRowsEditorOptions = {
   ptoTab: string;
@@ -28,6 +31,7 @@ type UsePtoLinkedRowsEditorOptions = {
   requestSave: () => void;
   markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
+  showSaveStatus: ShowSaveStatus;
   addAdminLog: (entry: AdminLogInput) => void;
 };
 
@@ -45,6 +49,7 @@ export function usePtoLinkedRowsEditor({
   requestSave,
   markPtoDatabaseInlineWriteSaved,
   getPtoDatabaseExpectedUpdatedAt,
+  showSaveStatus,
   addAdminLog,
 }: UsePtoLinkedRowsEditorOptions) {
   const addLinkedPtoDateRow = useCallback((overrides: Partial<PtoPlanRow> = {}, insertAfterRow?: PtoPlanRow) => {
@@ -90,19 +95,22 @@ export function usePtoLinkedRowsEditor({
       setPtoSurveyRows(removeRow);
     }
     if (databaseConfigured && databaseLoadedRef.current) {
-      void enqueuePtoDatabaseWrite(async () => {
-        const { deletePtoRowsFromDatabase } = await import("@/lib/data/pto");
-        const result = await deletePtoRowsFromDatabase(table, [row.id], {
-          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
-        });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+      enqueuePtoInlineDatabaseWrite({
+        label: "удаление строки",
+        showSaveStatus,
+        write: async () => {
+          const { deletePtoRowsFromDatabase } = await import("@/lib/data/pto");
+          return await deletePtoRowsFromDatabase(table, [row.id], {
+            expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+          });
+        },
+        onSaved: (result) => markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
           kind: "date-row",
           action: "delete",
           table,
           rowIds: [row.id],
-        });
-      })
-        .catch((error) => console.warn("Database PTO row delete failed:", error));
+        }),
+      });
     }
     requestSave();
     addAdminLog({
@@ -110,7 +118,7 @@ export function usePtoLinkedRowsEditor({
       section: "ПТО",
       details: `Удалена строка из ${currentPtoTableLabel()}: ${rowName}.`,
     });
-  }, [addAdminLog, currentPtoDateTableKey, currentPtoTableLabel, databaseConfigured, databaseLoadedRef, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoOperRows, setPtoPlanRows, setPtoSurveyRows]);
+  }, [addAdminLog, currentPtoDateTableKey, currentPtoTableLabel, databaseConfigured, databaseLoadedRef, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoOperRows, setPtoPlanRows, setPtoSurveyRows, showSaveStatus]);
 
   const getPtoDropPosition = useCallback((event: DragEvent<HTMLTableRowElement>): PtoDropPosition => {
     const bounds = event.currentTarget.getBoundingClientRect();

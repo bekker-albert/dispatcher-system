@@ -52,6 +52,7 @@ export function useAppPtoControllers({
     ptoOperRows,
     setPtoOperRows,
     addAdminLog,
+    showSaveStatus,
   } = appState;
 
   const {
@@ -98,6 +99,7 @@ export function useAppPtoControllers({
     markPtoDatabaseInlineWriteSaved,
     getPtoDatabaseExpectedUpdatedAt,
     requestPtoDatabaseSave,
+    showSaveStatus,
     setExpandedPtoMonths,
     setPtoManualYears,
     setPtoOperRows,

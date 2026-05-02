@@ -20,6 +20,7 @@ const ptoDateRowValueEditorSource = readFileSync(resolve(testDir, "../features/p
 const ptoDateTableContextSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateTableContext.ts"), "utf8");
 const ptoLinkedRowsEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoLinkedRowsEditor.ts"), "utf8");
 const ptoYearEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoYearEditor.ts"), "utf8");
+const ptoInlineDatabaseWriteSource = readFileSync(resolve(testDir, "../features/pto/ptoInlineDatabaseWrite.ts"), "utf8");
 const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
 const mysqlPtoFreshnessSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-freshness.ts"), "utf8");
 const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase/pto-commands.ts"), "utf8");
@@ -77,6 +78,13 @@ assert.match(ptoLocalPersistenceSource, /useRef<PtoBrowserStorageSnapshotCache \
 assert.match(ptoLocalPersistenceSource, /ptoLocalSaveSnapshotRef\.current = result\.cache;/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false;/);
 assert.match(ptoDateTableContextSource, /kind: "day-values"/);
+assert.match(ptoInlineDatabaseWriteSource, /export function enqueuePtoInlineDatabaseWrite/);
+assert.match(ptoInlineDatabaseWriteSource, /isDatabaseConflictError/);
+assert.match(ptoInlineDatabaseWriteSource, /showSaveStatus\("error", inlineWriteErrorMessage\(label, error\)\)/);
+assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "ячейка дня"[\s\S]*showSaveStatus[\s\S]*savePtoDayValueWithRowToDatabase/);
+assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "значения месяца"[\s\S]*showSaveStatus[\s\S]*savePtoDayValuesWithRowToDatabase/);
+assert.match(ptoLinkedRowsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление строки"[\s\S]*deletePtoRowsFromDatabase/);
+assert.match(ptoYearEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление года"[\s\S]*deletePtoYearFromDatabase/);
 assert.match(ptoDatabaseSaveSource, /markPtoDatabaseInlineWriteSaved/);
 
 assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\s\S]*storage: Record<string, string>;[\s\S]*settings: Record<string, unknown>;[\s\S]*\};/);

@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from "react";
-import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import { enqueuePtoInlineDatabaseWrite } from "@/features/pto/ptoInlineDatabaseWrite";
 import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
+import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   normalizePtoYearValue,
@@ -8,6 +9,8 @@ import {
   type PtoPlanRow,
 } from "@/lib/domain/pto/date-table";
 import { uniqueSorted } from "@/lib/utils/text";
+
+type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type UsePtoYearEditorOptions = {
   ptoYearInput: string;
@@ -26,6 +29,7 @@ type UsePtoYearEditorOptions = {
   requestSave: () => void;
   markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
+  showSaveStatus: ShowSaveStatus;
   addAdminLog: (entry: AdminLogInput) => void;
 };
 
@@ -46,6 +50,7 @@ export function usePtoYearEditor({
   requestSave,
   markPtoDatabaseInlineWriteSaved,
   getPtoDatabaseExpectedUpdatedAt,
+  showSaveStatus,
   addAdminLog,
 }: UsePtoYearEditorOptions) {
   const addPtoYear = useCallback(() => {
@@ -82,18 +87,21 @@ export function usePtoYearEditor({
     setPtoYearInput("");
     setPtoYearDialogOpen(false);
     if (databaseConfigured && databaseLoadedRef.current) {
-      void enqueuePtoDatabaseWrite(async () => {
-        const { deletePtoYearFromDatabase } = await import("@/lib/data/pto");
-        const result = await deletePtoYearFromDatabase(year, {
-          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
-        });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+      enqueuePtoInlineDatabaseWrite({
+        label: "удаление года",
+        showSaveStatus,
+        write: async () => {
+          const { deletePtoYearFromDatabase } = await import("@/lib/data/pto");
+          return await deletePtoYearFromDatabase(year, {
+            expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+          });
+        },
+        onSaved: (result) => markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
           kind: "year",
           action: "delete",
           year,
-        });
-      })
-        .catch((error) => console.warn("Database PTO year delete failed:", error));
+        }),
+      });
     }
     requestSave();
     addAdminLog({
@@ -117,6 +125,7 @@ export function usePtoYearEditor({
     setPtoSurveyRows,
     setPtoYearDialogOpen,
     setPtoYearInput,
+    showSaveStatus,
   ]);
 
   return {

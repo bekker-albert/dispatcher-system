@@ -5,9 +5,13 @@ import { usePtoLinkedRowsEditor } from "@/features/pto/usePtoLinkedRowsEditor";
 import { usePtoRowTextDrafts } from "@/features/pto/usePtoRowTextDrafts";
 import { usePtoYearEditor } from "@/features/pto/usePtoYearEditor";
 import type { PtoRowsSetter } from "@/features/pto/ptoDateTableTypes";
+import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { SubTabConfig } from "@/lib/domain/navigation/tabs";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
+
+type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type UseAppPtoDateEditingOptions = {
   addAdminLog: (entry: AdminLogInput) => void;
@@ -23,9 +27,10 @@ type UseAppPtoDateEditingOptions = {
   ptoTab: string;
   ptoYearInput: string;
   ptoYearTabs: string[];
-  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
   requestPtoDatabaseSave: () => void;
+  showSaveStatus: ShowSaveStatus;
   setExpandedPtoMonths: Dispatch<SetStateAction<Record<string, boolean>>>;
   setPtoManualYears: Dispatch<SetStateAction<string[]>>;
   setPtoOperRows: PtoRowsSetter;
@@ -54,6 +59,7 @@ export function useAppPtoDateEditing({
   markPtoDatabaseInlineWriteSaved,
   getPtoDatabaseExpectedUpdatedAt,
   requestPtoDatabaseSave,
+  showSaveStatus,
   setExpandedPtoMonths,
   setPtoManualYears,
   setPtoOperRows,
@@ -76,6 +82,7 @@ export function useAppPtoDateEditing({
     databaseLoadedRef: ptoDatabaseLoadedRef,
     markPtoDatabaseInlineWriteSaved,
     getPtoDatabaseExpectedUpdatedAt,
+    showSaveStatus,
   });
 
   const {
@@ -97,6 +104,7 @@ export function useAppPtoDateEditing({
     requestSave: requestPtoDatabaseSave,
     markPtoDatabaseInlineWriteSaved,
     getPtoDatabaseExpectedUpdatedAt,
+    showSaveStatus,
     addAdminLog,
   });
 
@@ -120,6 +128,7 @@ export function useAppPtoDateEditing({
     requestSave: requestPtoDatabaseSave,
     markPtoDatabaseInlineWriteSaved,
     getPtoDatabaseExpectedUpdatedAt,
+    showSaveStatus,
     addAdminLog,
   });
 
