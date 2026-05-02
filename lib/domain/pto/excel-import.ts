@@ -117,9 +117,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
 
       const signatureProbe = normalizePtoPlanRow({ area, customerCode, structure, unit });
       const existing = currentBySignature.get(ptoImportRowSignature(signatureProbe, includeCustomerCode));
-      const dailyPlans = Object.fromEntries(
-        Object.entries(existing?.dailyPlans ?? {}).filter(([date]) => !date.startsWith(`${year}-`)),
-      );
+      const dailyPlans = { ...(existing?.dailyPlans ?? {}) };
       const importedDayDates = new Set<string>();
 
       dateColumns.forEach(({ index, date }) => {

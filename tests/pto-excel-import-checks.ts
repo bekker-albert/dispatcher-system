@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { normalizePtoPlanRow } from "../lib/domain/pto/date-table";
 import { createPtoPlanRowsFromImportTable } from "../lib/domain/pto/excel";
 
 const duplicateCustomerRows = createPtoPlanRowsFromImportTable([
@@ -22,3 +23,27 @@ const duplicateLinkedRows = createPtoPlanRowsFromImportTable([
 assert.equal(duplicateLinkedRows.length, 1);
 assert.equal(duplicateLinkedRows[0].dailyPlans["2026-04-01"], 7);
 assert.equal(duplicateLinkedRows[0].dailyPlans["2026-04-02"], 9);
+
+const existingPlanRow = normalizePtoPlanRow({
+  id: "existing-plan-row",
+  area: "Уч_Аксу",
+  customerCode: "AAM",
+  structure: "Подача руды",
+  unit: "тн",
+  dailyPlans: {
+    "2026-04-01": 10,
+    "2026-04-02": 20,
+    "2026-05-01": 30,
+  },
+  years: ["2026"],
+});
+const partialImportRows = createPtoPlanRowsFromImportTable([
+  ["Участок", "Заказчик", "Вид работ", "Ед.", "02.04.2026"],
+  ["Аксу", "AAM", "Подача руды", "тн", "25"],
+], "2026", [existingPlanRow], "plan");
+
+assert.equal(partialImportRows.length, 1);
+assert.equal(partialImportRows[0].id, existingPlanRow.id);
+assert.equal(partialImportRows[0].dailyPlans["2026-04-01"], 10);
+assert.equal(partialImportRows[0].dailyPlans["2026-04-02"], 25);
+assert.equal(partialImportRows[0].dailyPlans["2026-05-01"], 30);
