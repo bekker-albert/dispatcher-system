@@ -9,12 +9,9 @@ type DependencyLinkTypeOption = {
   label: string;
 };
 
-const linearLinkType = "Линейная" as DependencyLinkType;
-const functionalLinkType = "Функциональная" as DependencyLinkType;
-
 export const dependencyLinkTypeOptions: DependencyLinkTypeOption[] = [
-  { value: linearLinkType, label: "Линейная" },
-  { value: functionalLinkType, label: "Функциональная" },
+  { value: "Линейная", label: "Линейная" },
+  { value: "Функциональная", label: "Функциональная" },
 ];
 
 const dependencyLinkTypeLabels = new Map<DependencyLinkType, string>(
