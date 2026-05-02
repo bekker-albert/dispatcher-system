@@ -1,6 +1,8 @@
 import { createPtoDateTableModel, createPtoEffectiveCarryoverGetter, createPtoRowDateTotalsGetter } from "@/features/pto/ptoDateTableModel";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
-import { previousPtoYearLabel, ptoAreaMatches, ptoRowHasYear } from "@/lib/domain/pto/date-table";
+import { previousPtoYearLabel, ptoAreaMatches, ptoRowHasYear, type PtoPlanRow } from "@/lib/domain/pto/date-table";
+
+const emptyPtoRowById = new Map<string, PtoPlanRow>();
 
 type PtoDateTableViewModelOptions = Pick<
   PtoDateTableContainerProps,
@@ -32,7 +34,7 @@ export function createPtoDateTableViewModel({
   const showCustomerCode = ptoTab === "plan";
   const editableMonthTotal = options.editableMonthTotal === true;
   const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
-  const rowById = new Map(rows.map((row) => [row.id, row] as const));
+  const rowById = ptoDateEditing ? new Map(rows.map((row) => [row.id, row] as const)) : emptyPtoRowById;
   const getRowDateTotals = createPtoRowDateTotalsGetter(ptoPlanYear);
   const getEffectiveCarryover = createPtoEffectiveCarryoverGetter(rows, ptoPlanYear);
   const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;

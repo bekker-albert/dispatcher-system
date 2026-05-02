@@ -10,6 +10,7 @@ const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features
 const initialAppDatabaseBootstrapSource = readFileSync(resolve(testDir, "../features/app/initialAppDatabaseBootstrap.ts"), "utf8");
 const navigationSelectionHandlersSource = readFileSync(resolve(testDir, "../features/navigation/useNavigationSelectionHandlers.ts"), "utf8");
 const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto/ptoBucketsGridModel.ts"), "utf8");
+const ptoDateTableViewModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateTableViewModel.ts"), "utf8");
 const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
 const ptoDateEditableTableBodySource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableBody.tsx"), "utf8");
 const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableRow.tsx"), "utf8");
@@ -123,6 +124,8 @@ assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsViewModel/)
 assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsEditor/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsViewModel/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsEditor/);
+assert.match(ptoDateTableViewModelSource, /const emptyPtoRowById = new Map<string, PtoPlanRow>\(\);/);
+assert.match(ptoDateTableViewModelSource, /const rowById = ptoDateEditing \? new Map\(rows\.map\(\(row\) => \[row\.id, row\] as const\)\) : emptyPtoRowById;/);
 assert.match(usePtoDateViewModelSource, /ptoDateEditing: boolean;/);
 assert.match(usePtoDateViewModelSource, /isPtoDateTab \? yearMonths\(ptoPlanYear\) : \[\]/);
 assert.match(usePtoDateViewModelSource, /if \(!isPtoDateTab \|\| !ptoDateEditing\) \{/);
