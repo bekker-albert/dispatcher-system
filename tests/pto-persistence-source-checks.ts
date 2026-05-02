@@ -43,6 +43,7 @@ assert.match(ptoDatabaseLoadSource, /runPtoDatabaseLoadOnce\(\{[\s\S]*isCancelle
 assert.doesNotMatch(ptoDatabaseLoadSource, /\n\s*options,\n\s*\]\);/);
 assert.match(ptoDatabaseLoadRunnerSource, /const includeBuckets = ptoTab === "buckets";/);
 assert.match(ptoDatabaseLoadRunnerSource, /localPtoNeedsDatabaseFreshnessCheck/);
+assert.match(ptoDatabaseLoadRunnerSource, /if \(currentYearLoaded && includeBuckets && !currentYearBucketsLoaded\) \{[\s\S]*loadPtoBucketsFromDatabase\(\)[\s\S]*return;[\s\S]*\}\s*\n\s*ptoDatabaseLoadedRef\.current = false;/);
 assert.match(ptoDatabaseLoadRunnerSource, /loadPtoStateFromDatabase\(\{ year: ptoPlanYear,\s*includeBuckets \}\)/);
 assert.match(ptoDatabaseLoadRunnerSource, /preserveFallbackBuckets: !includeBuckets/);
 assert.match(ptoDatabaseLoadRunnerSource, /setPtoPlanYear\(ptoPlanYear\)/);

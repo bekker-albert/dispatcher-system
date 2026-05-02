@@ -73,15 +73,11 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
     return;
   }
 
-  ptoDatabaseLoadedRef.current = false;
-  ptoDatabaseLoadedYearRef.current = null;
-  ptoDatabaseLoadedBucketsYearRef.current = null;
-  setPtoDatabaseReady(false);
-  setPtoDatabaseMessage(ptoDatabaseMessages.loading);
+  if (currentYearLoaded && includeBuckets && !currentYearBucketsLoaded) {
+    setPtoDatabaseReady(false);
+    setPtoDatabaseMessage(ptoDatabaseMessages.loading);
 
-  try {
-    const { loadPtoStateFromDatabase, loadPtoUpdatedAtFromDatabase } = await import("@/lib/data/pto");
-    if (currentYearLoaded && includeBuckets && !currentYearBucketsLoaded) {
+    try {
       const { loadPtoBucketsFromDatabase } = await import("@/lib/data/pto");
       const bucketState = await loadPtoBucketsFromDatabase();
       if (isCancelled()) return;
@@ -99,9 +95,26 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
       );
       setPtoDatabaseReady(true);
       setPtoDatabaseMessage(ptoDatabaseMessages.loaded);
-      return;
+    } catch (error) {
+      if (!isCancelled()) {
+        ptoDatabaseLoadedBucketsYearRef.current = null;
+        setPtoDatabaseReady(true);
+        const message = ptoDatabaseMessages.loadError(errorToMessage(error));
+        setPtoDatabaseMessage(message);
+        showSaveStatus("error", message);
+      }
     }
+    return;
+  }
 
+  ptoDatabaseLoadedRef.current = false;
+  ptoDatabaseLoadedYearRef.current = null;
+  ptoDatabaseLoadedBucketsYearRef.current = null;
+  setPtoDatabaseReady(false);
+  setPtoDatabaseMessage(ptoDatabaseMessages.loading);
+
+  try {
+    const { loadPtoStateFromDatabase, loadPtoUpdatedAtFromDatabase } = await import("@/lib/data/pto");
     const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt);
     if (localPtoNeedsDatabaseFreshnessCheck({
       currentState: ptoDatabaseStateRef.current,
