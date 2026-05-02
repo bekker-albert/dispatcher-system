@@ -67,6 +67,7 @@ assert.match(ptoDatabaseSaveSource, /return true;/);
 assert.match(ptoDatabaseSaveSource, /const ptoDatabaseDirtyRef = useRef\(false\);/);
 assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseDirtyRef\.current\) \{[\s\S]*return true;[\s\S]*\}/);
 assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSaveShouldSkip\(mode, snapshotToSave, ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*ptoDatabaseDirtyRef\.current = false;[\s\S]*return true;[\s\S]*\}/);
+assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseDirtyRef\.current\) \{[\s\S]*setPtoDatabaseMessage\(ptoDatabaseMessages\.alreadySaved\);[\s\S]*return true;[\s\S]*\}\s*const stateToSave = ptoDatabaseStateRef\.current;\s*const snapshotToSave = serializePtoDatabaseState\(stateToSave\);/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseSaveSnapshotRef\.current = savedSnapshot;\s*ptoDatabaseDirtyRef\.current = false;/);
 assert.match(ptoDatabaseSaveSource, /if \(!databaseConfigured \|\| !ptoDatabaseLoadedRef\.current \|\| ptoDatabaseLoadedYearRef\.current !== currentYear\) return;\s*ptoDatabaseDirtyRef\.current = true;/);
 assert.match(ptoDatabaseSaveSource, /getPtoDatabaseExpectedUpdatedAt = useCallback/);
