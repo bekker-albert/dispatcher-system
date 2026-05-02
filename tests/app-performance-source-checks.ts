@@ -15,6 +15,7 @@ const ptoDateTableViewModelSource = readFileSync(resolve(testDir, "../features/p
 const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
 const ptoDateEditableTableBodySource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableBody.tsx"), "utf8");
 const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableRow.tsx"), "utf8");
+const ptoDateEditingResetSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateEditingReset.ts"), "utf8");
 const ptoBucketsTableSource = readFileSync(resolve(testDir, "../features/pto/PtoBucketsTable.tsx"), "utf8");
 const ptoBucketsTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoBucketsTableRow.tsx"), "utf8");
 const ptoBucketsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoBucketsPrimaryContent.tsx"), "utf8");
@@ -141,6 +142,8 @@ assert.match(ptoDateEditableTableRowSource, /export const PtoDateEditableTableRo
 assert.match(ptoBucketsTableRowSource, /export const PtoBucketsTableRow = memo\(function PtoBucketsTableRow/);
 assert.match(ptoBucketsTableSource, /const rowActiveCell = activeCell\?\.rowKey === row\.key \? activeCell : null;/);
 assert.match(ptoBucketsTableSource, /draft=\{rowActiveCell \? draft : ""\}/);
+assert.match(ptoDateEditingResetSource, /setPtoSelectedCellKeys\(\(current\) => \(current\.length === 0 \? current : \[\]\)\)/);
+assert.doesNotMatch(ptoDateEditingResetSource, /setPtoSelectedCellKeys\(\[\]\)/);
 assert.match(ptoBucketsPrimaryContentSource, /useAppPtoBucketSupplementalTables/);
 assert.doesNotMatch(ptoBucketsPrimaryContentSource, /ptoPlanRows:/);
 assert.doesNotMatch(ptoBucketsPrimaryContentSource, /ptoOperRows:/);

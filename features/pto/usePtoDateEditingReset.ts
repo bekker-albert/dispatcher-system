@@ -26,12 +26,12 @@ export function usePtoDateEditingReset({
   useEffect(() => {
     if (active) return;
 
-    setPtoDateEditing(false);
-    setDraggedPtoRowId(null);
-    setPtoDropTarget(null);
-    setPtoFormulaCell(null);
-    setPtoInlineEditCell(null);
-    setPtoSelectedCellKeys([]);
+    setPtoDateEditing((current) => (current ? false : current));
+    setDraggedPtoRowId((current) => (current === null ? current : null));
+    setPtoDropTarget((current) => (current === null ? current : null));
+    setPtoFormulaCell((current) => (current === null ? current : null));
+    setPtoInlineEditCell((current) => (current === null ? current : null));
+    setPtoSelectedCellKeys((current) => (current.length === 0 ? current : []));
   }, [
     active,
     setDraggedPtoRowId,
