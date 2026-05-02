@@ -68,7 +68,9 @@ export function savePtoStateToBrowserStorage(
   let changed = false;
 
   Object.entries(snapshot).forEach(([storageKey, value]) => {
-    if (previousCache?.snapshot[storageKey] === value) return;
+    const previousValue = previousCache?.snapshot[storageKey] ?? window.localStorage.getItem(storageKey);
+    if (previousValue === value) return;
+
     window.localStorage.setItem(storageKey, value);
     changed = true;
   });

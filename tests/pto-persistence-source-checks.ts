@@ -93,6 +93,8 @@ assert.match(ptoPersistenceStorageSource, /savePtoStateToDatabase\(stateToSave, 
 assert.match(ptoPersistenceStorageSource, /type PtoBrowserStorageSnapshotCache = \{[\s\S]*snapshot: PtoBrowserStorageSnapshot;[\s\S]*refs: Record<string, unknown>;[\s\S]*\};/);
 assert.match(ptoPersistenceStorageSource, /export type PtoBrowserStorageSaveOptions = \{[\s\S]*markLocalUpdatedAt: boolean;[\s\S]*localUpdatedAt\?: string \| null;[\s\S]*\};/);
 assert.match(ptoPersistenceStorageSource, /if \(cache && cache\.refs\[storageKey\] === ref && typeof cache\.snapshot\[storageKey\] === "string"\)/);
+assert.match(ptoPersistenceStorageSource, /const previousValue = previousCache\?\.snapshot\[storageKey\] \?\? window\.localStorage\.getItem\(storageKey\);/);
+assert.match(ptoPersistenceStorageSource, /if \(previousValue === value\) return;/);
 assert.match(ptoPersistenceStorageSource, /const updatedAt = options\.localUpdatedAt === undefined \? new Date\(\)\.toISOString\(\) : options\.localUpdatedAt;/);
 assert.match(ptoPersistenceStorageSource, /if \(options\.markLocalUpdatedAt && updatedAt\) \{[\s\S]*window\.localStorage\.setItem\(adminStorageKeys\.ptoLocalUpdatedAt, updatedAt\);/);
 assert.match(ptoPersistenceStorageSource, /window\.localStorage\.setItem\(adminStorageKeys\.appLocalUpdatedAt, updatedAt \?\? new Date\(\)\.toISOString\(\)\);/);
