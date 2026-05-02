@@ -19,6 +19,7 @@ import {
 } from "../features/admin/vehicles/vehicleInlineEditModel";
 import { resolveInitialVehicleRowsSource } from "../features/admin/vehicles/initialVehicleRows";
 import {
+  createVehicleFilterOptionsByKey,
   createVehicleFilterSets,
   vehicleMatchesFilterSets,
 } from "../lib/domain/vehicles/filtering";
@@ -155,10 +156,17 @@ const vehicleFilterColumns = [
   { key: "owner", getValue: (vehicle: VehicleRow) => vehicle.owner ?? "" },
 ];
 const vehicleFilterSets = createVehicleFilterSets({ brand: ["Howo"] });
+const vehicleFilterOptionsByKey = createVehicleFilterOptionsByKey([
+  ...vehicleRows,
+  { ...vehicleRows[0], id: 11, brand: "Shacman", owner: "Another" },
+], vehicleFilterColumns, ["brand", "owner"]);
 
 assert.equal(vehicleMatchesFilterSets(vehicleRows[0], vehicleFilterSets, vehicleFilterColumns), true);
 assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns), false);
 assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns, "brand"), true);
+assert.deepEqual(vehicleFilterOptionsByKey.brand, ["Howo", "Shacman"]);
+assert.deepEqual(vehicleFilterOptionsByKey.owner, ["Another", "Owner"]);
+assert.match(useAdminVehicleRowsViewModelSource, /createVehicleFilterOptionsByKey\(deferredVehicleRows, vehicleFilterColumns, vehicleAutocompleteFilterKeys\)/);
 assert.match(useAdminVehicleRowsViewModelSource, /createVehicleFilterOptionsForKey\(/);
 assert.match(useVehicleFilterMenuSource, /createVehicleFilterOptionsForKey\(/);
 assert.doesNotMatch(useVehicleFilterMenuSource, /vehicleMatchesFilters/);

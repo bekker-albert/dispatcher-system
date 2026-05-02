@@ -26,8 +26,20 @@ function ptoImportRowSignature(row: PtoPlanRow, includeCustomerCode: boolean) {
   return includeCustomerCode ? ptoCustomerPlanRowSignature(row) : ptoLinkedRowSignature(row);
 }
 
-function ptoMonthTotalFromDays(row: PtoPlanRow, days: string[]) {
-  const total = days.reduce((sum, day) => sum + (row.dailyPlans[day] ?? 0), 0);
+type PtoImportMonthColumn = {
+  index: number;
+  days: string[];
+};
+
+function createPtoImportMonthColumn(index: number, month: string): PtoImportMonthColumn {
+  return {
+    index,
+    days: monthDays(month),
+  };
+}
+
+function ptoMonthTotalFromKnownDays(dailyPlans: PtoPlanRow["dailyPlans"], days: string[]) {
+  const total = days.reduce((sum, day) => sum + (dailyPlans[day] ?? 0), 0);
   return Math.round(total * 1000000) / 1000000;
 }
 
@@ -100,7 +112,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
   const monthColumns = headers
     .map((header, index) => ({ index, month: parsePtoPlanExcelMonthHeader(header, year) }))
     .filter((column) => column.month.startsWith(`${year}-`))
-    .map((column) => ({ ...column, days: monthDays(column.month) }));
+    .map((column) => createPtoImportMonthColumn(column.index, column.month));
   const currentBySignature = new Map(
     currentRows
       .map((row) => [ptoImportRowSignature(row, includeCustomerCode), row] as const)
@@ -138,7 +150,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
         if (parsed === null) return;
 
         const hasImportedDays = days.some((day) => importedDayDates.has(day));
-        const existingMonthTotal = existing ? ptoMonthTotalFromDays(existing, days) : 0;
+        const existingMonthTotal = existing ? ptoMonthTotalFromKnownDays(existing.dailyPlans, days) : 0;
         const importedDaysStillMatchExisting = Boolean(existing) && days.every((day) => {
           const importedHasValue = importedDayDates.has(day);
           const existingHasValue = existing?.dailyPlans[day] !== undefined;

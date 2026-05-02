@@ -3,38 +3,12 @@ import { delta, formatReportWorkName, reportRowDisplayKey } from "../../lib/doma
 import { reportYearFact } from "../../lib/domain/reports/facts";
 import { reportReasonEntryKey, reportYearReasonTextWithManualOverride } from "../../lib/domain/reports/reasons";
 import type { ReportRow } from "../../lib/domain/reports/types";
+import { reportPrintProfile, type ReportPrintTextColumnKey } from "./reportPrintProfile";
 
-const reportPrintRowsPerPage = 42;
-const reportPrintPageWidthBudget = 1400;
-const reportPrintBaseColumnWidths: Record<ReportColumnKey, number> = {
-  area: 54,
-  "work-name": 180,
-  unit: 24,
-  "day-plan": 42,
-  "day-fact": 42,
-  "day-delta": 38,
-  "day-productivity": 48,
-  "day-reason": 175,
-  "month-total-plan": 48,
-  "month-plan": 48,
-  "month-fact": 58,
-  "month-delta": 42,
-  "month-productivity": 48,
-  "year-plan": 52,
-  "year-fact": 62,
-  "year-delta": 46,
-  "year-reason": 190,
-  "annual-plan": 54,
-  "annual-fact": 54,
-  "annual-remaining": 58,
-};
-const reportPrintTextColumnBounds = {
-  "work-name": { min: 150, max: 225, base: 118, char: 4.2 },
-  "day-reason": { min: 145, max: 230, base: 118, char: 3.8 },
-  "year-reason": { min: 165, max: 260, base: 126, char: 3.8 },
-} as const;
-
-type ReportPrintTextColumnKey = keyof typeof reportPrintTextColumnBounds;
+const reportPrintRowsPerPage = reportPrintProfile.rows.perPage;
+const reportPrintPageWidthBudget = reportPrintProfile.page.widthBudgetPx;
+const reportPrintBaseColumnWidths = reportPrintProfile.columns.baseWidths;
+const reportPrintTextColumnBounds = reportPrintProfile.columns.textBounds;
 
 type ReportPrintLayoutOptions = {
   columnKeys?: readonly ReportColumnKey[];
@@ -181,9 +155,17 @@ export function createReportPrintLayout({
   };
   const reportLastPrintPageRows = reportBodyRowCount > 0 ? reportPrintLastPageRows(groups) : 0;
   const reportMissingPrintRows = reportBodyRowCount > 0 ? reportPrintRowsPerPage - reportLastPrintPageRows : 0;
-  const reportShouldFillPrintRows = reportMissingPrintRows >= 1 && reportMissingPrintRows <= 5;
+  const reportShouldFillPrintRows = reportMissingPrintRows >= reportPrintProfile.fillRows.minMissingRows
+    && reportMissingPrintRows <= reportPrintProfile.fillRows.maxMissingRows;
   const reportPrintFillPaddingMm = reportShouldFillPrintRows
-    ? Math.min(0.5, Math.max(0.08, (reportMissingPrintRows * 2.2) / Math.max(reportLastPrintPageRows, 1)))
+    ? Math.min(
+      reportPrintProfile.fillRows.maxPaddingMm,
+      Math.max(
+        reportPrintProfile.fillRows.minPaddingMm,
+        (reportMissingPrintRows * reportPrintProfile.fillRows.paddingMmPerMissingRow)
+          / Math.max(reportLastPrintPageRows, 1),
+      ),
+    )
     : 0;
 
   return {

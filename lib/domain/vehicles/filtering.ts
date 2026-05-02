@@ -21,6 +21,35 @@ export function createVehicleFilterOptions(rows: VehicleRow[], column: Pick<Vehi
     .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
 }
 
+export function createVehicleFilterOptionsByKey(
+  rows: VehicleRow[],
+  columns: VehicleFilterColumnLike[],
+  keys: readonly string[],
+) {
+  const keySet = new Set(keys);
+  const optionSets = new Map<string, Set<string>>();
+  const targetColumns = columns.filter((column) => {
+    if (!keySet.has(column.key)) return false;
+
+    optionSets.set(column.key, new Set());
+    return true;
+  });
+
+  rows.forEach((vehicle) => {
+    targetColumns.forEach((column) => {
+      optionSets.get(column.key)?.add(vehicleFilterOptionValue(column.getValue(vehicle)));
+    });
+  });
+
+  return Object.fromEntries(
+    targetColumns.map((column) => [
+      column.key,
+      Array.from(optionSets.get(column.key) ?? [])
+        .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru")),
+    ]),
+  ) as Partial<Record<string, string[]>>;
+}
+
 export function mergeVehicleFilterOptions(options: string[], selectedValues: string[] = []) {
   return Array.from(new Set([...options, ...selectedValues.map(vehicleFilterOptionValue)]))
     .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));

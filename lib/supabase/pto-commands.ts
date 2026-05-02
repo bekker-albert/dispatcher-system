@@ -55,6 +55,10 @@ function ptoBucketPairsToDeleteRecords(pairs: Array<{ rowKey: string; equipmentK
   }));
 }
 
+function ptoDayValuePatchesForRow(row: PtoPlanRow, values: PtoDayValuePatch[]) {
+  return values.map((item) => ({ ...item, rowId: row.id }));
+}
+
 async function savePtoDayValueWithClient(
   client: SupabasePtoClient,
   table: SupabasePtoTable,
@@ -172,7 +176,7 @@ export async function savePtoDayValuesWithRowToSupabaseClient(
   await savePtoDayValuesWithClient(
     client,
     table,
-    values.map((item) => ({ ...item, rowId: row.id })),
+    ptoDayValuePatchesForRow(row, values),
   );
   return supabasePtoInlineWriteResult(client);
 }

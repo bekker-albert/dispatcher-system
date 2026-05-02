@@ -1,8 +1,10 @@
+import { reportPrintProfile } from "./reportPrintProfile";
+
 export const reportPrintPageCss = `@page {
-  size: A3 landscape;
-  margin: 5mm;
+  size: ${reportPrintProfile.page.size};
+  margin: ${reportPrintProfile.page.marginMm}mm;
 }`;
 
 export const reportPrintSharedCss = `.report-print-table tbody.report-print-area-group tr:first-child > td {
-  border-top: 2px solid #64748b !important;
+  border-top: ${reportPrintProfile.table.borderPx}px solid ${reportPrintProfile.table.borderColor} !important;
 }`;

@@ -1,16 +1,18 @@
+import { reportPrintProfile } from "./reportPrintProfile";
+
 export const reportPrintMediaTableLayoutCss = `  .report-print-table-scroll {
     display: block !important;
     border: 0 !important;
   }
 
   .report-print-table {
-    border: 2px solid #64748b !important;
+    border: ${reportPrintProfile.table.borderPx}px solid ${reportPrintProfile.table.borderColor} !important;
     height: auto !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
     table-layout: fixed !important;
-    font-size: 7.6px !important;
+    font-size: ${reportPrintProfile.table.fontSizePx}px !important;
     border-collapse: collapse !important;
   }
 
@@ -23,55 +25,55 @@ export const reportPrintMediaTableLayoutCss = `  .report-print-table-scroll {
   }
 
   .report-print-table col.report-print-col-work-name {
-    width: var(--report-print-work-name-width, 170px) !important;
+    width: var(--report-print-work-name-width, ${reportPrintProfile.columns.cssFallbackWidths["work-name"]}px) !important;
   }
 
   .report-print-table col.report-print-col-day-reason {
-    width: var(--report-print-day-reason-width, 175px) !important;
+    width: var(--report-print-day-reason-width, ${reportPrintProfile.columns.cssFallbackWidths["day-reason"]}px) !important;
   }
 
   .report-print-table col.report-print-col-year-reason {
-    width: var(--report-print-year-reason-width, 190px) !important;
+    width: var(--report-print-year-reason-width, ${reportPrintProfile.columns.cssFallbackWidths["year-reason"]}px) !important;
   }`;
 
 export const reportPrintMediaCellMetricsCss = `  .report-print-table th,
   .report-print-table td {
-    line-height: 1.02 !important;
-    padding: 0.8px 1.5px !important;
+    line-height: ${reportPrintProfile.cells.lineHeight} !important;
+    padding: ${reportPrintProfile.cells.paddingYPx}px ${reportPrintProfile.cells.paddingXPx}px !important;
   }
 
   .report-print-table .report-metric {
     gap: 0 !important;
-    line-height: 1 !important;
+    line-height: ${reportPrintProfile.cells.metricLineHeight} !important;
   }
 
   .report-print-table .report-metric-value {
     font-size: 1em !important;
     font-weight: 700 !important;
-    line-height: 1 !important;
+    line-height: ${reportPrintProfile.cells.metricLineHeight} !important;
   }
 
   .report-print-table .report-metric-note {
-    color: #475569 !important;
+    color: ${reportPrintProfile.cells.noteColor} !important;
     font-size: 1em !important;
     font-weight: 500 !important;
-    line-height: 1.02 !important;
+    line-height: ${reportPrintProfile.cells.lineHeight} !important;
     white-space: nowrap !important;
   }
 
   .report-print-table th {
-    line-height: 1.08 !important;
-    padding-bottom: 1.4px !important;
-    padding-top: 1.4px !important;
+    line-height: ${reportPrintProfile.cells.headerLineHeight} !important;
+    padding-bottom: ${reportPrintProfile.cells.headerPaddingYPx}px !important;
+    padding-top: ${reportPrintProfile.cells.headerPaddingYPx}px !important;
   }
 
   .report-print-table tbody.report-print-area-group tr:first-child > td {
-    border-top: 2px solid #64748b !important;
+    border-top: ${reportPrintProfile.table.borderPx}px solid ${reportPrintProfile.table.borderColor} !important;
   }`;
 
 export const reportPrintMediaFillRowsCss = `  .report-print-table tr.report-print-fill-row > td {
-    padding-bottom: var(--report-print-fill-padding-y, 0.8px) !important;
-    padding-top: var(--report-print-fill-padding-y, 0.8px) !important;
+    padding-bottom: var(--report-print-fill-padding-y, ${reportPrintProfile.fillRows.fallbackPaddingPx}px) !important;
+    padding-top: var(--report-print-fill-padding-y, ${reportPrintProfile.fillRows.fallbackPaddingPx}px) !important;
   }`;
 
 export const reportPrintMediaStaticHeaderCss = `  .report-print-table thead th {
@@ -81,7 +83,7 @@ export const reportPrintMediaStaticHeaderCss = `  .report-print-table thead th {
   }`;
 
 export const reportPrintMediaTableHeaderCss = `  .report-print-table thead {
-    background: #f1f5f9 !important;
+    background: ${reportPrintProfile.header.background} !important;
     display: table-header-group !important;
   }
 
@@ -89,11 +91,11 @@ export const reportPrintMediaTableHeaderCss = `  .report-print-table thead {
   .report-print-table thead tr,
   .report-print-table thead th,
   .report-print-table thead th * {
-    color: #0f172a !important;
+    color: ${reportPrintProfile.header.textColor} !important;
   }
 
   .report-print-table thead th {
-    background: #f1f5f9 !important;
+    background: ${reportPrintProfile.header.background} !important;
   }
 
   .report-print-table thead .report-screen-header-content,
@@ -102,11 +104,11 @@ export const reportPrintMediaTableHeaderCss = `  .report-print-table thead {
   }
 
   .report-print-table thead .report-print-header-label {
-    color: #0f172a !important;
+    color: ${reportPrintProfile.header.textColor} !important;
     display: block !important;
     font: inherit !important;
-    font-weight: 800 !important;
-    line-height: 1.1 !important;
+    font-weight: ${reportPrintProfile.header.labelWeight} !important;
+    line-height: ${reportPrintProfile.cells.headerLabelLineHeight} !important;
     max-width: 100% !important;
     min-width: 0 !important;
     overflow-wrap: anywhere !important;

@@ -9,6 +9,7 @@ import { reportColumnKeys } from "../lib/domain/reports/columns";
 import { createReportBaseRows } from "../lib/domain/reports/rows-model";
 import { reportReasonEntryKey, reportYearReasonOverrideKey } from "../lib/domain/reports/reasons";
 import { createReportBodyLayout, createReportPrintLayout } from "../features/reports/reportPrintLayout";
+import { reportPrintProfile } from "../features/reports/reportPrintProfile";
 import { createCustomerReportRows, createReportAreaGroups, createReportAreaTabs, filterReportAreaGroups, flattenReportAreaGroups } from "../features/reports/customerReportRowsModel";
 import { createReportColumnTextModel } from "../features/reports/reportColumnTextModel";
 import { createReportRowDisplayViewModel } from "../features/reports/reportRowDisplayViewModel";
@@ -212,10 +213,10 @@ assert.equal(printLayout.reportBodyRowCount, 43);
 assert.equal(printLayout.reportLastPrintPageRows, 37);
 assert.equal(printLayout.reportShouldFillPrintRows, true);
 assert.ok(printLayout.reportPrintFillPaddingMm > 0);
-assert.equal(printLayout.reportPrintColumnWidths["day-plan"], 42);
-assert.equal(printLayout.reportPrintColumnWidths["month-fact"], 58);
+assert.equal(printLayout.reportPrintColumnWidths["day-plan"], reportPrintProfile.columns.baseWidths["day-plan"]);
+assert.equal(printLayout.reportPrintColumnWidths["month-fact"], reportPrintProfile.columns.baseWidths["month-fact"]);
 assert.ok(
-  reportColumnKeys.reduce((sum, key) => sum + printLayout.reportPrintColumnWidths[key], 0) <= 1400,
+  reportColumnKeys.reduce((sum, key) => sum + printLayout.reportPrintColumnWidths[key], 0) <= reportPrintProfile.page.widthBudgetPx,
 );
 const longGroupPrintLayout = createReportPrintLayout({
   columnKeys: reportColumnKeys,

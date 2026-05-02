@@ -3,7 +3,7 @@ import { useEffect, useMemo, type Dispatch, type RefObject, type SetStateAction 
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import {
   createVehicleFilterOptionsForKey,
-  createVehicleFilterOptions,
+  createVehicleFilterOptionsByKey,
   createVehicleFilterSets,
   vehicleMatchesFilterSets,
 } from "@/lib/domain/vehicles/filtering";
@@ -70,11 +70,7 @@ export function useAdminVehicleRowsViewModel({
 
   const vehicleAutocompleteOptions = useMemo(() => (
     active && adminVehiclesEditing
-      ? Object.fromEntries(
-          vehicleFilterColumns
-            .filter((column) => vehicleAutocompleteFilterKeys.includes(column.key))
-            .map((column) => [column.key, createVehicleFilterOptions(deferredVehicleRows, column)]),
-        ) as Partial<Record<VehicleFilterKey, string[]>>
+      ? createVehicleFilterOptionsByKey(deferredVehicleRows, vehicleFilterColumns, vehicleAutocompleteFilterKeys) as Partial<Record<VehicleFilterKey, string[]>>
       : emptyVehicleAutocompleteOptions
   ), [active, adminVehiclesEditing, deferredVehicleRows]);
 

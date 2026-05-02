@@ -113,6 +113,40 @@ function fakeClient() {
   return new FakeSupabaseClient() as unknown as FakeSupabaseClient & SupabasePtoClient;
 }
 
+function operationIndex(operations: Operation[], kind: Operation["kind"], table: string) {
+  const index = operations.findIndex((operation) => operation.kind === kind && operation.table === table);
+  assert.notEqual(index, -1, `${kind} ${table} was not called`);
+  return index;
+}
+
+{
+  const client = fakeClient();
+  client.rowsByTable[ptoDayValuesTable] = [
+    { table_type: "plan", row_id: row.id, work_date: "2026-04-01", value: 9, updated_at: "2026-04-03T00:00:00.000Z" },
+  ];
+
+  await savePtoDayValueWithRowToSupabaseClient("plan", row, "2026-04-01", 10, client, {
+    expectedUpdatedAt: "2026-04-03T00:00:00.000Z",
+  });
+
+  const rowUpsertIndex = operationIndex(client.operations, "upsert", ptoRowsTable);
+  const dayUpsertIndex = operationIndex(client.operations, "upsert", ptoDayValuesTable);
+  assert.equal(rowUpsertIndex < dayUpsertIndex, true);
+  assert.equal(client.operations.slice(0, rowUpsertIndex).every((operation) => operation.kind === "select"), true);
+  assert.equal(
+    client.operations.slice(0, rowUpsertIndex).some((operation) => operation.table === ptoDayValuesTable),
+    true,
+  );
+
+  assert.equal((client.operations[rowUpsertIndex]?.records?.[0] as { row_id?: unknown } | undefined)?.row_id, row.id);
+  assert.deepEqual(client.operations[dayUpsertIndex]?.records, [{
+    table_type: "plan",
+    row_id: row.id,
+    work_date: "2026-04-01",
+    value: 10,
+  }]);
+}
+
 {
   const client = fakeClient();
   await savePtoDayValuesWithRowToSupabaseClient("plan", row, [
@@ -144,6 +178,25 @@ function fakeClient() {
 
   await assert.rejects(
     savePtoDayValueWithRowToSupabaseClient("plan", row, "2026-04-01", 10, client, {
+      expectedUpdatedAt: "2026-04-02T00:00:00.000Z",
+    }),
+    /PTO data changed in database/,
+  );
+
+  assert.equal(client.operations.some((operation) => operation.kind === "upsert"), false);
+  assert.equal(client.operations.some((operation) => operation.kind === "delete"), false);
+}
+
+{
+  const client = fakeClient();
+  client.rowsByTable[ptoRowsTable] = [
+    { table_type: "plan", row_id: row.id, updated_at: "2026-04-03T00:00:00.000Z" },
+  ];
+
+  await assert.rejects(
+    savePtoDayValuesWithRowToSupabaseClient("plan", row, [
+      { rowId: "wrong-row", day: "2026-04-01", value: 10 },
+    ], client, {
       expectedUpdatedAt: "2026-04-02T00:00:00.000Z",
     }),
     /PTO data changed in database/,
