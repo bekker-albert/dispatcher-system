@@ -17,6 +17,7 @@ type UseReportRowsModelOptions = {
   needsReportRows: boolean;
   needsReportIndexes: boolean;
   needsAutoReportRows: boolean;
+  needsReportReasons: boolean;
   deferredPtoPlanRows: PtoPlanRow[];
   deferredPtoSurveyRows: PtoPlanRow[];
   deferredPtoOperRows: PtoPlanRow[];
@@ -33,6 +34,7 @@ export function useReportRowsModel({
   needsReportRows,
   needsReportIndexes,
   needsAutoReportRows,
+  needsReportReasons,
   deferredPtoPlanRows,
   deferredPtoSurveyRows,
   deferredPtoOperRows,
@@ -92,7 +94,7 @@ export function useReportRowsModel({
   ), [needsAutoReportRows, reportBaseRows, reportDate, reportPtoIndexes]);
 
   const reasonAccumulationStartDateByRowKey = useMemo(() => {
-    if (!needsAutoReportRows || !reportPtoIndexes) return new Map<string, string>();
+    if (!needsAutoReportRows || !needsReportReasons || !reportPtoIndexes) return new Map<string, string>();
 
     return new Map(calculatedReportRows.flatMap((derivedRow) => {
       const rowKey = reportRowKey(derivedRow);
@@ -101,13 +103,15 @@ export function useReportRowsModel({
         ? [[rowKey, reportReasonAccumulationStartDateFromIndexes(derivedRow, reportDate, reportPtoIndexes.plan, reportPtoIndexes.survey, reportPtoIndexes.oper)] as const]
         : [];
     }));
-  }, [calculatedReportRows, needsAutoReportRows, reportDate, reportPtoIndexes]);
+  }, [calculatedReportRows, needsAutoReportRows, needsReportReasons, reportDate, reportPtoIndexes]);
 
   const derivedReportRows = useMemo(() => {
     if (!needsAutoReportRows || calculatedReportRows.length === 0) {
       derivedReportRowsCacheRef.current = new Map();
       return [];
     }
+
+    if (!needsReportReasons) return calculatedReportRows;
 
     let reasonIndex: ReturnType<typeof createReportReasonIndex> | null = null;
     const previousCache = derivedReportRowsCacheRef.current;
@@ -154,7 +158,7 @@ export function useReportRowsModel({
 
     derivedReportRowsCacheRef.current = nextCache;
     return rows;
-  }, [calculatedReportRows, needsAutoReportRows, reasonAccumulationStartDateByRowKey, reportDate, reportReasons]);
+  }, [calculatedReportRows, needsAutoReportRows, needsReportReasons, reasonAccumulationStartDateByRowKey, reportDate, reportReasons]);
 
   return {
     reportBaseRows,

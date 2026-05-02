@@ -83,6 +83,7 @@ export function useAppReportsModel({
     needsReportRows: needsReportRows && needsReportData,
     needsReportIndexes: (needsReportIndexes || needsAdminReportAutoRows) && needsReportData,
     needsAutoReportRows: needsCalculatedReportRows && needsReportData,
+    needsReportReasons: needsVisibleReportRows,
     deferredPtoPlanRows,
     deferredPtoSurveyRows,
     deferredPtoOperRows,

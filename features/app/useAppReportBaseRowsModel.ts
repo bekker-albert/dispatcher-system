@@ -37,6 +37,7 @@ export function useAppReportBaseRowsModel({
     needsReportRows: needsReportBaseRows,
     needsReportIndexes: false,
     needsAutoReportRows: false,
+    needsReportReasons: false,
     deferredPtoPlanRows,
     deferredPtoSurveyRows,
     deferredPtoOperRows,
