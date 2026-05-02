@@ -21,6 +21,7 @@ const ptoDateTableContextSource = readFileSync(resolve(testDir, "../features/pto
 const ptoLinkedRowsEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoLinkedRowsEditor.ts"), "utf8");
 const ptoYearEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoYearEditor.ts"), "utf8");
 const ptoInlineDatabaseWriteSource = readFileSync(resolve(testDir, "../features/pto/ptoInlineDatabaseWrite.ts"), "utf8");
+const dataPtoSource = readFileSync(resolve(testDir, "../lib/data/pto.ts"), "utf8");
 const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
 const mysqlPtoFreshnessSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-freshness.ts"), "utf8");
 const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase/pto-commands.ts"), "utf8");
@@ -44,6 +45,13 @@ assert.match(ptoDatabaseLoadRunnerSource, /localPtoNeedsDatabaseFreshnessCheck/)
 assert.match(ptoDatabaseLoadRunnerSource, /loadPtoStateFromDatabase\(\{ year: ptoPlanYear,\s*includeBuckets \}\)/);
 assert.match(ptoDatabaseLoadRunnerSource, /preserveFallbackBuckets: !includeBuckets/);
 assert.match(ptoDatabaseLoadRunnerSource, /setPtoPlanYear\(ptoPlanYear\)/);
+assert.match(dataPtoSource, /const ptoLoadRequestCache = new Map<string, Promise<unknown>>\(\);/);
+assert.match(dataPtoSource, /function dedupePtoLoadRequest<T>\(key: string, load: \(\) => Promise<T>\): Promise<T>/);
+assert.match(dataPtoSource, /ptoLoadRequestCache\.delete\(key\)/);
+assert.match(dataPtoSource, /mysql:pto:load-year:\$\{options\.year\}:\$\{includeBuckets \? "buckets" : "date"\}/);
+assert.match(dataPtoSource, /mysql:pto:load-updated-at/);
+assert.match(dataPtoSource, /mysql:pto:load-buckets/);
+assert.doesNotMatch(dataPtoSource, /dedupePtoLoadRequest\([^)]*"save/);
 assert.doesNotMatch(ptoDatabaseLoadRunnerSource, /setPtoPlanYear\(loadedState\.uiState\.ptoPlanYear\)/);
 assert.match(ptoDatabaseLoadRunnerSource, /ptoDatabaseFullSaveNextRef\.current = true;[\s\S]*ptoDatabaseSaveSnapshotRef\.current = createPtoDatabaseSaveBaseline\("", databaseUpdatedAt \?\? null\)/);
 assert.match(ptoDatabaseLoadRunnerSource, /ptoDatabaseFullSaveNextRef\.current = resolution\.kind === "empty-save-local";/);

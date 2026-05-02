@@ -30,6 +30,19 @@ type DataPtoBucketRecordsLoadResult = {
   updatedAt?: string | null;
 };
 
+const ptoLoadRequestCache = new Map<string, Promise<unknown>>();
+
+function dedupePtoLoadRequest<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const activeRequest = ptoLoadRequestCache.get(key);
+  if (activeRequest) return activeRequest as Promise<T>;
+
+  const request = load().finally(() => {
+    ptoLoadRequestCache.delete(key);
+  });
+  ptoLoadRequestCache.set(key, request);
+  return request;
+}
+
 function ptoInlineSavePayload(options: DataPtoInlineSaveOptions) {
   return { expectedUpdatedAt: options.expectedUpdatedAt };
 }
@@ -41,33 +54,39 @@ async function loadSupabasePtoAdapter() {
 export function loadPtoStateFromDatabase(options: DataPtoLoadOptions = {}) {
   if (serverDatabaseConfigured) {
     if (options.year) {
-      return databaseRequest<DataPtoState | null>("pto", "load-year", {
+      const includeBuckets = options.includeBuckets === true;
+      return dedupePtoLoadRequest(`mysql:pto:load-year:${options.year}:${includeBuckets ? "buckets" : "date"}`, () => databaseRequest<DataPtoState | null>("pto", "load-year", {
         year: options.year,
-        includeBuckets: options.includeBuckets === true,
-      });
+        includeBuckets,
+      }));
     }
 
-    return databaseRequest<DataPtoState | null>("pto", "load");
+    return dedupePtoLoadRequest("mysql:pto:load", () => databaseRequest<DataPtoState | null>("pto", "load"));
   }
 
-  return loadSupabasePtoAdapter().then(({ loadPtoStateFromSupabase, loadPtoStateFromSupabaseForYear }) => {
+  return dedupePtoLoadRequest(`supabase:pto:load:${options.year ?? "all"}:${options.includeBuckets === true ? "buckets" : "date"}`, () => loadSupabasePtoAdapter().then(({ loadPtoStateFromSupabase, loadPtoStateFromSupabaseForYear }) => {
     if (options.year) return loadPtoStateFromSupabaseForYear(options.year, { includeBuckets: options.includeBuckets });
     return loadPtoStateFromSupabase();
-  });
+  }));
 }
 
 export function loadPtoUpdatedAtFromDatabase() {
   if (serverDatabaseConfigured) {
-    return databaseRequest<string | null | undefined>("pto", "load-updated-at");
+    return dedupePtoLoadRequest("mysql:pto:load-updated-at", () => databaseRequest<string | null | undefined>("pto", "load-updated-at"));
   }
 
-  return loadSupabasePtoAdapter().then(({ loadPtoUpdatedAtFromSupabase }) => loadPtoUpdatedAtFromSupabase());
+  return dedupePtoLoadRequest("supabase:pto:load-updated-at", () => loadSupabasePtoAdapter().then(({ loadPtoUpdatedAtFromSupabase }) => loadPtoUpdatedAtFromSupabase()));
 }
 
 export function loadPtoBucketsFromDatabase() {
-  const loadBucketRecords = serverDatabaseConfigured
-    ? databaseRequest<DataPtoBucketRecordsLoadResult>("pto", "load-buckets")
-    : loadSupabasePtoAdapter().then(({ loadPtoBucketsFromSupabase }) => loadPtoBucketsFromSupabase());
+  const loadBucketRecords = dedupePtoLoadRequest(
+    serverDatabaseConfigured ? "mysql:pto:load-buckets" : "supabase:pto:load-buckets",
+    () => (
+      serverDatabaseConfigured
+        ? databaseRequest<DataPtoBucketRecordsLoadResult>("pto", "load-buckets")
+        : loadSupabasePtoAdapter().then(({ loadPtoBucketsFromSupabase }) => loadPtoBucketsFromSupabase())
+    ),
+  );
 
   return loadBucketRecords.then((result) => ({
     bucketRows: ptoBucketRowsFromRecords(result.bucketRows),
