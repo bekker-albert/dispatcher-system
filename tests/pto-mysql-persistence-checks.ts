@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   loadPtoStateFromMysqlForYear,
   deletePtoYearFromMysql,
@@ -15,6 +16,7 @@ assert.match(mysqlTransactionSource, /rollback\(\)/);
 assert.match(mysqlTransactionSource, /release\(\)/);
 
 const mysqlFullSaveSource = savePtoStateToMysql.toString();
+const mysqlBucketWritesSource = readFileSync(new URL("../lib/server/mysql/pto-bucket-writes.ts", import.meta.url), "utf8");
 assert.match(mysqlFullSaveSource, /writePtoTransaction/);
 assert.match(mysqlFullSaveSource, /assertMysqlPtoMatchesExpectedUpdatedAt\(state,\s*options\.expectedUpdatedAt,\s*\{[\s\S]*yearScope: options\.yearScope[\s\S]*\}\)/);
 assert.match(mysqlFullSaveSource, /upsertPtoRows\(rowRecords,\s*execute\)/);
@@ -24,6 +26,9 @@ assert.match(mysqlFullSaveSource, /if \(options\.yearScope\) \{[\s\S]*prunePtoYe
 assert.match(mysqlFullSaveSource, /if \(!isYearScopedSave\) \{[\s\S]*deletePtoRowsMissingFromState\("plan",\s*planRows,\s*execute\)[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /if \(!isYearScopedSave\) \{[\s\S]*deletePtoBucketValuesMissingFromState\(bucketValueRecords,\s*execute\)[\s\S]*deletePtoBucketRowsMissingFromState\(bucketRowRecords,\s*execute\)[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /deletePtoBucketRowsMissingFromState\(bucketRowRecords,\s*execute\)/);
+assert.match(mysqlBucketWritesSource, /for \(const batch of chunkValues\(records\)\) \{[\s\S]*INSERT INTO pto_bucket_rows/);
+assert.match(mysqlBucketWritesSource, /SELECT row_key FROM pto_bucket_rows[\s\S]*DELETE FROM pto_bucket_rows[\s\S]*WHERE row_key IN/);
+assert.match(mysqlBucketWritesSource, /SELECT row_key, equipment_key FROM pto_bucket_values[\s\S]*DELETE FROM pto_bucket_values[\s\S]*WHERE \(row_key, equipment_key\) IN/);
 
 const mysqlDeleteYearSource = deletePtoYearFromMysql.toString();
 assert.match(mysqlDeleteYearSource, /DELETE FROM pto_day_values WHERE work_date >= \? AND work_date <= \?/);

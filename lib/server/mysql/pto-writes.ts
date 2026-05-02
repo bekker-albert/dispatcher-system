@@ -6,8 +6,6 @@ import {
   ptoPlanRowIds,
   ptoUiStateKey,
   ptoYearDateRange,
-  type PtoPersistenceBucketRowRecord,
-  type PtoPersistenceBucketValueRecord,
   type PtoPersistenceDayValueRecord,
   type PtoPersistenceRowRecord,
   type PtoPersistenceState,
@@ -318,92 +316,6 @@ export async function deletePtoRowsMissingFromState(
     WHERE table_type = ?
       AND row_id NOT IN (${placeholders})`,
     [table, ...rowIds],
-  );
-}
-
-export async function upsertPtoBucketRows(
-  records: PtoPersistenceBucketRowRecord[],
-  execute: DbExecutor = dbExecute,
-) {
-  if (!records.length) return;
-
-  const placeholders = records.map(() => "(?, ?, ?, ?, ?)").join(", ");
-  const values = records.flatMap((record) => [
-    record.row_key,
-    record.area,
-    record.structure,
-    record.source,
-    record.sort_index,
-  ]);
-
-  await execute(
-    `INSERT INTO pto_bucket_rows (row_key, area, structure, source, sort_index)
-    VALUES ${placeholders}
-    ON DUPLICATE KEY UPDATE
-      area = VALUES(area),
-      structure = VALUES(structure),
-      source = VALUES(source),
-      sort_index = VALUES(sort_index),
-      updated_at = CURRENT_TIMESTAMP(3)`,
-    values,
-  );
-}
-
-export async function upsertPtoBucketValues(
-  records: PtoPersistenceBucketValueRecord[],
-  execute: DbExecutor = dbExecute,
-) {
-  if (!records.length) return;
-
-  for (let index = 0; index < records.length; index += batchSize) {
-    const batch = records.slice(index, index + batchSize);
-    const placeholders = batch.map(() => "(?, ?, ?)").join(", ");
-    const values = batch.flatMap((record) => [record.row_key, record.equipment_key, record.value]);
-
-    await execute(
-      `INSERT INTO pto_bucket_values (row_key, equipment_key, value)
-      VALUES ${placeholders}
-      ON DUPLICATE KEY UPDATE
-        value = VALUES(value),
-        updated_at = CURRENT_TIMESTAMP(3)`,
-      values,
-    );
-  }
-}
-
-export async function deletePtoBucketRowsMissingFromState(
-  records: PtoPersistenceBucketRowRecord[],
-  execute: DbExecutor = dbExecute,
-) {
-  if (records.length === 0) {
-    await execute("DELETE FROM pto_bucket_rows");
-    return;
-  }
-
-  const placeholders = records.map(() => "?").join(", ");
-
-  await execute(
-    `DELETE FROM pto_bucket_rows
-    WHERE row_key NOT IN (${placeholders})`,
-    records.map((record) => record.row_key),
-  );
-}
-
-export async function deletePtoBucketValuesMissingFromState(
-  records: PtoPersistenceBucketValueRecord[],
-  execute: DbExecutor = dbExecute,
-) {
-  if (records.length === 0) {
-    await execute("DELETE FROM pto_bucket_values");
-    return;
-  }
-
-  const placeholders = records.map(() => "(?, ?)").join(", ");
-
-  await execute(
-    `DELETE FROM pto_bucket_values
-    WHERE (row_key, equipment_key) NOT IN (${placeholders})`,
-    records.flatMap((record) => [record.row_key, record.equipment_key]),
   );
 }
 
