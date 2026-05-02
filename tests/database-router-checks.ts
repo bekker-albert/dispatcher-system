@@ -37,6 +37,7 @@ assert.match(mysqlSchemaSource, /ALTER TABLE vehicles ADD INDEX vehicles_sort_in
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_rows ADD INDEX pto_rows_sort_idx \(table_type, sort_index\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_idx \(work_date\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_row_idx \(work_date, table_type, row_id\)/);
+assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_table_date_row_idx \(table_type, work_date, row_id\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_bucket_rows ADD INDEX pto_bucket_rows_sort_idx \(sort_index\)/);
 assert.doesNotMatch(mysqlPtoCommandsSource, /loadPtoUpdatedAtFromMysql/);
 assert.match(mysqlPtoCommandsSource, /return await touchPtoVersion\(execute\)/);

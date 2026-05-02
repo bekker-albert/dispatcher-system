@@ -2,7 +2,7 @@ import { getMysqlPool } from "./connection";
 import type { RowDataPacket } from "mysql2/promise";
 
 let schemaPromise: Promise<void> | null = null;
-const schemaVersionMetaKey = "schema:v2026-05-02-01";
+const schemaVersionMetaKey = "schema:v2026-05-02-02";
 const ptoMetaTableStatement = `CREATE TABLE IF NOT EXISTS pto_meta (
     meta_key VARCHAR(191) NOT NULL,
     updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
@@ -74,6 +74,7 @@ const statements = [
     PRIMARY KEY (table_type, row_id, work_date),
     KEY pto_day_values_date_idx (work_date),
     KEY pto_day_values_date_row_idx (work_date, table_type, row_id),
+    KEY pto_day_values_table_date_row_idx (table_type, work_date, row_id),
     KEY pto_day_values_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
@@ -214,6 +215,12 @@ async function runMysqlSchemaSetup() {
     "pto_day_values",
     "pto_day_values_date_row_idx",
     "ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_row_idx (work_date, table_type, row_id)",
+  );
+
+  await addMysqlIndexIfMissing(
+    "pto_day_values",
+    "pto_day_values_table_date_row_idx",
+    "ALTER TABLE pto_day_values ADD INDEX pto_day_values_table_date_row_idx (table_type, work_date, row_id)",
   );
 
   await addMysqlIndexIfMissing(
