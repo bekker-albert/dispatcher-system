@@ -57,6 +57,11 @@ assert.match(ptoDatabaseLoadRunnerSource, /ptoDatabaseFullSaveNextRef\.current =
 assert.match(ptoDatabaseLoadRunnerSource, /ptoDatabaseFullSaveNextRef\.current = resolution\.kind === "empty-save-local";/);
 assert.match(ptoDatabaseLoadRunnerSource, /ptoDatabaseFullSaveNextRef\.current = true;[\s\S]*ptoDatabaseSaveSnapshotRef\.current = createPtoDatabaseSaveBaseline\("", databaseState\?\.updatedAt \?\? null\)/);
 assert.match(ptoDatabaseLoadApplySource, /export function createPtoDatabaseLoadBaselineWithBuckets/);
+assert.match(ptoDatabaseLoadApplySource, /function setDeferredPtoDatabaseLoadBaseline/);
+assert.match(ptoDatabaseLoadApplySource, /const placeholderBaseline = createPtoDatabaseSaveBaseline\("", updatedAt\);/);
+assert.match(ptoDatabaseLoadApplySource, /requestIdleCallback\(callback, \{ timeout: 2000 \}\)/);
+assert.match(ptoDatabaseLoadApplySource, /if \(ptoDatabaseSaveSnapshotRef\.current !== placeholderBaseline\) return;/);
+assert.match(ptoDatabaseLoadApplySource, /serializePtoDatabaseState\(snapshotState\)/);
 assert.match(initialAppStorageSource, /export function readInitialStoredPtoState\(\)/);
 assert.match(initialAppDataLoadStepsSource, /readInitialStoredAppState\(\{ includePto: !databaseConfigured \}\)/);
 assert.match(initialAppDataLoadStepsSource, /const localInitialPtoState = buildInitialPtoState\(databaseConfigured \? readInitialStoredPtoState\(\) : storedState\);/);

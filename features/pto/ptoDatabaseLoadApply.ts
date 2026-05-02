@@ -38,6 +38,10 @@ type ApplyLoadedPtoDatabaseStateOptions = Pick<
   applySavedPtoTab: boolean;
 };
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+};
+
 export function applyLegacyReportFallback<T extends Record<string, string | number>>(
   setState: Dispatch<SetStateAction<T>>,
   fallbackState: T,
@@ -68,6 +72,43 @@ export function createPtoDatabaseLoadBaselineWithBuckets(
     bucketRows,
     bucketValues,
   }), updatedAt);
+}
+
+function schedulePtoDatabaseLoadBaseline(callback: () => void) {
+  if (typeof window === "undefined") {
+    callback();
+    return;
+  }
+
+  const idleWindow = window as IdleWindow;
+  if (typeof idleWindow.requestIdleCallback === "function") {
+    idleWindow.requestIdleCallback(callback, { timeout: 2000 });
+    return;
+  }
+
+  window.setTimeout(callback, 0);
+}
+
+function setDeferredPtoDatabaseLoadBaseline({
+  ptoDatabaseSaveSnapshotRef,
+  snapshotState,
+  updatedAt,
+}: {
+  ptoDatabaseSaveSnapshotRef: Pick<PtoDatabaseLoadOptions, "ptoDatabaseSaveSnapshotRef">["ptoDatabaseSaveSnapshotRef"];
+  snapshotState: NormalizedPtoDatabaseLoadState["snapshotState"];
+  updatedAt: string | null;
+}) {
+  const placeholderBaseline = createPtoDatabaseSaveBaseline("", updatedAt);
+  ptoDatabaseSaveSnapshotRef.current = placeholderBaseline;
+
+  schedulePtoDatabaseLoadBaseline(() => {
+    if (ptoDatabaseSaveSnapshotRef.current !== placeholderBaseline) return;
+
+    ptoDatabaseSaveSnapshotRef.current = createPtoDatabaseSaveBaseline(
+      serializePtoDatabaseState(snapshotState),
+      updatedAt,
+    );
+  });
 }
 
 export function applyLoadedPtoDatabaseState(options: ApplyLoadedPtoDatabaseStateOptions) {
@@ -103,10 +144,11 @@ export function applyLoadedPtoDatabaseState(options: ApplyLoadedPtoDatabaseState
   ptoDatabaseLoadedRef.current = true;
   ptoDatabaseLoadedYearRef.current = ptoPlanYear;
   resetUndoHistoryForExternalRestore();
-  ptoDatabaseSaveSnapshotRef.current = createPtoDatabaseSaveBaseline(
-    serializePtoDatabaseState(loadedState.snapshotState),
-    databaseUpdatedAt ?? null,
-  );
+  setDeferredPtoDatabaseLoadBaseline({
+    ptoDatabaseSaveSnapshotRef,
+    snapshotState: loadedState.snapshotState,
+    updatedAt: databaseUpdatedAt ?? null,
+  });
   setPtoManualYears(loadedState.manualYears);
   setPtoPlanRows(loadedState.planRows);
   setPtoOperRows(loadedState.operRows);
