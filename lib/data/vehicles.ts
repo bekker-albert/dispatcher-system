@@ -1,28 +1,51 @@
-import {
-  deleteVehicleFromSupabase as deleteVehicleFromBackend,
-  loadVehiclesFromSupabase as loadVehiclesFromBackend,
-  replaceVehiclesInSupabase as replaceVehiclesInBackend,
-  saveVehiclesToSupabase as saveVehiclesToBackend,
-  type SupabaseVehiclesState as BackendVehiclesState,
-  type VehicleSnapshotReplaceOptions,
-  type VehicleSnapshotWriteOptions,
-} from "@/lib/supabase/vehicles";
+import { databaseRequest } from "@/lib/database/rpc";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import { serverDatabaseConfigured } from "./config";
 
-export type DataVehiclesState = BackendVehiclesState;
+export type DataVehiclesState = {
+  updatedAt?: string;
+  rows: VehicleRow[];
+};
+
+export type VehicleSnapshotWriteOptions = {
+  expectedSnapshot?: VehicleRow[] | null;
+};
+
+export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
+
+async function loadSupabaseVehiclesAdapter() {
+  return import("@/lib/supabase/vehicles");
+}
 
 export function loadVehiclesFromDatabase() {
-  return loadVehiclesFromBackend();
+  if (serverDatabaseConfigured) {
+    return databaseRequest<DataVehiclesState | null>("vehicles", "load");
+  }
+
+  return loadSupabaseVehiclesAdapter().then(({ loadVehiclesFromSupabase }) => loadVehiclesFromSupabase());
 }
 
 export function saveVehiclesToDatabase(rows: VehicleRow[], options?: VehicleSnapshotWriteOptions) {
-  return saveVehiclesToBackend(rows, options);
+  if (serverDatabaseConfigured) {
+    return databaseRequest("vehicles", "save", { rows, expectedSnapshot: options?.expectedSnapshot });
+  }
+
+  return loadSupabaseVehiclesAdapter().then(({ saveVehiclesToSupabase }) => saveVehiclesToSupabase(rows, options));
 }
 
 export function replaceVehiclesInDatabase(rows: VehicleRow[], options?: VehicleSnapshotReplaceOptions) {
-  return replaceVehiclesInBackend(rows, options);
+  if (serverDatabaseConfigured) {
+    return databaseRequest("vehicles", "replace", { rows, expectedSnapshot: options?.expectedSnapshot });
+  }
+
+  return loadSupabaseVehiclesAdapter()
+    .then(({ replaceVehiclesInSupabase }) => replaceVehiclesInSupabase(rows, options));
 }
 
 export function deleteVehicleFromDatabase(id: number) {
-  return deleteVehicleFromBackend(id);
+  if (serverDatabaseConfigured) {
+    return databaseRequest("vehicles", "delete", { id });
+  }
+
+  return loadSupabaseVehiclesAdapter().then(({ deleteVehicleFromSupabase }) => deleteVehicleFromSupabase(id));
 }

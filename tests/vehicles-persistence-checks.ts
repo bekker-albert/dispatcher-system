@@ -57,6 +57,13 @@ assert.equal(supabaseReplaceSource.includes('.gte("vehicle_id", 0)'), false);
 
 assert.match(dataVehiclesSource, /saveVehiclesToDatabase\(rows: VehicleRow\[], options\?: VehicleSnapshotWriteOptions\)/);
 assert.match(dataVehiclesSource, /replaceVehiclesInDatabase\(rows: VehicleRow\[], options\?: VehicleSnapshotReplaceOptions\)/);
+assert.doesNotMatch(dataVehiclesSource, /from ["']@\/lib\/supabase\/vehicles["']/);
+assert.match(dataVehiclesSource, /serverDatabaseConfigured/);
+assert.match(dataVehiclesSource, /databaseRequest<DataVehiclesState \| null>\("vehicles", "load"\)/);
+assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "save", \{ rows, expectedSnapshot: options\?\.expectedSnapshot \}\)/);
+assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "replace", \{ rows, expectedSnapshot: options\?\.expectedSnapshot \}\)/);
+assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "delete", \{ id \}\)/);
+assert.match(dataVehiclesSource, /import\("@\/lib\/supabase\/vehicles"\)/);
 assert.match(databaseVehiclesSource, /function expectedVehicleSnapshotFromPayload/);
 assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSnapshotFromPayload\(record\.expectedSnapshot\)/g) ?? []).length, 2);
 assert.doesNotMatch(vehicleRowsEditorSource, /deleteVehicleFromDatabase/);
