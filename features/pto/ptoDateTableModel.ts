@@ -43,10 +43,10 @@ function ptoColumnWidth(columnWidths: Record<string, number>, key: string, fallb
 }
 
 export function createPtoRowDateTotalsGetter(year: string) {
-  const cache = new Map<string, PtoRowDateTotals>();
+  const cache = new WeakMap<PtoPlanRow, PtoRowDateTotals>();
 
   return (row: PtoPlanRow) => {
-    const cached = cache.get(row.id);
+    const cached = cache.get(row);
     if (cached) return cached;
 
     const monthTotals = new Map<string, { hasValue: boolean; value: number }>();
@@ -67,7 +67,7 @@ export function createPtoRowDateTotalsGetter(year: string) {
       monthTotals,
       yearDailyTotal: Math.round(yearDailyTotal * 1000000) / 1000000,
     };
-    cache.set(row.id, totals);
+    cache.set(row, totals);
     return totals;
   };
 }

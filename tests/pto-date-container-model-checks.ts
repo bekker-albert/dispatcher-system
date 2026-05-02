@@ -107,6 +107,7 @@ assert.deepEqual(combinedLookupBundle.areaSources.map((source) => source.area), 
 assert.deepEqual(combinedLookupBundle.bucketRowSources.map((source) => source.structure), [lookupBaseRows[0].structure, lookupChangedStructureRows[0].structure]);
 
 assert.match(ptoDateTableModelSource, /const rowsByYearAndSignature = new Map<string, Map<string, PtoPlanRow\[]>>\(\);/);
+assert.match(ptoDateTableModelSource, /const cache = new WeakMap<PtoPlanRow, PtoRowDateTotals>\(\);/);
 assert.match(ptoDateTableModelSource, /const indexedRowsForYear = \(targetYear: string\) => \{/);
 assert.match(ptoDateTableModelSource, /const totalWithCarryover = \(row: PtoPlanRow, targetYear: string\): number => \{/);
 assert.match(ptoDateRowsColumnsModelSource, /const virtualRowsModel = useMemo\(\(\) => createPtoDateVirtualRowsViewModel\(\{/);

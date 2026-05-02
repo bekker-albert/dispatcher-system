@@ -3,6 +3,7 @@ import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableType
 import { previousPtoYearLabel, ptoAreaMatches, ptoRowHasYear, type PtoPlanRow } from "@/lib/domain/pto/date-table";
 
 const emptyPtoRowById = new Map<string, PtoPlanRow>();
+const ptoCarryoverHeaderLabel = "\u041e\u0441\u0442\u0430\u0442\u043a\u0438";
 
 type PtoDateTableViewModelOptions = Pick<
   PtoDateTableContainerProps,
@@ -17,6 +18,22 @@ type PtoDateTableViewModelOptions = Pick<
   | "ptoDateEditing"
   | "ptoColumnWidths"
 >;
+
+export function createPtoDateFilteredRows(
+  rows: PtoPlanRow[],
+  ptoAreaFilter: string,
+  ptoPlanYear: string,
+) {
+  return rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
+}
+
+export function createPtoDateRowById(rows: PtoPlanRow[], ptoDateEditing: boolean) {
+  return ptoDateEditing ? new Map(rows.map((row) => [row.id, row] as const)) : emptyPtoRowById;
+}
+
+export function createPtoCarryoverHeader(ptoPlanYear: string) {
+  return `${ptoCarryoverHeaderLabel} ${previousPtoYearLabel(ptoPlanYear)}`;
+}
 
 export function createPtoDateTableViewModel({
   rows,
@@ -33,11 +50,11 @@ export function createPtoDateTableViewModel({
   const showLocation = options.showLocation !== false;
   const showCustomerCode = ptoTab === "plan";
   const editableMonthTotal = options.editableMonthTotal === true;
-  const filteredRows = rows.filter((row) => ptoAreaMatches(row.area, ptoAreaFilter) && ptoRowHasYear(row, ptoPlanYear));
-  const rowById = ptoDateEditing ? new Map(rows.map((row) => [row.id, row] as const)) : emptyPtoRowById;
+  const filteredRows = createPtoDateFilteredRows(rows, ptoAreaFilter, ptoPlanYear);
+  const rowById = createPtoDateRowById(rows, ptoDateEditing);
   const getRowDateTotals = createPtoRowDateTotalsGetter(ptoPlanYear);
   const getEffectiveCarryover = createPtoEffectiveCarryoverGetter(rows, ptoPlanYear);
-  const carryoverHeader = `Остатки ${previousPtoYearLabel(ptoPlanYear)}`;
+  const carryoverHeader = createPtoCarryoverHeader(ptoPlanYear);
   const {
     displayPtoMonthGroups,
     tableColumns,

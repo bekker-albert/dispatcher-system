@@ -3,7 +3,16 @@
 import { useMemo } from "react";
 
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
-import { createPtoDateTableViewModel } from "@/features/pto/ptoDateTableViewModel";
+import {
+  createPtoCarryoverHeader,
+  createPtoDateFilteredRows,
+  createPtoDateRowById,
+} from "@/features/pto/ptoDateTableViewModel";
+import {
+  createPtoDateTableModel,
+  createPtoEffectiveCarryoverGetter,
+  createPtoRowDateTotalsGetter,
+} from "@/features/pto/ptoDateTableModel";
 import {
   createPtoDateVirtualRowsLayoutModel,
   createPtoDateVirtualRowsViewModel,
@@ -45,48 +54,69 @@ export function usePtoDateRowsColumnsModel({
     editableMonthTotal: optionEditableMonthTotal,
     showLocation: optionShowLocation,
   } = options;
-  const tableModel = useMemo(() => createPtoDateTableViewModel({
-    rows,
-    options: {
-      editableMonthTotal: optionEditableMonthTotal,
-      showLocation: optionShowLocation,
-    },
-    ptoTab,
-    ptoAreaFilter,
-    ptoPlanYear,
+  const editableMonthTotal = optionEditableMonthTotal === true;
+  const showLocation = optionShowLocation !== false;
+  const showCustomerCode = ptoTab === "plan";
+  const filteredRows = useMemo(() => (
+    createPtoDateFilteredRows(rows, ptoAreaFilter, ptoPlanYear)
+  ), [ptoAreaFilter, ptoPlanYear, rows]);
+  const rowById = useMemo(() => (
+    createPtoDateRowById(rows, ptoDateEditing)
+  ), [ptoDateEditing, rows]);
+  const getRowDateTotals = useMemo(() => (
+    createPtoRowDateTotalsGetter(ptoPlanYear)
+  ), [ptoPlanYear]);
+  const getEffectiveCarryover = useMemo(() => (
+    createPtoEffectiveCarryoverGetter(rows, ptoPlanYear)
+  ), [ptoPlanYear, rows]);
+  const carryoverHeader = useMemo(() => (
+    createPtoCarryoverHeader(ptoPlanYear)
+  ), [ptoPlanYear]);
+  const tableLayoutModel = useMemo(() => createPtoDateTableModel({
+    showCustomerCode,
+    showLocation,
+    planYear: ptoPlanYear,
     reportDate,
-    ptoYearMonths,
-    ptoMonthGroups,
-    ptoDateEditing,
-    ptoColumnWidths,
+    yearMonths: ptoYearMonths,
+    monthGroups: ptoMonthGroups,
+    editing: ptoDateEditing,
+    columnWidths: ptoColumnWidths,
   }), [
-    rows,
-    optionEditableMonthTotal,
-    optionShowLocation,
-    ptoTab,
-    ptoAreaFilter,
-    ptoPlanYear,
-    reportDate,
-    ptoYearMonths,
-    ptoMonthGroups,
-    ptoDateEditing,
     ptoColumnWidths,
+    ptoDateEditing,
+    ptoMonthGroups,
+    ptoPlanYear,
+    ptoYearMonths,
+    reportDate,
+    showCustomerCode,
+    showLocation,
   ]);
   const virtualRowsLayout = useMemo(() => createPtoDateVirtualRowsLayoutModel({
-    rows: tableModel.filteredRows,
+    rows: filteredRows,
     rowHeights: ptoRowHeights,
     table: ptoTab,
-  }), [ptoRowHeights, ptoTab, tableModel.filteredRows]);
+  }), [filteredRows, ptoRowHeights, ptoTab]);
   const virtualRowsModel = useMemo(() => createPtoDateVirtualRowsViewModel({
     layout: virtualRowsLayout,
     viewport: ptoDateViewport,
   }), [ptoDateViewport, virtualRowsLayout]);
 
   return {
-    ...tableModel,
+    carryoverHeader,
+    columnWidthByKey: tableLayoutModel.columnWidthByKey,
+    displayPtoMonthGroups: tableLayoutModel.displayPtoMonthGroups,
+    editableMonthTotal,
+    filteredRows,
+    getEffectiveCarryover,
+    getRowDateTotals,
+    rowById,
+    showCustomerCode,
+    showLocation,
+    tableColumns: tableLayoutModel.tableColumns,
+    tableMinWidth: tableLayoutModel.tableMinWidth,
     ...virtualRowsModel,
     ptoColumnResizeHandler: ptoDateEditing ? startPtoColumnResize : undefined,
-    tableSpacerColSpan: tableModel.tableColumns.length,
+    tableSpacerColSpan: tableLayoutModel.tableColumns.length,
   };
 }
 

@@ -12,6 +12,7 @@ const navigationSelectionHandlersSource = readFileSync(resolve(testDir, "../feat
 const appUndoSchedulerSource = readFileSync(resolve(testDir, "../features/app/useAppUndoScheduler.ts"), "utf8");
 const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto/ptoBucketsGridModel.ts"), "utf8");
 const ptoDateTableViewModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateTableViewModel.ts"), "utf8");
+const ptoDateRowsColumnsModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateRowsColumnsModel.ts"), "utf8");
 const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
 const ptoDateEditableTableBodySource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableBody.tsx"), "utf8");
 const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableRow.tsx"), "utf8");
@@ -172,7 +173,13 @@ assert.match(usePtoBucketsViewModelSource, /ptoBucketVehicleColumnsSignature\(ve
 assert.match(usePtoBucketsViewModelSource, /createPtoBucketRows\(bucketRowSources, stableManualRows, areaFilter\)/);
 assert.match(usePtoBucketsViewModelSource, /createPtoBucketColumns\(stableVehicleRows\)/);
 assert.match(ptoDateTableViewModelSource, /const emptyPtoRowById = new Map<string, PtoPlanRow>\(\);/);
-assert.match(ptoDateTableViewModelSource, /const rowById = ptoDateEditing \? new Map\(rows\.map\(\(row\) => \[row\.id, row\] as const\)\) : emptyPtoRowById;/);
+assert.match(ptoDateTableViewModelSource, /export function createPtoDateFilteredRows/);
+assert.match(ptoDateTableViewModelSource, /export function createPtoDateRowById/);
+assert.match(ptoDateTableViewModelSource, /return ptoDateEditing \? new Map\(rows\.map\(\(row\) => \[row\.id, row\] as const\)\) : emptyPtoRowById;/);
+assert.match(ptoDateRowsColumnsModelSource, /const filteredRows = useMemo\(\(\) => \(\s*createPtoDateFilteredRows/);
+assert.match(ptoDateRowsColumnsModelSource, /const rowById = useMemo\(\(\) => \(\s*createPtoDateRowById/);
+assert.match(ptoDateRowsColumnsModelSource, /const tableLayoutModel = useMemo\(\(\) => createPtoDateTableModel/);
+assert.doesNotMatch(ptoDateRowsColumnsModelSource, /useMemo\(\(\) => createPtoDateTableViewModel/);
 assert.match(usePtoDateViewModelSource, /ptoDateEditing: boolean;/);
 assert.match(usePtoDateViewModelSource, /isPtoDateTab \? yearMonths\(ptoPlanYear\) : \[\]/);
 assert.match(usePtoDateViewModelSource, /if \(!isPtoDateTab \|\| !ptoDateEditing\) \{/);
