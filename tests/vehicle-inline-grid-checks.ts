@@ -28,6 +28,8 @@ import { adminStorageKeys } from "../lib/storage/keys";
 const testDir = dirname(fileURLToPath(import.meta.url));
 const adminVehiclesTableSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehiclesTable.tsx"), "utf8");
 const adminVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleFilterMenu.tsx"), "utf8");
+const useAdminVehicleRowsViewModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useAdminVehicleRowsViewModel.ts"), "utf8");
+const useVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleFilterMenu.ts"), "utf8");
 const vehicleInlineGridModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/vehicleInlineGridModel.ts"), "utf8");
 
 const rows = [
@@ -157,6 +159,9 @@ const vehicleFilterSets = createVehicleFilterSets({ brand: ["Howo"] });
 assert.equal(vehicleMatchesFilterSets(vehicleRows[0], vehicleFilterSets, vehicleFilterColumns), true);
 assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns), false);
 assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns, "brand"), true);
+assert.match(useAdminVehicleRowsViewModelSource, /createVehicleFilterOptionsForKey\(/);
+assert.match(useVehicleFilterMenuSource, /createVehicleFilterOptionsForKey\(/);
+assert.doesNotMatch(useVehicleFilterMenuSource, /vehicleMatchesFilters/);
 assert.match(adminVehicleFilterMenuSource, /const visibleOptions = useMemo\(\(\) => \{/);
 assert.match(adminVehicleFilterMenuSource, /const selectedSet = useMemo\(\(\) => new Set\(draftSelectedValues \?\? \[\]\), \[draftSelectedValues\]\);/);
 assert.match(adminVehicleFilterMenuSource, /vehicleFilterOptionLabel\(option\);/);

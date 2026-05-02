@@ -2,9 +2,9 @@ import { useEffect, useMemo, type Dispatch, type RefObject, type SetStateAction 
 
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
 import {
+  createVehicleFilterOptionsForKey,
   createVehicleFilterOptions,
   createVehicleFilterSets,
-  vehicleFilterOptionLabel,
   vehicleMatchesFilterSets,
 } from "@/lib/domain/vehicles/filtering";
 import {
@@ -81,15 +81,13 @@ export function useAdminVehicleRowsViewModel({
   const activeVehicleFilterOptions = useMemo(() => {
     if (!active || !openVehicleFilter) return emptyVehicleFilterOptions;
 
-    const column = vehicleFilterColumns.find((item) => item.key === openVehicleFilter);
-    if (!column) return emptyVehicleFilterOptions;
-
-    const rowsForColumn = deferredVehicleRows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, vehicleFilterSets, vehicleFilterColumns, column.key));
-    const options = createVehicleFilterOptions(rowsForColumn, column);
-    const selectedValues = vehicleFilters[column.key] ?? [];
-
-    return Array.from(new Set([...options, ...selectedValues]))
-      .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
+    return createVehicleFilterOptionsForKey(
+      deferredVehicleRows,
+      vehicleFilterColumns,
+      vehicleFilterSets,
+      openVehicleFilter,
+      vehicleFilters[openVehicleFilter],
+    );
   }, [active, deferredVehicleRows, openVehicleFilter, vehicleFilterSets, vehicleFilters]);
 
   const filteredVehicleRows = useMemo(() => (

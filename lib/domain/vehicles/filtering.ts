@@ -21,6 +21,11 @@ export function createVehicleFilterOptions(rows: VehicleRow[], column: Pick<Vehi
     .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
 }
 
+export function mergeVehicleFilterOptions(options: string[], selectedValues: string[] = []) {
+  return Array.from(new Set([...options, ...selectedValues.map(vehicleFilterOptionValue)]))
+    .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
+}
+
 export function createVehicleFilterSets(filters: VehicleFiltersLike) {
   return Object.fromEntries(
     Object.entries(filters).flatMap(([key, values]) => (
@@ -59,6 +64,20 @@ export function vehicleMatchesFilterSets(
 
     return selectedValues.has(vehicleFilterOptionValue(column.getValue(vehicle)));
   });
+}
+
+export function createVehicleFilterOptionsForKey(
+  rows: VehicleRow[],
+  columns: VehicleFilterColumnLike[],
+  filterSets: VehicleFilterSetsLike,
+  key: string,
+  selectedValues: string[] = [],
+) {
+  const column = columns.find((item) => item.key === key);
+  if (!column) return [];
+
+  const rowsForColumn = rows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, filterSets, columns, key));
+  return mergeVehicleFilterOptions(createVehicleFilterOptions(rowsForColumn, column), selectedValues);
 }
 
 export function cloneVehicleRows(rows: VehicleRow[]) {

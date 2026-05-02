@@ -16,7 +16,7 @@ import { formatDateInputValue, isStoredReportDateValue, resolveReportDateAreaCon
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "../lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleFallbackRows, defaultVehicleForm, normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, createVehiclesFromImportTable } from "../lib/domain/vehicles/import-export";
-import { createVehicleFilterOptions, vehicleMatchesFilters } from "../lib/domain/vehicles/filtering";
+import { createVehicleFilterOptions, createVehicleFilterOptionsForKey, createVehicleFilterSets, mergeVehicleFilterOptions, vehicleMatchesFilters } from "../lib/domain/vehicles/filtering";
 import { adminVehicleFallbackPreviewRows, adminVehicleMinPreviewRows, adminVehicleViewportBottomReserve, parseVehicleInlineFieldDomKey, vehicleAutocompleteFilterKeys, vehicleFieldIsNumeric, vehicleFilterColumnConfigs, vehicleInlineFieldDomKey, vehicleInlineFields } from "../lib/domain/vehicles/grid";
 import { adminStorageKeys } from "../lib/storage/keys";
 import { createId } from "../lib/utils/id";
@@ -202,6 +202,16 @@ assert.equal(importedVehicles[0].fuelCalcType, "Пробег");
 assert.equal(buildVehicleDisplayName(importedVehicles[0]), "Howo 371 - P129(915FZ02)");
 assert.deepEqual(createVehicleExportRows(importedVehicles)[1].slice(0, 3), ["Скрыта", "Транспортировочная", "Самосвал"]);
 assert.deepEqual(createVehicleFilterOptions(importedVehicles, { getValue: (vehicle) => vehicle.owner }), ["AA Mining"]);
+assert.deepEqual(mergeVehicleFilterOptions(["AA Mining"], [""]), ["", "AA Mining"]);
+assert.deepEqual(
+  createVehicleFilterOptionsForKey(
+    importedVehicles,
+    vehicleFilterColumnConfigs,
+    createVehicleFilterSets({ visible: ["Скрыта"] }),
+    "owner",
+  ),
+  ["AA Mining"],
+);
 assert.equal(
   vehicleMatchesFilters(importedVehicles[0], { owner: ["AA Mining"] }, [{ key: "owner", getValue: (vehicle) => vehicle.owner }]),
   true,

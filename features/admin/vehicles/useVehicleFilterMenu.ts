@@ -1,7 +1,7 @@
-import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
-import { createVehicleFilterOptions, vehicleFilterOptionLabel, vehicleMatchesFilters } from "@/lib/domain/vehicles/filtering";
+import { createVehicleFilterOptionsForKey, createVehicleFilterSets } from "@/lib/domain/vehicles/filtering";
 import type { VehicleFilterKey, VehicleFilters } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
@@ -28,6 +28,10 @@ export function useVehicleFilterMenu({
   setVehicleFilters,
   setVehicleFilterDrafts,
 }: UseVehicleFilterMenuOptions) {
+  const vehicleFilterSets = useMemo(() => (
+    active ? createVehicleFilterSets(vehicleFilters) : {}
+  ), [active, vehicleFilters]);
+
   useEffect(() => {
     if (!active || !openVehicleFilter) return undefined;
 
@@ -64,16 +68,14 @@ export function useVehicleFilterMenu({
     if (!active) return [];
     if (openVehicleFilter === key) return activeVehicleFilterOptions;
 
-    const column = vehicleFilterColumns.find((item) => item.key === key);
-    if (!column) return [];
-
-    const rowsForColumn = vehicleRows.filter((vehicle) => vehicleMatchesFilters(vehicle, vehicleFilters, vehicleFilterColumns, key));
-    const options = createVehicleFilterOptions(rowsForColumn, column);
-    const selectedValues = vehicleFilters[key] ?? [];
-
-    return Array.from(new Set([...options, ...selectedValues]))
-      .sort((a, b) => vehicleFilterOptionLabel(a).localeCompare(vehicleFilterOptionLabel(b), "ru"));
-  }, [active, activeVehicleFilterOptions, openVehicleFilter, vehicleFilters, vehicleRows]);
+    return createVehicleFilterOptionsForKey(
+      vehicleRows,
+      vehicleFilterColumns,
+      vehicleFilterSets,
+      key,
+      vehicleFilters[key],
+    );
+  }, [active, activeVehicleFilterOptions, openVehicleFilter, vehicleFilterSets, vehicleFilters, vehicleRows]);
 
   const toggleVehicleFilterDraftValue = useCallback((key: VehicleFilterKey, value: string) => {
     if (!active) return;
