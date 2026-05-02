@@ -15,6 +15,11 @@ export type PtoBucketColumn = {
   label: string;
 };
 
+export type PtoBucketColumnsModel = {
+  columns: PtoBucketColumn[];
+  signature: string;
+};
+
 export type PtoBucketCell = {
   rowKey: string;
   equipmentKey: string;
@@ -81,21 +86,29 @@ export function createPtoBucketRows(
 }
 
 export function createPtoBucketColumns(vehicles: VehicleRow[]) {
+  return createPtoBucketColumnsModel(vehicles).columns;
+}
+
+export function createPtoBucketColumnsModel(vehicles: VehicleRow[]): PtoBucketColumnsModel {
   const columnsByKey = new Map<string, PtoBucketColumn>();
 
-  vehicles
-    .filter((vehicle) => vehicle.visible !== false)
-    .filter(isLoadingEquipment)
-    .forEach((vehicle) => {
-      const label = loadingEquipmentLabel(vehicle);
-      if (!label) return;
+  vehicles.forEach((vehicle) => {
+    if (vehicle.visible === false || !isLoadingEquipment(vehicle)) return;
 
-      const key = normalizeLookupValue(label);
-      if (!columnsByKey.has(key)) columnsByKey.set(key, { key, label });
-    });
+    const label = loadingEquipmentLabel(vehicle);
+    if (!label) return;
 
-  return Array.from(columnsByKey.values())
+    const key = normalizeLookupValue(label);
+    if (!columnsByKey.has(key)) columnsByKey.set(key, { key, label });
+  });
+
+  const columns = Array.from(columnsByKey.values())
     .sort((left, right) => left.label.localeCompare(right.label, "ru"));
+
+  return {
+    columns,
+    signature: columns.map((column) => [column.key, column.label].join("\u001f")).join("\u001e"),
+  };
 }
 
 function ptoAreaMatchesForBucket(area: string, filter: string) {
