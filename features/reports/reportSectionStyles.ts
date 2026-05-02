@@ -22,6 +22,14 @@ export const reportPrintFirstTitleStyle: CSSProperties = {
   display: "none",
 };
 
+export const reportSyncStatusStyle: CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  fontWeight: 600,
+  color: "#475569",
+  textAlign: "center",
+};
+
 export const reportAreaTabsToolbarStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",

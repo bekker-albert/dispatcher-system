@@ -4,6 +4,7 @@ import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTyp
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppReportsScreenProps } from "@/features/app/useAppReportsScreenProps";
 import ReportsSection from "@/features/reports/ReportsSection";
+import { databaseConfigured } from "@/lib/data/config";
 
 type ReportsPrimaryContentProps = Pick<AppPrimaryContentProps, "appState" | "models" | "runtime">;
 
@@ -72,5 +73,10 @@ export function ReportsPrimaryContent({
     runtime,
   });
 
-  return <ReportsSection {...reportsProps} />;
+  return (
+    <ReportsSection
+      {...reportsProps}
+      databaseSyncMessage={databaseConfigured && !appState.ptoDatabaseReady ? appState.ptoDatabaseMessage : ""}
+    />
+  );
 }

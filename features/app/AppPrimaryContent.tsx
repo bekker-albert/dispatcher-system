@@ -48,7 +48,8 @@ export function AppPrimaryContent({
   const ptoTabNeedsDatabase = isPtoDateTableKey(appState.ptoTab) || appState.ptoTab === "buckets";
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
   const shouldShowPtoDatabaseGateOnly = shouldGatePtoDatabase
-    && (renderedTopTab === "reports" || (renderedTopTab === "pto" && ptoTabNeedsDatabase));
+    && renderedTopTab === "pto"
+    && ptoTabNeedsDatabase;
 
   if (shouldShowPtoDatabaseGateOnly) {
     return <PtoDatabaseGate message={ptoDatabaseMessage} />;

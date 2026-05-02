@@ -15,6 +15,7 @@ import { createReportBodyLayout, createReportPrintLayout } from "./reportPrintLa
 import {
   reportPanelStyle,
   reportPrintFirstTitleStyle,
+  reportSyncStatusStyle,
   reportTableScrollStyle,
   reportTableStyle,
   reportTitleStyle,
@@ -42,6 +43,7 @@ export type ReportsSectionProps = {
   onCancelReportDayReasonDraft: (rowKey: string, value: string) => void;
   onCommitReportYearReason: (rowKey: string, value: string) => void;
   onCancelReportYearReasonDraft: (rowKey: string, value: string) => void;
+  databaseSyncMessage?: string;
 };
 
 export default function ReportsSection({
@@ -65,6 +67,7 @@ export default function ReportsSection({
   onCancelReportDayReasonDraft,
   onCommitReportYearReason,
   onCancelReportYearReasonDraft,
+  databaseSyncMessage = "",
 }: ReportsSectionProps) {
   const reportPrintLayoutToken = useMemo(() => ({
     filteredReportAreaGroups,
@@ -155,6 +158,9 @@ export default function ReportsSection({
             <div className="report-screen-title" style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ width: "100%" }}>
                 <div className="report-print-title" style={reportTitleStyle}>{reportTitle}</div>
+                {databaseSyncMessage ? (
+                  <div style={reportSyncStatusStyle}>{databaseSyncMessage}</div>
+                ) : null}
               </div>
             </div>
             <div className="report-print-first-title" style={reportPrintFirstTitleStyle}>{reportTitle}</div>

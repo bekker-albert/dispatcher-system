@@ -25,6 +25,7 @@ const usePtoBucketsViewModelSource = readFileSync(resolve(testDir, "../features/
 const usePtoDateViewModelSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateViewModel.ts"), "utf8");
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const ptoDataPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoDataPrimaryContent.tsx"), "utf8");
+const reportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/ReportsPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
 const useAppAdminDatabasePropsSource = readFileSync(resolve(testDir, "../features/app/useAppAdminDatabaseProps.ts"), "utf8");
@@ -98,9 +99,12 @@ assert.match(reportsSectionSource, /const \[preparedReportPrintState, setPrepare
 assert.match(reportsSectionSource, /flushSync\(\(\) => setPreparedReportPrintState\(\{/);
 assert.doesNotMatch(reportsSectionSource, /setPreparedReportPrintState\(null\)/);
 assert.doesNotMatch(reportsSectionSource, /const reportPrintLayout = useMemo\(\(\) => createReportPrintLayout/);
+assert.match(appPrimaryContentSource, /const shouldShowPtoDatabaseGateOnly = shouldGatePtoDatabase\s*&& renderedTopTab === "pto"\s*&& ptoTabNeedsDatabase;/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /const ptoTabNeedsDatabase = isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets";/);
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(true, \{ includePto: !databaseConfigured \|\| ptoDatabaseReady \}\);/);
+assert.match(reportsPrimaryContentSource, /databaseSyncMessage=\{databaseConfigured && !appState\.ptoDatabaseReady \? appState\.ptoDatabaseMessage : ""\}/);
+assert.match(reportsSectionSource, /databaseSyncMessage\?: string;/);
 assert.match(initialAppDatabaseBootstrapSource, /storageChanged: boolean/);
 assert.match(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged\) \{\s*storedState = readInitialStoredAppState\(\{ includePto: false \}\);\s*initialReportState = applySharedState\(storedState\);\s*\}/);
 assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(\s*enabled: boolean,[\s\S]*includePto/);
