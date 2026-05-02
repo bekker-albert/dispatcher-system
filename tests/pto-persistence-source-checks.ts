@@ -68,7 +68,7 @@ assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseRetryTimerRef =
 assert.match(sharedDatabaseSaveQueueSource, /clearTimeout\(sharedDatabaseRetryTimerRef\.current\);/);
 assert.match(sharedDatabaseSaveQueueSource, /useEffect\(\(\) => clearSharedDatabaseRetryTimer, \[clearSharedDatabaseRetryTimer\]\);/);
 assert.match(sharedDatabaseSaveQueueSource, /createAppStateStorageSnapshot/);
-assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);[\s\S]*await saveSharedAppStateToDatabase\(queuedSave\.storage\);/);
+assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);[\s\S]*if \(!appSettingsDatabaseLoadedRef\.current\) \{[\s\S]*await saveSharedAppStateToDatabase\(queuedSave\.storage\);[\s\S]*\}/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /conflictRetries/);
 assert.match(sharedDatabaseSaveQueueSource, /let failed = false;/);
 assert.match(sharedDatabaseSaveQueueSource, /if \(!isDatabaseConflictError\(error\)\) \{[\s\S]*sharedDatabaseSaveQueueRef\.current = sharedDatabaseSaveQueueRef\.current \?\? queuedSave;[\s\S]*failed = true;[\s\S]*throw error;/);

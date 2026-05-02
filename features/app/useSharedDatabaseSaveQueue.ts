@@ -119,7 +119,9 @@ export function useSharedDatabaseSaveQueue({
 
         try {
           await saveSharedAppSettingsToDatabase(queuedSave.settings);
-          await saveSharedAppStateToDatabase(queuedSave.storage);
+          if (!appSettingsDatabaseLoadedRef.current) {
+            await saveSharedAppStateToDatabase(queuedSave.storage);
+          }
         } catch (error) {
           if (!isDatabaseConflictError(error)) {
             sharedDatabaseSaveQueueRef.current = sharedDatabaseSaveQueueRef.current ?? queuedSave;
@@ -165,6 +167,7 @@ export function useSharedDatabaseSaveQueue({
       }
     }
   }, [
+    appSettingsDatabaseLoadedRef,
     clearSharedDatabaseRetryTimer,
     saveSharedAppSettingsToDatabase,
     saveSharedAppStateToDatabase,
