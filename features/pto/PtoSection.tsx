@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import dynamic from "next/dynamic";
 import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { SectionCard } from "@/shared/ui/layout";
+import { PtoStaticTabContent, ptoInfoBlockStyle } from "./PtoStaticTabContent";
 
 export type PtoSectionProps = {
   ptoTab: string;
@@ -27,7 +28,7 @@ export type PtoSectionProps = {
 
 const PtoBucketsSection = dynamic(() => import("./PtoBucketsSection"), {
   ssr: false,
-  loading: () => <div style={blockStyle}>Загружаю таблицу ковшей...</div>,
+  loading: () => <div style={ptoInfoBlockStyle}>Загружаю таблицу ковшей...</div>,
 });
 
 export default function PtoSection({
@@ -54,13 +55,10 @@ export default function PtoSection({
   return (
     <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
       <SectionCard title={isPtoDateTab ? "" : `ПТО: ${activePtoSubtabLabel || ptoTab}`} fill={isPtoDateTab}>
-        {ptoTab.startsWith("custom:") && <div style={blockStyle}>{content || "В этой подвкладке пока нет информации."}</div>}
-        {ptoTab === "bodies" && <div style={blockStyle}>{content || "Справочник объемов кузовов: модель техники → материал → объем кузова."}</div>}
-        {ptoTab === "performance" && <div style={blockStyle}>{content || "Расчет производительности: рейсы, кузова, материалы, удельный вес, перевод м³ ↔ тн."}</div>}
-        {ptoTab === "cycle" && <div style={blockStyle}>{content || "Цикл погрузки: подъезд, погрузка, выезд, разгрузка, обратный путь."}</div>}
+        <PtoStaticTabContent content={content} ptoTab={ptoTab} />
         {ptoTab === "buckets" && (
           <div style={ptoBucketsPanelStyle}>
-            {content ? <div style={blockStyle}>{content}</div> : null}
+            {content ? <div style={ptoInfoBlockStyle}>{content}</div> : null}
             <PtoBucketsSection
               ptoAreaTabs={ptoAreaTabs}
               ptoAreaFilter={ptoAreaFilter}
@@ -77,19 +75,19 @@ export default function PtoSection({
         )}
         {ptoTab === "plan" && (
           <div style={ptoDatePanelStyle}>
-            {content ? <div style={blockStyle}>{content}</div> : null}
+            {content ? <div style={ptoInfoBlockStyle}>{content}</div> : null}
             <div style={ptoDateTableFrameStyle}>{renderPlanTable()}</div>
           </div>
         )}
         {ptoTab === "oper" && (
           <div style={ptoDatePanelStyle}>
-            {content ? <div style={blockStyle}>{content}</div> : null}
+            {content ? <div style={ptoInfoBlockStyle}>{content}</div> : null}
             <div style={ptoDateTableFrameStyle}>{renderOperTable()}</div>
           </div>
         )}
         {ptoTab === "survey" && (
           <div style={ptoDatePanelStyle}>
-            {content ? <div style={blockStyle}>{content}</div> : null}
+            {content ? <div style={ptoInfoBlockStyle}>{content}</div> : null}
             <div style={ptoDateTableFrameStyle}>{renderSurveyTable()}</div>
           </div>
         )}
@@ -97,13 +95,6 @@ export default function PtoSection({
     </div>
   );
 }
-
-const blockStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 16,
-  padding: 16,
-  background: "#f8fafc",
-};
 
 const ptoWorkspaceStyle: CSSProperties = {
   height: "calc(100dvh - 184px)",
