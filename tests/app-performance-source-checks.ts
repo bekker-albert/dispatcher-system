@@ -155,10 +155,10 @@ assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsViewModel/)
 assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsEditor/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsViewModel/);
 assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsEditor/);
-assert.match(usePtoBucketsViewModelSource, /ptoBucketRowLookupSourcesSignature\(bucketRowSources\)/);
+assert.doesNotMatch(usePtoBucketsViewModelSource, /ptoBucketRowLookupSourcesSignature\(bucketRowSources\)/);
 assert.match(usePtoBucketsViewModelSource, /ptoBucketManualRowsSignature\(manualRows\)/);
 assert.match(usePtoBucketsViewModelSource, /ptoBucketVehicleColumnsSignature\(vehicleRows\)/);
-assert.match(usePtoBucketsViewModelSource, /createPtoBucketRows\(stableBucketRowSources, stableManualRows, areaFilter\)/);
+assert.match(usePtoBucketsViewModelSource, /createPtoBucketRows\(bucketRowSources, stableManualRows, areaFilter\)/);
 assert.match(usePtoBucketsViewModelSource, /createPtoBucketColumns\(stableVehicleRows\)/);
 assert.match(ptoDateTableViewModelSource, /const emptyPtoRowById = new Map<string, PtoPlanRow>\(\);/);
 assert.match(ptoDateTableViewModelSource, /const rowById = ptoDateEditing \? new Map\(rows\.map\(\(row\) => \[row\.id, row\] as const\)\) : emptyPtoRowById;/);

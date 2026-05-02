@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { createPtoBucketColumns, createPtoBucketRows, type PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
-import { ptoBucketRowLookupSourcesSignature, type PtoBucketRowLookupSource } from "./ptoDateLookupModel";
+import type { PtoBucketRowLookupSource } from "./ptoDateLookupModel";
 
 type UsePtoBucketsViewModelOptions = {
   active: boolean;
@@ -27,11 +27,6 @@ function ptoBucketVehicleColumnsSignature(rows: readonly VehicleRow[]) {
   ].join("\u001f")).join("\u001e");
 }
 
-function useStableBucketRowSources(sources: PtoBucketRowLookupSource[], signature: string) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => sources, [signature]);
-}
-
 function useStableManualRows(rows: PtoBucketRow[], signature: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => rows, [signature]);
@@ -49,18 +44,16 @@ export function usePtoBucketsViewModel({
   areaFilter,
   vehicleRows,
 }: UsePtoBucketsViewModelOptions) {
-  const bucketRowSourcesSignature = useMemo(() => ptoBucketRowLookupSourcesSignature(bucketRowSources), [bucketRowSources]);
   const manualRowsSignature = useMemo(() => ptoBucketManualRowsSignature(manualRows), [manualRows]);
   const vehicleColumnsSignature = useMemo(() => ptoBucketVehicleColumnsSignature(vehicleRows), [vehicleRows]);
-  const stableBucketRowSources = useStableBucketRowSources(bucketRowSources, bucketRowSourcesSignature);
   const stableManualRows = useStableManualRows(manualRows, manualRowsSignature);
   const stableVehicleRows = useStableVehicleRows(vehicleRows, vehicleColumnsSignature);
 
   const ptoBucketRows = useMemo(() => {
     if (!active) return [];
 
-    return createPtoBucketRows(stableBucketRowSources, stableManualRows, areaFilter);
-  }, [active, areaFilter, stableBucketRowSources, stableManualRows]);
+    return createPtoBucketRows(bucketRowSources, stableManualRows, areaFilter);
+  }, [active, areaFilter, bucketRowSources, stableManualRows]);
 
   const ptoBucketColumns = useMemo(() => {
     if (!active) return [];
