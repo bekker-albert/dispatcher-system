@@ -18,13 +18,17 @@ import {
   previousPtoYearLabel,
   ptoCustomerPlanRowSignature,
   ptoLinkedRowSignature,
-  ptoMonthTotal,
   type PtoDateTableKey,
   type PtoPlanRow,
 } from "./date-table";
 
 function ptoImportRowSignature(row: PtoPlanRow, includeCustomerCode: boolean) {
   return includeCustomerCode ? ptoCustomerPlanRowSignature(row) : ptoLinkedRowSignature(row);
+}
+
+function ptoMonthTotalFromDays(row: PtoPlanRow, days: string[]) {
+  const total = days.reduce((sum, day) => sum + (row.dailyPlans[day] ?? 0), 0);
+  return Math.round(total * 1000000) / 1000000;
 }
 
 function mergeImportedDuplicatePtoRows(rows: PtoPlanRow[], includeCustomerCode: boolean) {
@@ -95,7 +99,8 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
     .filter((column) => column.date.startsWith(`${year}-`));
   const monthColumns = headers
     .map((header, index) => ({ index, month: parsePtoPlanExcelMonthHeader(header, year) }))
-    .filter((column) => column.month.startsWith(`${year}-`));
+    .filter((column) => column.month.startsWith(`${year}-`))
+    .map((column) => ({ ...column, days: monthDays(column.month) }));
   const currentBySignature = new Map(
     currentRows
       .map((row) => [ptoImportRowSignature(row, includeCustomerCode), row] as const)
@@ -128,13 +133,12 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
         importedDayDates.add(date);
       });
 
-      monthColumns.forEach(({ index, month }) => {
+      monthColumns.forEach(({ index, days }) => {
         const parsed = parseDecimalInput(ptoPlanImportCell(row, index));
         if (parsed === null) return;
 
-        const days = monthDays(month);
         const hasImportedDays = days.some((day) => importedDayDates.has(day));
-        const existingMonthTotal = existing ? ptoMonthTotal(existing, month) : 0;
+        const existingMonthTotal = existing ? ptoMonthTotalFromDays(existing, days) : 0;
         const importedDaysStillMatchExisting = Boolean(existing) && days.every((day) => {
           const importedHasValue = importedDayDates.has(day);
           const existingHasValue = existing?.dailyPlans[day] !== undefined;

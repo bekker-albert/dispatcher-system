@@ -5,6 +5,7 @@ import {
   normalizeTableHeader,
   parseCsvRows,
 } from "../lib/utils/xlsx";
+import { createZipBlob, readZipTextEntries } from "../lib/utils/zip";
 
 assert.equal(normalizeTableHeader("Гос. номер"), "госномер");
 assert.equal(normalizeTableHeader("Гос номер"), "госномер");
@@ -23,3 +24,13 @@ const xlsxBlob = createXlsxBlob([
 ], "Техника");
 assert.equal(xlsxBlob.type, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 assert.ok(xlsxBlob.size > 0);
+
+const zipBlob = createZipBlob([
+  { name: "keep.xml", content: "<keep />" },
+  { name: "skip.xml", content: "<skip />" },
+]);
+const zipEntries = await readZipTextEntries(new File([zipBlob], "selected.zip"), {
+  include: (name) => name === "keep.xml",
+});
+
+assert.deepEqual(zipEntries, { "keep.xml": "<keep />" });

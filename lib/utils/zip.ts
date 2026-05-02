@@ -3,6 +3,10 @@ export type ZipTextEntry = {
   content: string;
 };
 
+export type ZipTextReadOptions = {
+  include?: (name: string) => boolean;
+};
+
 const zipCrcTable = Array.from({ length: 256 }, (_, index) => {
   let value = index;
 
@@ -113,7 +117,7 @@ async function inflateZipEntry(bytes: Uint8Array) {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-export async function readZipTextEntries(file: File) {
+export async function readZipTextEntries(file: File, options: ZipTextReadOptions = {}) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const decoder = new TextDecoder("utf-8");
   let eocdOffset = -1;
@@ -144,10 +148,13 @@ export async function readZipTextEntries(file: File) {
     const localNameLength = zipReadUint16(bytes, localHeaderOffset + 26);
     const localExtraLength = zipReadUint16(bytes, localHeaderOffset + 28);
     const dataOffset = localHeaderOffset + 30 + localNameLength + localExtraLength;
-    const compressedData = bytes.slice(dataOffset, dataOffset + compressedSize);
-    const contentBytes = method === 0 ? compressedData : method === 8 ? await inflateZipEntry(compressedData) : null;
 
-    if (contentBytes) entries[fileName] = decoder.decode(contentBytes);
+    if (!options.include || options.include(fileName)) {
+      const compressedData = bytes.subarray(dataOffset, dataOffset + compressedSize);
+      const contentBytes = method === 0 ? compressedData : method === 8 ? await inflateZipEntry(compressedData) : null;
+
+      if (contentBytes) entries[fileName] = decoder.decode(contentBytes);
+    }
     directoryOffset += 46 + fileNameLength + extraLength + commentLength;
   }
 

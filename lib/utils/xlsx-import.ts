@@ -1,6 +1,16 @@
 import { readZipTextEntries } from "./zip";
 import { parseCsvRows } from "./xlsx-csv";
 
+const xlsxImportEntryNames = new Set([
+  "xl/workbook.xml",
+  "xl/_rels/workbook.xml.rels",
+  "xl/sharedStrings.xml",
+]);
+
+function shouldReadXlsxImportEntry(name: string) {
+  return xlsxImportEntryNames.has(name) || name.startsWith("xl/worksheets/");
+}
+
 function xmlTextContent(node: Element) {
   return Array.from(node.getElementsByTagName("t")).map((item) => item.textContent ?? "").join("");
 }
@@ -69,5 +79,5 @@ export async function parseTableImportFile(file: File) {
     throw new Error("Поддерживается импорт .xlsx или .csv.");
   }
 
-  return parseXlsxSheetRows(await readZipTextEntries(file));
+  return parseXlsxSheetRows(await readZipTextEntries(file, { include: shouldReadXlsxImportEntry }));
 }
