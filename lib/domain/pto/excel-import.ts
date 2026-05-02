@@ -27,6 +27,50 @@ function ptoImportRowSignature(row: PtoPlanRow, includeCustomerCode: boolean) {
   return includeCustomerCode ? ptoCustomerPlanRowSignature(row) : ptoLinkedRowSignature(row);
 }
 
+function mergeImportedDuplicatePtoRows(rows: PtoPlanRow[], includeCustomerCode: boolean) {
+  const signatureIndexes = new Map<string, number>();
+  const mergedRows: PtoPlanRow[] = [];
+
+  rows.forEach((row) => {
+    const signature = ptoImportRowSignature(row, includeCustomerCode);
+    if (!signature) {
+      mergedRows.push(row);
+      return;
+    }
+
+    const existingIndex = signatureIndexes.get(signature);
+    if (existingIndex === undefined) {
+      signatureIndexes.set(signature, mergedRows.length);
+      mergedRows.push(row);
+      return;
+    }
+
+    const existing = mergedRows[existingIndex];
+    mergedRows[existingIndex] = normalizePtoPlanRow({
+      ...existing,
+      location: existing.location || row.location,
+      unit: existing.unit || row.unit,
+      status: existing.status || row.status,
+      customerCode: includeCustomerCode ? existing.customerCode || row.customerCode : "",
+      dailyPlans: {
+        ...existing.dailyPlans,
+        ...row.dailyPlans,
+      },
+      carryovers: {
+        ...(existing.carryovers ?? {}),
+        ...(row.carryovers ?? {}),
+      },
+      carryoverManualYears: uniqueSorted([
+        ...(existing.carryoverManualYears ?? []),
+        ...(row.carryoverManualYears ?? []),
+      ]),
+      years: uniqueSorted([...(existing.years ?? []), ...(row.years ?? [])]),
+    });
+  });
+
+  return mergedRows;
+}
+
 export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: string, currentRows: PtoPlanRow[], table: PtoDateTableKey = "plan") {
   const includeCustomerCode = table === "plan";
   const [headers = [], ...rows] = tableRows
@@ -59,7 +103,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
   );
   let previousArea = "";
 
-  return rows
+  const importedRows = rows
     .map((row) => {
       const rawArea = ptoPlanImportCell(row, columns.area);
       if (rawArea) previousArea = rawArea;
@@ -135,6 +179,8 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
       });
     })
     .filter((row): row is PtoPlanRow => row !== null);
+
+  return mergeImportedDuplicatePtoRows(importedRows, includeCustomerCode);
 }
 
 export function mergeImportedPtoPlanRows(currentRows: PtoPlanRow[], importedRows: PtoPlanRow[], options: { includeCustomerCode?: boolean } = {}) {
