@@ -95,6 +95,8 @@ assert.match(sharedDatabaseSaveQueueSource, /Сохранение в базу н
 assert.match(sharedDatabaseSaveQueueSource, /return useCallback\(\(savedLocalState: SharedAppStorageWriteResult\) => \{[\s\S]*sharedDatabaseSaveQueueRef\.current = \{[\s\S]*storage: savedLocalState\.storage,[\s\S]*settings: savedLocalState\.settings,[\s\S]*void runSharedDatabaseSaveQueue\(\);/);
 assert.match(appLocalPersistenceSource, /import \{ useSharedDatabaseSaveQueue \} from "@\/features\/app\/useSharedDatabaseSaveQueue";/);
 assert.match(appLocalPersistenceSource, /if \(savedLocalState\.changedKeys\.length > 0\) \{[\s\S]*enqueueSharedDatabaseSave\(savedLocalState\);[\s\S]*requestClientSnapshotSave\("app-state-save"\);/);
+assert.match(appLocalPersistenceSource, /window\.addEventListener\("pagehide", flushAppLocalState\)/);
+assert.match(appLocalPersistenceSource, /const savedLocalState = saveAppLocalState\(\);[\s\S]*if \(savedLocalState\.changedKeys\.length > 0\) \{[\s\S]*enqueueSharedDatabaseSave\(savedLocalState\);[\s\S]*requestClientSnapshotSave\("app-state-pagehide"\);/);
 
 assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatch\(rowToSave, day, parsedValue\);\s*requestSave\(\);/);
 assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatches\(rowToSave, patches\);\s*requestSave\(\);/);

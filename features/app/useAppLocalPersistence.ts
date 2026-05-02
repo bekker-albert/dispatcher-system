@@ -146,8 +146,6 @@ export function useAppLocalPersistence({
     saveAppLocalState,
   ]);
 
-  // Pagehide only flushes browser storage. Server writes stay debounced above
-  // to avoid blocking page close and to keep database writes predictable.
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
 
@@ -156,10 +154,14 @@ export function useAppLocalPersistence({
         window.clearTimeout(appStateSaveTimerRef.current);
         appStateSaveTimerRef.current = null;
       }
-      saveAppLocalState();
+      const savedLocalState = saveAppLocalState();
+      if (savedLocalState.changedKeys.length > 0) {
+        enqueueSharedDatabaseSave(savedLocalState);
+        requestClientSnapshotSave("app-state-pagehide");
+      }
     };
 
     window.addEventListener("pagehide", flushAppLocalState);
     return () => window.removeEventListener("pagehide", flushAppLocalState);
-  }, [adminDataLoaded, saveAppLocalState]);
+  }, [adminDataLoaded, enqueueSharedDatabaseSave, requestClientSnapshotSave, saveAppLocalState]);
 }
