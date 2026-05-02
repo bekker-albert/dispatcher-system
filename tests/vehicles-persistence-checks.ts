@@ -71,3 +71,4 @@ assert.match(vehicleRowsPersistenceSource, /const vehicleRowsVersionRef = useRef
 assert.match(vehicleRowsPersistenceSource, /const snapshotVersion = vehicleRowsVersionRef\.current;/);
 assert.doesNotMatch(vehicleRowsPersistenceSource, /JSON\.stringify\(vehicleRowsRef\.current\)\) return;/);
 assert.match(vehicleRowsEditorSource, /Удаление техники будет сохранено общим списком/);
+assert.match(mysqlVehiclesSource, /Список техники уже изменился в базе/);

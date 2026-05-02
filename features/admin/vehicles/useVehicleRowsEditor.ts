@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from "react";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import { defaultVehicleForm } from "@/lib/domain/vehicles/defaults";
