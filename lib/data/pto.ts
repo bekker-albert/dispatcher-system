@@ -47,6 +47,17 @@ function ptoInlineSavePayload(options: DataPtoInlineSaveOptions) {
   return { expectedUpdatedAt: options.expectedUpdatedAt };
 }
 
+function latestPtoStateUpdatedAt(values: Array<string | null | undefined>) {
+  return values
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .sort()
+    .at(-1);
+}
+
+function mysqlPtoYearLoadKey(year: string, includeBuckets: boolean) {
+  return `mysql:pto:load-year:${year}:${includeBuckets ? "buckets" : "date"}`;
+}
+
 async function loadSupabasePtoAdapter() {
   return import("@/lib/supabase/pto");
 }
@@ -55,7 +66,30 @@ export function loadPtoStateFromDatabase(options: DataPtoLoadOptions = {}) {
   if (serverDatabaseConfigured) {
     if (options.year) {
       const includeBuckets = options.includeBuckets === true;
-      return dedupePtoLoadRequest(`mysql:pto:load-year:${options.year}:${includeBuckets ? "buckets" : "date"}`, () => databaseRequest<DataPtoState | null>("pto", "load-year", {
+      const year = options.year;
+      const dateLoadKey = mysqlPtoYearLoadKey(year, false);
+
+      if (includeBuckets) {
+        const activeDateLoad = ptoLoadRequestCache.get(dateLoadKey) as Promise<DataPtoState | null> | undefined;
+        if (activeDateLoad) {
+          return dedupePtoLoadRequest(mysqlPtoYearLoadKey(year, true), async () => {
+            const [dateState, bucketState] = await Promise.all([
+              activeDateLoad,
+              loadPtoBucketsFromDatabase(),
+            ]);
+            if (!dateState) return dateState;
+
+            return {
+              ...dateState,
+              bucketRows: bucketState.bucketRows,
+              bucketValues: bucketState.bucketValues,
+              updatedAt: latestPtoStateUpdatedAt([dateState.updatedAt, bucketState.updatedAt]) ?? dateState.updatedAt,
+            };
+          });
+        }
+      }
+
+      return dedupePtoLoadRequest(mysqlPtoYearLoadKey(year, includeBuckets), () => databaseRequest<DataPtoState | null>("pto", "load-year", {
         year: options.year,
         includeBuckets,
       }));
