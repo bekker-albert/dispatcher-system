@@ -110,18 +110,15 @@ export function ptoRecordToRow(
   };
 }
 
-export function ptoRowsByTable(
+export function ptoRowsByTables(
   records: PtoPersistenceRowRecord[],
   dayValues: PtoPersistenceDayValueRecord[],
-  table: PtoPersistenceTable,
   options: {
     normalizeDate?: (value: string) => string | null;
     parseStoredValue?: (value: unknown) => unknown;
   } = {},
 ) {
   const dailyPlansByRow = dayValues.reduce<Map<string, Record<string, number>>>((map, dayValue) => {
-    if (dayValue.table_type !== table) return map;
-
     const numberValue = Number(dayValue.value);
     const dateKey = options.normalizeDate ? options.normalizeDate(dayValue.work_date) : dayValue.work_date;
     if (!Number.isFinite(numberValue) || !dateKey) return map;
@@ -133,14 +130,43 @@ export function ptoRowsByTable(
     return map;
   }, new Map<string, Record<string, number>>());
 
-  return records
-    .filter((record) => record.table_type === table)
-    .sort((left, right) => asFiniteNumber(left.sort_index) - asFiniteNumber(right.sort_index))
-    .map((record) =>
-      ptoRecordToRow(
-        record,
-        dailyPlansByRow.get(ptoRowKey(table, record.row_id)) ?? {},
-        options.parseStoredValue,
+  const recordsByTable = records.reduce<Map<PtoPersistenceTable, PtoPersistenceRowRecord[]>>((map, record) => {
+    const tableRecords = map.get(record.table_type) ?? [];
+    tableRecords.push(record);
+    map.set(record.table_type, tableRecords);
+    return map;
+  }, new Map<PtoPersistenceTable, PtoPersistenceRowRecord[]>());
+
+  const rowsForTable = (table: PtoPersistenceTable) => (
+    (recordsByTable.get(table) ?? [])
+      .sort((left, right) => asFiniteNumber(left.sort_index) - asFiniteNumber(right.sort_index))
+      .map((record) =>
+        ptoRecordToRow(
+          record,
+          dailyPlansByRow.get(ptoRowKey(table, record.row_id)) ?? {},
+          options.parseStoredValue,
+        )
       )
-    );
+  );
+
+  return {
+    planRows: rowsForTable("plan"),
+    operRows: rowsForTable("oper"),
+    surveyRows: rowsForTable("survey"),
+  };
+}
+
+export function ptoRowsByTable(
+  records: PtoPersistenceRowRecord[],
+  dayValues: PtoPersistenceDayValueRecord[],
+  table: PtoPersistenceTable,
+  options: {
+    normalizeDate?: (value: string) => string | null;
+    parseStoredValue?: (value: unknown) => unknown;
+  } = {},
+) {
+  const rowsByTable = ptoRowsByTables(records, dayValues, options);
+  if (table === "plan") return rowsByTable.planRows;
+  if (table === "oper") return rowsByTable.operRows;
+  return rowsByTable.surveyRows;
 }

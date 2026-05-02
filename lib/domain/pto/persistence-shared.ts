@@ -50,6 +50,7 @@ export {
   ptoPlanRowIds,
   ptoRecordToRow,
   ptoRowsByTable,
+  ptoRowsByTables,
   ptoRowsToDayRecords,
   ptoRowsToRecords,
 } from "./persistence-rows";

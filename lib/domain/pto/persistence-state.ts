@@ -11,7 +11,7 @@ import {
   ptoBucketValuesFromRecords,
   ptoBucketValuesToRecords,
 } from "./persistence-buckets";
-import { ptoRowsByTable, ptoRowsToDayRecords, ptoRowsToRecords } from "./persistence-rows";
+import { ptoRowsByTables, ptoRowsToDayRecords, ptoRowsToRecords } from "./persistence-rows";
 import { asObjectRecord, asStringArray, latestPtoUpdatedAt } from "./persistence-values";
 
 function dateBelongsToYear(dateKey: string, year: string) {
@@ -79,6 +79,7 @@ export function ptoStateFromPersistenceRecords<SettingRecord extends { updated_a
 
   const settingsByKey = new Map(settingRecords.map((setting) => [getSettingKey(setting), getSettingValue(setting)]));
   const rowOptions = { normalizeDate, parseStoredValue };
+  const rowsByTable = ptoRowsByTables(rowRecords, dayValueRecords, rowOptions);
 
   return {
     updatedAt: latestPtoUpdatedAt(
@@ -86,9 +87,9 @@ export function ptoStateFromPersistenceRecords<SettingRecord extends { updated_a
       normalizeUpdatedAt,
     ),
     manualYears: asStringArray(settingsByKey.get(ptoManualYearsKey)),
-    planRows: ptoRowsByTable(rowRecords, dayValueRecords, "plan", rowOptions),
-    operRows: ptoRowsByTable(rowRecords, dayValueRecords, "oper", rowOptions),
-    surveyRows: ptoRowsByTable(rowRecords, dayValueRecords, "survey", rowOptions),
+    planRows: rowsByTable.planRows,
+    operRows: rowsByTable.operRows,
+    surveyRows: rowsByTable.surveyRows,
     bucketValues: ptoBucketValuesFromRecords(bucketValueRecords),
     bucketRows: ptoBucketRowsFromRecords(bucketRowRecords),
     uiState: asObjectRecord(settingsByKey.get(ptoUiStateKey)) as PtoPersistenceState["uiState"],
