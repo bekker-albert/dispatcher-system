@@ -107,7 +107,7 @@ export function usePtoDateExcelTransfer({
 
     try {
       const [
-        { createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows },
+        { createPtoDateImportRowUpdates, createPtoPlanRowsFromImportTable },
         { parseTableImportFile },
       ] = await Promise.all([
         import("@/lib/domain/pto/excel-import"),
@@ -121,26 +121,13 @@ export function usePtoDateExcelTransfer({
 
       if (!window.confirm(`Загрузить таблицу "${meta.label}" из файла? Будет обновлено или добавлено строк: ${importedRows.length}.`)) return;
 
-      const firstImportedMonth = importedRows
-        .flatMap((row) => Object.keys(row.dailyPlans))
-        .filter((date) => date.startsWith(`${ptoPlanYear}-`))
-        .sort()[0]?.slice(0, 7) ?? `${ptoPlanYear}-01`;
+      const rowUpdates = createPtoDateImportRowUpdates(meta.table, importedRows, ptoPlanYear);
 
-      if (meta.table === "oper") {
-        setPtoOperRows((current) => mergeImportedPtoPlanRows(current, importedRows));
-        setPtoPlanRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-        setPtoSurveyRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-      } else if (meta.table === "survey") {
-        setPtoSurveyRows((current) => mergeImportedPtoPlanRows(current, importedRows));
-        setPtoPlanRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-        setPtoOperRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-      } else {
-        setPtoPlanRows((current) => mergeImportedPtoPlanRows(current, importedRows, { includeCustomerCode: true }));
-        setPtoOperRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-        setPtoSurveyRows((current) => ensureImportedRowsInLinkedPtoTable(current, importedRows, ptoPlanYear));
-      }
+      setPtoPlanRows(rowUpdates.updatePlanRows);
+      setPtoOperRows(rowUpdates.updateOperRows);
+      setPtoSurveyRows(rowUpdates.updateSurveyRows);
       setPtoManualYears((current) => uniqueSorted([...current, ptoPlanYear]));
-      setExpandedPtoMonths((current) => ({ ...current, [firstImportedMonth]: true }));
+      setExpandedPtoMonths((current) => ({ ...current, [rowUpdates.firstImportedMonth]: true }));
       requestSave();
       addAdminLog({
         action: "Загрузка",

@@ -233,3 +233,41 @@ export function ensureImportedRowsInLinkedPtoTable(currentRows: PtoPlanRow[], im
 
   return nextRows;
 }
+
+export function firstImportedPtoMonth(importedRows: PtoPlanRow[], selectedYear: string) {
+  return importedRows
+    .flatMap((row) => Object.keys(row.dailyPlans))
+    .filter((date) => date.startsWith(`${selectedYear}-`))
+    .sort()[0]?.slice(0, 7) ?? `${selectedYear}-01`;
+}
+
+export function createPtoDateImportRowUpdates(
+  table: PtoDateTableKey,
+  importedRows: PtoPlanRow[],
+  selectedYear: string,
+) {
+  return {
+    firstImportedMonth: firstImportedPtoMonth(importedRows, selectedYear),
+    updatePlanRows: (currentRows: PtoPlanRow[]) => {
+      if (table === "plan") {
+        return mergeImportedPtoPlanRows(currentRows, importedRows, { includeCustomerCode: true });
+      }
+
+      return ensureImportedRowsInLinkedPtoTable(currentRows, importedRows, selectedYear);
+    },
+    updateOperRows: (currentRows: PtoPlanRow[]) => {
+      if (table === "oper") {
+        return mergeImportedPtoPlanRows(currentRows, importedRows);
+      }
+
+      return ensureImportedRowsInLinkedPtoTable(currentRows, importedRows, selectedYear);
+    },
+    updateSurveyRows: (currentRows: PtoPlanRow[]) => {
+      if (table === "survey") {
+        return mergeImportedPtoPlanRows(currentRows, importedRows);
+      }
+
+      return ensureImportedRowsInLinkedPtoTable(currentRows, importedRows, selectedYear);
+    },
+  };
+}

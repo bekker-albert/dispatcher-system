@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { normalizePtoPlanRow } from "../lib/domain/pto/date-table";
-import { createPtoPlanRowsFromImportTable } from "../lib/domain/pto/excel";
+import { createPtoDateImportRowUpdates, createPtoPlanRowsFromImportTable } from "../lib/domain/pto/excel";
 
 const duplicateCustomerRows = createPtoPlanRowsFromImportTable([
   ["Участок", "Заказчик", "Вид работ", "Ед.", "01.04.2026", "02.04.2026", "Остатки 2025"],
@@ -82,3 +82,14 @@ assert.equal(Math.round(importedAprilTotal * 1000000) / 1000000, 62);
 assert.equal(Math.round((monthTotalImportRows[0].dailyPlans["2026-04-01"] ?? 0) * 100), 207);
 assert.equal(Math.round((monthTotalImportRows[0].dailyPlans["2026-04-30"] ?? 0) * 100), 207);
 assert.equal(multiYearExistingRow.dailyPlans["2026-04-01"], 10);
+
+const operImportRows = createPtoPlanRowsFromImportTable([
+  ["Участок", "Вид работ", "Ед.", "01.05.2026"],
+  ["Аксу", "Временная работа", "м3", "15"],
+], "2026", [], "oper");
+const operImportUpdates = createPtoDateImportRowUpdates("oper", operImportRows, "2026");
+
+assert.equal(operImportUpdates.firstImportedMonth, "2026-05");
+assert.equal(operImportUpdates.updateOperRows([]).length, 1);
+assert.equal(operImportUpdates.updatePlanRows([]).length, 1);
+assert.equal(operImportUpdates.updateSurveyRows([]).length, 1);
