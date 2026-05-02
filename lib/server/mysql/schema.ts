@@ -163,12 +163,6 @@ async function addMysqlColumnIfMissing(tableName: string, columnName: string, st
 async function runMysqlSchemaSetup() {
   await getMysqlPool().execute(ptoMetaTableStatement);
 
-  const schemaVersionRows = await mysqlRows(
-    "SELECT meta_key FROM pto_meta WHERE meta_key = ? LIMIT 1",
-    [schemaVersionMetaKey],
-  );
-  if (schemaVersionRows.length > 0) return;
-
   for (const statement of statements) {
     await getMysqlPool().execute(statement);
   }

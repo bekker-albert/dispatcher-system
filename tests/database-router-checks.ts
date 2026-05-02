@@ -29,8 +29,9 @@ const mysqlPtoVersionSource = readFileSync(resolve(testDir, "../lib/server/mysql
 const mysqlPtoLoadSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-load.ts"), "utf8");
 
 assert.match(mysqlSchemaSource, /const schemaVersionMetaKey = "schema:v/);
-assert.match(mysqlSchemaSource, /SELECT meta_key FROM pto_meta WHERE meta_key = \? LIMIT 1/);
-assert.match(mysqlSchemaSource, /if \(schemaVersionRows\.length > 0\) return;/);
+assert.doesNotMatch(mysqlSchemaSource, /SELECT meta_key FROM pto_meta WHERE meta_key = \? LIMIT 1/);
+assert.doesNotMatch(mysqlSchemaSource, /if \(schemaVersionRows\.length > 0\) return;/);
+assert.match(mysqlSchemaSource, /for \(const statement of statements\) \{[\s\S]*await getMysqlPool\(\)\.execute\(statement\);[\s\S]*\}/);
 assert.match(mysqlSchemaSource, /INSERT IGNORE INTO pto_meta \(meta_key\) VALUES \(\?\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE vehicles ADD INDEX vehicles_sort_index_idx \(sort_index\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_rows ADD INDEX pto_rows_sort_idx \(table_type, sort_index\)/);
