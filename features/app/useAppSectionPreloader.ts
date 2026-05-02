@@ -7,6 +7,10 @@ type BrowserIdleWindow = Window & {
   requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => IdleCallbackHandle;
   cancelIdleCallback?: (handle: IdleCallbackHandle) => void;
 };
+type SectionPreloader = {
+  key: string;
+  load: () => Promise<unknown>;
+};
 
 function scheduleIdlePreload(callback: () => void) {
   const browserWindow = window as BrowserIdleWindow;
@@ -20,14 +24,16 @@ function scheduleIdlePreload(callback: () => void) {
   return () => window.clearTimeout(handle);
 }
 
-const primarySectionPreloaders = [
-  () => import("@/features/app/ReportsPrimaryContent"),
-  () => import("@/features/app/DispatchPrimaryContent"),
-  () => import("@/features/app/AdminPrimaryContent"),
+const completedPreloaders = new Set<string>();
+
+const primarySectionPreloaders: SectionPreloader[] = [
+  { key: "reports", load: () => import("@/features/app/ReportsPrimaryContent") },
+  { key: "dispatch", load: () => import("@/features/app/DispatchPrimaryContent") },
+  { key: "admin", load: () => import("@/features/app/AdminPrimaryContent") },
 ];
 
-const ptoSectionPreloaders = [
-  () => import("@/features/app/PtoPrimaryContent"),
+const ptoSectionPreloaders: SectionPreloader[] = [
+  { key: "pto", load: () => import("@/features/app/PtoPrimaryContent") },
 ];
 
 export function useAppSectionPreloader(
@@ -46,6 +52,9 @@ export function useAppSectionPreloader(
     let preloadIndex = 0;
 
     const runNextPreload = () => {
+      while (preloadIndex < sectionPreloaders.length && completedPreloaders.has(sectionPreloaders[preloadIndex]?.key ?? "")) {
+        preloadIndex += 1;
+      }
       if (cancelled || preloadIndex >= sectionPreloaders.length) return;
 
       cancelIdlePreload = scheduleIdlePreload(() => {
@@ -55,7 +64,8 @@ export function useAppSectionPreloader(
         preloadIndex += 1;
         if (!preloadSection) return;
 
-        void preloadSection().finally(() => {
+        void preloadSection.load().finally(() => {
+          completedPreloaders.add(preloadSection.key);
           runNextPreload();
         });
       });
