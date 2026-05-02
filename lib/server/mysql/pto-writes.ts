@@ -31,6 +31,10 @@ type PtoRowYearMetadataRecord = RowDataPacket & {
   years: unknown;
 };
 
+type PtoDayValueRowIdRecord = RowDataPacket & {
+  row_id: string;
+};
+
 function scopedDateClause(yearScope: string | null | undefined, values: unknown[]) {
   if (!yearScope) return "";
 
@@ -287,6 +291,54 @@ export async function deletePtoDayValuesMissingFromState(
         [...values, ...dates],
       );
     }
+  }
+}
+
+export async function deletePtoDayValuesForRowsMissingFromYearState(
+  table: PtoDateTableKey,
+  rows: PtoPlanRow[],
+  yearScope: string,
+  execute: DbExecutor = dbExecute,
+) {
+  const { start, end } = ptoYearDateRange(yearScope);
+  const rowIds = new Set(ptoPlanRowIds(rows));
+
+  if (rowIds.size === 0) {
+    await execute(
+      `DELETE FROM pto_day_values
+      WHERE table_type = ?
+        AND work_date >= ?
+        AND work_date <= ?`,
+      [table, start, end],
+    );
+    return;
+  }
+
+  const existingRows = await (execute.rows?.<PtoDayValueRowIdRecord>(
+    `SELECT DISTINCT row_id
+    FROM pto_day_values
+    WHERE table_type = ?
+      AND work_date >= ?
+      AND work_date <= ?`,
+    [table, start, end],
+  ) ?? Promise.resolve([]));
+
+  const staleRowIds = existingRows
+    .map((record) => record.row_id)
+    .filter((rowId) => !rowIds.has(rowId));
+
+  for (const rowIdBatch of chunkValues(staleRowIds)) {
+    if (rowIdBatch.length === 0) continue;
+
+    const rowPlaceholders = rowIdBatch.map(() => "?").join(", ");
+    await execute(
+      `DELETE FROM pto_day_values
+      WHERE table_type = ?
+        AND work_date >= ?
+        AND work_date <= ?
+        AND row_id IN (${rowPlaceholders})`,
+      [table, start, end, ...rowIdBatch],
+    );
   }
 }
 

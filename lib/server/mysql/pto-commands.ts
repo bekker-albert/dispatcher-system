@@ -26,6 +26,7 @@ import {
   upsertPtoBucketValues as upsertMysqlPtoBucketValues,
 } from "./pto-bucket-writes";
 import {
+  deletePtoDayValuesForRowsMissingFromYearState as deleteMissingPtoYearRowValuesFromMysqlState,
   deletePtoDayValuesMissingFromState as deleteMissingPtoDayValuesFromMysqlState,
   deletePtoRowsWithoutData as deleteMysqlPtoRowsWithoutData,
   deletePtoRowsMissingFromState as deleteMissingPtoRowsFromMysqlState,
@@ -47,6 +48,7 @@ const assertMysqlPtoMatchesExpectedUpdatedAt = assertFreshMysqlPtoMatchesExpecte
 const deletePtoBucketRowsMissingFromState = deleteMissingPtoBucketRowsFromMysqlState;
 const deletePtoBucketValuesMissingFromState = deleteMissingPtoBucketValuesFromMysqlState;
 const deletePtoDayValuesMissingFromState = deleteMissingPtoDayValuesFromMysqlState;
+const deletePtoDayValuesForRowsMissingFromYearState = deleteMissingPtoYearRowValuesFromMysqlState;
 const deletePtoRowsWithoutData = deleteMysqlPtoRowsWithoutData;
 const deletePtoRowsMissingFromState = deleteMissingPtoRowsFromMysqlState;
 const insertPtoRowsIfMissing = insertMissingMysqlPtoRows;
@@ -139,6 +141,9 @@ export async function savePtoStateToMysql(
     await deletePtoDayValuesMissingFromState("oper", operRows, execute, { yearScope: options.yearScope });
     await deletePtoDayValuesMissingFromState("survey", surveyRows, execute, { yearScope: options.yearScope });
     if (options.yearScope) {
+      await deletePtoDayValuesForRowsMissingFromYearState("plan", planRows, options.yearScope, execute);
+      await deletePtoDayValuesForRowsMissingFromYearState("oper", operRows, options.yearScope, execute);
+      await deletePtoDayValuesForRowsMissingFromYearState("survey", surveyRows, options.yearScope, execute);
       await prunePtoYearFromRows(options.yearScope, execute, {
         excludeRowIdsByTable: {
           plan: ptoPlanRowIds(planRows),
