@@ -50,9 +50,10 @@ assert.deepEqual(emptyPtoDateModel.ptoYearTabs, ["2026"]);
 assert.deepEqual(emptyPtoDateModel.activePtoDateRows, []);
 assert.deepEqual(emptyPtoDateModel.ptoBucketRowLookupSources, []);
 
-assert.match(guardedSelectTopTabSource, /flushPtoDatabasePendingSave\(\)/);
 assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\)/);
-assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\);\s*void runtime\.flushPtoDatabasePendingSave\(\);/);
+assert.doesNotMatch(guardedSelectTopTabSource, /flushPtoDatabasePendingSave\(\)/);
+assert.match(useAppScreenPropsSource, /const schedulePtoDatabaseFlush = useCallback\(\(\) => \{[\s\S]*window\.setTimeout\(\(\) => \{[\s\S]*void runtime\.flushPtoDatabasePendingSave\(\);[\s\S]*\}, 0\);[\s\S]*\}, \[runtime\]\);/);
+assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\);\s*schedulePtoDatabaseFlush\(\);/);
 assert.doesNotMatch(guardedSelectTopTabSource, /if \(canNavigate\) selectTopTab\(tab\)/);
 assert.match(guardedSelectPtoTabSource, /selectPtoTab\(tab\)/);
 assert.doesNotMatch(guardedSelectPtoTabSource, /flushPtoDatabasePendingSave/);

@@ -61,11 +61,17 @@ export function useAppScreenProps({
     headerSubtabsOffset,
   } = navigation;
 
+  const schedulePtoDatabaseFlush = useCallback(() => {
+    window.setTimeout(() => {
+      void runtime.flushPtoDatabasePendingSave();
+    }, 0);
+  }, [runtime]);
+
   const guardedSelectTopTab = useCallback((tab: typeof topTab) => {
     if (tab === topTab) return;
     selectTopTab(tab);
-    void runtime.flushPtoDatabasePendingSave();
-  }, [runtime, selectTopTab, topTab]);
+    schedulePtoDatabaseFlush();
+  }, [schedulePtoDatabaseFlush, selectTopTab, topTab]);
 
   const guardedSelectPtoTab = useCallback((tab: string) => {
     if (tab === ptoTab) return;
