@@ -44,7 +44,7 @@ export function useAppUndoScheduler({
       const nextSignature = appUndoSnapshotReferenceSignature(nextSnapshot);
 
       if (!undoCurrentSnapshotRef.current) {
-        undoCurrentSnapshotRef.current = cloneAppUndoSnapshot(nextSnapshot);
+        undoCurrentSnapshotRef.current = nextSnapshot;
         undoCurrentSignatureRef.current = nextSignature;
         undoSnapshotTimerRef.current = null;
         return;
@@ -52,7 +52,7 @@ export function useAppUndoScheduler({
 
       if (undoRestoringRef.current) {
         undoRestoringRef.current = false;
-        undoCurrentSnapshotRef.current = cloneAppUndoSnapshot(nextSnapshot);
+        undoCurrentSnapshotRef.current = nextSnapshot;
         undoCurrentSignatureRef.current = nextSignature;
         undoSnapshotTimerRef.current = null;
         return;
@@ -67,7 +67,7 @@ export function useAppUndoScheduler({
         ...undoHistoryRef.current,
         cloneAppUndoSnapshot(undoCurrentSnapshotRef.current),
       ].slice(-10);
-      undoCurrentSnapshotRef.current = cloneAppUndoSnapshot(nextSnapshot);
+      undoCurrentSnapshotRef.current = nextSnapshot;
       undoCurrentSignatureRef.current = nextSignature;
 
       undoSnapshotTimerRef.current = null;
@@ -84,7 +84,7 @@ export function useAppUndoScheduler({
     if (!previousSnapshot) return null;
 
     undoRestoringRef.current = true;
-    undoCurrentSnapshotRef.current = cloneAppUndoSnapshot(previousSnapshot);
+    undoCurrentSnapshotRef.current = previousSnapshot;
     return previousSnapshot;
   }, []);
 

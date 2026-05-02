@@ -9,6 +9,7 @@ const appPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/A
 const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features/app/initialAppDataLoadSteps.ts"), "utf8");
 const initialAppDatabaseBootstrapSource = readFileSync(resolve(testDir, "../features/app/initialAppDatabaseBootstrap.ts"), "utf8");
 const navigationSelectionHandlersSource = readFileSync(resolve(testDir, "../features/navigation/useNavigationSelectionHandlers.ts"), "utf8");
+const appUndoSchedulerSource = readFileSync(resolve(testDir, "../features/app/useAppUndoScheduler.ts"), "utf8");
 const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto/ptoBucketsGridModel.ts"), "utf8");
 const ptoDateTableViewModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateTableViewModel.ts"), "utf8");
 const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
@@ -124,6 +125,9 @@ assert.match(ptoDataPrimaryContentSource, /usePtoDateEditingGlobalReset/);
 assert.match(ptoPrimaryContentSource, /if \(!isPtoDateTab && !isPtoBucketsSection\)/);
 assert.doesNotMatch(ptoPrimaryContentSource, /allPtoDateRows/);
 assert.match(navigationSelectionHandlersSource, /const selectTopTab = useCallback\(\(tab: TopTab\) => \{\s*startTransition\(\(\) => \{\s*setTopTab\(tab\);\s*\}\);/);
+assert.doesNotMatch(appUndoSchedulerSource, /undoCurrentSnapshotRef\.current = cloneAppUndoSnapshot\(nextSnapshot\)/);
+assert.match(appUndoSchedulerSource, /undoCurrentSnapshotRef\.current = nextSnapshot;/);
+assert.match(appUndoSchedulerSource, /cloneAppUndoSnapshot\(undoCurrentSnapshotRef\.current\)/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridRangeKeys/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridKeyAtOffset/);
 assert.match(ptoBucketsGridModelSource, /rowKeys\.indexOf\(activeCell\.rowKey\)/);
