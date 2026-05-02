@@ -20,29 +20,38 @@ function scheduleIdlePreload(callback: () => void) {
   return () => window.clearTimeout(handle);
 }
 
-const coreSectionPreloaders = [
+const primarySectionPreloaders = [
   () => import("@/features/app/ReportsPrimaryContent"),
   () => import("@/features/app/DispatchPrimaryContent"),
   () => import("@/features/app/AdminPrimaryContent"),
+];
+
+const ptoSectionPreloaders = [
   () => import("@/features/app/PtoPrimaryContent"),
 ];
 
-export function useAppSectionPreloader(enabled: boolean) {
+export function useAppSectionPreloader(
+  enabled: boolean,
+  { includePto = false }: { includePto?: boolean } = {},
+) {
   useEffect(() => {
     if (!enabled) return undefined;
     if (typeof window === "undefined") return undefined;
 
+    const sectionPreloaders = includePto
+      ? [...primarySectionPreloaders, ...ptoSectionPreloaders]
+      : primarySectionPreloaders;
     let cancelled = false;
     let cancelIdlePreload: (() => void) | undefined;
     let preloadIndex = 0;
 
     const runNextPreload = () => {
-      if (cancelled || preloadIndex >= coreSectionPreloaders.length) return;
+      if (cancelled || preloadIndex >= sectionPreloaders.length) return;
 
       cancelIdlePreload = scheduleIdlePreload(() => {
         if (cancelled) return;
 
-        const preloadSection = coreSectionPreloaders[preloadIndex];
+        const preloadSection = sectionPreloaders[preloadIndex];
         preloadIndex += 1;
         if (!preloadSection) return;
 
@@ -58,5 +67,5 @@ export function useAppSectionPreloader(enabled: boolean) {
       cancelled = true;
       cancelIdlePreload?.();
     };
-  }, [enabled]);
+  }, [enabled, includePto]);
 }

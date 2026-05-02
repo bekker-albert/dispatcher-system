@@ -100,12 +100,14 @@ assert.doesNotMatch(reportsSectionSource, /setPreparedReportPrintState\(null\)/)
 assert.doesNotMatch(reportsSectionSource, /const reportPrintLayout = useMemo\(\(\) => createReportPrintLayout/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /const ptoTabNeedsDatabase = isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets";/);
-assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
+assert.match(appPrimaryContentSource, /useAppSectionPreloader\(true, \{ includePto: !databaseConfigured \|\| ptoDatabaseReady \}\);/);
 assert.match(initialAppDatabaseBootstrapSource, /storageChanged: boolean/);
 assert.match(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged\) \{\s*storedState = readInitialStoredAppState\(\{ includePto: false \}\);\s*initialReportState = applySharedState\(storedState\);\s*\}/);
-assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(enabled: boolean\)/);
+assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(\s*enabled: boolean,[\s\S]*includePto/);
 assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
-assert.match(useAppSectionPreloaderSource, /const coreSectionPreloaders = \[/);
+assert.match(useAppSectionPreloaderSource, /const primarySectionPreloaders = \[/);
+assert.match(useAppSectionPreloaderSource, /const ptoSectionPreloaders = \[/);
+assert.match(useAppSectionPreloaderSource, /includePto[\s\S]*\? \[\.\.\.primarySectionPreloaders, \.\.\.ptoSectionPreloaders\][\s\S]*: primarySectionPreloaders/);
 assert.match(useAppSectionPreloaderSource, /runNextPreload\(\);/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /function preloadCoreSections/);
 assert.match(useAppAdminDatabasePropsSource, /const ptoMemoryTotal = useMemo\(\(\) => \(/);
