@@ -11,6 +11,8 @@ const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto
 const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
 const ptoDateEditableTableBodySource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableBody.tsx"), "utf8");
 const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableRow.tsx"), "utf8");
+const ptoBucketsTableSource = readFileSync(resolve(testDir, "../features/pto/PtoBucketsTable.tsx"), "utf8");
+const ptoBucketsTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoBucketsTableRow.tsx"), "utf8");
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
@@ -94,3 +96,6 @@ assert.match(ptoDateEditableTableBodySource, /rowProps\.formulaRowEditing\(row\.
 assert.doesNotMatch(ptoDateEditableTableBodySource, /some\(\(cell\) =>/);
 assert.match(ptoDateEditableTableRowSource, /formulaCellEditing=\{formulaCellEditing\}/);
 assert.match(ptoDateEditableTableRowSource, /export const PtoDateEditableTableRow = memo\(function PtoDateEditableTableRow/);
+assert.match(ptoBucketsTableRowSource, /export const PtoBucketsTableRow = memo\(function PtoBucketsTableRow/);
+assert.match(ptoBucketsTableSource, /const rowActiveCell = activeCell\?\.rowKey === row\.key \? activeCell : null;/);
+assert.match(ptoBucketsTableSource, /draft=\{rowActiveCell \? draft : ""\}/);

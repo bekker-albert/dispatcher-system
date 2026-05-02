@@ -84,26 +84,30 @@ export function PtoBucketsTable({
               <td colSpan={renderedColumnSpan} style={{ ...ptoBucketSpacerCellStyle, height: virtualRows.topSpacerHeight }} />
             </tr>
           ) : null}
-          {virtualRows.rows.map((row) => (
-            <PtoBucketsTableRow
-              key={row.key}
-              activeCell={activeCell}
-              draft={draft}
-              editKey={editKey}
-              editingMode={editingMode}
-              row={row}
-              selectedBucketKeys={selectedBucketKeys}
-              values={values}
-              virtualColumns={virtualColumns}
-              onCellBlur={onCellBlur}
-              onCellDraftChange={onCellDraftChange}
-              onCellKeyDown={onCellKeyDown}
-              onCellMouseDown={onCellMouseDown}
-              onDeleteManualRow={onDeleteManualRow}
-              onSelectCell={onSelectCell}
-              onStartEdit={onStartEdit}
-            />
-          ))}
+          {virtualRows.rows.map((row) => {
+            const rowActiveCell = activeCell?.rowKey === row.key ? activeCell : null;
+
+            return (
+              <PtoBucketsTableRow
+                key={row.key}
+                activeCell={rowActiveCell}
+                draft={rowActiveCell ? draft : ""}
+                editKey={editKey}
+                editingMode={editingMode}
+                row={row}
+                selectedBucketKeys={selectedBucketKeys}
+                values={values}
+                virtualColumns={virtualColumns}
+                onCellBlur={onCellBlur}
+                onCellDraftChange={onCellDraftChange}
+                onCellKeyDown={onCellKeyDown}
+                onCellMouseDown={onCellMouseDown}
+                onDeleteManualRow={onDeleteManualRow}
+                onSelectCell={onSelectCell}
+                onStartEdit={onStartEdit}
+              />
+            );
+          })}
           {virtualRows.bottomSpacerHeight > 0 ? (
             <tr aria-hidden>
               <td colSpan={renderedColumnSpan} style={{ ...ptoBucketSpacerCellStyle, height: virtualRows.bottomSpacerHeight }} />

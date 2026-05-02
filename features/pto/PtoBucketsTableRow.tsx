@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Trash2 } from "lucide-react";
 import { PtoBucketValueCell } from "@/features/pto/PtoBucketValueCell";
 import { bucketRowHeight } from "@/features/pto/ptoBucketsConfig";
@@ -26,7 +27,7 @@ type PtoBucketsTableRowProps = PtoBucketsCellHandlers & {
   onDeleteManualRow: (row: PtoBucketRow) => void;
 };
 
-export function PtoBucketsTableRow({
+export const PtoBucketsTableRow = memo(function PtoBucketsTableRow({
   activeCell,
   draft,
   editKey,
@@ -93,4 +94,4 @@ export function PtoBucketsTableRow({
       {virtualColumns.rightSpacerWidth > 0 ? <td aria-hidden style={ptoBucketHorizontalSpacerStyle} /> : null}
     </tr>
   );
-}
+});
