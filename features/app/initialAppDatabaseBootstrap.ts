@@ -24,19 +24,26 @@ export async function loadInitialAppDatabaseBootstrap({
   appSettingsDatabaseLoadedRef,
   appSettingsDatabaseSaveSnapshotRef,
 }: InitialAppDatabaseBootstrapOptions) {
-  const [appStateResult, settingsResult] = await Promise.allSettled([
-    (async () => {
-      const { createAppStateSaveCheckpoint, loadAppStateFromDatabase } = await import("@/lib/data/app-state");
-      return {
-        createAppStateSaveCheckpoint,
-        databaseAppState: await loadAppStateFromDatabase(),
-      };
-    })(),
-    (async () => {
-      const { loadAppSettingsFromDatabase } = await import("@/lib/data/settings");
-      return await loadAppSettingsFromDatabase([...sharedAppSettingKeys]);
-    })(),
+  const [
+    { createAppStateSaveCheckpoint },
+    { loadInitialAppBootstrapFromDatabase },
+  ] = await Promise.all([
+    import("@/lib/data/app-state"),
+    import("@/lib/data/app-bootstrap"),
   ]);
+  const databaseBootstrap = await loadInitialAppBootstrapFromDatabase([...sharedAppSettingKeys]);
+  const appStateResult = databaseBootstrap.appStateError
+    ? { status: "rejected" as const, reason: databaseBootstrap.appStateError }
+    : {
+        status: "fulfilled" as const,
+        value: {
+          createAppStateSaveCheckpoint,
+          databaseAppState: databaseBootstrap.appState,
+        },
+      };
+  const settingsResult = databaseBootstrap.settingsError
+    ? { status: "rejected" as const, reason: databaseBootstrap.settingsError }
+    : { status: "fulfilled" as const, value: databaseBootstrap.settings };
 
   if (appStateResult.status === "fulfilled") {
     const { createAppStateSaveCheckpoint, databaseAppState } = appStateResult.value;

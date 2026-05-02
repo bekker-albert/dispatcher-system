@@ -5,6 +5,7 @@ export type DatabaseResource = "status" | "vehicles" | "settings" | "app-state" 
 export type DatabaseAction =
   | "status"
   | "load"
+  | "load-bootstrap"
   | "load-year"
   | "load-buckets"
   | "load-updated-at"
