@@ -52,6 +52,26 @@ const clearedDayBaseline = readPtoDatabaseSaveBaseline(patchPtoDatabaseSaveBasel
 const clearedDayState = JSON.parse(clearedDayBaseline.snapshot);
 assert.equal("2026-04-02" in clearedDayState.planRows[0].dailyPlans, false);
 
+const deletedDateRowBaseline = readPtoDatabaseSaveBaseline(patchPtoDatabaseSaveBaseline(
+  ptoInlineBaseline,
+  "2026-04-06T00:00:00.000Z",
+  { kind: "date-row", action: "delete", table: "plan", rowIds: ["row-1"] },
+));
+const deletedDateRowState = JSON.parse(deletedDateRowBaseline.snapshot);
+assert.equal(deletedDateRowBaseline.expectedUpdatedAt, "2026-04-06T00:00:00.000Z");
+assert.equal(deletedDateRowState.planRows.length, 0);
+
+const deletedYearBaseline = readPtoDatabaseSaveBaseline(patchPtoDatabaseSaveBaseline(
+  ptoInlineBaseline,
+  "2026-04-06T01:00:00.000Z",
+  { kind: "year", action: "delete", year: "2026" },
+));
+const deletedYearState = JSON.parse(deletedYearBaseline.snapshot);
+assert.equal(deletedYearBaseline.expectedUpdatedAt, "2026-04-06T01:00:00.000Z");
+assert.deepEqual(deletedYearState.manualYears, []);
+assert.equal(deletedYearState.planRows[0].years.includes("2026"), false);
+assert.equal("2026-04-01" in deletedYearState.planRows[0].dailyPlans, false);
+
 const patchedBucketBaseline = readPtoDatabaseSaveBaseline(patchPtoDatabaseSaveBaseline(
   ptoInlineBaseline,
   "2026-04-06T00:00:00.000Z",

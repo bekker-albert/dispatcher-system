@@ -32,6 +32,17 @@ export type PtoDatabaseInlineSavePatch =
     values: PtoPersistenceDayValuePatch[];
   }
   | {
+    kind: "date-row";
+    action: "delete";
+    table: PtoDateTableKey;
+    rowIds: string[];
+  }
+  | {
+    kind: "year";
+    action: "delete";
+    year: string;
+  }
+  | {
     kind: "bucket-values";
     values: Array<{ cellKey: string; value: number | null }>;
   }

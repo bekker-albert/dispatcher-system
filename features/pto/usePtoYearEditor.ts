@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type RefObject, type SetStateAction } from "react";
 import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   normalizePtoYearValue,
@@ -23,7 +24,7 @@ type UsePtoYearEditorOptions = {
   setPtoOperRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   setPtoSurveyRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   requestSave: () => void;
-  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
   addAdminLog: (entry: AdminLogInput) => void;
 };
@@ -86,7 +87,11 @@ export function usePtoYearEditor({
         const result = await deletePtoYearFromDatabase(year, {
           expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
         });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null);
+        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+          kind: "year",
+          action: "delete",
+          year,
+        });
       })
         .catch((error) => console.warn("Database PTO year delete failed:", error));
     }

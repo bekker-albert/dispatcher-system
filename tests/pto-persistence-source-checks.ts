@@ -16,6 +16,8 @@ const ptoDatabaseSaveSource = readFileSync(resolve(testDir, "../features/pto/use
 const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features/app/initialAppDataLoadSteps.ts"), "utf8");
 const ptoDateRowValueEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateRowValueEditor.ts"), "utf8");
 const ptoDateTableContextSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateTableContext.ts"), "utf8");
+const ptoLinkedRowsEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoLinkedRowsEditor.ts"), "utf8");
+const ptoYearEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoYearEditor.ts"), "utf8");
 const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
 const mysqlPtoFreshnessSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-freshness.ts"), "utf8");
 const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase/pto-commands.ts"), "utf8");
@@ -65,6 +67,8 @@ assert.match(ptoDatabaseSaveSource, /const stateAtWrite = ptoDatabaseStateRef\.c
 assert.match(ptoDatabaseSaveSource, /stateAtWrite === stateToSave[\s\S]*\? snapshotToSave[\s\S]*: serializePtoDatabaseState\(stateAtWrite\)/);
 assert.match(ptoDatabaseSaveSource, /yearScope: saveAllYears \? undefined : stateAtWrite\.uiState\.ptoPlanYear/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false;/);
+assert.match(ptoDateTableContextSource, /kind: "day-values"/);
+assert.match(ptoDatabaseSaveSource, /markPtoDatabaseInlineWriteSaved/);
 
 assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\s\S]*storage: Record<string, string>;[\s\S]*settings: Record<string, unknown>;[\s\S]*\};/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSaveQueueRef = useRef<SharedDatabaseSaveQueue \| null>\(null\);/);
@@ -96,6 +100,8 @@ assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatch\(rowToS
 assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatches\(rowToSave, patches\);\s*requestSave\(\);/);
 assert.match(ptoDateTableContextSource, /savePtoDayValueWithRowToDatabase\(table, row, day, value, \{\s*expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt\(\),\s*\}\)/);
 assert.match(ptoDateTableContextSource, /savePtoDayValuesWithRowToDatabase\(table, row, values, \{\s*expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt\(\),\s*\}\)/);
+assert.match(ptoLinkedRowsEditorSource, /markPtoDatabaseInlineWriteSaved\(result\?\.updatedAt \?\? null,\s*\{[\s\S]*kind: "date-row"[\s\S]*action: "delete"[\s\S]*rowIds: \[row\.id\]/);
+assert.match(ptoYearEditorSource, /markPtoDatabaseInlineWriteSaved\(result\?\.updatedAt \?\? null,\s*\{[\s\S]*kind: "year"[\s\S]*action: "delete"[\s\S]*year,/);
 assert.match(supabasePtoCommandsSource, /expectedUpdatedAt: options\.expectedUpdatedAt/);
 assert.match(supabasePtoCommandsSource, /assertSupabasePtoInlineMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, client\)/);
 assert.match(supabasePtoCommandsSource, /supabasePtoInlineWriteResult\(client\)/);

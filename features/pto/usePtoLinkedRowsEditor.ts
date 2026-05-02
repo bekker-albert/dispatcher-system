@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type DragEvent, type RefObject, type SetStateAction } from "react";
 import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import {
   createEmptyPtoDateRow,
@@ -25,7 +26,7 @@ type UsePtoLinkedRowsEditorOptions = {
   setPtoOperRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   setPtoSurveyRows: Dispatch<SetStateAction<PtoPlanRow[]>>;
   requestSave: () => void;
-  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
   addAdminLog: (entry: AdminLogInput) => void;
 };
@@ -94,7 +95,12 @@ export function usePtoLinkedRowsEditor({
         const result = await deletePtoRowsFromDatabase(table, [row.id], {
           expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
         });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null);
+        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+          kind: "date-row",
+          action: "delete",
+          table,
+          rowIds: [row.id],
+        });
       })
         .catch((error) => console.warn("Database PTO row delete failed:", error));
     }

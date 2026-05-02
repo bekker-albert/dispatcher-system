@@ -1,5 +1,5 @@
 import type { DataPtoState } from "../../lib/data/pto";
-import type { PtoDateTableKey } from "../../lib/domain/pto/date-table";
+import { removeYearFromPtoRows, type PtoDateTableKey } from "../../lib/domain/pto/date-table";
 import type {
   PtoDatabaseInlineSavePatch,
   PtoDatabaseSaveBaseline,
@@ -58,6 +58,23 @@ function ptoRowsForInlinePatch(state: DataPtoState, table: PtoDateTableKey) {
 }
 
 function applyPtoInlineSavePatch(state: DataPtoState, patch: PtoDatabaseInlineSavePatch): DataPtoState {
+  if (patch.kind === "year") {
+    return {
+      ...state,
+      manualYears: (state.manualYears ?? []).filter((year) => year !== patch.year),
+      planRows: removeYearFromPtoRows(state.planRows, patch.year),
+      operRows: removeYearFromPtoRows(state.operRows, patch.year),
+      surveyRows: removeYearFromPtoRows(state.surveyRows, patch.year),
+    };
+  }
+
+  if (patch.kind === "date-row") {
+    const rowIds = new Set(patch.rowIds);
+    if (patch.table === "plan") return { ...state, planRows: state.planRows.filter((row) => !rowIds.has(row.id)) };
+    if (patch.table === "oper") return { ...state, operRows: state.operRows.filter((row) => !rowIds.has(row.id)) };
+    return { ...state, surveyRows: state.surveyRows.filter((row) => !rowIds.has(row.id)) };
+  }
+
   if (patch.kind === "bucket-values") {
     const bucketValues = { ...(state.bucketValues ?? {}) };
     patch.values.forEach(({ cellKey, value }) => {
