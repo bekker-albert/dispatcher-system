@@ -69,6 +69,8 @@ assert.match(sharedDatabaseSaveQueueSource, /if \(!failed && sharedDatabaseSaveQ
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /refreshSharedDatabaseSaveBaselines/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /loadAppSettingsFromDatabase/);
 assert.match(sharedDatabaseSaveQueueSource, /const savedSettings = await saveAppSettingsToDatabase\(delta\.settings/);
+assert.match(sharedDatabaseSaveQueueSource, /if \(storageSnapshot === checkpoint\.storageSnapshot\) return;/);
+assert.doesNotMatch(sharedDatabaseSaveQueueSource, /JSON\.stringify\(checkpoint\.storage\)/);
 assert.match(sharedDatabaseSaveQueueSource, /sharedDatabaseSaveQueueRef\.current = null;[\s\S]*failed = true;[\s\S]*showSaveStatus\([\s\S]*break;/);
 assert.match(sharedDatabaseSaveQueueSource, /Данные на сервере изменились другим пользователем\. Локальная правка сохранена в браузере; обнови страницу перед повторным сохранением\./);
 assert.match(sharedDatabaseSaveQueueSource, /return useCallback\(\(savedLocalState: SharedAppStorageWriteResult\) => \{[\s\S]*sharedDatabaseSaveQueueRef\.current = \{[\s\S]*storage: savedLocalState\.storage,[\s\S]*settings: savedLocalState\.settings,[\s\S]*void runSharedDatabaseSaveQueue\(\);/);

@@ -46,7 +46,7 @@ export function useSharedDatabaseSaveQueue({
       saveAppStateToDatabase,
     } = await import("@/lib/data/app-state");
     const checkpoint = parseAppStateSaveCheckpoint(appDatabaseSaveSnapshotRef.current);
-    if (storageSnapshot === JSON.stringify(checkpoint.storage)) return;
+    if (storageSnapshot === checkpoint.storageSnapshot) return;
 
     showSaveStatus("saving", "Сохраняю общие данные...");
 

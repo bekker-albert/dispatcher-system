@@ -16,6 +16,7 @@ import {
 } from "../lib/domain/app/shared-settings-snapshot";
 import {
   createAppStateSaveCheckpoint,
+  createAppStateStorageSnapshot,
   parseAppStateSaveCheckpoint,
 } from "../lib/data/app-state";
 import { adminStorageKeys } from "../lib/storage/keys";
@@ -71,15 +72,21 @@ assert.deepEqual(parseAppStateSaveCheckpoint(appStateCheckpoint), {
   storage: {
     [adminStorageKeys.reportCustomers]: "[\"old\"]",
   },
+  storageSnapshot: createAppStateStorageSnapshot({
+    [adminStorageKeys.reportCustomers]: "[\"old\"]",
+  }),
   updatedAt: "2026-04-28T01:00:00.000Z",
 });
-assert.deepEqual(parseAppStateSaveCheckpoint(""), { storage: {}, updatedAt: null });
+assert.deepEqual(parseAppStateSaveCheckpoint(""), { storage: {}, storageSnapshot: createAppStateStorageSnapshot({}), updatedAt: null });
 assert.deepEqual(parseAppStateSaveCheckpoint(JSON.stringify({
   [adminStorageKeys.reportCustomers]: "[\"legacy\"]",
 })), {
   storage: {
     [adminStorageKeys.reportCustomers]: "[\"legacy\"]",
   },
+  storageSnapshot: createAppStateStorageSnapshot({
+    [adminStorageKeys.reportCustomers]: "[\"legacy\"]",
+  }),
   updatedAt: null,
 });
 
