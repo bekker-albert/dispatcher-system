@@ -15,6 +15,8 @@ type PtoLocalPersistenceOptions = {
   ptoDatabaseStateRef: RefObject<PtoDatabaseState>;
   ptoDatabaseLoadedRef: RefObject<boolean>;
   hasStoredPtoStateRef: RefObject<boolean>;
+  getPtoDatabaseExpectedUpdatedAt: () => string | null;
+  isPtoDatabaseDirty: () => boolean;
   requestClientSnapshotSave: (reason?: string) => void;
   ptoManualYears: string[];
   ptoPlanRows: PtoPlanRow[];
@@ -37,6 +39,8 @@ export function usePtoLocalPersistence({
   ptoDatabaseStateRef,
   ptoDatabaseLoadedRef,
   hasStoredPtoStateRef,
+  getPtoDatabaseExpectedUpdatedAt,
+  isPtoDatabaseDirty,
   requestClientSnapshotSave,
   ptoManualYears,
   ptoPlanRows,
@@ -60,7 +64,17 @@ export function usePtoLocalPersistence({
 
     const state = ptoDatabaseStateRef.current;
     const markLocalUpdatedAt = ptoDatabaseLoadedRef.current;
-    const result = savePtoStateToBrowserStorage(state, markLocalUpdatedAt, ptoLocalSaveSnapshotRef.current);
+    const localUpdatedAt = markLocalUpdatedAt && !isPtoDatabaseDirty()
+      ? getPtoDatabaseExpectedUpdatedAt()
+      : undefined;
+    const result = savePtoStateToBrowserStorage(
+      state,
+      {
+        markLocalUpdatedAt,
+        localUpdatedAt,
+      },
+      ptoLocalSaveSnapshotRef.current,
+    );
     ptoLocalSaveSnapshotRef.current = result.cache;
     if (!result.changed) return;
 
@@ -68,7 +82,15 @@ export function usePtoLocalPersistence({
       hasStoredPtoStateRef.current = true;
     }
     requestClientSnapshotSave("pto-local-save");
-  }, [hasStoredPtoStateRef, ptoDatabaseLoadedRef, ptoDatabaseStateRef, requestClientSnapshotSave, skipUntilDatabaseLoaded]);
+  }, [
+    getPtoDatabaseExpectedUpdatedAt,
+    hasStoredPtoStateRef,
+    isPtoDatabaseDirty,
+    ptoDatabaseLoadedRef,
+    ptoDatabaseStateRef,
+    requestClientSnapshotSave,
+    skipUntilDatabaseLoaded,
+  ]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;

@@ -65,6 +65,8 @@ export function usePtoDatabaseSave({
     readPtoDatabaseSaveBaseline(ptoDatabaseSaveSnapshotRef.current).expectedUpdatedAt
   ), []);
 
+  const isPtoDatabaseDirty = useCallback(() => ptoDatabaseDirtyRef.current, []);
+
   const savePtoDatabaseChanges = useCallback(async (mode: PtoDatabaseSaveMode = "manual") => {
     if (ptoDatabaseSaveRequestTimerRef.current !== null) {
       window.clearTimeout(ptoDatabaseSaveRequestTimerRef.current);
@@ -229,6 +231,7 @@ export function usePtoDatabaseSave({
     ptoDatabaseSaveSnapshotRef,
     markPtoDatabaseInlineWriteSaved,
     getPtoDatabaseExpectedUpdatedAt,
+    isPtoDatabaseDirty,
     savePtoDatabaseChanges,
     flushPtoDatabasePendingSave,
     requestPtoDatabaseSave,

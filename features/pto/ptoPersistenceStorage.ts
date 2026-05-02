@@ -7,6 +7,10 @@ export type PtoBrowserStorageSnapshotCache = {
   snapshot: PtoBrowserStorageSnapshot;
   refs: Record<string, unknown>;
 };
+export type PtoBrowserStorageSaveOptions = {
+  markLocalUpdatedAt: boolean;
+  localUpdatedAt?: string | null;
+};
 
 function jsonFromCache(
   cache: PtoBrowserStorageSnapshotCache | null,
@@ -56,7 +60,7 @@ function ptoBrowserStorageSnapshot(
 
 export function savePtoStateToBrowserStorage(
   state: DataPtoState,
-  markLocalUpdatedAt: boolean,
+  options: PtoBrowserStorageSaveOptions,
   previousCache: PtoBrowserStorageSnapshotCache | null = null,
 ) {
   const cache = ptoBrowserStorageSnapshot(state, previousCache);
@@ -71,10 +75,11 @@ export function savePtoStateToBrowserStorage(
 
   if (!changed) return { changed, snapshot, cache };
 
-  if (markLocalUpdatedAt) {
-    window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
+  const updatedAt = options.localUpdatedAt === undefined ? new Date().toISOString() : options.localUpdatedAt;
+  if (options.markLocalUpdatedAt && updatedAt) {
+    window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, updatedAt);
   }
-  window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+  window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt ?? new Date().toISOString());
 
   return { changed, snapshot, cache };
 }
