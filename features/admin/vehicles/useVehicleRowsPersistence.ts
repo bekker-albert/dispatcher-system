@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
+import { createVehicleRowsSavePlan } from "@/lib/domain/vehicles/persistence";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
@@ -84,14 +85,20 @@ export function useVehicleRowsPersistence({
       if (databaseConfigured && databaseLoadedRef.current) {
         if (snapshot !== databaseSaveSnapshotRef.current) {
           const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
+          const savePlan = createVehicleRowsSavePlan(rowsSnapshot, expectedSnapshot);
 
           showSaveStatus("saving", "\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u044e \u0442\u0435\u0445\u043d\u0438\u043a\u0443...");
           databaseSaveQueueRef.current?.enqueue(async (isLatest) => {
             try {
-              const { replaceVehiclesInDatabase } = await import("@/lib/data/vehicles");
+              const { replaceVehiclesInDatabase, saveVehicleRowsPatchToDatabase } = await import("@/lib/data/vehicles");
               if (!isLatest()) return;
 
-              await replaceVehiclesInDatabase(rowsSnapshot, { expectedSnapshot });
+              if (savePlan.kind === "patch") {
+                await saveVehicleRowsPatchToDatabase(savePlan.patchRows, { expectedSnapshot: savePlan.expectedSnapshot });
+              } else if (savePlan.kind === "replace") {
+                await replaceVehiclesInDatabase(savePlan.rows, { expectedSnapshot: savePlan.expectedSnapshot });
+              }
+
               if (!isLatest() || snapshotVersion !== vehicleRowsVersionRef.current) return;
 
               databaseSaveSnapshotRef.current = snapshot;

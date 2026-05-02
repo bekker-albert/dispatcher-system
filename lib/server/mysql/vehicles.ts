@@ -1,5 +1,6 @@
 import type { RowDataPacket } from "mysql2/promise";
 import { normalizeVehicleRow } from "../../domain/vehicles/defaults";
+import type { VehicleRowsPatchItem } from "../../domain/vehicles/persistence";
 import type { VehicleRow } from "../../domain/vehicles/types";
 import { DatabaseConflictError } from "../database/conflicts";
 import { dbExecute, dbRows, dbTransaction, type DbExecutor } from "./pool";
@@ -59,14 +60,19 @@ function vehicleSnapshotKey(rows: VehicleRow[]) {
 }
 
 async function upsertVehiclesToMysql(rows: VehicleRow[], execute: DbExecutor = dbExecute) {
+  await upsertVehiclePatchRowsToMysql(rows.map((row, sortIndex) => ({ row, sortIndex })), execute);
+}
+
+async function upsertVehiclePatchRowsToMysql(patchRows: VehicleRowsPatchItem[], execute: DbExecutor = dbExecute) {
+  const rows = patchRows;
   if (rows.length === 0) return;
 
   for (let index = 0; index < rows.length; index += batchSize) {
     const batch = rows.slice(index, index + batchSize);
     const placeholders = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
-    const values = batch.flatMap((vehicle, vehicleIndex) => [
+    const values = batch.flatMap(({ row: vehicle, sortIndex }) => [
       vehicle.id,
-      index + vehicleIndex,
+      sortIndex,
       vehicle.visible !== false ? 1 : 0,
       vehicle.vehicleType,
       vehicle.equipmentType,
@@ -164,6 +170,13 @@ export async function saveVehiclesToMysql(rows: VehicleRow[], options: VehicleSn
   await dbTransaction(async (execute) => {
     await assertMysqlVehiclesMatchExpectedSnapshot(options.expectedSnapshot, execute);
     await upsertVehiclesToMysql(rows, execute);
+  });
+}
+
+export async function saveVehicleRowsPatchToMysql(patchRows: VehicleRowsPatchItem[], options: VehicleSnapshotWriteOptions = {}) {
+  await dbTransaction(async (execute) => {
+    await assertMysqlVehiclesMatchExpectedSnapshot(options.expectedSnapshot, execute);
+    await upsertVehiclePatchRowsToMysql(patchRows, execute);
   });
 }
 

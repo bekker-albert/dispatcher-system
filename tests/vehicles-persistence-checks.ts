@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
+import { createVehicleRowsSavePlan } from "../lib/domain/vehicles/persistence";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.ts"), "utf8");
@@ -61,14 +63,31 @@ assert.doesNotMatch(dataVehiclesSource, /from ["']@\/lib\/supabase\/vehicles["']
 assert.match(dataVehiclesSource, /serverDatabaseConfigured/);
 assert.match(dataVehiclesSource, /databaseRequest<DataVehiclesState \| null>\("vehicles", "load"\)/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "save", \{ rows, expectedSnapshot: options\?\.expectedSnapshot \}\)/);
+assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "savePatch", \{ patchRows, expectedSnapshot: options\?\.expectedSnapshot \}\)/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "replace", \{ rows, expectedSnapshot: options\?\.expectedSnapshot \}\)/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "delete", \{ id \}\)/);
 assert.match(dataVehiclesSource, /import\("@\/lib\/supabase\/vehicles"\)/);
 assert.match(databaseVehiclesSource, /function expectedVehicleSnapshotFromPayload/);
-assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSnapshotFromPayload\(record\.expectedSnapshot\)/g) ?? []).length, 2);
+assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSnapshotFromPayload\(record\.expectedSnapshot\)/g) ?? []).length, 3);
 assert.doesNotMatch(vehicleRowsEditorSource, /deleteVehicleFromDatabase/);
 assert.match(vehicleRowsPersistenceSource, /const vehicleRowsVersionRef = useRef\(0\);/);
 assert.match(vehicleRowsPersistenceSource, /const snapshotVersion = vehicleRowsVersionRef\.current;/);
+assert.match(vehicleRowsPersistenceSource, /createVehicleRowsSavePlan\(rowsSnapshot, expectedSnapshot\)/);
+assert.match(vehicleRowsPersistenceSource, /saveVehicleRowsPatchToDatabase\(savePlan\.patchRows/);
 assert.doesNotMatch(vehicleRowsPersistenceSource, /JSON\.stringify\(vehicleRowsRef\.current\)\) return;/);
 assert.match(vehicleRowsEditorSource, /Удаление техники будет сохранено общим списком/);
 assert.match(mysqlVehiclesSource, /Список техники уже изменился в базе/);
+
+const vehicleOne = normalizeVehicleRow({ id: 1, brand: "Howo", garageNumber: "1" });
+const vehicleTwo = normalizeVehicleRow({ id: 2, brand: "Shacman", garageNumber: "2" });
+const editedVehicleTwo = normalizeVehicleRow({ ...vehicleTwo, model: "X3000" });
+const patchPlan = createVehicleRowsSavePlan([vehicleOne, editedVehicleTwo], [vehicleOne, vehicleTwo]);
+
+assert.equal(patchPlan.kind, "patch");
+if (patchPlan.kind === "patch") {
+  assert.deepEqual(patchPlan.patchRows.map(({ row, sortIndex }) => [row.id, sortIndex]), [[2, 1]]);
+}
+
+assert.equal(createVehicleRowsSavePlan([vehicleTwo, vehicleOne], [vehicleOne, vehicleTwo]).kind, "replace");
+assert.equal(createVehicleRowsSavePlan([vehicleOne, vehicleTwo], null).kind, "replace");
+assert.equal(createVehicleRowsSavePlan([vehicleOne, vehicleTwo], [vehicleOne, vehicleTwo]).kind, "none");

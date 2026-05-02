@@ -1,7 +1,8 @@
 import type { VehicleRow } from "../../domain/vehicles/types";
+import type { VehicleRowsPatchItem } from "../../domain/vehicles/persistence";
 import { payloadRecord } from "./payload";
 import type { DatabaseResourceHandler } from "./types";
-import { requirePayloadArray, requirePayloadNumber } from "./validation";
+import { requirePayloadArray, requirePayloadNumber, requirePayloadRecord } from "./validation";
 
 function vehicleRowsFromPayload(value: unknown) {
   return requirePayloadArray<VehicleRow>(value, "rows");
@@ -9,6 +10,16 @@ function vehicleRowsFromPayload(value: unknown) {
 
 function expectedVehicleSnapshotFromPayload(value: unknown) {
   return Array.isArray(value) ? value as VehicleRow[] : undefined;
+}
+
+function vehiclePatchRowsFromPayload(value: unknown): VehicleRowsPatchItem[] {
+  return requirePayloadArray(value, "patchRows").map((item, index) => {
+    const record = requirePayloadRecord(item, `patchRows[${index}]`);
+    return {
+      row: requirePayloadRecord(record.row, `patchRows[${index}].row`) as VehicleRow,
+      sortIndex: requirePayloadNumber(record.sortIndex, `patchRows[${index}].sortIndex`),
+    };
+  });
 }
 
 export const handleVehiclesDatabaseAction: DatabaseResourceHandler = async ({
@@ -22,6 +33,12 @@ export const handleVehiclesDatabaseAction: DatabaseResourceHandler = async ({
   if (action === "load") return json(await vehicles.loadVehiclesFromMysql());
   if (action === "save") {
     await vehicles.saveVehiclesToMysql(vehicleRowsFromPayload(record.rows), {
+      expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
+    });
+    return json({ ok: true });
+  }
+  if (action === "savePatch") {
+    await vehicles.saveVehicleRowsPatchToMysql(vehiclePatchRowsFromPayload(record.patchRows), {
       expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
     });
     return json({ ok: true });

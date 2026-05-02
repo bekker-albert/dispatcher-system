@@ -22,7 +22,8 @@ export type DatabaseAction =
   | "save-bucket-value"
   | "delete-bucket-values"
   | "save-client-snapshot"
-  | "load-client-snapshots";
+  | "load-client-snapshots"
+  | "savePatch";
 
 type DatabaseResponse<T> = {
   data?: T;

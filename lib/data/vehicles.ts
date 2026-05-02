@@ -1,4 +1,5 @@
 import { databaseRequest } from "@/lib/database/rpc";
+import type { VehicleRowsPatchItem } from "@/lib/domain/vehicles/persistence";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { serverDatabaseConfigured } from "./config";
 
@@ -31,6 +32,15 @@ export function saveVehiclesToDatabase(rows: VehicleRow[], options?: VehicleSnap
   }
 
   return loadSupabaseVehiclesAdapter().then(({ saveVehiclesToSupabase }) => saveVehiclesToSupabase(rows, options));
+}
+
+export function saveVehicleRowsPatchToDatabase(patchRows: VehicleRowsPatchItem[], options?: VehicleSnapshotWriteOptions) {
+  if (serverDatabaseConfigured) {
+    return databaseRequest("vehicles", "savePatch", { patchRows, expectedSnapshot: options?.expectedSnapshot });
+  }
+
+  return loadSupabaseVehiclesAdapter()
+    .then(({ saveVehicleRowsPatchToSupabase }) => saveVehicleRowsPatchToSupabase(patchRows, options));
 }
 
 export function replaceVehiclesInDatabase(rows: VehicleRow[], options?: VehicleSnapshotReplaceOptions) {

@@ -1,4 +1,5 @@
 import { normalizeVehicleRow } from "../domain/vehicles/defaults";
+import type { VehicleRowsPatchItem } from "../domain/vehicles/persistence";
 import type { VehicleRow } from "../domain/vehicles/types";
 import { databaseRequest } from "../database/rpc";
 import { supabase, supabaseConfigured } from "./client";
@@ -159,6 +160,20 @@ export async function saveVehiclesToSupabase(rows: VehicleRow[], options: Vehicl
   await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
 
   const records = rows.map(vehicleToRecord);
+  const client = requireSupabase();
+
+  await upsertVehiclesToSupabase(client, records);
+}
+
+export async function saveVehicleRowsPatchToSupabase(patchRows: VehicleRowsPatchItem[], options: VehicleSnapshotWriteOptions = {}) {
+  if (serverDatabaseConfigured) {
+    await databaseRequest("vehicles", "savePatch", { patchRows, expectedSnapshot: options.expectedSnapshot });
+    return;
+  }
+
+  await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
+
+  const records = patchRows.map(({ row, sortIndex }) => vehicleToRecord(row, sortIndex));
   const client = requireSupabase();
 
   await upsertVehiclesToSupabase(client, records);
