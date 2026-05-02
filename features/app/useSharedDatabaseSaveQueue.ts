@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import {
   type SharedAppStorageWriteResult,
 } from "@/features/app/sharedAppStorage";
@@ -12,6 +12,9 @@ import {
 } from "@/lib/domain/app/shared-settings-snapshot";
 import { errorToMessage } from "@/lib/utils/normalizers";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
+
+const sharedDatabaseRetryInitialDelayMs = 2_000;
+const sharedDatabaseRetryMaxDelayMs = 30_000;
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
@@ -35,6 +38,17 @@ export function useSharedDatabaseSaveQueue({
 }: UseSharedDatabaseSaveQueueOptions) {
   const sharedDatabaseSaveQueueRef = useRef<SharedDatabaseSaveQueue | null>(null);
   const sharedDatabaseSavingRef = useRef(false);
+  const sharedDatabaseRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sharedDatabaseRetryDelayRef = useRef(sharedDatabaseRetryInitialDelayMs);
+
+  const clearSharedDatabaseRetryTimer = useCallback(() => {
+    if (!sharedDatabaseRetryTimerRef.current) return;
+
+    clearTimeout(sharedDatabaseRetryTimerRef.current);
+    sharedDatabaseRetryTimerRef.current = null;
+  }, []);
+
+  useEffect(() => clearSharedDatabaseRetryTimer, [clearSharedDatabaseRetryTimer]);
 
   const saveSharedAppStateToDatabase = useCallback(async (storage: Record<string, string>) => {
     if (!databaseConfigured) return;
@@ -94,6 +108,7 @@ export function useSharedDatabaseSaveQueue({
 
   const runSharedDatabaseSaveQueue = useCallback(async () => {
     if (sharedDatabaseSavingRef.current) return;
+    clearSharedDatabaseRetryTimer();
     sharedDatabaseSavingRef.current = true;
     let failed = false;
 
@@ -125,11 +140,32 @@ export function useSharedDatabaseSaveQueue({
       console.warn("Shared database save failed:", error);
     } finally {
       sharedDatabaseSavingRef.current = false;
-      if (!failed && sharedDatabaseSaveQueueRef.current) {
-        void runSharedDatabaseSaveQueue();
+      if (!failed) {
+        sharedDatabaseRetryDelayRef.current = sharedDatabaseRetryInitialDelayMs;
+        if (sharedDatabaseSaveQueueRef.current) {
+          void runSharedDatabaseSaveQueue();
+        }
+        return;
+      }
+
+      if (sharedDatabaseSaveQueueRef.current && !sharedDatabaseRetryTimerRef.current) {
+        const retryDelay = sharedDatabaseRetryDelayRef.current;
+        sharedDatabaseRetryDelayRef.current = Math.min(
+          retryDelay * 2,
+          sharedDatabaseRetryMaxDelayMs,
+        );
+        showSaveStatus(
+          "error",
+          `Сохранение в базу не прошло. Повторю автоматически через ${Math.round(retryDelay / 1000)} сек.`,
+        );
+        sharedDatabaseRetryTimerRef.current = setTimeout(() => {
+          sharedDatabaseRetryTimerRef.current = null;
+          void runSharedDatabaseSaveQueue();
+        }, retryDelay);
       }
     }
   }, [
+    clearSharedDatabaseRetryTimer,
     saveSharedAppSettingsToDatabase,
     saveSharedAppStateToDatabase,
     showSaveStatus,

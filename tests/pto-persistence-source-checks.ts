@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,12 +61,16 @@ assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false
 assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\s\S]*storage: Record<string, string>;[\s\S]*settings: Record<string, unknown>;[\s\S]*\};/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSaveQueueRef = useRef<SharedDatabaseSaveQueue \| null>\(null\);/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSavingRef = useRef\(false\);/);
+assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseRetryTimerRef = useRef<ReturnType<typeof setTimeout> \| null>\(null\);/);
+assert.match(sharedDatabaseSaveQueueSource, /clearTimeout\(sharedDatabaseRetryTimerRef\.current\);/);
+assert.match(sharedDatabaseSaveQueueSource, /useEffect\(\(\) => clearSharedDatabaseRetryTimer, \[clearSharedDatabaseRetryTimer\]\);/);
 assert.match(sharedDatabaseSaveQueueSource, /createAppStateStorageSnapshot/);
 assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);[\s\S]*await saveSharedAppStateToDatabase\(queuedSave\.storage\);/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /conflictRetries/);
 assert.match(sharedDatabaseSaveQueueSource, /let failed = false;/);
 assert.match(sharedDatabaseSaveQueueSource, /if \(!isDatabaseConflictError\(error\)\) \{[\s\S]*sharedDatabaseSaveQueueRef\.current = sharedDatabaseSaveQueueRef\.current \?\? queuedSave;[\s\S]*failed = true;[\s\S]*throw error;/);
-assert.match(sharedDatabaseSaveQueueSource, /if \(!failed && sharedDatabaseSaveQueueRef\.current\) \{/);
+assert.match(sharedDatabaseSaveQueueSource, /if \(!failed\) \{[\s\S]*sharedDatabaseRetryDelayRef\.current = sharedDatabaseRetryInitialDelayMs;[\s\S]*if \(sharedDatabaseSaveQueueRef\.current\) \{[\s\S]*void runSharedDatabaseSaveQueue\(\);/);
+assert.match(sharedDatabaseSaveQueueSource, /if \(sharedDatabaseSaveQueueRef\.current && !sharedDatabaseRetryTimerRef\.current\) \{[\s\S]*setTimeout\(\(\) => \{[\s\S]*void runSharedDatabaseSaveQueue\(\);[\s\S]*\}, retryDelay\);/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /refreshSharedDatabaseSaveBaselines/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /loadAppSettingsFromDatabase/);
 assert.match(sharedDatabaseSaveQueueSource, /const savedSettings = await saveAppSettingsToDatabase\(delta\.settings/);
@@ -75,6 +79,7 @@ assert.doesNotMatch(sharedDatabaseSaveQueueSource, /const storageSnapshot = JSON
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /JSON\.stringify\(checkpoint\.storage\)/);
 assert.match(sharedDatabaseSaveQueueSource, /sharedDatabaseSaveQueueRef\.current = null;[\s\S]*failed = true;[\s\S]*showSaveStatus\([\s\S]*break;/);
 assert.match(sharedDatabaseSaveQueueSource, /Данные на сервере изменились другим пользователем\. Локальная правка сохранена в браузере; обнови страницу перед повторным сохранением\./);
+assert.match(sharedDatabaseSaveQueueSource, /Сохранение в базу не прошло\. Повторю автоматически через/);
 assert.match(sharedDatabaseSaveQueueSource, /return useCallback\(\(savedLocalState: SharedAppStorageWriteResult\) => \{[\s\S]*sharedDatabaseSaveQueueRef\.current = \{[\s\S]*storage: savedLocalState\.storage,[\s\S]*settings: savedLocalState\.settings,[\s\S]*void runSharedDatabaseSaveQueue\(\);/);
 assert.match(appLocalPersistenceSource, /import \{ useSharedDatabaseSaveQueue \} from "@\/features\/app\/useSharedDatabaseSaveQueue";/);
 assert.match(appLocalPersistenceSource, /if \(savedLocalState\.changedKeys\.length > 0\) \{[\s\S]*enqueueSharedDatabaseSave\(savedLocalState\);[\s\S]*requestClientSnapshotSave\("app-state-save"\);/);
