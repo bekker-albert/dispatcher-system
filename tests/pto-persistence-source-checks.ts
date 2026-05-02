@@ -12,6 +12,7 @@ const ptoUiStateDatabaseSyncSource = readFileSync(resolve(testDir, "../features/
 const ptoDatabaseLoadSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseLoad.ts"), "utf8");
 const ptoDatabaseLoadRunnerSource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadRunner.ts"), "utf8");
 const ptoDatabaseLoadApplySource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadApply.ts"), "utf8");
+const ptoPersistenceComparisonSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceComparison.ts"), "utf8");
 const ptoPersistenceStorageSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceStorage.ts"), "utf8");
 const ptoLocalPersistenceSource = readFileSync(resolve(testDir, "../features/pto/usePtoLocalPersistence.ts"), "utf8");
 const ptoDatabaseSaveSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseSave.ts"), "utf8");
@@ -62,6 +63,9 @@ assert.match(ptoDatabaseLoadApplySource, /const placeholderBaseline = createPtoD
 assert.match(ptoDatabaseLoadApplySource, /requestIdleCallback\(callback, \{ timeout: 2000 \}\)/);
 assert.match(ptoDatabaseLoadApplySource, /if \(ptoDatabaseSaveSnapshotRef\.current !== placeholderBaseline\) return;/);
 assert.match(ptoDatabaseLoadApplySource, /serializePtoDatabaseState\(snapshotState\)/);
+assert.match(ptoPersistenceComparisonSource, /const ptoDatabaseStateSerializationCache = new WeakMap<DataPtoState, string>\(\);/);
+assert.match(ptoPersistenceComparisonSource, /ptoDatabaseStateSerializationCache\.get\(state\)/);
+assert.match(ptoPersistenceComparisonSource, /ptoDatabaseStateSerializationCache\.set\(state, serialized\)/);
 assert.match(initialAppStorageSource, /export function readInitialStoredPtoState\(\)/);
 assert.match(initialAppDataLoadStepsSource, /readInitialStoredAppState\(\{ includePto: !databaseConfigured \}\)/);
 assert.match(initialAppDataLoadStepsSource, /const localInitialPtoState = buildInitialPtoState\(databaseConfigured \? readInitialStoredPtoState\(\) : storedState\);/);

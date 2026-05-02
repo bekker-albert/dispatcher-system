@@ -6,8 +6,15 @@ import type {
   PtoDatabaseSaveMode,
 } from "./ptoPersistenceTypes";
 
+const ptoDatabaseStateSerializationCache = new WeakMap<DataPtoState, string>();
+
 export function serializePtoDatabaseState(state: DataPtoState) {
-  return JSON.stringify(state);
+  const cached = ptoDatabaseStateSerializationCache.get(state);
+  if (cached !== undefined) return cached;
+
+  const serialized = JSON.stringify(state);
+  ptoDatabaseStateSerializationCache.set(state, serialized);
+  return serialized;
 }
 
 export function createPtoDatabaseSaveBaseline(snapshot: string, expectedUpdatedAt: string | null): string {
