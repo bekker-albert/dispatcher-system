@@ -34,6 +34,7 @@ import {
   prunePtoYearFromRows as pruneMysqlPtoYearFromRows,
   upsertPtoDayValues as upsertMysqlPtoDayValues,
   upsertPtoRows as upsertMysqlPtoRows,
+  upsertPtoRowsForYearScope as upsertMysqlPtoRowsForYearScope,
   upsertPtoSettings as upsertMysqlPtoSettings,
 } from "./pto-writes";
 
@@ -57,6 +58,7 @@ const upsertPtoBucketRows = upsertMysqlPtoBucketRows;
 const upsertPtoBucketValues = upsertMysqlPtoBucketValues;
 const upsertPtoDayValues = upsertMysqlPtoDayValues;
 const upsertPtoRows = upsertMysqlPtoRows;
+const upsertPtoRowsForYearScope = upsertMysqlPtoRowsForYearScope;
 const upsertPtoSettings = upsertMysqlPtoSettings;
 
 async function writePtoTransaction(callback: (execute: DbExecutor) => Promise<void>) {
@@ -135,7 +137,11 @@ export async function savePtoStateToMysql(
 
   return await writePtoTransaction(async (execute) => {
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
-    await upsertPtoRows(rowRecords, execute);
+    if (options.yearScope) {
+      await upsertPtoRowsForYearScope(rowRecords, options.yearScope, execute);
+    } else {
+      await upsertPtoRows(rowRecords, execute);
+    }
     await upsertPtoDayValues(scopedDayRecords, execute);
     await deletePtoDayValuesMissingFromState("plan", planRows, execute, { yearScope: options.yearScope });
     await deletePtoDayValuesMissingFromState("oper", operRows, execute, { yearScope: options.yearScope });

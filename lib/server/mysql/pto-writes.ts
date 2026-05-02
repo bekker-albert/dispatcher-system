@@ -65,6 +65,29 @@ function objectFromStoredJson(value: unknown) {
     : {};
 }
 
+function ptoRowRecordKey(record: Pick<PtoPersistenceRowRecord, "table_type" | "row_id">) {
+  return `${record.table_type}:${record.row_id}`;
+}
+
+function mergePtoYearList(existingValue: unknown, incomingValue: unknown, year: string) {
+  const incomingValues = stringArrayFromStoredJson(incomingValue);
+  const values = stringArrayFromStoredJson(existingValue).filter((item) => item !== year);
+  if (incomingValues.includes(year)) values.push(year);
+  return Array.from(new Set(values)).sort();
+}
+
+function mergePtoCarryovers(existingValue: unknown, incomingValue: unknown, year: string) {
+  const carryovers = objectFromStoredJson(existingValue);
+  const incomingCarryovers = objectFromStoredJson(incomingValue);
+  delete carryovers[year];
+
+  if (Object.prototype.hasOwnProperty.call(incomingCarryovers, year)) {
+    carryovers[year] = incomingCarryovers[year];
+  }
+
+  return carryovers;
+}
+
 async function selectPtoRowsWithYearMetadata(
   execute: DbExecutor,
   options: {
@@ -95,6 +118,27 @@ async function selectPtoRowsWithYearMetadata(
     ${where}`,
     values,
   ) ?? Promise.resolve([]));
+}
+
+async function selectPtoRowsWithYearMetadataByRecords(
+  records: PtoPersistenceRowRecord[],
+  execute: DbExecutor,
+) {
+  if (!records.length) return [];
+
+  const rows: PtoRowYearMetadataRecord[] = [];
+  for (const batch of chunkValues(records)) {
+    const placeholders = batch.map(() => "(?, ?)").join(", ");
+    const values = batch.flatMap((record) => [record.table_type, record.row_id]);
+    rows.push(...await (execute.rows?.<PtoRowYearMetadataRecord>(
+      `SELECT table_type, row_id, carryovers, carryover_manual_years, years
+      FROM pto_rows
+      WHERE (table_type, row_id) IN (${placeholders})`,
+      values,
+    ) ?? Promise.resolve([])));
+  }
+
+  return rows;
 }
 
 async function prunePtoYearFromRowMetadataRecords(
@@ -219,6 +263,36 @@ export async function upsertPtoRows(records: PtoPersistenceRowRecord[], execute:
       values,
     );
   }
+}
+
+export async function upsertPtoRowsForYearScope(
+  records: PtoPersistenceRowRecord[],
+  year: string,
+  execute: DbExecutor = dbExecute,
+) {
+  if (!records.length) return;
+
+  const existingMetadataByKey = new Map(
+    (await selectPtoRowsWithYearMetadataByRecords(records, execute))
+      .map((record) => [ptoRowRecordKey(record), record] as const),
+  );
+  const mergedRecords = records.map((record) => {
+    const existingMetadata = existingMetadataByKey.get(ptoRowRecordKey(record));
+    if (!existingMetadata) return record;
+
+    return {
+      ...record,
+      years: mergePtoYearList(existingMetadata.years, record.years, year),
+      carryover_manual_years: mergePtoYearList(
+        existingMetadata.carryover_manual_years,
+        record.carryover_manual_years,
+        year,
+      ),
+      carryovers: mergePtoCarryovers(existingMetadata.carryovers, record.carryovers, year),
+    };
+  });
+
+  await upsertPtoRows(mergedRecords, execute);
 }
 
 export async function insertPtoRowsIfMissing(records: PtoPersistenceRowRecord[], execute: DbExecutor = dbExecute) {

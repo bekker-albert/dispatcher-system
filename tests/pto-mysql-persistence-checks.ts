@@ -20,7 +20,7 @@ const mysqlBucketWritesSource = readFileSync(new URL("../lib/server/mysql/pto-bu
 const mysqlPtoWritesSource = readFileSync(new URL("../lib/server/mysql/pto-writes.ts", import.meta.url), "utf8");
 assert.match(mysqlFullSaveSource, /writePtoTransaction/);
 assert.match(mysqlFullSaveSource, /assertMysqlPtoMatchesExpectedUpdatedAt\(state,\s*options\.expectedUpdatedAt,\s*\{[\s\S]*yearScope: options\.yearScope[\s\S]*\}\)/);
-assert.match(mysqlFullSaveSource, /upsertPtoRows\(rowRecords,\s*execute\)/);
+assert.match(mysqlFullSaveSource, /if \(options\.yearScope\) \{[\s\S]*upsertPtoRowsForYearScope\(rowRecords,\s*options\.yearScope,\s*execute\);[\s\S]*\} else \{[\s\S]*upsertPtoRows\(rowRecords,\s*execute\);[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /deletePtoDayValuesMissingFromState\("plan",\s*planRows,\s*execute,\s*\{ yearScope: options\.yearScope \}\)/);
 assert.match(mysqlFullSaveSource, /const isYearScopedSave = Boolean\(options\.yearScope\)/);
 assert.match(mysqlFullSaveSource, /if \(options\.yearScope\) \{[\s\S]*deletePtoDayValuesForRowsMissingFromYearState\("plan",\s*planRows,\s*options\.yearScope,\s*execute\);[\s\S]*deletePtoDayValuesForRowsMissingFromYearState\("oper",\s*operRows,\s*options\.yearScope,\s*execute\);[\s\S]*deletePtoDayValuesForRowsMissingFromYearState\("survey",\s*surveyRows,\s*options\.yearScope,\s*execute\);/);
@@ -28,6 +28,10 @@ assert.match(mysqlFullSaveSource, /if \(options\.yearScope\) \{[\s\S]*prunePtoYe
 assert.match(mysqlFullSaveSource, /if \(!isYearScopedSave\) \{[\s\S]*deletePtoRowsMissingFromState\("plan",\s*planRows,\s*execute\)[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /if \(!isYearScopedSave\) \{[\s\S]*deletePtoBucketValuesMissingFromState\(bucketValueRecords,\s*execute\)[\s\S]*deletePtoBucketRowsMissingFromState\(bucketRowRecords,\s*execute\)[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /deletePtoBucketRowsMissingFromState\(bucketRowRecords,\s*execute\)/);
+assert.match(mysqlPtoWritesSource, /export async function upsertPtoRowsForYearScope/);
+assert.match(mysqlPtoWritesSource, /selectPtoRowsWithYearMetadataByRecords\(records,\s*execute\)/);
+assert.match(mysqlPtoWritesSource, /mergePtoYearList\(existingMetadata\.years,\s*record\.years,\s*year\)/);
+assert.match(mysqlPtoWritesSource, /mergePtoCarryovers\(existingMetadata\.carryovers,\s*record\.carryovers,\s*year\)/);
 assert.match(mysqlPtoWritesSource, /export async function deletePtoDayValuesForRowsMissingFromYearState/);
 assert.match(mysqlPtoWritesSource, /SELECT DISTINCT row_id[\s\S]*FROM pto_day_values[\s\S]*WHERE table_type = \?[\s\S]*AND work_date >= \?[\s\S]*AND work_date <= \?/);
 assert.match(mysqlPtoWritesSource, /const staleRowIds = existingRows[\s\S]*filter\(\(rowId\) => !rowIds\.has\(rowId\)\)/);
