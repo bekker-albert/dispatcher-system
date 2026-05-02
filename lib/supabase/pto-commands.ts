@@ -23,16 +23,80 @@ import {
   ptoDayValuesTable,
   ptoRowsTable,
   requireSupabase,
+  deleteSupabaseBucketValues,
+  deleteSupabaseDayValues,
   upsertPtoBucketRows,
   upsertPtoBucketValues,
   upsertPtoDayValues,
   upsertPtoRows,
   type SupabasePtoTable,
+  type SupabasePtoClient,
 } from "./pto-storage";
 import type { PtoDayValuePatch, PtoSnapshotWriteOptions, PtoSnapshotWriteResult } from "./pto-types";
 
-async function supabasePtoInlineWriteResult(client: ReturnType<typeof requireSupabase>): Promise<PtoSnapshotWriteResult> {
+async function supabasePtoInlineWriteResult(client: SupabasePtoClient): Promise<PtoSnapshotWriteResult> {
   return { updatedAt: await loadSupabasePtoCurrentUpdatedAt(client) };
+}
+
+function ptoDayDeletePatchesToRecords(table: SupabasePtoTable, values: PtoDayValuePatch[]) {
+  return values.map((item) => ({
+    table_type: table,
+    row_id: item.rowId,
+    work_date: item.day,
+    value: null,
+  }));
+}
+
+function ptoBucketPairsToDeleteRecords(pairs: Array<{ rowKey: string; equipmentKey: string }>) {
+  return pairs.map((item) => ({
+    row_key: item.rowKey,
+    equipment_key: item.equipmentKey,
+    value: null,
+  }));
+}
+
+async function savePtoDayValueWithClient(
+  client: SupabasePtoClient,
+  table: SupabasePtoTable,
+  rowId: string,
+  day: string,
+  value: number | null,
+) {
+  if (value === null) {
+    await deleteSupabaseDayValues(ptoDayDeletePatchesToRecords(table, [{ rowId, day, value }]), client);
+    return;
+  }
+
+  await upsertPtoDayValues([{
+    table_type: table,
+    row_id: rowId,
+    work_date: day,
+    value,
+  }], client);
+}
+
+async function savePtoDayValuesWithClient(
+  client: SupabasePtoClient,
+  table: SupabasePtoTable,
+  values: PtoDayValuePatch[],
+) {
+  const { upsertRecords, deleteValues } = ptoDayValuePatchesToRecords(table, values);
+
+  await upsertPtoDayValues(upsertRecords, client);
+  await deleteSupabaseDayValues(ptoDayDeletePatchesToRecords(table, deleteValues), client);
+}
+
+export async function savePtoDayValueToSupabaseClient(
+  table: SupabasePtoTable,
+  rowId: string,
+  day: string,
+  value: number | null,
+  client: SupabasePtoClient,
+  options: PtoSnapshotWriteOptions = {},
+) {
+  await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
+  await savePtoDayValueWithClient(client, table, rowId, day, value);
+  return supabasePtoInlineWriteResult(client);
 }
 
 export async function savePtoDayValueToSupabase(
@@ -46,26 +110,20 @@ export async function savePtoDayValueToSupabase(
     return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-day", { table, rowId, day, value, expectedUpdatedAt: options.expectedUpdatedAt });
   }
 
-  const client = requireSupabase();
+  return savePtoDayValueToSupabaseClient(table, rowId, day, value, requireSupabase(), options);
+}
+
+export async function savePtoDayValueWithRowToSupabaseClient(
+  table: SupabasePtoTable,
+  row: PtoPlanRow,
+  day: string,
+  value: number | null,
+  client: SupabasePtoClient,
+  options: PtoSnapshotWriteOptions = {},
+) {
   await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
-
-  if (value === null) {
-    const { error } = await client
-      .from(ptoDayValuesTable)
-      .delete()
-      .eq("table_type", table)
-      .eq("row_id", rowId)
-      .eq("work_date", day);
-    if (error) throw error;
-    return supabasePtoInlineWriteResult(client);
-  }
-
-  await upsertPtoDayValues([{
-    table_type: table,
-    row_id: rowId,
-    work_date: day,
-    value,
-  }], client);
+  await upsertPtoRows(ptoRowsToRecords(table, [row]), client);
+  await savePtoDayValueWithClient(client, table, row.id, day, value);
   return supabasePtoInlineWriteResult(client);
 }
 
@@ -80,10 +138,18 @@ export async function savePtoDayValueWithRowToSupabase(
     return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-day-with-row", { table, row, day, value, expectedUpdatedAt: options.expectedUpdatedAt });
   }
 
-  const client = requireSupabase();
+  return savePtoDayValueWithRowToSupabaseClient(table, row, day, value, requireSupabase(), options);
+}
+
+export async function savePtoDayValuesToSupabaseClient(
+  table: SupabasePtoTable,
+  values: PtoDayValuePatch[],
+  client: SupabasePtoClient,
+  options: PtoSnapshotWriteOptions = {},
+) {
   await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
-  await upsertPtoRows(ptoRowsToRecords(table, [row]), client);
-  return savePtoDayValueToSupabase(table, row.id, day, value);
+  await savePtoDayValuesWithClient(client, table, values);
+  return supabasePtoInlineWriteResult(client);
 }
 
 export async function savePtoDayValuesToSupabase(table: SupabasePtoTable, values: PtoDayValuePatch[], options: PtoSnapshotWriteOptions = {}) {
@@ -91,21 +157,23 @@ export async function savePtoDayValuesToSupabase(table: SupabasePtoTable, values
     return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-days", { table, values, expectedUpdatedAt: options.expectedUpdatedAt });
   }
 
-  const client = requireSupabase();
+  return savePtoDayValuesToSupabaseClient(table, values, requireSupabase(), options);
+}
+
+export async function savePtoDayValuesWithRowToSupabaseClient(
+  table: SupabasePtoTable,
+  row: PtoPlanRow,
+  values: PtoDayValuePatch[],
+  client: SupabasePtoClient,
+  options: PtoSnapshotWriteOptions = {},
+) {
   await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
-  const { upsertRecords, deleteValues } = ptoDayValuePatchesToRecords(table, values);
-
-  await upsertPtoDayValues(upsertRecords, client);
-
-  for (const item of deleteValues) {
-    const { error } = await client
-      .from(ptoDayValuesTable)
-      .delete()
-      .eq("table_type", table)
-      .eq("row_id", item.rowId)
-      .eq("work_date", item.day);
-    if (error) throw error;
-  }
+  await upsertPtoRows(ptoRowsToRecords(table, [row]), client);
+  await savePtoDayValuesWithClient(
+    client,
+    table,
+    values.map((item) => ({ ...item, rowId: row.id })),
+  );
   return supabasePtoInlineWriteResult(client);
 }
 
@@ -119,10 +187,7 @@ export async function savePtoDayValuesWithRowToSupabase(
     return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-days-with-row", { table, row, values, expectedUpdatedAt: options.expectedUpdatedAt });
   }
 
-  const client = requireSupabase();
-  await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
-  await upsertPtoRows(ptoRowsToRecords(table, [row]), client);
-  return savePtoDayValuesToSupabase(table, values);
+  return savePtoDayValuesWithRowToSupabaseClient(table, row, values, requireSupabase(), options);
 }
 
 export async function deletePtoRowsFromSupabase(table: SupabasePtoTable, rowIds: string[], options: PtoSnapshotWriteOptions = {}) {
@@ -225,21 +290,20 @@ export async function savePtoBucketValueToSupabase(cellKey: string, value: numbe
   return supabasePtoInlineWriteResult(client);
 }
 
+export async function deletePtoBucketValuesFromSupabaseClient(
+  cellKeys: string[],
+  client: SupabasePtoClient,
+  options: PtoSnapshotWriteOptions = {},
+) {
+  await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
+  await deleteSupabaseBucketValues(ptoBucketPairsToDeleteRecords(ptoBucketCellKeysToPairs(cellKeys)), client);
+  return supabasePtoInlineWriteResult(client);
+}
+
 export async function deletePtoBucketValuesFromSupabase(cellKeys: string[], options: PtoSnapshotWriteOptions = {}) {
   if (shouldRoutePtoThroughServerDatabase()) {
     return ptoDatabaseRequest<PtoSnapshotWriteResult>("delete-bucket-values", { cellKeys, expectedUpdatedAt: options.expectedUpdatedAt });
   }
 
-  const client = requireSupabase();
-  await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
-
-  for (const parsed of ptoBucketCellKeysToPairs(cellKeys)) {
-    const { error } = await client
-      .from(ptoBucketValuesTable)
-      .delete()
-      .eq("row_key", parsed.rowKey)
-      .eq("equipment_key", parsed.equipmentKey);
-    if (error) throw error;
-  }
-  return supabasePtoInlineWriteResult(client);
+  return deletePtoBucketValuesFromSupabaseClient(cellKeys, requireSupabase(), options);
 }
