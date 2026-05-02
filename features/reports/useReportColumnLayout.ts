@@ -35,9 +35,9 @@ export function useReportColumnLayout({
 }: UseReportColumnLayoutOptions) {
   const reportColumnTextModel = useMemo(() => {
     const valuesByKey = createEmptyReportColumnValueLists();
-    if (!needsDerivedReportRows) return { rows: [], valuesByKey };
+    if (!needsDerivedReportRows) return { valuesByKey };
 
-    const rows = filteredReports.map((row) => {
+    filteredReports.forEach((row) => {
       const monthFact = reportMonthFact(row);
       const yearFact = reportYearFact(row);
       const annualFact = reportAnnualFact(row);
@@ -68,11 +68,9 @@ export function useReportColumnLayout({
       reportColumnKeys.forEach((key) => {
         valuesByKey[key].push(textRow[key]);
       });
-
-      return textRow;
     });
 
-    return { rows, valuesByKey };
+    return { valuesByKey };
   }, [filteredReports, needsDerivedReportRows]);
 
   const visibleReportColumnKeys = useMemo(() => (
@@ -118,7 +116,6 @@ export function useReportColumnLayout({
   }), [filteredReports, needsDerivedReportRows, reportArea, reportDate]);
 
   return {
-    reportColumnTextRows: reportColumnTextModel.rows,
     visibleReportColumnKeys,
     autoReportColumnWidths,
     reportTableColumnWidths,

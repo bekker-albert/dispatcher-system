@@ -58,6 +58,7 @@ assert.doesNotMatch(dispatchSectionSource, /buildVehicleDisplayName/);
 assert.doesNotMatch(dispatchSectionSource, /useMemo/);
 assert.match(useReportColumnLayoutSource, /createEmptyReportColumnValueLists/);
 assert.match(useReportColumnLayoutSource, /valuesByKey\[key\]\.push\(textRow\[key\]\)/);
+assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows\.map\(\(row\) => row\[key\]\)/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
