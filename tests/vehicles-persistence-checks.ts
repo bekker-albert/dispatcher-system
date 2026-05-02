@@ -73,9 +73,13 @@ assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSna
 assert.doesNotMatch(vehicleRowsEditorSource, /deleteVehicleFromDatabase/);
 assert.match(vehicleRowsPersistenceSource, /const vehicleRowsVersionRef = useRef\(0\);/);
 assert.match(vehicleRowsPersistenceSource, /const snapshotVersion = vehicleRowsVersionRef\.current;/);
+assert.match(vehicleRowsPersistenceSource, /const vehicleLocalSaveSnapshotRef = useRef<string \| null>\(null\);/);
+assert.match(vehicleRowsPersistenceSource, /function saveVehicleRowsLocalBackupIfChanged/);
 assert.match(vehicleRowsPersistenceSource, /createVehicleRowsSavePlan\(rowsSnapshot, expectedSnapshot\)/);
 assert.match(vehicleRowsPersistenceSource, /saveVehicleRowsPatchToDatabase\(savePlan\.patchRows/);
 assert.doesNotMatch(vehicleRowsPersistenceSource, /JSON\.stringify\(vehicleRowsRef\.current\)\) return;/);
+assert.match(vehicleRowsPersistenceSource, /if \(localBackupChanged\) \{\s*requestClientSnapshotSave\("vehicles-save"\);/);
+assert.match(vehicleRowsPersistenceSource, /readVehicleRowsLocalBackup\(\)/);
 assert.match(vehicleRowsEditorSource, /Удаление техники будет сохранено общим списком/);
 assert.match(mysqlVehiclesSource, /Список техники уже изменился в базе/);
 

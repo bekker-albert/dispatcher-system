@@ -24,6 +24,26 @@ function saveVehicleRowsLocalBackup(snapshot: string, updatedAt: string) {
   }
 }
 
+function readVehicleRowsLocalBackup() {
+  try {
+    return window.localStorage.getItem(adminStorageKeys.vehicles);
+  } catch (error) {
+    console.warn("Vehicle local backup read failed:", error);
+    return null;
+  }
+}
+
+function saveVehicleRowsLocalBackupIfChanged(
+  snapshot: string,
+  updatedAt: string,
+  previousSnapshot: string | null,
+) {
+  if (snapshot === previousSnapshot) return false;
+
+  saveVehicleRowsLocalBackup(snapshot, updatedAt);
+  return true;
+}
+
 function parseExpectedVehicleSnapshot(snapshot: string) {
   if (!snapshot) return null;
 
@@ -59,6 +79,7 @@ export function useVehicleRowsPersistence({
   const vehicleSaveTimerRef = useRef<number | null>(null);
   const databaseSaveQueueRef = useRef<VehicleRowsSaveQueue | null>(null);
   const vehicleRowsVersionRef = useRef(0);
+  const vehicleLocalSaveSnapshotRef = useRef<string | null>(null);
 
   if (databaseSaveQueueRef.current === null) {
     databaseSaveQueueRef.current = createVehicleRowsSaveQueue();
@@ -80,8 +101,15 @@ export function useVehicleRowsPersistence({
       const snapshot = JSON.stringify(rowsSnapshot);
       const snapshotVersion = vehicleRowsVersionRef.current;
       const localUpdatedAt = new Date().toISOString();
+      const previousLocalSnapshot = vehicleLocalSaveSnapshotRef.current ?? readVehicleRowsLocalBackup();
+      const localBackupChanged = saveVehicleRowsLocalBackupIfChanged(
+        snapshot,
+        localUpdatedAt,
+        previousLocalSnapshot,
+      );
 
-      saveVehicleRowsLocalBackup(snapshot, localUpdatedAt);
+      vehicleLocalSaveSnapshotRef.current = snapshot;
+
       if (databaseConfigured && databaseLoadedRef.current) {
         if (snapshot !== databaseSaveSnapshotRef.current) {
           const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
@@ -112,7 +140,9 @@ export function useVehicleRowsPersistence({
           });
         }
       }
-      requestClientSnapshotSave("vehicles-save");
+      if (localBackupChanged) {
+        requestClientSnapshotSave("vehicles-save");
+      }
       vehicleSaveTimerRef.current = null;
     }, 700);
 
@@ -141,7 +171,12 @@ export function useVehicleRowsPersistence({
         window.clearTimeout(vehicleSaveTimerRef.current);
         vehicleSaveTimerRef.current = null;
       }
-      saveVehicleRowsLocalBackup(JSON.stringify(vehicleRowsRef.current), new Date().toISOString());
+      const snapshot = JSON.stringify(vehicleRowsRef.current);
+      const previousLocalSnapshot = vehicleLocalSaveSnapshotRef.current ?? readVehicleRowsLocalBackup();
+
+      if (saveVehicleRowsLocalBackupIfChanged(snapshot, new Date().toISOString(), previousLocalSnapshot)) {
+        vehicleLocalSaveSnapshotRef.current = snapshot;
+      }
     };
 
     window.addEventListener("pagehide", flushVehicleRows);
