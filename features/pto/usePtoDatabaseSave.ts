@@ -59,7 +59,11 @@ export function usePtoDatabaseSave({
     ptoDatabaseSaveSnapshotRef.current = patch
       ? patchPtoDatabaseSaveBaseline(ptoDatabaseSaveSnapshotRef.current, updatedAt, patch)
       : createPtoDatabaseSaveBaseline(baseline.snapshot, updatedAt);
-  }, []);
+
+    if (!ptoDatabaseStateChanged(ptoDatabaseStateRef.current, ptoDatabaseSaveSnapshotRef.current)) {
+      ptoDatabaseDirtyRef.current = false;
+    }
+  }, [ptoDatabaseStateRef]);
 
   const getPtoDatabaseExpectedUpdatedAt = useCallback(() => (
     readPtoDatabaseSaveBaseline(ptoDatabaseSaveSnapshotRef.current).expectedUpdatedAt

@@ -56,7 +56,6 @@ assert.match(ptoDatabaseSaveSource, /return true;/);
 assert.match(ptoDatabaseSaveSource, /const ptoDatabaseDirtyRef = useRef\(false\);/);
 assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseDirtyRef\.current\) \{[\s\S]*return true;[\s\S]*\}/);
 assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSaveShouldSkip\(mode, snapshotToSave, ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*ptoDatabaseDirtyRef\.current = false;[\s\S]*return true;[\s\S]*\}/);
-assert.doesNotMatch(ptoDatabaseSaveSource, /if \(!ptoDatabaseStateChanged\(ptoDatabaseStateRef\.current,\s*ptoDatabaseSaveSnapshotRef\.current\)\) \{/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseSaveSnapshotRef\.current = savedSnapshot;\s*ptoDatabaseDirtyRef\.current = false;/);
 assert.match(ptoDatabaseSaveSource, /if \(!databaseConfigured \|\| !ptoDatabaseLoadedRef\.current \|\| ptoDatabaseLoadedYearRef\.current !== currentYear\) return;\s*ptoDatabaseDirtyRef\.current = true;/);
 assert.match(ptoDatabaseSaveSource, /getPtoDatabaseExpectedUpdatedAt = useCallback/);
@@ -96,6 +95,7 @@ assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]
 assert.match(ptoLinkedRowsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление строки"[\s\S]*deletePtoRowsFromDatabase/);
 assert.match(ptoYearEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление года"[\s\S]*deletePtoYearFromDatabase/);
 assert.match(ptoDatabaseSaveSource, /markPtoDatabaseInlineWriteSaved/);
+assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseStateChanged\(ptoDatabaseStateRef\.current, ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*ptoDatabaseDirtyRef\.current = false;[\s\S]*\}/);
 
 assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\s\S]*storage: Record<string, string>;[\s\S]*settings: Record<string, unknown>;[\s\S]*\};/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSaveQueueRef = useRef<SharedDatabaseSaveQueue \| null>\(null\);/);
