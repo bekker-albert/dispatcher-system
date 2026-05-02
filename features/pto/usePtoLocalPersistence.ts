@@ -5,7 +5,7 @@ import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import {
   savePtoStateToBrowserStorage,
-  type PtoBrowserStorageSnapshot,
+  type PtoBrowserStorageSnapshotCache,
   type PtoDatabaseState,
 } from "@/features/pto/ptoPersistenceModel";
 
@@ -53,7 +53,7 @@ export function usePtoLocalPersistence({
   expandedPtoMonths,
 }: PtoLocalPersistenceOptions) {
   const ptoLocalSaveTimerRef = useRef<number | null>(null);
-  const ptoLocalSaveSnapshotRef = useRef<PtoBrowserStorageSnapshot | null>(null);
+  const ptoLocalSaveSnapshotRef = useRef<PtoBrowserStorageSnapshotCache | null>(null);
 
   const savePtoLocalState = useCallback(() => {
     if (skipUntilDatabaseLoaded && !ptoDatabaseLoadedRef.current) return;
@@ -61,7 +61,7 @@ export function usePtoLocalPersistence({
     const state = ptoDatabaseStateRef.current;
     const markLocalUpdatedAt = ptoDatabaseLoadedRef.current;
     const result = savePtoStateToBrowserStorage(state, markLocalUpdatedAt, ptoLocalSaveSnapshotRef.current);
-    ptoLocalSaveSnapshotRef.current = result.snapshot;
+    ptoLocalSaveSnapshotRef.current = result.cache;
     if (!result.changed) return;
 
     if (markLocalUpdatedAt) {

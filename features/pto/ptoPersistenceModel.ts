@@ -20,6 +20,7 @@ export { ptoDatabaseMessages } from "./ptoPersistenceMessages";
 export {
   savePtoDatabaseSnapshot,
   savePtoStateToBrowserStorage,
+  type PtoBrowserStorageSnapshotCache,
   type PtoBrowserStorageSnapshot,
 } from "./ptoPersistenceStorage";
 export type {

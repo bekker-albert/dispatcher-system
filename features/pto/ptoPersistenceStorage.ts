@@ -3,45 +3,80 @@ import { scopePtoStateForYear } from "../../lib/domain/pto/persistence-shared";
 import { adminStorageKeys } from "../../lib/storage/keys";
 
 export type PtoBrowserStorageSnapshot = Record<string, string>;
+export type PtoBrowserStorageSnapshotCache = {
+  snapshot: PtoBrowserStorageSnapshot;
+  refs: Record<string, unknown>;
+};
 
-function ptoBrowserStorageSnapshot(state: DataPtoState): PtoBrowserStorageSnapshot {
+function jsonFromCache(
+  cache: PtoBrowserStorageSnapshotCache | null,
+  storageKey: string,
+  ref: unknown,
+  fallbackValue: unknown,
+) {
+  if (cache && cache.refs[storageKey] === ref && typeof cache.snapshot[storageKey] === "string") {
+    return cache.snapshot[storageKey];
+  }
+
+  return JSON.stringify(ref ?? fallbackValue);
+}
+
+function ptoBrowserStorageSnapshot(
+  state: DataPtoState,
+  previousCache: PtoBrowserStorageSnapshotCache | null,
+): PtoBrowserStorageSnapshotCache {
   const uiState = state.uiState ?? {};
+  const refs = {
+    [adminStorageKeys.ptoYears]: state.manualYears,
+    [adminStorageKeys.ptoPlanRows]: state.planRows,
+    [adminStorageKeys.ptoSurveyRows]: state.surveyRows,
+    [adminStorageKeys.ptoOperRows]: state.operRows,
+    [adminStorageKeys.ptoColumnWidths]: uiState.ptoColumnWidths ?? null,
+    [adminStorageKeys.ptoRowHeights]: uiState.ptoRowHeights ?? null,
+    [adminStorageKeys.ptoHeaderLabels]: uiState.ptoHeaderLabels ?? null,
+    [adminStorageKeys.ptoBucketValues]: state.bucketValues ?? null,
+    [adminStorageKeys.ptoBucketRows]: state.bucketRows ?? null,
+  };
 
   return {
-    [adminStorageKeys.ptoYears]: JSON.stringify(state.manualYears),
-    [adminStorageKeys.ptoPlanRows]: JSON.stringify(state.planRows),
-    [adminStorageKeys.ptoSurveyRows]: JSON.stringify(state.surveyRows),
-    [adminStorageKeys.ptoOperRows]: JSON.stringify(state.operRows),
-    [adminStorageKeys.ptoColumnWidths]: JSON.stringify(uiState.ptoColumnWidths ?? {}),
-    [adminStorageKeys.ptoRowHeights]: JSON.stringify(uiState.ptoRowHeights ?? {}),
-    [adminStorageKeys.ptoHeaderLabels]: JSON.stringify(uiState.ptoHeaderLabels ?? {}),
-    [adminStorageKeys.ptoBucketValues]: JSON.stringify(state.bucketValues ?? {}),
-    [adminStorageKeys.ptoBucketRows]: JSON.stringify(state.bucketRows ?? []),
+    refs,
+    snapshot: {
+      [adminStorageKeys.ptoYears]: jsonFromCache(previousCache, adminStorageKeys.ptoYears, refs[adminStorageKeys.ptoYears], []),
+      [adminStorageKeys.ptoPlanRows]: jsonFromCache(previousCache, adminStorageKeys.ptoPlanRows, refs[adminStorageKeys.ptoPlanRows], []),
+      [adminStorageKeys.ptoSurveyRows]: jsonFromCache(previousCache, adminStorageKeys.ptoSurveyRows, refs[adminStorageKeys.ptoSurveyRows], []),
+      [adminStorageKeys.ptoOperRows]: jsonFromCache(previousCache, adminStorageKeys.ptoOperRows, refs[adminStorageKeys.ptoOperRows], []),
+      [adminStorageKeys.ptoColumnWidths]: jsonFromCache(previousCache, adminStorageKeys.ptoColumnWidths, refs[adminStorageKeys.ptoColumnWidths], {}),
+      [adminStorageKeys.ptoRowHeights]: jsonFromCache(previousCache, adminStorageKeys.ptoRowHeights, refs[adminStorageKeys.ptoRowHeights], {}),
+      [adminStorageKeys.ptoHeaderLabels]: jsonFromCache(previousCache, adminStorageKeys.ptoHeaderLabels, refs[adminStorageKeys.ptoHeaderLabels], {}),
+      [adminStorageKeys.ptoBucketValues]: jsonFromCache(previousCache, adminStorageKeys.ptoBucketValues, refs[adminStorageKeys.ptoBucketValues], {}),
+      [adminStorageKeys.ptoBucketRows]: jsonFromCache(previousCache, adminStorageKeys.ptoBucketRows, refs[adminStorageKeys.ptoBucketRows], []),
+    },
   };
 }
 
 export function savePtoStateToBrowserStorage(
   state: DataPtoState,
   markLocalUpdatedAt: boolean,
-  previousSnapshot: PtoBrowserStorageSnapshot | null = null,
+  previousCache: PtoBrowserStorageSnapshotCache | null = null,
 ) {
-  const snapshot = ptoBrowserStorageSnapshot(state);
+  const cache = ptoBrowserStorageSnapshot(state, previousCache);
+  const { snapshot } = cache;
   let changed = false;
 
   Object.entries(snapshot).forEach(([storageKey, value]) => {
-    if (previousSnapshot?.[storageKey] === value) return;
+    if (previousCache?.snapshot[storageKey] === value) return;
     window.localStorage.setItem(storageKey, value);
     changed = true;
   });
 
-  if (!changed) return { changed, snapshot };
+  if (!changed) return { changed, snapshot, cache };
 
   if (markLocalUpdatedAt) {
     window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, new Date().toISOString());
   }
   window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
 
-  return { changed, snapshot };
+  return { changed, snapshot, cache };
 }
 
 export async function savePtoDatabaseSnapshot(

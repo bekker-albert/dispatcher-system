@@ -13,6 +13,7 @@ const ptoDatabaseLoadSource = readFileSync(resolve(testDir, "../features/pto/use
 const ptoDatabaseLoadRunnerSource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadRunner.ts"), "utf8");
 const ptoDatabaseLoadApplySource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadApply.ts"), "utf8");
 const ptoPersistenceStorageSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceStorage.ts"), "utf8");
+const ptoLocalPersistenceSource = readFileSync(resolve(testDir, "../features/pto/usePtoLocalPersistence.ts"), "utf8");
 const ptoDatabaseSaveSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseSave.ts"), "utf8");
 const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features/app/initialAppDataLoadSteps.ts"), "utf8");
 const ptoDateRowValueEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateRowValueEditor.ts"), "utf8");
@@ -70,6 +71,10 @@ assert.match(ptoDatabaseSaveSource, /yearScope: saveAllYears \? undefined : stat
 assert.match(ptoPersistenceStorageSource, /scopePtoStateForYear/);
 assert.match(ptoPersistenceStorageSource, /const stateToSave = options\.yearScope \? scopePtoStateForYear\(state, options\.yearScope\) : state;/);
 assert.match(ptoPersistenceStorageSource, /savePtoStateToDatabase\(stateToSave, \{ expectedUpdatedAt, yearScope: options\.yearScope \}\)/);
+assert.match(ptoPersistenceStorageSource, /type PtoBrowserStorageSnapshotCache = \{[\s\S]*snapshot: PtoBrowserStorageSnapshot;[\s\S]*refs: Record<string, unknown>;[\s\S]*\};/);
+assert.match(ptoPersistenceStorageSource, /if \(cache && cache\.refs\[storageKey\] === ref && typeof cache\.snapshot\[storageKey\] === "string"\)/);
+assert.match(ptoLocalPersistenceSource, /useRef<PtoBrowserStorageSnapshotCache \| null>\(null\)/);
+assert.match(ptoLocalPersistenceSource, /ptoLocalSaveSnapshotRef\.current = result\.cache;/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false;/);
 assert.match(ptoDateTableContextSource, /kind: "day-values"/);
 assert.match(ptoDatabaseSaveSource, /markPtoDatabaseInlineWriteSaved/);
