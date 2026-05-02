@@ -176,3 +176,7 @@ assert.match(ptoDateTableViewModelSource, /const rowById = ptoDateEditing \? new
 assert.match(usePtoDateViewModelSource, /ptoDateEditing: boolean;/);
 assert.match(usePtoDateViewModelSource, /isPtoDateTab \? yearMonths\(ptoPlanYear\) : \[\]/);
 assert.match(usePtoDateViewModelSource, /if \(!isPtoDateTab \|\| !ptoDateEditing\) \{/);
+assert.match(usePtoDateViewModelSource, /createPtoAreaLookupSourceBundle/);
+assert.match(usePtoDateViewModelSource, /const activePtoAreaLookupBundle = useMemo/);
+assert.match(usePtoDateViewModelSource, /const ptoBucketReferenceLookupBundle = useMemo/);
+assert.doesNotMatch(usePtoDateViewModelSource, /createPtoAreaAndBucketRowLookupSourceBundle\(\[activePtoDateRows\]\)/);

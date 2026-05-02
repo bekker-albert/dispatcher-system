@@ -12,12 +12,21 @@ import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 import {
   createPtoAreaAndBucketRowLookupSourceBundle,
+  createPtoAreaLookupSourceBundle,
   createPtoBucketAreaLookupSourceBundle,
   createPtoDateLookupSourceBundle,
   type PtoAreaLookupSource,
   type PtoBucketRowLookupSource,
   type PtoDateLookupSource,
 } from "./ptoDateLookupModel";
+
+const emptyAreaLookupBundle = { sources: [] as PtoAreaLookupSource[], signature: "" };
+const emptyAreaAndBucketRowLookupBundle = {
+  areaSources: [] as PtoAreaLookupSource[],
+  areaSignature: "",
+  bucketRowSources: [] as PtoBucketRowLookupSource[],
+  bucketRowSignature: "",
+};
 
 const allAreasLabel = "Все участки";
 
@@ -84,26 +93,25 @@ export function usePtoDateViewModel({
   const activePtoDateLookupSources = useStablePtoDateLookupSources(
     useMemo(() => createPtoDateLookupSourceBundle(activePtoDateRows), [activePtoDateRows]),
   );
-  const ptoReferenceLookupBundle = useMemo(() => (
+  const activePtoAreaLookupBundle = useMemo(() => (
+    isPtoDateTab ? createPtoAreaLookupSourceBundle(activePtoDateRows) : emptyAreaLookupBundle
+  ), [activePtoDateRows, isPtoDateTab]);
+  const ptoBucketReferenceLookupBundle = useMemo(() => (
     isPtoBucketsSection
       ? createPtoAreaAndBucketRowLookupSourceBundle([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
-      : createPtoAreaAndBucketRowLookupSourceBundle([activePtoDateRows])
-  ), [activePtoDateRows, deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
+      : emptyAreaAndBucketRowLookupBundle
+  ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
   const allPtoAreaLookupSources = useStablePtoAreaLookupSources(
     useMemo(() => ({
-      sources: ptoReferenceLookupBundle.areaSources,
-      signature: ptoReferenceLookupBundle.areaSignature,
-    }), [ptoReferenceLookupBundle]),
+      sources: isPtoBucketsSection ? ptoBucketReferenceLookupBundle.areaSources : activePtoAreaLookupBundle.sources,
+      signature: isPtoBucketsSection ? ptoBucketReferenceLookupBundle.areaSignature : activePtoAreaLookupBundle.signature,
+    }), [activePtoAreaLookupBundle, isPtoBucketsSection, ptoBucketReferenceLookupBundle]),
   );
   const ptoBucketRowLookupSources = useStablePtoBucketRowLookupSources(
-    useMemo(() => (
-      isPtoBucketsSection
-        ? {
-            sources: ptoReferenceLookupBundle.bucketRowSources,
-            signature: ptoReferenceLookupBundle.bucketRowSignature,
-          }
-        : { sources: [], signature: "" }
-    ), [isPtoBucketsSection, ptoReferenceLookupBundle]),
+    useMemo(() => ({
+      sources: ptoBucketReferenceLookupBundle.bucketRowSources,
+      signature: ptoBucketReferenceLookupBundle.bucketRowSignature,
+    }), [ptoBucketReferenceLookupBundle]),
   );
   const ptoBucketAreaLookupSources = useStablePtoAreaLookupSources(
     useMemo(() => (
