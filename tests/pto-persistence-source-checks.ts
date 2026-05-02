@@ -48,6 +48,11 @@ assert.match(initialAppDataLoadStepsSource, /if \(!databaseConfigured \|\| local
 assert.match(ptoDatabaseSaveSource, /return await savePtoDatabaseChanges\("manual"\);/);
 assert.match(ptoDatabaseSaveSource, /return false;/);
 assert.match(ptoDatabaseSaveSource, /return true;/);
+assert.match(ptoDatabaseSaveSource, /const ptoDatabaseDirtyRef = useRef\(false\);/);
+assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseDirtyRef\.current\) \{[\s\S]*return true;[\s\S]*\}/);
+assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseStateChanged\(ptoDatabaseStateRef\.current,\s*ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*ptoDatabaseDirtyRef\.current = false;[\s\S]*return true;[\s\S]*\}/);
+assert.match(ptoDatabaseSaveSource, /ptoDatabaseSaveSnapshotRef\.current = savedSnapshot;\s*ptoDatabaseDirtyRef\.current = false;/);
+assert.match(ptoDatabaseSaveSource, /if \(!databaseConfigured \|\| !ptoDatabaseLoadedRef\.current \|\| ptoDatabaseLoadedYearRef\.current !== currentYear\) return;\s*ptoDatabaseDirtyRef\.current = true;/);
 assert.match(ptoDatabaseSaveSource, /getPtoDatabaseExpectedUpdatedAt = useCallback/);
 assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSavingRef\.current\) \{[\s\S]*try \{[\s\S]*await ptoDatabaseActiveSaveRef\.current;[\s\S]*\} catch \{[\s\S]*return false;[\s\S]*\}/);
 assert.doesNotMatch(ptoDatabaseSaveSource, /refreshPtoDatabaseSaveBaseline/);

@@ -47,6 +47,7 @@ export function usePtoDatabaseSave({
 }: PtoDatabaseSaveOptions) {
   const ptoDatabaseSavingRef = useRef(false);
   const ptoDatabaseSaveQueuedRef = useRef(false);
+  const ptoDatabaseDirtyRef = useRef(false);
   const ptoDatabaseSaveSnapshotRef = useRef("");
   const ptoDatabaseSaveRequestTimerRef = useRef<number | null>(null);
   const ptoDatabaseActiveSaveRef = useRef<Promise<void> | null>(null);
@@ -125,6 +126,7 @@ export function usePtoDatabaseSave({
       ptoDatabaseActiveSaveRef.current = savePromise.then(() => undefined);
       const savedSnapshot = await savePromise;
       ptoDatabaseSaveSnapshotRef.current = savedSnapshot;
+      ptoDatabaseDirtyRef.current = false;
       ptoDatabaseFullSaveNextRef.current = false;
       setPtoDatabaseMessage(ptoDatabaseMessages.savedState(mode));
       showSaveStatus("saved", ptoDatabaseMessages.savedStatus);
@@ -176,7 +178,12 @@ export function usePtoDatabaseSave({
       return false;
     }
 
+    if (!ptoDatabaseDirtyRef.current) {
+      return true;
+    }
+
     if (!ptoDatabaseStateChanged(ptoDatabaseStateRef.current, ptoDatabaseSaveSnapshotRef.current)) {
+      ptoDatabaseDirtyRef.current = false;
       return true;
     }
 
@@ -186,6 +193,7 @@ export function usePtoDatabaseSave({
   const requestPtoDatabaseSave = useCallback(() => {
     const currentYear = ptoDatabaseStateRef.current.uiState.ptoPlanYear;
     if (!databaseConfigured || !ptoDatabaseLoadedRef.current || ptoDatabaseLoadedYearRef.current !== currentYear) return;
+    ptoDatabaseDirtyRef.current = true;
     setPtoDatabaseMessage(ptoDatabaseMessages.queued);
 
     if (ptoDatabaseSaveRequestTimerRef.current !== null) {
