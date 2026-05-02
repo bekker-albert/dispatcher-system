@@ -65,4 +65,5 @@ export {
   ptoPersistenceLoadIsEmpty,
   ptoPersistenceStateToRecords,
   ptoStateFromPersistenceRecords,
+  scopePtoStateForYear,
 } from "./persistence-state";

@@ -14,6 +14,37 @@ import {
 import { ptoRowsByTable, ptoRowsToDayRecords, ptoRowsToRecords } from "./persistence-rows";
 import { asObjectRecord, asStringArray, latestPtoUpdatedAt } from "./persistence-values";
 
+function dateBelongsToYear(dateKey: string, year: string) {
+  return dateKey.startsWith(`${year}-`);
+}
+
+function objectHasYearValue(values: Record<string, unknown> | undefined, year: string) {
+  return Boolean(values && Object.prototype.hasOwnProperty.call(values, year));
+}
+
+function ptoRowBelongsToYear(row: PtoPersistenceState["planRows"][number], year: string) {
+  return Object.keys(row.dailyPlans ?? {}).some((dateKey) => dateBelongsToYear(dateKey, year))
+    || (row.years ?? []).includes(year)
+    || (row.carryoverManualYears ?? []).includes(year)
+    || objectHasYearValue(row.carryovers, year);
+}
+
+function scopePtoRowsForYear(rows: PtoPersistenceState["planRows"], year: string) {
+  return rows
+    .filter((row) => ptoRowBelongsToYear(row, year))
+    .map((row) => ({
+      ...row,
+      dailyPlans: Object.fromEntries(
+        Object.entries(row.dailyPlans ?? {}).filter(([dateKey]) => dateBelongsToYear(dateKey, year)),
+      ),
+      years: (row.years ?? []).filter((item) => item === year),
+      carryoverManualYears: (row.carryoverManualYears ?? []).filter((item) => item === year),
+      carryovers: Object.fromEntries(
+        Object.entries(row.carryovers ?? {}).filter(([item]) => item === year),
+      ),
+    }));
+}
+
 export function ptoPersistenceLoadIsEmpty<SettingRecord extends { updated_at?: string | null }>(
   groups: PtoPersistenceLoadRecordGroups<SettingRecord>,
 ) {
@@ -85,5 +116,16 @@ export function ptoPersistenceStateToRecords(state: PtoPersistenceState) {
     ],
     bucketRowRecords: ptoBucketRowsToRecords(state.bucketRows ?? []),
     bucketValueRecords: ptoBucketValuesToRecords(state.bucketValues ?? {}),
+  };
+}
+
+export function scopePtoStateForYear(state: PtoPersistenceState, year: string): PtoPersistenceState {
+  return {
+    ...state,
+    planRows: scopePtoRowsForYear(state.planRows, year),
+    operRows: scopePtoRowsForYear(state.operRows, year),
+    surveyRows: scopePtoRowsForYear(state.surveyRows, year),
+    bucketRows: [],
+    bucketValues: {},
   };
 }

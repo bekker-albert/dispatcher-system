@@ -1,4 +1,5 @@
 import type { DataPtoState } from "../../lib/data/pto";
+import { scopePtoStateForYear } from "../../lib/domain/pto/persistence-shared";
 import { adminStorageKeys } from "../../lib/storage/keys";
 
 export type PtoBrowserStorageSnapshot = Record<string, string>;
@@ -49,5 +50,6 @@ export async function savePtoDatabaseSnapshot(
   options: { yearScope?: string | null } = {},
 ) {
   const { savePtoStateToDatabase } = await import("@/lib/data/pto");
-  return savePtoStateToDatabase(state, { expectedUpdatedAt, yearScope: options.yearScope });
+  const stateToSave = options.yearScope ? scopePtoStateForYear(state, options.yearScope) : state;
+  return savePtoStateToDatabase(stateToSave, { expectedUpdatedAt, yearScope: options.yearScope });
 }

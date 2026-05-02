@@ -42,6 +42,7 @@ import {
   ptoStateFromPersistenceRecords,
   ptoUiStateKey,
   ptoYearDateRange,
+  scopePtoStateForYear,
   splitPtoBucketCellKey,
 } from "../lib/domain/pto/persistence-shared";
 import * as persistenceState from "../lib/domain/pto/persistence-state";
@@ -60,6 +61,7 @@ assert.equal(persistenceDates.ptoYearDateRange, ptoYearDateRange);
 assert.equal(persistenceRows.ptoRowsToRecords, ptoRowsToRecords);
 assert.equal(persistenceBuckets.ptoBucketRowsToRecords, ptoBucketRowsToRecords);
 assert.equal(persistenceState.ptoPersistenceStateToRecords, ptoPersistenceStateToRecords);
+assert.equal(persistenceState.scopePtoStateForYear, scopePtoStateForYear);
 
 const ptoRow = {
   id: "row-1",
@@ -187,6 +189,34 @@ assert.equal(stateRecords.rowRecords.length, 2);
 assert.equal(stateRecords.dayRecords.length, 4);
 assert.equal(stateRecords.bucketRowRecords.length, 1);
 assert.equal(stateRecords.bucketValueRecords.length, 1);
+const scopedPtoState = scopePtoStateForYear({
+  manualYears: ["2025", "2026"],
+  planRows: [
+    {
+      ...ptoRow,
+      id: "row-2026",
+      dailyPlans: { "2025-12-31": 7, "2026-04-01": 10, "2027-01-01": 9 },
+      years: ["2025", "2026"],
+      carryovers: { "2025": 2, "2026": 3 },
+      carryoverManualYears: ["2025", "2026"],
+    },
+    { ...ptoRow, id: "row-2025", dailyPlans: { "2025-04-01": 8 }, years: ["2025"] },
+  ],
+  operRows: [{ ...ptoRow, id: "oper-2026", dailyPlans: { "2026-04-01": 4 } }],
+  surveyRows: [],
+  bucketRows: [{ key: "aksu:work", area: "Аксу", structure: "Перевозка", source: "manual" }],
+  bucketValues: { "aksu:work::excavator": 3 },
+  uiState: { ptoPlanYear: "2026" },
+}, "2026");
+assert.deepEqual(scopedPtoState.manualYears, ["2025", "2026"]);
+assert.deepEqual(scopedPtoState.planRows.map((row) => row.id), ["row-2026"]);
+assert.deepEqual(scopedPtoState.planRows[0]?.dailyPlans, { "2026-04-01": 10 });
+assert.deepEqual(scopedPtoState.planRows[0]?.years, ["2026"]);
+assert.deepEqual(scopedPtoState.planRows[0]?.carryovers, { "2026": 3 });
+assert.deepEqual(scopedPtoState.planRows[0]?.carryoverManualYears, ["2026"]);
+assert.deepEqual(scopedPtoState.operRows.map((row) => row.id), ["oper-2026"]);
+assert.deepEqual(scopedPtoState.bucketRows, []);
+assert.deepEqual(scopedPtoState.bucketValues, {});
 assert.deepEqual(
   ptoPersistenceStateToRecords({
     manualYears: [],

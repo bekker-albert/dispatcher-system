@@ -12,6 +12,7 @@ const ptoUiStateDatabaseSyncSource = readFileSync(resolve(testDir, "../features/
 const ptoDatabaseLoadSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseLoad.ts"), "utf8");
 const ptoDatabaseLoadRunnerSource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadRunner.ts"), "utf8");
 const ptoDatabaseLoadApplySource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadApply.ts"), "utf8");
+const ptoPersistenceStorageSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceStorage.ts"), "utf8");
 const ptoDatabaseSaveSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseSave.ts"), "utf8");
 const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features/app/initialAppDataLoadSteps.ts"), "utf8");
 const ptoDateRowValueEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateRowValueEditor.ts"), "utf8");
@@ -66,6 +67,9 @@ assert.match(ptoDatabaseSaveSource, /const stateToSave = ptoDatabaseStateRef\.cu
 assert.match(ptoDatabaseSaveSource, /const stateAtWrite = ptoDatabaseStateRef\.current;/);
 assert.match(ptoDatabaseSaveSource, /stateAtWrite === stateToSave[\s\S]*\? snapshotToSave[\s\S]*: serializePtoDatabaseState\(stateAtWrite\)/);
 assert.match(ptoDatabaseSaveSource, /yearScope: saveAllYears \? undefined : stateAtWrite\.uiState\.ptoPlanYear/);
+assert.match(ptoPersistenceStorageSource, /scopePtoStateForYear/);
+assert.match(ptoPersistenceStorageSource, /const stateToSave = options\.yearScope \? scopePtoStateForYear\(state, options\.yearScope\) : state;/);
+assert.match(ptoPersistenceStorageSource, /savePtoStateToDatabase\(stateToSave, \{ expectedUpdatedAt, yearScope: options\.yearScope \}\)/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false;/);
 assert.match(ptoDateTableContextSource, /kind: "day-values"/);
 assert.match(ptoDatabaseSaveSource, /markPtoDatabaseInlineWriteSaved/);
