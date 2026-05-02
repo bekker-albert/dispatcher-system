@@ -1,3 +1,4 @@
+import type { RowDataPacket } from "mysql2/promise";
 import type { PtoDateTableKey, PtoPlanRow } from "../../domain/pto/date-table";
 import {
   ptoDayValueRecordDates,
@@ -11,7 +12,7 @@ import {
   type PtoPersistenceRowRecord,
   type PtoPersistenceState,
 } from "../../domain/pto/persistence-shared";
-import { stringifyJson } from "./json";
+import { parseJson, stringifyJson } from "./json";
 import { dbExecute, type DbExecutor } from "./pool";
 
 const batchSize = 250;
@@ -22,6 +23,14 @@ const ptoRowInsertColumns = `
 
 type DeletePtoDayValuesOptions = {
   yearScope?: string | null;
+};
+
+type PtoRowYearMetadataRecord = RowDataPacket & {
+  table_type: PtoDateTableKey;
+  row_id: string;
+  carryovers: unknown;
+  carryover_manual_years: unknown;
+  years: unknown;
 };
 
 function scopedDateClause(yearScope: string | null | undefined, values: unknown[]) {
@@ -38,6 +47,114 @@ function chunkValues<T>(values: T[], size = batchSize) {
     chunks.push(values.slice(index, index + size));
   }
   return chunks;
+}
+
+function stringArrayFromStoredJson(value: unknown) {
+  const parsed = parseJson(value, value);
+  return Array.isArray(parsed)
+    ? parsed.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function objectFromStoredJson(value: unknown) {
+  const parsed = parseJson(value, value);
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : {};
+}
+
+async function selectPtoRowsWithYearMetadata(
+  execute: DbExecutor,
+  options: {
+    table?: PtoDateTableKey;
+    excludeRowIdsByTable?: Partial<Record<PtoDateTableKey, string[]>>;
+  } = {},
+) {
+  const clauses: string[] = [];
+  const values: unknown[] = [];
+
+  if (options.table) {
+    clauses.push("table_type = ?");
+    values.push(options.table);
+  }
+
+  Object.entries(options.excludeRowIdsByTable ?? {}).forEach(([table, rowIds]) => {
+    if (!rowIds || rowIds.length === 0) return;
+
+    const placeholders = rowIds.map(() => "?").join(", ");
+    clauses.push("(table_type <> ? OR row_id NOT IN (" + placeholders + "))");
+    values.push(table, ...rowIds);
+  });
+
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  return await (execute.rows?.<PtoRowYearMetadataRecord>(
+    `SELECT table_type, row_id, carryovers, carryover_manual_years, years
+    FROM pto_rows
+    ${where}`,
+    values,
+  ) ?? Promise.resolve([]));
+}
+
+async function prunePtoYearFromRowMetadataRecords(
+  records: PtoRowYearMetadataRecord[],
+  year: string,
+  execute: DbExecutor,
+) {
+  for (const record of records) {
+    const years = stringArrayFromStoredJson(record.years).filter((item) => item !== year);
+    const carryoverManualYears = stringArrayFromStoredJson(record.carryover_manual_years)
+      .filter((item) => item !== year);
+    const carryovers = objectFromStoredJson(record.carryovers);
+    delete carryovers[year];
+
+    await execute(
+      `UPDATE pto_rows
+      SET years = ?,
+        carryover_manual_years = ?,
+        carryovers = ?,
+        updated_at = CURRENT_TIMESTAMP(3)
+      WHERE table_type = ? AND row_id = ?`,
+      [
+        stringifyJson(years),
+        stringifyJson(carryoverManualYears),
+        stringifyJson(carryovers),
+        record.table_type,
+        record.row_id,
+      ],
+    );
+  }
+}
+
+export async function prunePtoYearFromRows(
+  year: string,
+  execute: DbExecutor = dbExecute,
+  options: {
+    table?: PtoDateTableKey;
+    excludeRowIdsByTable?: Partial<Record<PtoDateTableKey, string[]>>;
+  } = {},
+) {
+  await prunePtoYearFromRowMetadataRecords(
+    await selectPtoRowsWithYearMetadata(execute, options),
+    year,
+    execute,
+  );
+}
+
+export async function deletePtoRowsWithoutData(execute: DbExecutor = dbExecute) {
+  await execute(
+    `DELETE rows_without_data
+    FROM pto_rows AS rows_without_data
+    WHERE JSON_LENGTH(COALESCE(rows_without_data.years, JSON_ARRAY())) = 0
+      AND JSON_LENGTH(COALESCE(rows_without_data.carryover_manual_years, JSON_ARRAY())) = 0
+      AND JSON_LENGTH(COALESCE(rows_without_data.carryovers, JSON_OBJECT())) = 0
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pto_day_values AS values_for_row
+        WHERE values_for_row.table_type = rows_without_data.table_type
+          AND values_for_row.row_id = rows_without_data.row_id
+        LIMIT 1
+      )`,
+  );
 }
 
 function ptoDayValueDateGroups(rows: PtoPlanRow[]) {

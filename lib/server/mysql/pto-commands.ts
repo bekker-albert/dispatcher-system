@@ -8,6 +8,7 @@ import {
   ptoDayValuePatchesToRecords,
   ptoRowsToRecords,
   ptoPersistenceStateToRecords,
+  ptoPlanRowIds,
   ptoYearDateRange,
   splitPtoBucketCellKey,
   type PtoPersistenceDayValuePatch,
@@ -22,8 +23,10 @@ import {
   deletePtoBucketRowsMissingFromState as deleteMissingPtoBucketRowsFromMysqlState,
   deletePtoBucketValuesMissingFromState as deleteMissingPtoBucketValuesFromMysqlState,
   deletePtoDayValuesMissingFromState as deleteMissingPtoDayValuesFromMysqlState,
+  deletePtoRowsWithoutData as deleteMysqlPtoRowsWithoutData,
   deletePtoRowsMissingFromState as deleteMissingPtoRowsFromMysqlState,
   insertPtoRowsIfMissing as insertMissingMysqlPtoRows,
+  prunePtoYearFromRows as pruneMysqlPtoYearFromRows,
   upsertPtoBucketRows as upsertMysqlPtoBucketRows,
   upsertPtoBucketValues as upsertMysqlPtoBucketValues,
   upsertPtoDayValues as upsertMysqlPtoDayValues,
@@ -42,8 +45,10 @@ const assertMysqlPtoMatchesExpectedUpdatedAt = assertFreshMysqlPtoMatchesExpecte
 const deletePtoBucketRowsMissingFromState = deleteMissingPtoBucketRowsFromMysqlState;
 const deletePtoBucketValuesMissingFromState = deleteMissingPtoBucketValuesFromMysqlState;
 const deletePtoDayValuesMissingFromState = deleteMissingPtoDayValuesFromMysqlState;
+const deletePtoRowsWithoutData = deleteMysqlPtoRowsWithoutData;
 const deletePtoRowsMissingFromState = deleteMissingPtoRowsFromMysqlState;
 const insertPtoRowsIfMissing = insertMissingMysqlPtoRows;
+const prunePtoYearFromRows = pruneMysqlPtoYearFromRows;
 const upsertPtoBucketRows = upsertMysqlPtoBucketRows;
 const upsertPtoBucketValues = upsertMysqlPtoBucketValues;
 const upsertPtoDayValues = upsertMysqlPtoDayValues;
@@ -131,6 +136,16 @@ export async function savePtoStateToMysql(
     await deletePtoDayValuesMissingFromState("plan", planRows, execute, { yearScope: options.yearScope });
     await deletePtoDayValuesMissingFromState("oper", operRows, execute, { yearScope: options.yearScope });
     await deletePtoDayValuesMissingFromState("survey", surveyRows, execute, { yearScope: options.yearScope });
+    if (options.yearScope) {
+      await prunePtoYearFromRows(options.yearScope, execute, {
+        excludeRowIdsByTable: {
+          plan: ptoPlanRowIds(planRows),
+          oper: ptoPlanRowIds(operRows),
+          survey: ptoPlanRowIds(surveyRows),
+        },
+      });
+      await deletePtoRowsWithoutData(execute);
+    }
     if (!isYearScopedSave) {
       await deletePtoRowsMissingFromState("plan", planRows, execute);
       await deletePtoRowsMissingFromState("oper", operRows, execute);
@@ -246,6 +261,8 @@ export async function deletePtoYearFromMysql(year: string, options: PtoInlineWri
       "DELETE FROM pto_day_values WHERE work_date >= ? AND work_date <= ?",
       [start, end],
     );
+    await prunePtoYearFromRows(year, execute);
+    await deletePtoRowsWithoutData(execute);
   });
 }
 

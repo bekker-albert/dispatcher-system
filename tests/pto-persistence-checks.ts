@@ -48,6 +48,7 @@ import * as persistenceState from "../lib/domain/pto/persistence-state";
 import * as persistenceValues from "../lib/domain/pto/persistence-values";
 import {
   loadPtoStateFromMysqlForYear,
+  deletePtoYearFromMysql,
   savePtoDayValueWithRowToMysql,
   savePtoDayValuesWithRowToMysql,
   savePtoStateToMysql,
@@ -80,9 +81,15 @@ assert.match(mysqlFullSaveSource, /assertMysqlPtoMatchesExpectedUpdatedAt\(state
 assert.match(mysqlFullSaveSource, /upsertPtoRows\(rowRecords,\s*execute\)/);
 assert.match(mysqlFullSaveSource, /deletePtoDayValuesMissingFromState\("plan",\s*planRows,\s*execute,\s*\{ yearScope: options\.yearScope \}\)/);
 assert.match(mysqlFullSaveSource, /const isYearScopedSave = Boolean\(options\.yearScope\)/);
+assert.match(mysqlFullSaveSource, /if \(options\.yearScope\) \{[\s\S]*prunePtoYearFromRows\(options\.yearScope,\s*execute,\s*\{[\s\S]*excludeRowIdsByTable:[\s\S]*ptoPlanRowIds\)\(planRows\)[\s\S]*ptoPlanRowIds\)\(operRows\)[\s\S]*ptoPlanRowIds\)\(surveyRows\)[\s\S]*\}\);[\s\S]*deletePtoRowsWithoutData\(execute\);[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /if \(!isYearScopedSave\) \{[\s\S]*deletePtoRowsMissingFromState\("plan",\s*planRows,\s*execute\)[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /if \(!isYearScopedSave\) \{[\s\S]*deletePtoBucketValuesMissingFromState\(bucketValueRecords,\s*execute\)[\s\S]*deletePtoBucketRowsMissingFromState\(bucketRowRecords,\s*execute\)[\s\S]*\}/);
 assert.match(mysqlFullSaveSource, /deletePtoBucketRowsMissingFromState\(bucketRowRecords,\s*execute\)/);
+
+const mysqlDeleteYearSource = deletePtoYearFromMysql.toString();
+assert.match(mysqlDeleteYearSource, /DELETE FROM pto_day_values WHERE work_date >= \? AND work_date <= \?/);
+assert.match(mysqlDeleteYearSource, /prunePtoYearFromRows\(year,\s*execute\)/);
+assert.match(mysqlDeleteYearSource, /deletePtoRowsWithoutData\(execute\)/);
 
 const mysqlDayWithRowSaveSource = savePtoDayValueWithRowToMysql.toString();
 assert.match(mysqlDayWithRowSaveSource, /writePtoTransaction/);
