@@ -15,6 +15,10 @@ import { stringifyJson } from "./json";
 import { dbExecute, type DbExecutor } from "./pool";
 
 const batchSize = 250;
+const ptoRowInsertColumns = `
+        table_type, row_id, area, location, structure, customer_code, unit, status,
+        carryover, carryovers, carryover_manual_years, years, sort_index
+      `;
 
 type DeletePtoDayValuesOptions = {
   yearScope?: string | null;
@@ -51,13 +55,10 @@ function ptoDayValueDateGroups(rows: PtoPlanRow[]) {
   return Array.from(groups.values());
 }
 
-export async function upsertPtoRows(records: PtoPersistenceRowRecord[], execute: DbExecutor = dbExecute) {
-  if (!records.length) return;
-
-  for (let index = 0; index < records.length; index += batchSize) {
-    const batch = records.slice(index, index + batchSize);
-    const placeholders = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
-    const values = batch.flatMap((record) => [
+function ptoRowBatchValues(records: PtoPersistenceRowRecord[]) {
+  return {
+    placeholders: records.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", "),
+    values: records.flatMap((record) => [
       record.table_type,
       record.row_id,
       record.area,
@@ -71,13 +72,18 @@ export async function upsertPtoRows(records: PtoPersistenceRowRecord[], execute:
       stringifyJson(record.carryover_manual_years),
       stringifyJson(record.years),
       record.sort_index,
-    ]);
+    ]),
+  };
+}
+
+export async function upsertPtoRows(records: PtoPersistenceRowRecord[], execute: DbExecutor = dbExecute) {
+  if (!records.length) return;
+
+  for (const batch of chunkValues(records)) {
+    const { placeholders, values } = ptoRowBatchValues(batch);
 
     await execute(
-      `INSERT INTO pto_rows (
-        table_type, row_id, area, location, structure, customer_code, unit, status,
-        carryover, carryovers, carryover_manual_years, years, sort_index
-      ) VALUES ${placeholders}
+      `INSERT INTO pto_rows (${ptoRowInsertColumns}) VALUES ${placeholders}
       ON DUPLICATE KEY UPDATE
         area = VALUES(area),
         location = VALUES(location),
@@ -99,30 +105,11 @@ export async function upsertPtoRows(records: PtoPersistenceRowRecord[], execute:
 export async function insertPtoRowsIfMissing(records: PtoPersistenceRowRecord[], execute: DbExecutor = dbExecute) {
   if (!records.length) return;
 
-  for (let index = 0; index < records.length; index += batchSize) {
-    const batch = records.slice(index, index + batchSize);
-    const placeholders = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
-    const values = batch.flatMap((record) => [
-      record.table_type,
-      record.row_id,
-      record.area,
-      record.location,
-      record.structure,
-      record.customer_code,
-      record.unit,
-      record.status,
-      record.carryover,
-      stringifyJson(record.carryovers),
-      stringifyJson(record.carryover_manual_years),
-      stringifyJson(record.years),
-      record.sort_index,
-    ]);
+  for (const batch of chunkValues(records)) {
+    const { placeholders, values } = ptoRowBatchValues(batch);
 
     await execute(
-      `INSERT IGNORE INTO pto_rows (
-        table_type, row_id, area, location, structure, customer_code, unit, status,
-        carryover, carryovers, carryover_manual_years, years, sort_index
-      ) VALUES ${placeholders}`,
+      `INSERT IGNORE INTO pto_rows (${ptoRowInsertColumns}) VALUES ${placeholders}`,
       values,
     );
   }
