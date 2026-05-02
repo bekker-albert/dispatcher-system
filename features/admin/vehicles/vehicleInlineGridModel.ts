@@ -6,10 +6,6 @@ import {
   type VehicleInlineField,
 } from "../../../lib/domain/vehicles/grid";
 import type { VehicleRow } from "../../../lib/domain/vehicles/types";
-import {
-  editableGridKeyAtOffset,
-  editableGridRangeKeys,
-} from "../../../shared/editable-grid/selection";
 
 export type VehicleCell = {
   id: number;
@@ -26,12 +22,38 @@ export function createVehicleGridKeys(rows: VehicleRow[]) {
   ));
 }
 
+function vehicleCellPosition(rows: VehicleRow[], cell: VehicleCell) {
+  const rowIndex = rows.findIndex((vehicle) => vehicle.id === cell.id);
+  const columnIndex = vehicleInlineFields.indexOf(cell.field);
+
+  return rowIndex >= 0 && columnIndex >= 0
+    ? { rowIndex, columnIndex }
+    : null;
+}
+
 export function vehicleCellRangeKeys(rows: VehicleRow[], anchor: VehicleCell, target: VehicleCell) {
-  return editableGridRangeKeys(
-    createVehicleGridKeys(rows),
-    vehicleCellKey(anchor),
-    vehicleCellKey(target),
-  );
+  const anchorPosition = vehicleCellPosition(rows, anchor);
+  const targetPosition = vehicleCellPosition(rows, target);
+
+  if (!anchorPosition || !targetPosition) return [vehicleCellKey(target)];
+
+  const rowStart = Math.min(anchorPosition.rowIndex, targetPosition.rowIndex);
+  const rowEnd = Math.max(anchorPosition.rowIndex, targetPosition.rowIndex);
+  const columnStart = Math.min(anchorPosition.columnIndex, targetPosition.columnIndex);
+  const columnEnd = Math.max(anchorPosition.columnIndex, targetPosition.columnIndex);
+  const keys: string[] = [];
+
+  for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
+    const row = rows[rowIndex];
+    if (!row) continue;
+
+    for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex += 1) {
+      const field = vehicleInlineFields[columnIndex];
+      if (field) keys.push(vehicleInlineFieldDomKey(row.id, field));
+    }
+  }
+
+  return keys;
 }
 
 export function resolveVehicleCellByOffset(
@@ -40,16 +62,15 @@ export function resolveVehicleCellByOffset(
   rowOffset: number,
   fieldOffset: number,
 ) {
-  const nextKey = editableGridKeyAtOffset(
-    createVehicleGridKeys(rows),
-    vehicleCellKey(activeCell),
-    rowOffset,
-    fieldOffset,
-  );
-  if (!nextKey) return null;
+  const position = vehicleCellPosition(rows, activeCell);
+  if (!position || rows.length === 0) return null;
 
-  const parsedCell = parseVehicleInlineFieldDomKey(nextKey);
-  return parsedCell ? { id: parsedCell.vehicleId, field: parsedCell.field } : null;
+  const nextRowIndex = Math.min(rows.length - 1, Math.max(0, position.rowIndex + rowOffset));
+  const nextColumnIndex = Math.min(vehicleInlineFields.length - 1, Math.max(0, position.columnIndex + fieldOffset));
+  const nextRow = rows[nextRowIndex];
+  const nextField = vehicleInlineFields[nextColumnIndex];
+
+  return nextRow && nextField ? { id: nextRow.id, field: nextField } : null;
 }
 
 export function collectSelectedVehicleFieldsById(targetKeys: string[]) {

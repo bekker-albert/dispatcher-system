@@ -28,6 +28,7 @@ import { adminStorageKeys } from "../lib/storage/keys";
 const testDir = dirname(fileURLToPath(import.meta.url));
 const adminVehiclesTableSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehiclesTable.tsx"), "utf8");
 const adminVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleFilterMenu.tsx"), "utf8");
+const vehicleInlineGridModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/vehicleInlineGridModel.ts"), "utf8");
 
 const rows = [
   { id: 1 },
@@ -86,6 +87,9 @@ assert.deepEqual(resolveVehicleCellByOffset(rows, { id: 1, field: "owner" }, 10,
 });
 assert.equal(resolveVehicleCellByOffset(rows, { id: 404, field: "brand" }, 1, 0), null);
 assert.equal(resolveVehicleCellByOffset([], { id: 1, field: "brand" }, 1, 0), null);
+assert.doesNotMatch(vehicleInlineGridModelSource, /editableGridRangeKeys/);
+assert.doesNotMatch(vehicleInlineGridModelSource, /editableGridKeyAtOffset/);
+assert.match(vehicleInlineGridModelSource, /function vehicleCellPosition/);
 
 const fieldsById = collectSelectedVehicleFieldsById(["1:brand", "1:model", "2:vin", "bad", "2:vin", "NaN:brand"]);
 assert.deepEqual(Array.from(fieldsById.get(1) ?? []), ["brand", "model"]);
