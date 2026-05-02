@@ -62,7 +62,7 @@ export function useAppPtoControllers({
     deferredVehicleRows,
     isPtoDateTab,
     isPtoBucketsSection,
-    allPtoDateRows,
+    ptoBucketRowLookupSources,
     ptoYearTabs,
   } = models;
 
@@ -117,7 +117,7 @@ export function useAppPtoControllers({
 
   const ptoSupplementalTables = useAppPtoSupplementalTables({
     isPtoBucketsSection,
-    allPtoDateRows,
+    ptoBucketRowLookupSources,
     deferredVehicleRows,
     ptoTab,
     ptoPlanYear,

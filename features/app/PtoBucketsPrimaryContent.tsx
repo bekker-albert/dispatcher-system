@@ -29,7 +29,7 @@ export function PtoBucketsPrimaryContent({
 }: PtoBucketsPrimaryContentProps) {
   const ptoSupplementalTables = useAppPtoSupplementalTables({
     isPtoBucketsSection: true,
-    allPtoDateRows: models.allPtoDateRows,
+    ptoBucketRowLookupSources: models.ptoBucketRowLookupSources,
     deferredVehicleRows: models.deferredVehicleRows,
     ptoTab: appState.ptoTab,
     ptoPlanYear: appState.ptoPlanYear,

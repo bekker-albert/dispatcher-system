@@ -1,5 +1,6 @@
 import type { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { PtoBucketRowLookupSource } from "@/features/pto/ptoDateLookupModel";
 
 export function createEmptyPtoDateModel(ptoPlanYear: string): ReturnType<typeof useAppPtoDateModel> {
   return {
@@ -7,7 +8,7 @@ export function createEmptyPtoDateModel(ptoPlanYear: string): ReturnType<typeof 
     isPtoDateTab: false,
     isPtoBucketsSection: false,
     activePtoDateRows: [] as PtoPlanRow[],
-    allPtoDateRows: [] as PtoPlanRow[],
+    ptoBucketRowLookupSources: [] as PtoBucketRowLookupSource[],
     ptoYearTabs: [ptoPlanYear],
     ptoYearMonths: [],
     ptoMonthGroups: [],

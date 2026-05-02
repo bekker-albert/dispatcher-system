@@ -22,6 +22,13 @@ type LookupSourceBundle<T> = {
   signature: string;
 };
 
+type PtoAreaAndBucketRowLookupSourceBundle = {
+  areaSources: PtoAreaLookupSource[];
+  areaSignature: string;
+  bucketRowSources: PtoBucketRowLookupSource[];
+  bucketRowSignature: string;
+};
+
 function validYearFromDateKey(date: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.slice(0, 4) : "";
 }
@@ -82,6 +89,32 @@ export function createPtoAreaLookupSourceBundle(rows: readonly PtoPlanRow[]): Lo
   return {
     sources,
     signature: sources.map((source) => source.area).join("\u001e"),
+  };
+}
+
+export function createPtoAreaAndBucketRowLookupSourceBundle(
+  rowGroups: readonly (readonly PtoPlanRow[])[],
+): PtoAreaAndBucketRowLookupSourceBundle {
+  const areaSources: PtoAreaLookupSource[] = [];
+  const areaSignatureParts: string[] = [];
+  const bucketRowSources: PtoBucketRowLookupSource[] = [];
+  const bucketRowSignatureParts: string[] = [];
+
+  rowGroups.forEach((rows) => {
+    rows.forEach((row) => {
+      areaSources.push({ area: row.area });
+      areaSignatureParts.push(row.area);
+
+      bucketRowSources.push({ area: row.area, structure: row.structure });
+      bucketRowSignatureParts.push([row.area, row.structure].join("\u001f"));
+    });
+  });
+
+  return {
+    areaSources,
+    areaSignature: areaSignatureParts.join("\u001e"),
+    bucketRowSources,
+    bucketRowSignature: bucketRowSignatureParts.join("\u001e"),
   };
 }
 

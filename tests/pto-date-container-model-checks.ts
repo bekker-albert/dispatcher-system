@@ -8,6 +8,7 @@ import type { createPtoDateReadonlyProps } from "../features/pto/ptoDateReadonly
 import type { createPtoDateFormulaBarProps } from "../features/pto/ptoDateFormulaBarModel";
 import type { createPtoDateEditableRowModel } from "../features/pto/PtoDateEditableRowModel";
 import {
+  createPtoAreaAndBucketRowLookupSourceBundle,
   createPtoBucketRowLookupSources,
   createPtoDateLookupSources,
   ptoBucketRowLookupSourcesSignature,
@@ -101,6 +102,9 @@ assert.notEqual(
   ptoBucketRowLookupSourcesSignature(createPtoBucketRowLookupSources(lookupBaseRows)),
   ptoBucketRowLookupSourcesSignature(createPtoBucketRowLookupSources(lookupChangedStructureRows)),
 );
+const combinedLookupBundle = createPtoAreaAndBucketRowLookupSourceBundle([lookupBaseRows, lookupChangedStructureRows]);
+assert.deepEqual(combinedLookupBundle.areaSources.map((source) => source.area), [lookupBaseRows[0].area, lookupChangedStructureRows[0].area]);
+assert.deepEqual(combinedLookupBundle.bucketRowSources.map((source) => source.structure), [lookupBaseRows[0].structure, lookupChangedStructureRows[0].structure]);
 
 assert.match(ptoDateTableModelSource, /const rowsByYearAndSignature = new Map<string, Map<string, PtoPlanRow\[]>>\(\);/);
 assert.match(ptoDateTableModelSource, /const indexedRowsForYear = \(targetYear: string\) => \{/);

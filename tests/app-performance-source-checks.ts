@@ -33,7 +33,7 @@ assert.equal(emptyPtoDateModel.isPtoDateTab, false);
 assert.equal(emptyPtoDateModel.isPtoBucketsSection, false);
 assert.deepEqual(emptyPtoDateModel.ptoYearTabs, ["2026"]);
 assert.deepEqual(emptyPtoDateModel.activePtoDateRows, []);
-assert.deepEqual(emptyPtoDateModel.allPtoDateRows, []);
+assert.deepEqual(emptyPtoDateModel.ptoBucketRowLookupSources, []);
 
 assert.match(guardedSelectTopTabSource, /flushPtoDatabasePendingSave\(\)/);
 assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\)/);
@@ -82,6 +82,7 @@ assert.doesNotMatch(sharedNavigationSource, /style=\{\{[\s\S]*headerSubtabButton
 assert.match(ptoPrimaryContentSource, /createEmptyPtoDateModel\(appState\.ptoPlanYear\)/);
 assert.match(ptoPrimaryContentSource, /function PtoDataPrimaryContent/);
 assert.match(ptoPrimaryContentSource, /if \(!isPtoDateTab && !isPtoBucketsSection\)/);
+assert.doesNotMatch(ptoPrimaryContentSource, /allPtoDateRows/);
 assert.match(navigationSelectionHandlersSource, /const selectTopTab = useCallback\(\(tab: TopTab\) => \{\s*startTransition\(\(\) => \{\s*setTopTab\(tab\);\s*\}\);/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridRangeKeys/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridKeyAtOffset/);

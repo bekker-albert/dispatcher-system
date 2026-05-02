@@ -9,13 +9,14 @@ import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import type { PtoBucketRowLookupSource } from "@/features/pto/ptoDateLookupModel";
 
 type AddAdminLog = (entry: AdminLogInput) => void;
 type PtoRowsSetter = Dispatch<SetStateAction<PtoPlanRow[]>>;
 
 type UseAppPtoSupplementalTablesOptions = {
   isPtoBucketsSection: boolean;
-  allPtoDateRows: PtoPlanRow[];
+  ptoBucketRowLookupSources: PtoBucketRowLookupSource[];
   deferredVehicleRows: VehicleRow[];
   ptoTab: string;
   ptoPlanYear: string;
@@ -42,7 +43,7 @@ type UseAppPtoSupplementalTablesOptions = {
 
 export function useAppPtoSupplementalTables({
   isPtoBucketsSection,
-  allPtoDateRows,
+  ptoBucketRowLookupSources,
   deferredVehicleRows,
   ptoTab,
   ptoPlanYear,
@@ -71,7 +72,7 @@ export function useAppPtoSupplementalTables({
     ptoBucketColumns,
   } = usePtoBucketsViewModel({
     active: isPtoBucketsSection,
-    allPtoDateRows,
+    bucketRowSources: ptoBucketRowLookupSources,
     manualRows: ptoBucketManualRows,
     areaFilter: ptoAreaFilter,
     vehicleRows: deferredVehicleRows,
