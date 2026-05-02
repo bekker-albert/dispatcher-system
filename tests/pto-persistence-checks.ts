@@ -436,4 +436,5 @@ assert.deepEqual(readPtoDatabaseSaveBaseline(ptoBaseline), {
 });
 assert.equal(readPtoDatabaseSaveBaseline(ptoSnapshot).snapshot, ptoSnapshot);
 assert.equal(ptoDatabaseSaveShouldSkip("auto", ptoSnapshot, ptoBaseline), true);
+assert.equal(ptoDatabaseSaveShouldSkip("manual", ptoSnapshot, ptoBaseline), true);
 assert.equal(ptoDatabaseStateChanged({ manualYears: ["2026"] } as never, ptoBaseline), false);

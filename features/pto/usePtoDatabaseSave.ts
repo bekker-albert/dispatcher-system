@@ -90,6 +90,7 @@ export function usePtoDatabaseSave({
     const stateToSave = ptoDatabaseStateRef.current;
     const snapshotToSave = serializePtoDatabaseState(stateToSave);
     if (ptoDatabaseSaveShouldSkip(mode, snapshotToSave, ptoDatabaseSaveSnapshotRef.current)) {
+      ptoDatabaseDirtyRef.current = false;
       setPtoDatabaseMessage(ptoDatabaseMessages.alreadySaved);
       return true;
     }
@@ -181,11 +182,6 @@ export function usePtoDatabaseSave({
     }
 
     if (!ptoDatabaseDirtyRef.current) {
-      return true;
-    }
-
-    if (!ptoDatabaseStateChanged(ptoDatabaseStateRef.current, ptoDatabaseSaveSnapshotRef.current)) {
-      ptoDatabaseDirtyRef.current = false;
       return true;
     }
 

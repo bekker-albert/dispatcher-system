@@ -153,6 +153,6 @@ export function ptoDatabaseStateChanged(state: DataPtoState, savedSnapshot: stri
   return serializePtoDatabaseState(state) !== readPtoDatabaseSaveBaseline(savedSnapshot).snapshot;
 }
 
-export function ptoDatabaseSaveShouldSkip(mode: PtoDatabaseSaveMode, snapshotToSave: string, savedSnapshot: string) {
-  return mode === "auto" && snapshotToSave === readPtoDatabaseSaveBaseline(savedSnapshot).snapshot;
+export function ptoDatabaseSaveShouldSkip(_mode: PtoDatabaseSaveMode, snapshotToSave: string, savedSnapshot: string) {
+  return snapshotToSave === readPtoDatabaseSaveBaseline(savedSnapshot).snapshot;
 }
