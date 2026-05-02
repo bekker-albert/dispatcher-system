@@ -32,6 +32,9 @@ const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/r
 const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
 const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
+const useAppReportsModelSource = readFileSync(resolve(testDir, "../features/app/useAppReportsModel.ts"), "utf8");
+const useAppAdminReportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/useAppAdminReportsPrimaryContent.tsx"), "utf8");
+const useAdminReportSettingsViewModelSource = readFileSync(resolve(testDir, "../features/reports/useAdminReportSettingsViewModel.ts"), "utf8");
 const useDispatchSummaryViewModelSource = readFileSync(resolve(testDir, "../features/dispatch/useDispatchSummaryViewModel.ts"), "utf8");
 const dispatchSectionSource = readFileSync(resolve(testDir, "../features/dispatch/DispatchSection.tsx"), "utf8");
 
@@ -62,6 +65,13 @@ assert.match(useReportRowsModelSource, /reasonIndex \?\?= createReportReasonInde
 assert.match(useReportRowsModelSource, /const derivedReportRowsCacheRef = useRef\(new Map<string, CachedDerivedReportRow>\(\)\);/);
 assert.match(useReportRowsModelSource, /previous\?\.base === derivedRow/);
 assert.match(useReportRowsModelSource, /return previous\.output;/);
+assert.match(useAppReportsModelSource, /needsAdminReportAutoRows: boolean;/);
+assert.match(useAppReportsModelSource, /const needsCalculatedReportRows = needsAutoReportRows \|\| needsAdminReportAutoRows;/);
+assert.match(useAppReportsModelSource, /needsReportIndexes: \(needsReportIndexes \|\| needsAdminReportAutoRows\) && needsReportData/);
+assert.match(useAppAdminReportsPrimaryContentSource, /const adminReportTabNeedsAutoRows = activeAdminReportSettingsTab === "display" \|\| activeAdminReportCustomer\.autoShowRows;/);
+assert.match(useAppAdminReportsPrimaryContentSource, /needsAutoReportRows: false,/);
+assert.match(useAdminReportSettingsViewModelSource, /needsAdminReportAutoRows: boolean;/);
+assert.match(useAdminReportSettingsViewModelSource, /needsAdminReportAutoRows\s*\?\s*new Map\(derivedReportRows\.map/);
 assert.match(useDispatchSummaryViewModelSource, /const normalizedDispatchSearch = useMemo\(\(\) => search\.trim\(\)\.toLowerCase\(\), \[search\]\);/);
 assert.match(useDispatchSummaryViewModelSource, /const vehicleSearchRecords = useMemo/);
 assert.match(useDispatchSummaryViewModelSource, /const dispatchVehicleSelectOptions = useMemo/);

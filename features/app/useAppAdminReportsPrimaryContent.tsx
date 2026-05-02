@@ -6,6 +6,8 @@ import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { AdminReportSettingsSection } from "@/features/app/lazySections";
+import { defaultReportCustomers } from "@/lib/domain/reports/defaults";
+import { reportCustomerUsesSummaryRows } from "@/lib/domain/reports/display";
 
 type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
 
@@ -47,11 +49,19 @@ export function AdminReportsPrimaryContent({
     reportHeaderLabels,
     reportColumnWidths,
   } = appState;
+  const activeAdminReportCustomer = reportCustomers.find((customer) => customer.id === adminReportCustomerId)
+    ?? reportCustomers[0]
+    ?? defaultReportCustomers[0];
+  const activeAdminReportSettingsTab = reportCustomerUsesSummaryRows(activeAdminReportCustomer) || adminReportCustomerSettingsTab !== "summary"
+    ? adminReportCustomerSettingsTab
+    : "display";
+  const adminReportTabNeedsAutoRows = activeAdminReportSettingsTab === "display" || activeAdminReportCustomer.autoShowRows;
 
   const reportsModel = useAppReportsModel({
     needsReportRows: true,
-    needsReportIndexes: true,
-    needsAutoReportRows: true,
+    needsReportIndexes: adminReportTabNeedsAutoRows,
+    needsAutoReportRows: false,
+    needsAdminReportAutoRows: adminReportTabNeedsAutoRows,
     needsAdminReportRows: true,
     needsDerivedReportRows: false,
     needsAreaShiftScheduleAreas: false,

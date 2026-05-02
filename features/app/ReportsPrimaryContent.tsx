@@ -41,6 +41,7 @@ export function ReportsPrimaryContent({
     needsReportRows: true,
     needsReportIndexes: true,
     needsAutoReportRows: true,
+    needsAdminReportAutoRows: false,
     needsAdminReportRows: false,
     needsDerivedReportRows: true,
     needsAreaShiftScheduleAreas: false,

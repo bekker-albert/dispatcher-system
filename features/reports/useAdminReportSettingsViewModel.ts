@@ -17,6 +17,7 @@ import { normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
 
 type UseAdminReportSettingsViewModelOptions = {
   needsAdminReportRows: boolean;
+  needsAdminReportAutoRows: boolean;
   reportCustomers: ReportCustomerConfig[];
   adminReportCustomerId: string;
   adminReportCustomerSettingsTab: AdminReportCustomerSettingsTab;
@@ -29,6 +30,7 @@ type UseAdminReportSettingsViewModelOptions = {
 
 export function useAdminReportSettingsViewModel({
   needsAdminReportRows,
+  needsAdminReportAutoRows,
   reportCustomers,
   adminReportCustomerId,
   adminReportCustomerSettingsTab,
@@ -49,19 +51,19 @@ export function useAdminReportSettingsViewModel({
   ), [needsAdminReportRows, reportAreaOrder, reportBaseRows, reportWorkOrder]);
 
   const derivedReportRowsByKey = useMemo(() => (
-    needsAdminReportRows
+    needsAdminReportAutoRows
       ? new Map(derivedReportRows.map((row) => [reportRowKey(row), row]))
       : new Map<string, ReportRow>()
-  ), [derivedReportRows, needsAdminReportRows]);
+  ), [derivedReportRows, needsAdminReportAutoRows]);
 
   const reportAutoRowKeysForCustomer = useCallback((customer: ReportCustomerConfig) => (
-    !needsAdminReportRows ? new Set<string>() :
+    !needsAdminReportAutoRows ? new Set<string>() :
     new Set(
       reportRowsForCustomer(derivedReportRows, customer)
         .filter(reportRowHasAutoShowData)
         .map(reportRowKey),
     )
-  ), [derivedReportRows, needsAdminReportRows]);
+  ), [derivedReportRows, needsAdminReportAutoRows]);
 
   const activeAdminReportBaseRows = useMemo(() => (
     needsAdminReportRows
@@ -74,8 +76,8 @@ export function useAdminReportSettingsViewModel({
   ), [activeAdminReportCustomer, adminReportBaseRows, needsAdminReportRows]);
 
   const activeAdminAutoReportRowKeys = useMemo(() => (
-    needsAdminReportRows ? reportAutoRowKeysForCustomer(activeAdminReportCustomer) : new Set<string>()
-  ), [activeAdminReportCustomer, needsAdminReportRows, reportAutoRowKeysForCustomer]);
+    needsAdminReportAutoRows ? reportAutoRowKeysForCustomer(activeAdminReportCustomer) : new Set<string>()
+  ), [activeAdminReportCustomer, needsAdminReportAutoRows, reportAutoRowKeysForCustomer]);
 
   const activeAdminReportVisibleRowKeys = useMemo(() => (
     needsAdminReportRows

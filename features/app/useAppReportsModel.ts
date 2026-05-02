@@ -18,6 +18,7 @@ type UseAppReportsModelOptions = {
   needsReportRows: boolean;
   needsReportIndexes: boolean;
   needsAutoReportRows: boolean;
+  needsAdminReportAutoRows: boolean;
   needsAdminReportRows: boolean;
   needsDerivedReportRows: boolean;
   needsAreaShiftScheduleAreas: boolean;
@@ -46,6 +47,7 @@ export function useAppReportsModel({
   needsReportRows,
   needsReportIndexes,
   needsAutoReportRows,
+  needsAdminReportAutoRows,
   needsAdminReportRows,
   needsDerivedReportRows,
   needsAreaShiftScheduleAreas,
@@ -72,14 +74,15 @@ export function useAppReportsModel({
   const needsVisibleReportRows = needsDerivedReportRows;
   const needsReportSettingsRows = needsAdminReportRows;
   const needsReportData = needsVisibleReportRows || needsReportSettingsRows;
+  const needsCalculatedReportRows = needsAutoReportRows || needsAdminReportAutoRows;
 
   const {
     reportBaseRows,
     derivedReportRows,
   } = useReportRowsModel({
     needsReportRows: needsReportRows && needsReportData,
-    needsReportIndexes: needsReportIndexes && needsReportData,
-    needsAutoReportRows: needsAutoReportRows && needsReportData,
+    needsReportIndexes: (needsReportIndexes || needsAdminReportAutoRows) && needsReportData,
+    needsAutoReportRows: needsCalculatedReportRows && needsReportData,
     deferredPtoPlanRows,
     deferredPtoSurveyRows,
     deferredPtoOperRows,
@@ -89,6 +92,7 @@ export function useAppReportsModel({
 
   const adminReportSettings = useAdminReportSettingsViewModel({
     needsAdminReportRows: needsReportSettingsRows,
+    needsAdminReportAutoRows,
     reportCustomers,
     adminReportCustomerId,
     adminReportCustomerSettingsTab,
