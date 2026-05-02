@@ -348,6 +348,11 @@ assert.deepEqual(ptoBucketRowToRecord({ key: "row", area: "Area", structure: "Wo
   source: "manual",
   sort_index: 4,
 });
+assert.deepEqual(ptoBucketRowsFromRecords([
+  { row_key: "manual:third", area: "Area", structure: "Third", source: "manual", sort_index: 3 },
+  { row_key: "manual:first", area: "Area", structure: "First", source: "manual", sort_index: 1 },
+  { row_key: "manual:second", area: "Area", structure: "Second", source: "manual", sort_index: 2 },
+]).map((row) => row.key), ["manual:first", "manual:second", "manual:third"]);
 assert.deepEqual(ptoBucketValueToRecord("plan:row-1::equipment", 9), {
   row_key: "plan:row-1",
   equipment_key: "equipment",

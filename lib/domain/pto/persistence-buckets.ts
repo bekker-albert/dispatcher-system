@@ -48,11 +48,22 @@ export function ptoBucketValuesFromRecords(records: PtoPersistenceBucketValueRec
   );
 }
 
+function ptoBucketRowRecordSortIndex(record: PtoPersistenceBucketRowRecord, fallbackIndex: number) {
+  const sortIndex = Number(record.sort_index);
+  return Number.isFinite(sortIndex) ? sortIndex : fallbackIndex;
+}
+
 export function ptoBucketRowsFromRecords(records: PtoPersistenceBucketRowRecord[]): PtoBucketRow[] {
-  return records.map((record) => ({
-    key: record.row_key,
-    area: record.area ?? "",
-    structure: record.structure ?? "",
-    source: record.source === "auto" ? "auto" : "manual",
-  }));
+  return records
+    .map((record, index) => ({ index, record }))
+    .sort((a, b) => (
+      ptoBucketRowRecordSortIndex(a.record, a.index) - ptoBucketRowRecordSortIndex(b.record, b.index)
+      || a.index - b.index
+    ))
+    .map(({ record }) => ({
+      key: record.row_key,
+      area: record.area ?? "",
+      structure: record.structure ?? "",
+      source: record.source === "auto" ? "auto" : "manual",
+    }));
 }
