@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import * as reportDisplay from "../lib/domain/reports/display";
 import { buildReportPtoIndex, normalizeReportRow } from "../lib/domain/reports/calculation";
+import { defaultReportCustomers } from "../lib/domain/reports/defaults";
 import { deriveReportRowFromPtoIndex } from "../lib/domain/reports/pto-facts";
 import { buildReportPtoIndex as buildReportPtoIndexDirect } from "../lib/domain/reports/pto-index";
 import { normalizeReportRow as normalizeReportRowDirect } from "../lib/domain/reports/row-normalization";
@@ -8,6 +9,7 @@ import { reportColumnKeys } from "../lib/domain/reports/columns";
 import { createReportBaseRows } from "../lib/domain/reports/rows-model";
 import { reportReasonEntryKey, reportYearReasonOverrideKey } from "../lib/domain/reports/reasons";
 import { createReportBodyLayout, createReportPrintLayout } from "../features/reports/reportPrintLayout";
+import { createCustomerReportRows, createReportAreaGroups, createReportAreaTabs, filterReportAreaGroups, flattenReportAreaGroups } from "../features/reports/customerReportRowsModel";
 import { createReportColumnTextModel } from "../features/reports/reportColumnTextModel";
 import { createReportRowDisplayViewModel } from "../features/reports/reportRowDisplayViewModel";
 import { normalizePtoPlanRow } from "../lib/domain/pto/date-table";
@@ -73,6 +75,16 @@ assert.equal(reportColumnTextModel.valuesByKey["day-productivity"]?.[0], "8\n80%
 const summary = reportDisplay.createReportSummaryRow({ id: "sum-1", label: "Итого", unit: "м3", area: "Аксу", rowKeys: [] }, [reportRow]);
 assert.equal(summary?.displayKey, "summary:sum-1");
 assert.equal(summary?.dayPlan, 10);
+const reportAreaGroups = createReportAreaGroups([
+  reportRow,
+  normalizeReportRow({ area: "Аксу", name: "Вторая работа", unit: "м3" }),
+  normalizeReportRow({ area: "Бозшаколь", name: "Третья работа", unit: "м3" }),
+]);
+assert.deepEqual(reportAreaGroups.map((group) => group.area), ["Аксу", "Бозшаколь"]);
+assert.deepEqual(createReportAreaTabs(reportAreaGroups, ["Бозшаколь", "Аксу"], true), ["Все участки", "Бозшаколь", "Аксу"]);
+assert.equal(filterReportAreaGroups(reportAreaGroups, "Аксу", true).length, 1);
+assert.equal(flattenReportAreaGroups(reportAreaGroups).length, 3);
+assert.equal(createCustomerReportRows([reportRow], { ...defaultReportCustomers[0], rowLabels: { [reportDisplay.reportRowKey(reportRow)]: "Название заказчика" } }, true)[0].name, "Название заказчика");
 
 const orderedReportRows = reportDisplay.sortReportRowsByAreaOrder([
   normalizeReportRow({ area: "Аксу", name: "Вторая работа", unit: "м3" }),

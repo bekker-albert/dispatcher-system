@@ -41,6 +41,8 @@ const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports
 const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
 const reportPrintLayoutSource = readFileSync(resolve(testDir, "../features/reports/reportPrintLayout.ts"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
+const useCustomerReportViewModelSource = readFileSync(resolve(testDir, "../features/reports/useCustomerReportViewModel.ts"), "utf8");
+const customerReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/customerReportRowsModel.ts"), "utf8");
 const useAppReportsModelSource = readFileSync(resolve(testDir, "../features/app/useAppReportsModel.ts"), "utf8");
 const useAppAdminReportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/useAppAdminReportsPrimaryContent.tsx"), "utf8");
 const useAdminReportSettingsViewModelSource = readFileSync(resolve(testDir, "../features/reports/useAdminReportSettingsViewModel.ts"), "utf8");
@@ -97,6 +99,11 @@ assert.match(reportColumnTextModelSource, /createEmptyReportColumnValueLists\(co
 assert.match(reportColumnTextModelSource, /valuesByKey\[key\]\?\.push\(reportColumnTextValue\(row, key, facts\)\)/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows\.map\(\(row\) => row\[key\]\)/);
+assert.match(useCustomerReportViewModelSource, /createCustomerReportRows\(derivedReportRows, activeReportCustomer, needsDerivedReportRows\)/);
+assert.match(useCustomerReportViewModelSource, /flattenReportAreaGroups\(filteredReportAreaGroups\)/);
+assert.doesNotMatch(useCustomerReportViewModelSource, /flatMap/);
+assert.match(customerReportRowsModelSource, /function addSummarySourceRowKeys/);
+assert.match(customerReportRowsModelSource, /summaryRows\.forEach\(\(summary\) => addSummarySourceRowKeys/);
 assert.match(reportTableBodySource, /const bodyGroups = useMemo/);
 assert.match(reportTableBodySource, /rowKey=\{rowDescriptor\.rowKey\}/);
 assert.doesNotMatch(reportTableBodySource, /const rowKey = reportRowDisplayKey\(row\);\s*const dayReasonText/);
