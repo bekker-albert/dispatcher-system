@@ -1,9 +1,12 @@
 import { Fragment, type CSSProperties } from "react";
-import { Check, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { IconButton } from "@/shared/ui/buttons";
 import { CompactTd, CompactTh, Field } from "@/shared/ui/layout";
 import type { DependencyNode } from "@/lib/domain/admin/structure";
+
+import { AdminStructureRowActions } from "./AdminStructureRowActions";
+import { addFormStyle, detailCellStyle, inlineEditStyle, inputStyle } from "./AdminStructureSharedStyles";
 
 type AdminStructureElementsProps = {
   dependencyNodes: DependencyNode[];
@@ -55,27 +58,22 @@ export function AdminStructureElements({
                     <CompactTd>
                       <div style={primaryTextStyle}>{node.name || "Без названия"}</div>
                     </CompactTd>
-                    <CompactTd>{node.kind || "—"}</CompactTd>
-                    <CompactTd>{node.owner || "—"}</CompactTd>
+                    <CompactTd>{node.kind || "-"}</CompactTd>
+                    <CompactTd>{node.owner || "-"}</CompactTd>
                     <CompactTd>{node.visible ? "Показывается" : "Скрыт"}</CompactTd>
                     <CompactTd>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <IconButton
-                          label={isEditing ? "Завершить редактирование" : "Редактировать элемент"}
-                          onClick={() => onEditDependencyNode(isEditing ? null : node.id)}
-                        >
-                          {isEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-                        </IconButton>
-                        <IconButton
-                          label={node.visible ? "Скрыть элемент" : "Вернуть элемент"}
-                          onClick={() => onUpdateDependencyNode(node.id, "visible", !node.visible)}
-                        >
-                          {node.visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-                        </IconButton>
-                        <IconButton label="Удалить элемент" onClick={() => onDeleteDependencyNode(node.id)}>
-                          <Trash2 size={16} aria-hidden />
-                        </IconButton>
-                      </div>
+                      <AdminStructureRowActions
+                        deleteLabel="Удалить элемент"
+                        editLabel="Редактировать элемент"
+                        finishEditLabel="Завершить редактирование"
+                        hiddenIconLabel="Вернуть элемент"
+                        isEditing={isEditing}
+                        visible={node.visible}
+                        visibleIconLabel="Скрыть элемент"
+                        onDelete={() => onDeleteDependencyNode(node.id)}
+                        onToggleEdit={() => onEditDependencyNode(isEditing ? null : node.id)}
+                        onToggleVisible={() => onUpdateDependencyNode(node.id, "visible", !node.visible)}
+                      />
                     </CompactTd>
                   </tr>
                   {isEditing && (
@@ -168,35 +166,4 @@ const tableStyle: CSSProperties = {
 const primaryTextStyle: CSSProperties = {
   fontWeight: 700,
   color: "#0f172a",
-};
-
-const detailCellStyle: CSSProperties = {
-  padding: 10,
-  background: "#f8fafc",
-  borderBottom: "1px solid #e2e8f0",
-};
-
-const inlineEditStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: 10,
-  alignItems: "end",
-};
-
-const addFormStyle: CSSProperties = {
-  marginTop: 14,
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr)) auto",
-  gap: 10,
-  alignItems: "end",
-};
-
-const inputStyle: CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  outline: "none",
-  fontSize: 14,
-  background: "#ffffff",
 };
