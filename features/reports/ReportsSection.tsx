@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import type { ReportColumnKey } from "@/lib/domain/reports/columns";
 import type { ReportCompletionCard } from "@/lib/domain/reports/completion";
 import { formatReportTitleDate } from "@/lib/domain/reports/display";
@@ -10,7 +11,7 @@ import { ReportAreaToolbar } from "./ReportAreaToolbar";
 import { ReportCompletionCards } from "./ReportCompletionCards";
 import { ReportTableBody } from "./ReportTableBody";
 import { ReportTableHeader } from "./ReportTableHeader";
-import { createReportPrintLayout } from "./reportPrintLayout";
+import { createReportBodyLayout, createReportPrintLayout } from "./reportPrintLayout";
 import {
   reportPanelStyle,
   reportPrintFirstTitleStyle,
@@ -65,22 +66,57 @@ export default function ReportsSection({
   onCommitReportYearReason,
   onCancelReportYearReasonDraft,
 }: ReportsSectionProps) {
-  const reportPrintLayout = useMemo(() => createReportPrintLayout({
+  const reportPrintLayoutToken = useMemo(() => ({
+    filteredReportAreaGroups,
+    reportColumnKeys,
+    reportDate,
+    reportHeaderLabel,
+    reportReasons,
+  }), [filteredReportAreaGroups, reportColumnKeys, reportDate, reportReasons, reportHeaderLabel]);
+  const [preparedReportPrintState, setPreparedReportPrintState] = useState<{
+    layout: ReturnType<typeof createReportPrintLayout>;
+    token: object;
+  } | null>(null);
+  const reportBodyLayout = useMemo(() => createReportBodyLayout(filteredReportAreaGroups), [filteredReportAreaGroups]);
+  const buildReportPrintLayout = useCallback(() => createReportPrintLayout({
     columnKeys: reportColumnKeys,
     groups: filteredReportAreaGroups,
     reportDate,
     reportReasons,
     reportHeaderLabel,
   }), [filteredReportAreaGroups, reportColumnKeys, reportDate, reportReasons, reportHeaderLabel]);
+  const handlePrintReport = useCallback(() => {
+    flushSync(() => setPreparedReportPrintState({
+      layout: buildReportPrintLayout(),
+      token: reportPrintLayoutToken,
+    }));
+    window.requestAnimationFrame(onPrintReport);
+  }, [buildReportPrintLayout, onPrintReport, reportPrintLayoutToken]);
+  const preparedReportPrintLayout = preparedReportPrintState?.token === reportPrintLayoutToken
+    ? preparedReportPrintState.layout
+    : null;
+
   const {
     reportBodyRowCount,
     reportGroupStartIndexes,
+  } = reportBodyLayout;
+  const {
     reportLastPrintPageRows,
     reportPrintColumnWidths,
     reportPrintFillPaddingMm,
     reportPrintTextColumnWidths,
     reportShouldFillPrintRows,
-  } = reportPrintLayout;
+  } = preparedReportPrintLayout ?? {
+    reportLastPrintPageRows: 0,
+    reportPrintColumnWidths: null,
+    reportPrintFillPaddingMm: 0,
+    reportPrintTextColumnWidths: {
+      "work-name": reportColumnWidthByKey.get("work-name") ?? 180,
+      "day-reason": reportColumnWidthByKey.get("day-reason") ?? 175,
+      "year-reason": reportColumnWidthByKey.get("year-reason") ?? 190,
+    },
+    reportShouldFillPrintRows: false,
+  };
   const reportTableInlineStyle = useMemo(() => ({
     ...reportTableStyle,
     minWidth: 0,
@@ -99,7 +135,7 @@ export default function ReportsSection({
   const reportColumnStyles = useMemo(
     () => reportColumnKeys.map((key, index) => ({
       width: `${reportTableColumnWidths[index]}px`,
-      "--report-print-column-width": `${reportPrintColumnWidths[key]}px`,
+      "--report-print-column-width": `${reportPrintColumnWidths?.[key] ?? reportTableColumnWidths[index]}px`,
     } as CSSProperties)),
     [reportColumnKeys, reportPrintColumnWidths, reportTableColumnWidths],
   );
@@ -110,7 +146,7 @@ export default function ReportsSection({
         reportAreaTabs={reportAreaTabs}
         reportArea={reportArea}
         onSelectReportArea={onSelectReportArea}
-        onPrintReport={onPrintReport}
+        onPrintReport={handlePrintReport}
       />
 
       <div className="report-print-area" style={reportWorkspaceStyle}>

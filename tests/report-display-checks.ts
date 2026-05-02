@@ -6,7 +6,7 @@ import { buildReportPtoIndex as buildReportPtoIndexDirect } from "../lib/domain/
 import { normalizeReportRow as normalizeReportRowDirect } from "../lib/domain/reports/row-normalization";
 import { reportColumnKeys } from "../lib/domain/reports/columns";
 import { reportReasonEntryKey, reportYearReasonOverrideKey } from "../lib/domain/reports/reasons";
-import { createReportPrintLayout } from "../features/reports/reportPrintLayout";
+import { createReportBodyLayout, createReportPrintLayout } from "../features/reports/reportPrintLayout";
 import { createReportRowDisplayViewModel } from "../features/reports/reportRowDisplayViewModel";
 import type { ReportRow } from "../lib/domain/reports/types";
 
@@ -173,6 +173,12 @@ const printLayout = createReportPrintLayout({
   reportHeaderLabel: (_key, fallback) => fallback,
 });
 
+const bodyLayout = createReportBodyLayout([
+  { rows: Array.from({ length: 2 }, (_, index) => createPrintRow(index)) },
+  { rows: Array.from({ length: 3 }, (_, index) => createPrintRow(index + 2)) },
+]);
+assert.deepEqual(bodyLayout.reportGroupStartIndexes, [0, 2]);
+assert.equal(bodyLayout.reportBodyRowCount, 5);
 assert.equal(printLayout.reportBodyRowCount, 43);
 assert.equal(printLayout.reportLastPrintPageRows, 37);
 assert.equal(printLayout.reportShouldFillPrintRows, true);

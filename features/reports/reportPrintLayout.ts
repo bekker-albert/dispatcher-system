@@ -44,6 +44,8 @@ type ReportPrintLayoutOptions = {
   reportHeaderLabel: (key: string, fallback: string) => string;
 };
 
+type ReportBodyLayoutGroup = Array<{ rows: ReportRow[] }>;
+
 function reportClampWidth(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -134,13 +136,12 @@ export function createReportPrintLayout({
     "day-reason": [],
     "year-reason": [],
   };
-  const reportGroupStartIndexes: number[] = [];
-  let reportBodyRowCount = 0;
+  const {
+    reportBodyRowCount,
+    reportGroupStartIndexes,
+  } = createReportBodyLayout(groups);
 
   groups.forEach((group) => {
-    reportGroupStartIndexes.push(reportBodyRowCount);
-    reportBodyRowCount += group.rows.length;
-
     group.rows.forEach((row) => {
       reportPrintTextValues["work-name"].push(formatReportWorkName(row.name));
 
@@ -197,5 +198,20 @@ export function createReportPrintLayout({
     reportPrintFillPaddingMm,
     reportPrintTextColumnWidths,
     reportShouldFillPrintRows,
+  };
+}
+
+export function createReportBodyLayout(groups: ReportBodyLayoutGroup) {
+  const reportGroupStartIndexes: number[] = [];
+  let reportBodyRowCount = 0;
+
+  groups.forEach((group) => {
+    reportGroupStartIndexes.push(reportBodyRowCount);
+    reportBodyRowCount += group.rows.length;
+  });
+
+  return {
+    reportBodyRowCount,
+    reportGroupStartIndexes,
   };
 }

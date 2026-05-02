@@ -30,6 +30,7 @@ const sharedNavigationSource = readFileSync(resolve(testDir, "../shared/ui/navig
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
+const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
 const useDispatchSummaryViewModelSource = readFileSync(resolve(testDir, "../features/dispatch/useDispatchSummaryViewModel.ts"), "utf8");
 const dispatchSectionSource = readFileSync(resolve(testDir, "../features/dispatch/DispatchSection.tsx"), "utf8");
@@ -74,6 +75,12 @@ assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnTextRows\.map\(\(r
 assert.match(reportTableBodySource, /const bodyGroups = useMemo/);
 assert.match(reportTableBodySource, /rowKey=\{rowDescriptor\.rowKey\}/);
 assert.doesNotMatch(reportTableBodySource, /const rowKey = reportRowDisplayKey\(row\);\s*const dayReasonText/);
+assert.match(reportsSectionSource, /createReportBodyLayout\(filteredReportAreaGroups\)/);
+assert.match(reportsSectionSource, /const reportPrintLayoutToken = useMemo\(\(\) => \(\{[\s\S]*filteredReportAreaGroups,[\s\S]*reportColumnKeys,[\s\S]*reportDate,[\s\S]*reportHeaderLabel,[\s\S]*reportReasons,[\s\S]*\}\)/);
+assert.match(reportsSectionSource, /const \[preparedReportPrintState, setPreparedReportPrintState\] = useState/);
+assert.match(reportsSectionSource, /flushSync\(\(\) => setPreparedReportPrintState\(\{/);
+assert.doesNotMatch(reportsSectionSource, /setPreparedReportPrintState\(null\)/);
+assert.doesNotMatch(reportsSectionSource, /const reportPrintLayout = useMemo\(\(\) => createReportPrintLayout/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /const ptoTabNeedsDatabase = isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets";/);
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(!databaseConfigured \|\| ptoDatabaseReady\);/);
