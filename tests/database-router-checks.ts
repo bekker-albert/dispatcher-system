@@ -77,6 +77,18 @@ assert.deepEqual(parseAppStateSaveCheckpoint(appStateCheckpoint), {
   }),
   updatedAt: "2026-04-28T01:00:00.000Z",
 });
+assert.equal(
+  createAppStateStorageSnapshot({ b: "2", a: "1" }),
+  createAppStateStorageSnapshot({ a: "1", b: "2" }),
+);
+assert.equal(
+  parseAppStateSaveCheckpoint(JSON.stringify({
+    storage: { b: "2", a: "1" },
+    storageSnapshot: "stale-raw-provider-order",
+    updatedAt: "2026-04-28T01:02:00.000Z",
+  })).storageSnapshot,
+  createAppStateStorageSnapshot({ a: "1", b: "2" }),
+);
 assert.deepEqual(parseAppStateSaveCheckpoint(""), { storage: {}, storageSnapshot: createAppStateStorageSnapshot({}), updatedAt: null });
 assert.deepEqual(parseAppStateSaveCheckpoint(JSON.stringify({
   [adminStorageKeys.reportCustomers]: "[\"legacy\"]",

@@ -29,7 +29,12 @@ function normalizeStorage(value: unknown): Record<string, string> {
 }
 
 export function createAppStateStorageSnapshot(storage: Record<string, string>) {
-  return JSON.stringify(normalizeStorage(storage));
+  const normalizedStorage = normalizeStorage(storage);
+  const sortedStorage = Object.fromEntries(
+    Object.entries(normalizedStorage).sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey)),
+  );
+
+  return JSON.stringify(sortedStorage);
 }
 
 export function createAppStateSaveCheckpoint(
@@ -60,9 +65,7 @@ export function parseAppStateSaveCheckpoint(checkpoint: string): DataAppStateSav
 
       return {
         storage,
-        storageSnapshot: typeof record.storageSnapshot === "string"
-          ? record.storageSnapshot
-          : createAppStateStorageSnapshot(storage),
+        storageSnapshot: createAppStateStorageSnapshot(storage),
         updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : null,
       };
     }

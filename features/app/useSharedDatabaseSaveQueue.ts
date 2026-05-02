@@ -39,12 +39,13 @@ export function useSharedDatabaseSaveQueue({
   const saveSharedAppStateToDatabase = useCallback(async (storage: Record<string, string>) => {
     if (!databaseConfigured) return;
 
-    const storageSnapshot = JSON.stringify(storage);
     const {
+      createAppStateStorageSnapshot,
       createAppStateSaveCheckpoint,
       parseAppStateSaveCheckpoint,
       saveAppStateToDatabase,
     } = await import("@/lib/data/app-state");
+    const storageSnapshot = createAppStateStorageSnapshot(storage);
     const checkpoint = parseAppStateSaveCheckpoint(appDatabaseSaveSnapshotRef.current);
     if (storageSnapshot === checkpoint.storageSnapshot) return;
 

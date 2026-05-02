@@ -61,6 +61,7 @@ assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false
 assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\s\S]*storage: Record<string, string>;[\s\S]*settings: Record<string, unknown>;[\s\S]*\};/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSaveQueueRef = useRef<SharedDatabaseSaveQueue \| null>\(null\);/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSavingRef = useRef\(false\);/);
+assert.match(sharedDatabaseSaveQueueSource, /createAppStateStorageSnapshot/);
 assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);[\s\S]*await saveSharedAppStateToDatabase\(queuedSave\.storage\);/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /conflictRetries/);
 assert.match(sharedDatabaseSaveQueueSource, /let failed = false;/);
@@ -70,6 +71,7 @@ assert.doesNotMatch(sharedDatabaseSaveQueueSource, /refreshSharedDatabaseSaveBas
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /loadAppSettingsFromDatabase/);
 assert.match(sharedDatabaseSaveQueueSource, /const savedSettings = await saveAppSettingsToDatabase\(delta\.settings/);
 assert.match(sharedDatabaseSaveQueueSource, /if \(storageSnapshot === checkpoint\.storageSnapshot\) return;/);
+assert.doesNotMatch(sharedDatabaseSaveQueueSource, /const storageSnapshot = JSON\.stringify\(storage\)/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /JSON\.stringify\(checkpoint\.storage\)/);
 assert.match(sharedDatabaseSaveQueueSource, /sharedDatabaseSaveQueueRef\.current = null;[\s\S]*failed = true;[\s\S]*showSaveStatus\([\s\S]*break;/);
 assert.match(sharedDatabaseSaveQueueSource, /Данные на сервере изменились другим пользователем\. Локальная правка сохранена в браузере; обнови страницу перед повторным сохранением\./);
