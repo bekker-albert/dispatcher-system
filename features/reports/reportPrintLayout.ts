@@ -60,9 +60,8 @@ function reportPrintTextScore(value: string) {
   return Math.max(longestWord, Math.min(normalized.length, 34));
 }
 
-function reportPrintTextColumnWidth(key: ReportPrintTextColumnKey, header: string, values: string[]) {
+function reportPrintTextColumnWidthFromScore(key: ReportPrintTextColumnKey, score: number) {
   const bounds = reportPrintTextColumnBounds[key];
-  const score = values.reduce((max, value) => Math.max(max, reportPrintTextScore(value)), reportPrintTextScore(header));
   return reportClampWidth(Math.round(bounds.base + score * bounds.char), bounds.min, bounds.max);
 }
 
@@ -131,10 +130,13 @@ export function createReportPrintLayout({
   reportReasons,
   reportHeaderLabel,
 }: ReportPrintLayoutOptions) {
-  const reportPrintTextValues: Record<ReportPrintTextColumnKey, string[]> = {
-    "work-name": [],
-    "day-reason": [],
-    "year-reason": [],
+  const reportPrintTextScores: Record<ReportPrintTextColumnKey, number> = {
+    "work-name": reportPrintTextScore(reportHeaderLabel("work-name", "Вид работ")),
+    "day-reason": reportPrintTextScore(reportHeaderLabel("day-reason", "Причина за сутки")),
+    "year-reason": reportPrintTextScore(reportHeaderLabel("year-reason", "Причины с накоплением")),
+  };
+  const addReportPrintTextScore = (key: ReportPrintTextColumnKey, value: string) => {
+    reportPrintTextScores[key] = Math.max(reportPrintTextScores[key], reportPrintTextScore(value));
   };
   const {
     reportBodyRowCount,
@@ -143,40 +145,34 @@ export function createReportPrintLayout({
 
   groups.forEach((group) => {
     group.rows.forEach((row) => {
-      reportPrintTextValues["work-name"].push(formatReportWorkName(row.name));
+      addReportPrintTextScore("work-name", formatReportWorkName(row.name));
 
       if (delta(row.dayPlan, row.dayFact) < 0) {
         const rowKey = reportRowDisplayKey(row);
-        reportPrintTextValues["day-reason"].push(
+        addReportPrintTextScore(
+          "day-reason",
           reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? row.dayReason,
         );
-      } else {
-        reportPrintTextValues["day-reason"].push("");
       }
 
-      reportPrintTextValues["year-reason"].push(
-        delta(row.yearPlan, reportYearFact(row)) < 0
-          ? reportPrintYearReasonText(row, reportDate, reportReasons)
-          : "",
-      );
+      if (delta(row.yearPlan, reportYearFact(row)) < 0) {
+        addReportPrintTextScore("year-reason", reportPrintYearReasonText(row, reportDate, reportReasons));
+      }
     });
   });
 
   const reportPrintTextColumnWidths = reportFitPrintTextColumnWidths({
-    "work-name": reportPrintTextColumnWidth(
+    "work-name": reportPrintTextColumnWidthFromScore(
       "work-name",
-      reportHeaderLabel("work-name", "Вид работ"),
-      reportPrintTextValues["work-name"],
+      reportPrintTextScores["work-name"],
     ),
-    "day-reason": reportPrintTextColumnWidth(
+    "day-reason": reportPrintTextColumnWidthFromScore(
       "day-reason",
-      reportHeaderLabel("day-reason", "Причина за сутки"),
-      reportPrintTextValues["day-reason"],
+      reportPrintTextScores["day-reason"],
     ),
-    "year-reason": reportPrintTextColumnWidth(
+    "year-reason": reportPrintTextColumnWidthFromScore(
       "year-reason",
-      reportHeaderLabel("year-reason", "Причины с накоплением"),
-      reportPrintTextValues["year-reason"],
+      reportPrintTextScores["year-reason"],
     ),
   }, columnKeys);
   const reportPrintColumnWidths: Record<ReportColumnKey, number> = {

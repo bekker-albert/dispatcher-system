@@ -35,6 +35,7 @@ const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../component
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
 const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
+const reportPrintLayoutSource = readFileSync(resolve(testDir, "../features/reports/reportPrintLayout.ts"), "utf8");
 const useReportRowsModelSource = readFileSync(resolve(testDir, "../features/reports/useReportRowsModel.ts"), "utf8");
 const useAppReportsModelSource = readFileSync(resolve(testDir, "../features/app/useAppReportsModel.ts"), "utf8");
 const useAppAdminReportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/useAppAdminReportsPrimaryContent.tsx"), "utf8");
@@ -99,6 +100,9 @@ assert.match(reportsSectionSource, /const \[preparedReportPrintState, setPrepare
 assert.match(reportsSectionSource, /flushSync\(\(\) => setPreparedReportPrintState\(\{/);
 assert.doesNotMatch(reportsSectionSource, /setPreparedReportPrintState\(null\)/);
 assert.doesNotMatch(reportsSectionSource, /const reportPrintLayout = useMemo\(\(\) => createReportPrintLayout/);
+assert.match(reportPrintLayoutSource, /const reportPrintTextScores: Record<ReportPrintTextColumnKey, number>/);
+assert.match(reportPrintLayoutSource, /const addReportPrintTextScore = \(key: ReportPrintTextColumnKey, value: string\)/);
+assert.doesNotMatch(reportPrintLayoutSource, /Record<ReportPrintTextColumnKey, string\[\]>/);
 assert.match(appPrimaryContentSource, /const shouldShowPtoDatabaseGateOnly = shouldGatePtoDatabase\s*&& renderedTopTab === "pto"\s*&& ptoTabNeedsDatabase;/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /const ptoTabNeedsDatabase = isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets";/);
