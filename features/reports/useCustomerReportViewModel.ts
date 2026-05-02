@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 
 import { defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import {
@@ -22,6 +22,34 @@ type UseCustomerReportViewModelOptions = {
   derivedReportRows: ReportRow[];
   reportArea: string;
 };
+
+const reportAllAreasTab = "Р’СЃРµ СѓС‡Р°СЃС‚РєРё";
+const reportSummaryAreaLabel = "РС‚РѕРіРѕ";
+
+function createReportAreaGroups(rows: ReportRow[]) {
+  const groups: Array<{ area: string; normalizedArea: string; rows: ReportRow[] }> = [];
+  let index = 0;
+
+  while (index < rows.length) {
+    const area = rows[index].area;
+    const normalizedArea = normalizeLookupValue(area);
+    let nextIndex = index + 1;
+
+    while (nextIndex < rows.length && normalizeLookupValue(rows[nextIndex].area) === normalizedArea) {
+      nextIndex += 1;
+    }
+
+    groups.push({
+      area,
+      normalizedArea,
+      rows: rows.slice(index, nextIndex),
+    });
+
+    index = nextIndex;
+  }
+
+  return groups;
+}
 
 export function useCustomerReportViewModel({
   needsDerivedReportRows,
@@ -76,49 +104,33 @@ export function useCustomerReportViewModel({
     return sortReportRowsByAreaOrder([...selectedRows, ...summaryRows], activeReportCustomer.areaOrder, activeReportCustomer.workOrder);
   }, [activeReportCustomer, derivedReportRows, needsDerivedReportRows]);
 
+  const customerReportAreaGroups = useMemo(() => createReportAreaGroups(customerReportRows), [customerReportRows]);
+
   const reportAreaTabs = useMemo(() => [
-    "Все участки",
+    reportAllAreasTab,
     ...(
       needsDerivedReportRows
         ? sortAreaNamesByOrder(
-            uniqueSorted(customerReportRows.map((row) => row.area).filter((area) => normalizeLookupValue(area) !== normalizeLookupValue("Итого"))),
+            uniqueSorted(customerReportAreaGroups
+              .filter((group) => group.normalizedArea !== normalizeLookupValue(reportSummaryAreaLabel))
+              .map((group) => group.area)),
             activeReportCustomer.areaOrder,
           )
         : []
     ),
-  ], [activeReportCustomer.areaOrder, customerReportRows, needsDerivedReportRows]);
-
-  const filteredReports = useMemo(() => {
-    if (!needsDerivedReportRows) return [];
-    if (reportArea === "Все участки") return customerReportRows;
-
-    return customerReportRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(reportArea));
-  }, [customerReportRows, needsDerivedReportRows, reportArea]);
+  ], [activeReportCustomer.areaOrder, customerReportAreaGroups, needsDerivedReportRows]);
 
   const filteredReportAreaGroups = useMemo(() => {
     if (!needsDerivedReportRows) return [];
+    if (reportArea === reportAllAreasTab) return customerReportAreaGroups;
 
-    const groups: Array<{ area: string; rows: ReportRow[] }> = [];
-    let index = 0;
+    const normalizedReportArea = normalizeLookupValue(reportArea);
+    return customerReportAreaGroups.filter((group) => group.normalizedArea === normalizedReportArea);
+  }, [customerReportAreaGroups, needsDerivedReportRows, reportArea]);
 
-    while (index < filteredReports.length) {
-      const currentArea = normalizeLookupValue(filteredReports[index].area);
-      let nextIndex = index + 1;
-
-      while (nextIndex < filteredReports.length && normalizeLookupValue(filteredReports[nextIndex].area) === currentArea) {
-        nextIndex += 1;
-      }
-
-      groups.push({
-        area: filteredReports[index].area,
-        rows: filteredReports.slice(index, nextIndex),
-      });
-
-      index = nextIndex;
-    }
-
-    return groups;
-  }, [filteredReports, needsDerivedReportRows]);
+  const filteredReports = useMemo(() => (
+    filteredReportAreaGroups.flatMap((group) => group.rows)
+  ), [filteredReportAreaGroups]);
 
   return {
     activeReportCustomer,
