@@ -7,6 +7,7 @@ import {
   savePtoDayValuesWithRowToMysql,
   savePtoStateToMysql,
 } from "../lib/server/mysql/pto";
+import { createPrunedPtoRowYearMetadata } from "../lib/server/mysql/pto-row-writes";
 import { dbTransaction } from "../lib/server/mysql/pool";
 
 const mysqlTransactionSource = dbTransaction.toString();
@@ -36,6 +37,10 @@ assert.match(mysqlPtoRowWritesSource, /export async function upsertPtoRowsForYea
 assert.match(mysqlPtoRowWritesSource, /selectPtoRowsWithYearMetadataByRecords\(records,\s*execute\)/);
 assert.match(mysqlPtoRowWritesSource, /mergePtoYearList\(existingMetadata\.years,\s*record\.years,\s*year\)/);
 assert.match(mysqlPtoRowWritesSource, /mergePtoCarryovers\(existingMetadata\.carryovers,\s*record\.carryovers,\s*year\)/);
+assert.match(mysqlPtoRowWritesSource, /createPrunedPtoRowYearMetadata\(record,\s*year\)/);
+assert.match(mysqlPtoRowWritesSource, /if \(!prunedMetadata\) continue;/);
+assert.match(mysqlPtoRowWritesSource, /JSON_CONTAINS\(COALESCE\(years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
+assert.match(mysqlPtoRowWritesSource, /JSON_EXTRACT\(COALESCE\(carryovers, JSON_OBJECT\(\)\), \?\) IS NOT NULL/);
 assert.match(mysqlPtoDayValueWritesSource, /export async function deletePtoDayValuesForRowsMissingFromYearState/);
 assert.match(mysqlPtoDayValueWritesSource, /SELECT DISTINCT row_id[\s\S]*FROM pto_day_values[\s\S]*WHERE table_type = \?[\s\S]*AND work_date >= \?[\s\S]*AND work_date <= \?/);
 assert.match(mysqlPtoDayValueWritesSource, /const staleRowIds = existingRows[\s\S]*filter\(\(rowId\) => !rowIds\.has\(rowId\)\)/);
@@ -72,3 +77,27 @@ assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_day_values[\s\S]*WHERE wor
 assert.match(mysqlYearLoadSource, /\[start,\s*end,\s*year,\s*year,\s*carryoverJsonPath\]/);
 assert.doesNotMatch(mysqlYearLoadSource, /ptoDayValueRecordsForYear/);
 assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_bucket_rows ORDER BY sort_index ASC/);
+
+assert.equal(
+  createPrunedPtoRowYearMetadata(
+    { years: "[\"2025\"]", carryover_manual_years: "[]", carryovers: "{}" },
+    "2026",
+  ),
+  null,
+);
+
+assert.deepEqual(
+  createPrunedPtoRowYearMetadata(
+    {
+      years: "[\"2025\",\"2026\"]",
+      carryover_manual_years: "[\"2024\",\"2026\"]",
+      carryovers: "{\"2024\":10,\"2026\":15}",
+    },
+    "2026",
+  ),
+  {
+    years: ["2025"],
+    carryoverManualYears: ["2024"],
+    carryovers: { "2024": 10 },
+  },
+);

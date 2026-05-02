@@ -23,7 +23,34 @@ type PtoRowYearMetadataRecord = RowDataPacket & {
   years: unknown;
 };
 
+export type PtoRowYearMetadataInput = {
+  carryovers: unknown;
+  carryover_manual_years: unknown;
+  years: unknown;
+};
+
+export function createPrunedPtoRowYearMetadata(record: PtoRowYearMetadataInput, year: string) {
+  const existingYears = stringArrayFromStoredJson(record.years);
+  const existingCarryoverManualYears = stringArrayFromStoredJson(record.carryover_manual_years);
+  const existingCarryovers = objectFromStoredJson(record.carryovers);
+  const hasYearMetadata = existingYears.includes(year)
+    || existingCarryoverManualYears.includes(year)
+    || Object.prototype.hasOwnProperty.call(existingCarryovers, year);
+
+  if (!hasYearMetadata) return null;
+
+  const carryovers = { ...existingCarryovers };
+  delete carryovers[year];
+
+  return {
+    years: existingYears.filter((item) => item !== year),
+    carryoverManualYears: existingCarryoverManualYears.filter((item) => item !== year),
+    carryovers,
+  };
+}
+
 async function selectPtoRowsWithYearMetadata(
+  year: string,
   execute: DbExecutor,
   options: {
     table?: PtoDateTableKey;
@@ -32,6 +59,14 @@ async function selectPtoRowsWithYearMetadata(
 ) {
   const clauses: string[] = [];
   const values: unknown[] = [];
+  const carryoverJsonPath = `$."${year}"`;
+
+  clauses.push(`(
+    JSON_CONTAINS(COALESCE(years, JSON_ARRAY()), JSON_QUOTE(?))
+    OR JSON_CONTAINS(COALESCE(carryover_manual_years, JSON_ARRAY()), JSON_QUOTE(?))
+    OR JSON_EXTRACT(COALESCE(carryovers, JSON_OBJECT()), ?) IS NOT NULL
+  )`);
+  values.push(year, year, carryoverJsonPath);
 
   if (options.table) {
     clauses.push("table_type = ?");
@@ -82,11 +117,8 @@ async function prunePtoYearFromRowMetadataRecords(
   execute: DbExecutor,
 ) {
   for (const record of records) {
-    const years = stringArrayFromStoredJson(record.years).filter((item) => item !== year);
-    const carryoverManualYears = stringArrayFromStoredJson(record.carryover_manual_years)
-      .filter((item) => item !== year);
-    const carryovers = objectFromStoredJson(record.carryovers);
-    delete carryovers[year];
+    const prunedMetadata = createPrunedPtoRowYearMetadata(record, year);
+    if (!prunedMetadata) continue;
 
     await execute(
       `UPDATE pto_rows
@@ -96,9 +128,9 @@ async function prunePtoYearFromRowMetadataRecords(
         updated_at = CURRENT_TIMESTAMP(3)
       WHERE table_type = ? AND row_id = ?`,
       [
-        stringifyJson(years),
-        stringifyJson(carryoverManualYears),
-        stringifyJson(carryovers),
+        stringifyJson(prunedMetadata.years),
+        stringifyJson(prunedMetadata.carryoverManualYears),
+        stringifyJson(prunedMetadata.carryovers),
         record.table_type,
         record.row_id,
       ],
@@ -115,7 +147,7 @@ export async function prunePtoYearFromRows(
   } = {},
 ) {
   await prunePtoYearFromRowMetadataRecords(
-    await selectPtoRowsWithYearMetadata(execute, options),
+    await selectPtoRowsWithYearMetadata(year, execute, options),
     year,
     execute,
   );
