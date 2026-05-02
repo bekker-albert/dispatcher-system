@@ -1,5 +1,4 @@
 import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
-import type { UseAppPtoScreenPropsArgs } from "@/features/app/appPtoScreenPropsTypes";
 
 export type AppPtoBucketSectionProps = {
   ptoBucketRows: PtoBucketRow[];
@@ -11,10 +10,23 @@ export type AppPtoBucketSectionProps = {
   deletePtoBucketManualRow: (row: PtoBucketRow) => void;
 };
 
+type AppPtoBucketSupplementalTables = Pick<
+  AppPtoBucketSectionProps,
+  | "ptoBucketRows"
+  | "ptoBucketColumns"
+  | "commitPtoBucketValue"
+  | "clearPtoBucketCells"
+  | "addPtoBucketManualRow"
+  | "deletePtoBucketManualRow"
+>;
+
 export function createAppPtoBucketSectionProps({
   appState,
   ptoSupplementalTables,
-}: Pick<UseAppPtoScreenPropsArgs, "appState" | "ptoSupplementalTables">): AppPtoBucketSectionProps {
+}: {
+  appState: { ptoBucketValues: Record<string, number> };
+  ptoSupplementalTables: AppPtoBucketSupplementalTables;
+}): AppPtoBucketSectionProps {
   return {
     ptoBucketRows: ptoSupplementalTables.ptoBucketRows,
     ptoBucketColumns: ptoSupplementalTables.ptoBucketColumns,

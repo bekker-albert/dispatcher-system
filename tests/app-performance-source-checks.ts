@@ -13,6 +13,9 @@ const ptoDateEditableTableBodySource = readFileSync(resolve(testDir, "../feature
 const ptoDateEditableTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoDateEditableTableRow.tsx"), "utf8");
 const ptoBucketsTableSource = readFileSync(resolve(testDir, "../features/pto/PtoBucketsTable.tsx"), "utf8");
 const ptoBucketsTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoBucketsTableRow.tsx"), "utf8");
+const ptoBucketsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoBucketsPrimaryContent.tsx"), "utf8");
+const useAppPtoSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoSupplementalTables.ts"), "utf8");
+const useAppPtoBucketSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoBucketSupplementalTables.ts"), "utf8");
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
@@ -99,3 +102,12 @@ assert.match(ptoDateEditableTableRowSource, /export const PtoDateEditableTableRo
 assert.match(ptoBucketsTableRowSource, /export const PtoBucketsTableRow = memo\(function PtoBucketsTableRow/);
 assert.match(ptoBucketsTableSource, /const rowActiveCell = activeCell\?\.rowKey === row\.key \? activeCell : null;/);
 assert.match(ptoBucketsTableSource, /draft=\{rowActiveCell \? draft : ""\}/);
+assert.match(ptoBucketsPrimaryContentSource, /useAppPtoBucketSupplementalTables/);
+assert.doesNotMatch(ptoBucketsPrimaryContentSource, /ptoPlanRows:/);
+assert.doesNotMatch(ptoBucketsPrimaryContentSource, /ptoOperRows:/);
+assert.doesNotMatch(ptoBucketsPrimaryContentSource, /ptoSurveyRows:/);
+assert.doesNotMatch(ptoBucketsPrimaryContentSource, /ptoPlanImportInputRef:/);
+assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsViewModel/);
+assert.doesNotMatch(useAppPtoSupplementalTablesSource, /usePtoBucketsEditor/);
+assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsViewModel/);
+assert.match(useAppPtoBucketSupplementalTablesSource, /usePtoBucketsEditor/);

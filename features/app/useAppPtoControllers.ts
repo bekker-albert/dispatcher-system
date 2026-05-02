@@ -51,18 +51,12 @@ export function useAppPtoControllers({
     setPtoSurveyRows,
     ptoOperRows,
     setPtoOperRows,
-    ptoBucketManualRows,
-    setPtoBucketValues,
-    setPtoBucketManualRows,
     addAdminLog,
   } = appState;
 
   const {
     renderedTopTab,
-    deferredVehicleRows,
     isPtoDateTab,
-    isPtoBucketsSection,
-    ptoBucketRowLookupSources,
     ptoYearTabs,
   } = models;
 
@@ -116,28 +110,18 @@ export function useAppPtoControllers({
   });
 
   const ptoSupplementalTables = useAppPtoSupplementalTables({
-    isPtoBucketsSection,
-    ptoBucketRowLookupSources,
-    deferredVehicleRows,
     ptoTab,
     ptoPlanYear,
     ptoAreaFilter,
     ptoPlanRows,
     ptoOperRows,
     ptoSurveyRows,
-    ptoBucketManualRows,
     ptoPlanImportInputRef,
     setPtoPlanRows,
     setPtoOperRows,
     setPtoSurveyRows,
     setPtoManualYears,
     setExpandedPtoMonths,
-    setPtoBucketValues,
-    setPtoBucketManualRows,
-    databaseConfigured,
-    ptoDatabaseLoadedRef,
-    markPtoDatabaseInlineWriteSaved,
-    getPtoDatabaseExpectedUpdatedAt,
     requestPtoDatabaseSave,
     addAdminLog,
   });
