@@ -34,6 +34,17 @@ export type PtoDatabaseInlineSavePatch =
   | {
     kind: "bucket-values";
     values: Array<{ cellKey: string; value: number | null }>;
+  }
+  | {
+    kind: "bucket-row";
+    action: "upsert";
+    row: PtoBucketRow;
+    index?: number;
+  }
+  | {
+    kind: "bucket-row";
+    action: "delete";
+    rowKey: string;
   };
 
 export type PtoDatabaseLoadResolution =

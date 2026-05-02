@@ -112,7 +112,12 @@ export function usePtoBucketsEditor({
         const result = await savePtoBucketRowToDatabase(row, ptoBucketManualRows.length, {
           expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
         });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null);
+        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+          kind: "bucket-row",
+          action: "upsert",
+          row,
+          index: ptoBucketManualRows.length,
+        });
       })
         .catch((error) => console.warn("Database PTO bucket row save failed:", error));
     }
@@ -136,7 +141,11 @@ export function usePtoBucketsEditor({
         const result = await deletePtoBucketRowFromDatabase(row.key, {
           expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
         });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null);
+        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+          kind: "bucket-row",
+          action: "delete",
+          rowKey: row.key,
+        });
       })
         .catch((error) => console.warn("Database PTO bucket row delete failed:", error));
     }

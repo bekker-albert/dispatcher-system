@@ -61,6 +61,40 @@ const patchedBucketState = JSON.parse(patchedBucketBaseline.snapshot);
 assert.equal(patchedBucketBaseline.expectedUpdatedAt, "2026-04-06T00:00:00.000Z");
 assert.equal("aksu:work::excavator" in patchedBucketState.bucketValues, false);
 
+const manualBucketRow = {
+  key: "aksu:manual",
+  area: "Аксу",
+  structure: "Ручная работа",
+  source: "manual" as const,
+};
+const patchedBucketRowBaseline = readPtoDatabaseSaveBaseline(patchPtoDatabaseSaveBaseline(
+  ptoInlineBaseline,
+  "2026-04-07T00:00:00.000Z",
+  { kind: "bucket-row", action: "upsert", row: manualBucketRow, index: 0 },
+));
+const patchedBucketRowState = JSON.parse(patchedBucketRowBaseline.snapshot);
+assert.equal(patchedBucketRowBaseline.expectedUpdatedAt, "2026-04-07T00:00:00.000Z");
+assert.deepEqual(patchedBucketRowState.bucketRows[0], manualBucketRow);
+
+const bucketRowBaseline = createPtoDatabaseSaveBaseline(JSON.stringify({
+  manualYears: ["2026"],
+  planRows: [ptoRow],
+  operRows: [],
+  surveyRows: [],
+  bucketRows: [manualBucketRow],
+  bucketValues: { "aksu:manual::excavator": 5, "aksu:work::excavator": 3 },
+  uiState: {},
+}), "2026-04-07T00:00:00.000Z");
+const deletedBucketRowBaseline = readPtoDatabaseSaveBaseline(patchPtoDatabaseSaveBaseline(
+  bucketRowBaseline,
+  "2026-04-08T00:00:00.000Z",
+  { kind: "bucket-row", action: "delete", rowKey: manualBucketRow.key },
+));
+const deletedBucketRowState = JSON.parse(deletedBucketRowBaseline.snapshot);
+assert.equal(deletedBucketRowState.bucketRows.length, 0);
+assert.equal("aksu:manual::excavator" in deletedBucketRowState.bucketValues, false);
+assert.equal(deletedBucketRowState.bucketValues["aksu:work::excavator"], 3);
+
 const rowWithCarryover = updatePtoCarryoverForYear(ptoRow, "2026", 12.5);
 assert.equal(rowWithCarryover.carryovers?.["2026"], 12.5);
 assert.equal(rowWithCarryover.carryoverManualYears?.includes("2026"), true);

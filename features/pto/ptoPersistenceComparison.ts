@@ -70,6 +70,28 @@ function applyPtoInlineSavePatch(state: DataPtoState, patch: PtoDatabaseInlineSa
     return { ...state, bucketValues };
   }
 
+  if (patch.kind === "bucket-row") {
+    if (patch.action === "delete") {
+      const bucketValues = { ...(state.bucketValues ?? {}) };
+      const cellKeyPrefix = `${patch.rowKey}::`;
+      Object.keys(bucketValues).forEach((cellKey) => {
+        if (cellKey.startsWith(cellKeyPrefix)) delete bucketValues[cellKey];
+      });
+      return {
+        ...state,
+        bucketRows: (state.bucketRows ?? []).filter((row) => row.key !== patch.rowKey),
+        bucketValues,
+      };
+    }
+
+    const bucketRows = (state.bucketRows ?? []).filter((row) => row.key !== patch.row.key);
+    const index = typeof patch.index === "number"
+      ? Math.max(0, Math.min(patch.index, bucketRows.length))
+      : bucketRows.length;
+    bucketRows.splice(index, 0, patch.row);
+    return { ...state, bucketRows };
+  }
+
   const rows = ptoRowsForInlinePatch(state, patch.table);
   const patchedRows = rows.map((row) => {
     const rowPatches = patch.values.filter((value) => value.rowId === row.id);
