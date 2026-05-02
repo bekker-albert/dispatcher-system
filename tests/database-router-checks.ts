@@ -26,6 +26,7 @@ const testDir = dirname(fileURLToPath(import.meta.url));
 const mysqlSchemaSource = readFileSync(resolve(testDir, "../lib/server/mysql/schema.ts"), "utf8");
 const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
 const mysqlPtoVersionSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-version.ts"), "utf8");
+const mysqlPtoLoadSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-load.ts"), "utf8");
 
 assert.match(mysqlSchemaSource, /const schemaVersionMetaKey = "schema:v/);
 assert.match(mysqlSchemaSource, /SELECT meta_key FROM pto_meta WHERE meta_key = \? LIMIT 1/);
@@ -38,6 +39,10 @@ assert.match(mysqlSchemaSource, /ALTER TABLE pto_bucket_rows ADD INDEX pto_bucke
 assert.doesNotMatch(mysqlPtoCommandsSource, /loadPtoUpdatedAtFromMysql/);
 assert.match(mysqlPtoCommandsSource, /return await touchPtoVersion\(execute\)/);
 assert.match(mysqlPtoVersionSource, /SELECT updated_at FROM pto_meta WHERE meta_key = \? LIMIT 1/);
+assert.match(mysqlPtoLoadSource, /FROM pto_rows AS rows_for_year/);
+assert.match(mysqlPtoLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
+assert.match(mysqlPtoLoadSource, /EXISTS \(\s*SELECT 1\s*FROM pto_day_values AS values_for_year/);
+assert.doesNotMatch(mysqlPtoLoadSource, /loadPtoStateFromMysqlForYear[\s\S]*SELECT \* FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
 
 async function responseJson(response: Response) {
   return await response.json() as { data?: unknown; error?: unknown };

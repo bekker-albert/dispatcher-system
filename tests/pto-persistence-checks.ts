@@ -96,7 +96,10 @@ assert.doesNotMatch(mysqlDaysWithRowSaveSource, /upsertPtoRows/);
 
 const mysqlYearLoadSource = loadPtoStateFromMysqlForYear.toString();
 assert.match(mysqlYearLoadSource, /ptoYearDateRange/);
-assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
+assert.match(mysqlYearLoadSource, /FROM pto_rows AS rows_for_year/);
+assert.match(mysqlYearLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
+assert.match(mysqlYearLoadSource, /JSON_EXTRACT\(COALESCE\(rows_for_year\.carryovers, JSON_OBJECT\(\)\), \?\) IS NOT NULL/);
+assert.match(mysqlYearLoadSource, /EXISTS \([\s\S]*FROM pto_day_values AS values_for_year/);
 assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_day_values[\s\S]*WHERE work_date >= \? AND work_date <= \?/);
 assert.match(mysqlYearLoadSource, /\[start,\s*end\]/);
 assert.doesNotMatch(mysqlYearLoadSource, /ptoDayValueRecordsForYear/);
