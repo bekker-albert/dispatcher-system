@@ -14,6 +14,7 @@ type PtoLocalPersistenceOptions = {
   skipUntilDatabaseLoaded: boolean;
   ptoDatabaseStateRef: RefObject<PtoDatabaseState>;
   ptoDatabaseLoadedRef: RefObject<boolean>;
+  ptoDatabaseLoadedBucketsYearRef: RefObject<string | null>;
   hasStoredPtoStateRef: RefObject<boolean>;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
   isPtoDatabaseDirty: () => boolean;
@@ -38,6 +39,7 @@ export function usePtoLocalPersistence({
   skipUntilDatabaseLoaded,
   ptoDatabaseStateRef,
   ptoDatabaseLoadedRef,
+  ptoDatabaseLoadedBucketsYearRef,
   hasStoredPtoStateRef,
   getPtoDatabaseExpectedUpdatedAt,
   isPtoDatabaseDirty,
@@ -67,9 +69,13 @@ export function usePtoLocalPersistence({
     const localUpdatedAt = markLocalUpdatedAt && !isPtoDatabaseDirty()
       ? getPtoDatabaseExpectedUpdatedAt()
       : undefined;
+    const includeBuckets = !skipUntilDatabaseLoaded
+      || ptoTab === "buckets"
+      || ptoDatabaseLoadedBucketsYearRef.current === ptoPlanYear;
     const result = savePtoStateToBrowserStorage(
       state,
       {
+        includeBuckets,
         markLocalUpdatedAt,
         localUpdatedAt,
       },
@@ -87,7 +93,10 @@ export function usePtoLocalPersistence({
     hasStoredPtoStateRef,
     isPtoDatabaseDirty,
     ptoDatabaseLoadedRef,
+    ptoDatabaseLoadedBucketsYearRef,
     ptoDatabaseStateRef,
+    ptoPlanYear,
+    ptoTab,
     requestClientSnapshotSave,
     skipUntilDatabaseLoaded,
   ]);

@@ -10,6 +10,7 @@ export type PtoBrowserStorageSnapshotCache = {
 export type PtoBrowserStorageSaveOptions = {
   markLocalUpdatedAt: boolean;
   localUpdatedAt?: string | null;
+  includeBuckets?: boolean;
 };
 
 function jsonFromCache(
@@ -28,6 +29,7 @@ function jsonFromCache(
 function ptoBrowserStorageSnapshot(
   state: DataPtoState,
   previousCache: PtoBrowserStorageSnapshotCache | null,
+  includeBuckets: boolean,
 ): PtoBrowserStorageSnapshotCache {
   const uiState = state.uiState ?? {};
   const refs = {
@@ -38,12 +40,19 @@ function ptoBrowserStorageSnapshot(
     [adminStorageKeys.ptoColumnWidths]: uiState.ptoColumnWidths ?? null,
     [adminStorageKeys.ptoRowHeights]: uiState.ptoRowHeights ?? null,
     [adminStorageKeys.ptoHeaderLabels]: uiState.ptoHeaderLabels ?? null,
-    [adminStorageKeys.ptoBucketValues]: state.bucketValues ?? null,
-    [adminStorageKeys.ptoBucketRows]: state.bucketRows ?? null,
   };
+  const bucketRefs = includeBuckets
+    ? {
+        [adminStorageKeys.ptoBucketValues]: state.bucketValues ?? null,
+        [adminStorageKeys.ptoBucketRows]: state.bucketRows ?? null,
+      }
+    : {};
 
   return {
-    refs,
+    refs: {
+      ...refs,
+      ...bucketRefs,
+    },
     snapshot: {
       [adminStorageKeys.ptoYears]: jsonFromCache(previousCache, adminStorageKeys.ptoYears, refs[adminStorageKeys.ptoYears], []),
       [adminStorageKeys.ptoPlanRows]: jsonFromCache(previousCache, adminStorageKeys.ptoPlanRows, refs[adminStorageKeys.ptoPlanRows], []),
@@ -52,8 +61,12 @@ function ptoBrowserStorageSnapshot(
       [adminStorageKeys.ptoColumnWidths]: jsonFromCache(previousCache, adminStorageKeys.ptoColumnWidths, refs[adminStorageKeys.ptoColumnWidths], {}),
       [adminStorageKeys.ptoRowHeights]: jsonFromCache(previousCache, adminStorageKeys.ptoRowHeights, refs[adminStorageKeys.ptoRowHeights], {}),
       [adminStorageKeys.ptoHeaderLabels]: jsonFromCache(previousCache, adminStorageKeys.ptoHeaderLabels, refs[adminStorageKeys.ptoHeaderLabels], {}),
-      [adminStorageKeys.ptoBucketValues]: jsonFromCache(previousCache, adminStorageKeys.ptoBucketValues, refs[adminStorageKeys.ptoBucketValues], {}),
-      [adminStorageKeys.ptoBucketRows]: jsonFromCache(previousCache, adminStorageKeys.ptoBucketRows, refs[adminStorageKeys.ptoBucketRows], []),
+      ...(includeBuckets
+        ? {
+            [adminStorageKeys.ptoBucketValues]: jsonFromCache(previousCache, adminStorageKeys.ptoBucketValues, bucketRefs[adminStorageKeys.ptoBucketValues], {}),
+            [adminStorageKeys.ptoBucketRows]: jsonFromCache(previousCache, adminStorageKeys.ptoBucketRows, bucketRefs[adminStorageKeys.ptoBucketRows], []),
+          }
+        : {}),
     },
   };
 }
@@ -63,7 +76,7 @@ export function savePtoStateToBrowserStorage(
   options: PtoBrowserStorageSaveOptions,
   previousCache: PtoBrowserStorageSnapshotCache | null = null,
 ) {
-  const cache = ptoBrowserStorageSnapshot(state, previousCache);
+  const cache = ptoBrowserStorageSnapshot(state, previousCache, options.includeBuckets ?? true);
   const { snapshot } = cache;
   let changed = false;
 

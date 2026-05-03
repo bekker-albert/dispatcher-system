@@ -197,6 +197,7 @@ export function useAppPtoPersistence({
     skipUntilDatabaseLoaded: databaseConfigured,
     ptoDatabaseStateRef,
     ptoDatabaseLoadedRef,
+    ptoDatabaseLoadedBucketsYearRef,
     hasStoredPtoStateRef,
     getPtoDatabaseExpectedUpdatedAt,
     isPtoDatabaseDirty,
