@@ -38,6 +38,11 @@ import {
   upsertPtoSettings as upsertMysqlPtoSettings,
 } from "./pto-writes";
 import { chunkValues } from "./pto-write-utils";
+import {
+  rebuildPtoRowYearMembership,
+  refreshPtoRowYearMembershipForRows,
+  refreshPtoRowYearMembershipForYear,
+} from "./pto-row-year-membership";
 
 export type PtoSnapshotWriteOptions = PtoPersistenceSnapshotWriteOptions;
 export type PtoSnapshotWriteResult = PtoPersistenceSnapshotWriteResult;
@@ -160,6 +165,11 @@ export async function savePtoStateToMysql(
       await deletePtoBucketValuesMissingFromState(bucketValueRecords, execute);
       await deletePtoBucketRowsMissingFromState(bucketRowRecords, execute);
     }
+    if (options.yearScope) {
+      await refreshPtoRowYearMembershipForYear(options.yearScope, execute);
+    } else {
+      await rebuildPtoRowYearMembership(execute);
+    }
     await upsertPtoSettings(state, execute);
   });
 }
@@ -181,6 +191,7 @@ export async function savePtoDayValueToMysql(
     } else {
       await upsertPtoDayValues([{ table_type: table, row_id: rowId, work_date: day, value }], execute);
     }
+    await refreshPtoRowYearMembershipForRows([{ table_type: table, row_id: rowId }], execute);
   });
 }
 
@@ -202,6 +213,7 @@ export async function savePtoDayValueWithRowToMysql(
     } else {
       await upsertPtoDayValues([{ table_type: table, row_id: row.id, work_date: day, value }], execute);
     }
+    await refreshPtoRowYearMembershipForRows([{ table_type: table, row_id: row.id }], execute);
   });
 }
 
@@ -216,6 +228,7 @@ export async function savePtoDayValuesToMysql(
     await assertPtoVersionMatchesExpectedUpdatedAt(options.expectedUpdatedAt, execute);
     await upsertPtoDayValues(upsertRecords, execute);
     await deletePtoDayValuePatches(table, deleteValues, execute);
+    await refreshPtoRowYearMembershipForRows(values.map((item) => ({ table_type: table, row_id: item.rowId })), execute);
   });
 }
 
@@ -233,6 +246,7 @@ export async function savePtoDayValuesWithRowToMysql(
     await insertPtoRowsIfMissing(ptoRowsToRecords(table, [row]), execute);
     await upsertPtoDayValues(upsertRecords, execute);
     await deletePtoDayValuePatches(table, deleteValues, execute);
+    await refreshPtoRowYearMembershipForRows([{ table_type: table, row_id: row.id }], execute);
   });
 }
 
@@ -255,6 +269,10 @@ export async function deletePtoRowsFromMysql(
         `DELETE FROM pto_rows WHERE table_type = ? AND row_id IN (${placeholders})`,
         [table, ...rowIdBatch],
       );
+      await execute(
+        `DELETE FROM pto_row_years WHERE table_type = ? AND row_id IN (${placeholders})`,
+        [table, ...rowIdBatch],
+      );
     }
   });
 }
@@ -269,6 +287,7 @@ export async function deletePtoYearFromMysql(year: string, options: PtoInlineWri
     );
     await prunePtoYearFromRows(year, execute);
     await deletePtoRowsWithoutData(execute);
+    await execute("DELETE FROM pto_row_years WHERE year_value = ?", [year]);
   });
 }
 

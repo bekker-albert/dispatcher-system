@@ -6,7 +6,6 @@ import { usePtoDatabaseLoad } from "@/features/pto/usePtoDatabaseLoad";
 import { usePtoDatabaseSave } from "@/features/pto/usePtoDatabaseSave";
 import { usePtoDatabaseState } from "@/features/pto/usePtoDatabaseState";
 import { usePtoLocalPersistence } from "@/features/pto/usePtoLocalPersistence";
-import { usePtoUiStateDatabaseSync } from "@/features/pto/usePtoUiStateDatabaseSync";
 import { useSyncedRef } from "@/features/app/useSyncedRef";
 import { databaseConfigured } from "@/lib/data/config";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
@@ -179,17 +178,6 @@ export function useAppPtoPersistence({
     setPtoColumnWidths,
     setPtoRowHeights,
     setPtoHeaderLabels,
-  });
-
-  usePtoUiStateDatabaseSync({
-    adminDataLoaded: ptoPersistenceEnabled,
-    ptoDatabaseLoadedRef,
-    ptoDatabaseLoadedYearRef,
-    ptoTab,
-    ptoPlanYear,
-    ptoAreaFilter,
-    expandedPtoMonths,
-    requestPtoDatabaseSave,
   });
 
   const { savePtoLocalState } = usePtoLocalPersistence({

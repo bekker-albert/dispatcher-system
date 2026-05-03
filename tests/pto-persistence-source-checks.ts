@@ -9,7 +9,6 @@ const sharedDatabaseSaveQueueSource = readFileSync(resolve(testDir, "../features
 const appPtoPersistenceSource = readFileSync(resolve(testDir, "../features/app/useAppPtoPersistence.ts"), "utf8");
 const appPtoPersistenceControllerSource = readFileSync(resolve(testDir, "../features/app/useAppPtoPersistenceController.ts"), "utf8");
 const initialAppStorageSource = readFileSync(resolve(testDir, "../features/app/initialAppStorage.ts"), "utf8");
-const ptoUiStateDatabaseSyncSource = readFileSync(resolve(testDir, "../features/pto/usePtoUiStateDatabaseSync.ts"), "utf8");
 const ptoDatabaseLoadSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseLoad.ts"), "utf8");
 const ptoDatabaseLoadRunnerSource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadRunner.ts"), "utf8");
 const ptoDatabaseLocalHydrationSource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLocalHydration.ts"), "utf8");
@@ -32,14 +31,9 @@ const mysqlPtoFreshnessSource = readFileSync(resolve(testDir, "../lib/server/mys
 const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase/pto-commands.ts"), "utf8");
 const supabasePtoFreshnessSource = readFileSync(resolve(testDir, "../lib/supabase/pto-freshness.ts"), "utf8");
 
-assert.match(ptoUiStateDatabaseSyncSource, /export function usePtoUiStateDatabaseSync/);
-assert.match(ptoUiStateDatabaseSyncSource, /const databaseLoadedForUiStateRef = useRef\(false\);/);
-assert.match(ptoUiStateDatabaseSyncSource, /databaseLoadedForUiStateRef\.current = false;/);
-assert.match(ptoUiStateDatabaseSyncSource, /if \(!databaseLoadedForUiStateRef\.current\) \{[\s\S]*databaseLoadedForUiStateRef\.current = true;[\s\S]*previousUiStateSignatureRef\.current = uiStateSignature;[\s\S]*return;[\s\S]*\}/);
-assert.match(appPtoPersistenceSource, /import \{ usePtoUiStateDatabaseSync \} from "@\/features\/pto\/usePtoUiStateDatabaseSync";/);
+assert.doesNotMatch(appPtoPersistenceSource, /usePtoUiStateDatabaseSync/);
 assert.match(appPtoPersistenceSource, /usePtoDatabaseLoad\(\{[\s\S]*adminDataLoaded: ptoDatabaseLoadEnabled,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceSource, /usePtoDatabaseSave\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*\}\);/);
-assert.match(appPtoPersistenceSource, /usePtoUiStateDatabaseSync\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*ptoDatabaseLoadedRef,[\s\S]*requestPtoDatabaseSave,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceSource, /usePtoLocalPersistence\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*skipUntilDatabaseLoaded: databaseConfigured,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceControllerSource, /const reportsNeedPtoDatabase = appState\.topTab === "reports"\s*\|\|\s*\(appState\.topTab === "admin" && appState\.adminSection === "reports"\);/);
 assert.match(appPtoPersistenceControllerSource, /const activePtoTabNeedsDatabase = appState\.topTab === "pto"\s*&& \(isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets"\);/);

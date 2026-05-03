@@ -113,25 +113,16 @@ export async function loadPtoStateFromMysqlForYear(
 ): Promise<PtoPersistenceState | null> {
   const { start, end } = ptoYearDateRange(year);
   const includeBuckets = options.includeBuckets === true;
-  const carryoverJsonPath = `$."${year}"`;
   const [ptoRows, ptoDayValues, ptoSettings, ptoBucketRows, ptoBucketValues, ptoVersionUpdatedAt] = await Promise.all([
     dbRows<PtoRowRecord>(
-      `WITH values_for_year AS (
-        SELECT DISTINCT table_type, row_id
-        FROM pto_day_values
-        WHERE work_date >= ? AND work_date <= ?
-      )
-      SELECT ${ptoRowSelectColumns.split(", ").map((column) => `rows_for_year.${column}`).join(", ")}
-      FROM pto_rows AS rows_for_year
-      LEFT JOIN values_for_year
-        ON values_for_year.table_type = rows_for_year.table_type
-        AND values_for_year.row_id = rows_for_year.row_id
-      WHERE values_for_year.row_id IS NOT NULL
-        OR JSON_CONTAINS(COALESCE(rows_for_year.years, JSON_ARRAY()), JSON_QUOTE(?))
-        OR JSON_CONTAINS(COALESCE(rows_for_year.carryover_manual_years, JSON_ARRAY()), JSON_QUOTE(?))
-        OR JSON_EXTRACT(COALESCE(rows_for_year.carryovers, JSON_OBJECT()), ?) IS NOT NULL
+      `SELECT ${ptoRowSelectColumns.split(", ").map((column) => `rows_for_year.${column}`).join(", ")}
+      FROM pto_row_years AS row_years
+      JOIN pto_rows AS rows_for_year
+        ON rows_for_year.table_type = row_years.table_type
+        AND rows_for_year.row_id = row_years.row_id
+      WHERE row_years.year_value = ?
       ORDER BY rows_for_year.table_type ASC, rows_for_year.sort_index ASC`,
-      [start, end, year, year, carryoverJsonPath],
+      [year],
     ),
     dbRows<PtoDayValueRecord>(
       `SELECT ${ptoDayValueSelectColumns} FROM pto_day_values

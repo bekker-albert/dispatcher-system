@@ -40,11 +40,15 @@ assert.match(mysqlSchemaSource, /ALTER TABLE pto_rows ADD INDEX pto_rows_sort_id
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_idx \(work_date\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_row_idx \(work_date, table_type, row_id\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_table_date_row_idx \(table_type, work_date, row_id\)/);
+assert.match(mysqlSchemaSource, /CREATE TABLE IF NOT EXISTS pto_row_years/);
+assert.match(mysqlSchemaSource, /PRIMARY KEY \(year_value, table_type, row_id\)/);
+assert.match(mysqlSchemaSource, /ALTER TABLE pto_row_years ADD INDEX pto_row_years_row_idx \(table_type, row_id, year_value\)/);
+assert.match(mysqlSchemaSource, /rebuildPtoRowYearMembership\(createSchemaSetupExecutor\(\)\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_bucket_rows ADD INDEX pto_bucket_rows_sort_idx \(sort_index\)/);
 assert.doesNotMatch(mysqlPtoCommandsSource, /loadPtoUpdatedAtFromMysql/);
 assert.match(mysqlPtoCommandsSource, /return await touchPtoVersion\(execute\)/);
 assert.match(mysqlPtoVersionSource, /SELECT updated_at FROM pto_meta WHERE meta_key = \? LIMIT 1/);
-assert.match(mysqlPtoLoadSource, /FROM pto_rows AS rows_for_year/);
+assert.match(mysqlPtoLoadSource, /JOIN pto_rows AS rows_for_year/);
 assert.match(mysqlPtoLoadSource, /const ptoRowSelectColumns = \[/);
 assert.match(mysqlPtoLoadSource, /const ptoDayValueSelectColumns = \[/);
 assert.match(mysqlPtoLoadSource, /SELECT \$\{ptoRowSelectColumns\} FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
@@ -52,9 +56,12 @@ assert.match(mysqlPtoLoadSource, /SELECT \$\{ptoDayValueSelectColumns\} FROM pto
 assert.match(mysqlPtoLoadSource, /rows_for_year\.\$\{column\}/);
 assert.doesNotMatch(mysqlPtoLoadSource, /SELECT rows_for_year\.\*/);
 assert.doesNotMatch(mysqlPtoLoadSource, /SELECT \* FROM pto_rows/);
-assert.match(mysqlPtoLoadSource, /WITH values_for_year AS \(/);
-assert.match(mysqlPtoLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
-assert.match(mysqlPtoLoadSource, /LEFT JOIN values_for_year/);
+assert.match(mysqlPtoLoadSource, /FROM pto_row_years AS row_years/);
+assert.match(mysqlPtoLoadSource, /JOIN pto_rows AS rows_for_year/);
+assert.match(mysqlPtoLoadSource, /WHERE row_years\.year_value = \?/);
+assert.doesNotMatch(mysqlPtoLoadSource, /WITH values_for_year AS \(/);
+assert.doesNotMatch(mysqlPtoLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
+assert.doesNotMatch(mysqlPtoLoadSource, /LEFT JOIN values_for_year/);
 assert.doesNotMatch(mysqlPtoLoadSource, /EXISTS \(\s*SELECT 1\s*FROM pto_day_values AS values_for_year/);
 assert.doesNotMatch(mysqlPtoLoadSource, /loadPtoStateFromMysqlForYear[\s\S]*SELECT \* FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
 

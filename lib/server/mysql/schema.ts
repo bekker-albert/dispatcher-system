@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { RowDataPacket } from "mysql2/promise";
 import { getMysqlPool } from "./connection";
+import { rebuildPtoRowYearMembership } from "./pto-row-year-membership";
 
 let schemaPromise: Promise<void> | null = null;
 
@@ -89,6 +90,16 @@ const statements = [
     KEY pto_day_values_date_row_idx (work_date, table_type, row_id),
     KEY pto_day_values_table_date_row_idx (table_type, work_date, row_id),
     KEY pto_day_values_updated_idx (updated_at)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS pto_row_years (
+    year_value VARCHAR(16) NOT NULL,
+    table_type VARCHAR(32) NOT NULL,
+    row_id VARCHAR(191) NOT NULL,
+    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (year_value, table_type, row_id),
+    KEY pto_row_years_row_idx (table_type, row_id, year_value),
+    KEY pto_row_years_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   `CREATE TABLE IF NOT EXISTS pto_settings (
@@ -193,6 +204,18 @@ const schemaMigrations: MysqlSchemaMigration[] = [
     tableName: "pto_day_values",
     indexName: "pto_day_values_updated_idx",
     statement: "ALTER TABLE pto_day_values ADD INDEX pto_day_values_updated_idx (updated_at)",
+  },
+  {
+    kind: "index",
+    tableName: "pto_row_years",
+    indexName: "pto_row_years_row_idx",
+    statement: "ALTER TABLE pto_row_years ADD INDEX pto_row_years_row_idx (table_type, row_id, year_value)",
+  },
+  {
+    kind: "index",
+    tableName: "pto_row_years",
+    indexName: "pto_row_years_updated_idx",
+    statement: "ALTER TABLE pto_row_years ADD INDEX pto_row_years_updated_idx (updated_at)",
   },
   {
     kind: "index",
@@ -311,6 +334,16 @@ async function addMysqlColumnIfMissing(tableName: string, columnName: string, st
   await executeIgnoringMysqlError(statement, "ER_DUP_FIELDNAME");
 }
 
+function createSchemaSetupExecutor() {
+  const execute = (async (sql: string, values: unknown[] = []) => {
+    const [result] = await getMysqlPool().execute(sql, values as never[]);
+    return result;
+  }) as Parameters<typeof rebuildPtoRowYearMembership>[0];
+
+  execute.rows = mysqlRows;
+  return execute;
+}
+
 async function applyMysqlSchemaMigration(migration: MysqlSchemaMigration) {
   if (migration.kind === "index") {
     await addMysqlIndexIfMissing(migration.tableName, migration.indexName, migration.statement);
@@ -332,6 +365,8 @@ async function runMysqlSchemaSetup() {
   for (const migration of schemaMigrations) {
     await applyMysqlSchemaMigration(migration);
   }
+
+  await rebuildPtoRowYearMembership(createSchemaSetupExecutor());
 
   await getMysqlPool().execute(
     "INSERT IGNORE INTO pto_meta (meta_key) VALUES (?)",
