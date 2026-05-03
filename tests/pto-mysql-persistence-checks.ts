@@ -21,6 +21,7 @@ const mysqlBucketWritesSource = readFileSync(new URL("../lib/server/mysql/pto-bu
 const mysqlPtoWritesSource = readFileSync(new URL("../lib/server/mysql/pto-writes.ts", import.meta.url), "utf8");
 const mysqlPtoRowWritesSource = readFileSync(new URL("../lib/server/mysql/pto-row-writes.ts", import.meta.url), "utf8");
 const mysqlPtoDayValueWritesSource = readFileSync(new URL("../lib/server/mysql/pto-day-value-writes.ts", import.meta.url), "utf8");
+const mysqlPtoRowYearMembershipSource = readFileSync(new URL("../lib/server/mysql/pto-row-year-membership.ts", import.meta.url), "utf8");
 assert.match(mysqlFullSaveSource, /writePtoTransaction/);
 assert.match(mysqlFullSaveSource, /assertMysqlPtoMatchesExpectedUpdatedAt\(state,\s*options\.expectedUpdatedAt,\s*\{[\s\S]*yearScope: options\.yearScope[\s\S]*\}\)/);
 assert.match(mysqlFullSaveSource, /if \(options\.yearScope\) \{[\s\S]*upsertPtoRowsForYearScope\(rowRecords,\s*options\.yearScope,\s*execute\);[\s\S]*\} else \{[\s\S]*upsertPtoRows\(rowRecords,\s*execute\);[\s\S]*\}/);
@@ -45,6 +46,8 @@ assert.match(mysqlPtoDayValueWritesSource, /export async function deletePtoDayVa
 assert.match(mysqlPtoDayValueWritesSource, /SELECT DISTINCT row_id[\s\S]*FROM pto_day_values[\s\S]*WHERE table_type = \?[\s\S]*AND work_date >= \?[\s\S]*AND work_date <= \?/);
 assert.match(mysqlPtoDayValueWritesSource, /const staleRowIds = existingRows[\s\S]*filter\(\(rowId\) => !rowIds\.has\(rowId\)\)/);
 assert.match(mysqlPtoDayValueWritesSource, /DELETE FROM pto_day_values[\s\S]*AND row_id IN/);
+assert.match(mysqlPtoRowYearMembershipSource, /SELECT DISTINCT table_type,\s*row_id,\s*CAST\(YEAR\(work_date\) AS CHAR\)/);
+assert.doesNotMatch(mysqlPtoRowYearMembershipSource, /GROUP BY table_type,\s*row_id,\s*YEAR\(work_date\)/);
 assert.match(mysqlBucketWritesSource, /import \{ chunkValues \} from "\.\/pto-write-utils";/);
 assert.doesNotMatch(mysqlBucketWritesSource, /const batchSize = 250/);
 assert.match(mysqlBucketWritesSource, /for \(const batch of chunkValues\(records\)\) \{[\s\S]*INSERT INTO pto_bucket_rows/);

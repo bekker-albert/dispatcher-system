@@ -80,10 +80,9 @@ async function insertPtoRowYearMembershipFromDayValues(
 
   await execute(
     `INSERT IGNORE INTO pto_row_years (table_type, row_id, year_value)
-    SELECT table_type, row_id, CAST(YEAR(work_date) AS CHAR)
+    SELECT DISTINCT table_type, row_id, CAST(YEAR(work_date) AS CHAR)
     FROM pto_day_values
-    ${where}
-    GROUP BY table_type, row_id, YEAR(work_date)`,
+    ${where}`,
     values,
   );
 }
