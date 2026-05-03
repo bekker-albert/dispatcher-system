@@ -23,6 +23,53 @@ import type {
 
 const ptoSnapshotConflictMessage = "Данные ПТО уже изменились в базе. Обновите страницу перед повторным сохранением.";
 
+const ptoFreshRowSelectColumns = [
+  "table_type",
+  "row_id",
+  "area",
+  "location",
+  "structure",
+  "customer_code",
+  "unit",
+  "status",
+  "carryover",
+  "carryovers",
+  "carryover_manual_years",
+  "years",
+  "sort_index",
+  "updated_at",
+].join(", ");
+
+const ptoFreshDayValueSelectColumns = [
+  "table_type",
+  "row_id",
+  "work_date",
+  "value",
+  "updated_at",
+].join(", ");
+
+const ptoFreshSettingSelectColumns = [
+  "setting_key",
+  "value",
+  "updated_at",
+].join(", ");
+
+const ptoFreshBucketRowSelectColumns = [
+  "row_key",
+  "area",
+  "structure",
+  "source",
+  "sort_index",
+  "updated_at",
+].join(", ");
+
+const ptoFreshBucketValueSelectColumns = [
+  "row_key",
+  "equipment_key",
+  "value",
+  "updated_at",
+].join(", ");
+
 function comparableJson(value: unknown) {
   return JSON.stringify(value ?? null);
 }
@@ -97,7 +144,7 @@ export async function assertMysqlPtoMatchesExpectedUpdatedAt(
   ];
   const yearScope = options.yearScope;
   const rowParams: unknown[] = [];
-  const rowQuery = `SELECT * FROM pto_rows${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, rowParams, "WHERE")}`;
+  const rowQuery = `SELECT ${ptoFreshRowSelectColumns} FROM pto_rows${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, rowParams, "WHERE")}`;
   const dayValueParams: unknown[] = yearScope
     ? [ptoYearDateRange(yearScope).start, ptoYearDateRange(yearScope).end]
     : [];
@@ -107,15 +154,15 @@ export async function assertMysqlPtoMatchesExpectedUpdatedAt(
     yearScope ? "AND" : "WHERE",
   );
   const currentDayValueQuery = yearScope
-    ? `SELECT * FROM pto_day_values
+    ? `SELECT ${ptoFreshDayValueSelectColumns} FROM pto_day_values
       WHERE work_date >= ? AND work_date <= ?${dayValueFreshnessClause}`
-    : `SELECT * FROM pto_day_values${dayValueFreshnessClause}`;
+    : `SELECT ${ptoFreshDayValueSelectColumns} FROM pto_day_values${dayValueFreshnessClause}`;
   const settingParams: unknown[] = [ptoManualYearsKey, ptoUiStateKey];
-  const settingQuery = `SELECT * FROM pto_settings WHERE setting_key IN (?, ?)${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, settingParams, "AND")}`;
+  const settingQuery = `SELECT ${ptoFreshSettingSelectColumns} FROM pto_settings WHERE setting_key IN (?, ?)${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, settingParams, "AND")}`;
   const bucketRowParams: unknown[] = [];
-  const bucketRowQuery = `SELECT * FROM pto_bucket_rows${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, bucketRowParams, "WHERE")}`;
+  const bucketRowQuery = `SELECT ${ptoFreshBucketRowSelectColumns} FROM pto_bucket_rows${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, bucketRowParams, "WHERE")}`;
   const bucketValueParams: unknown[] = [];
-  const bucketValueQuery = `SELECT * FROM pto_bucket_values${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, bucketValueParams, "WHERE")}`;
+  const bucketValueQuery = `SELECT ${ptoFreshBucketValueSelectColumns} FROM pto_bucket_values${mysqlUpdatedAfterExpectedClause(expectedUpdatedAt, bucketValueParams, "WHERE")}`;
   const includeBuckets = !yearScope;
   const [currentRows, currentDayValues, currentSettings, currentBucketRows, currentBucketValues] = await Promise.all([
     dbRows<PtoRowRecord>(rowQuery, rowParams),

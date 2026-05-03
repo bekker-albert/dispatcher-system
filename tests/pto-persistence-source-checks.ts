@@ -190,6 +190,11 @@ assert.match(mysqlPtoFreshnessSource, /return ` \$\{prefix\} updated_at > \?`;/)
 assert.match(mysqlPtoFreshnessSource, /const freshCurrentRecords = currentRecords\.filter/);
 assert.match(mysqlPtoFreshnessSource, /if \(freshCurrentRecords\.length === 0\) return;/);
 assert.match(mysqlPtoFreshnessSource, /for \(const record of freshCurrentRecords\)/);
+assert.match(mysqlPtoFreshnessSource, /const ptoFreshRowSelectColumns = \[/);
+assert.match(mysqlPtoFreshnessSource, /SELECT \$\{ptoFreshRowSelectColumns\} FROM pto_rows/);
+assert.match(mysqlPtoFreshnessSource, /SELECT \$\{ptoFreshDayValueSelectColumns\} FROM pto_day_values/);
+assert.match(mysqlPtoFreshnessSource, /SELECT \$\{ptoFreshBucketValueSelectColumns\} FROM pto_bucket_values/);
+assert.doesNotMatch(mysqlPtoFreshnessSource, /SELECT \* FROM pto_/);
 assert.match(mysqlPtoCommandsSource, /savePtoDayValueWithRowToMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);[\s\S]*await insertPtoRowsIfMissing/);
 assert.match(mysqlPtoCommandsSource, /savePtoDayValuesWithRowToMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);[\s\S]*await insertPtoRowsIfMissing/);
 assert.match(mysqlPtoCommandsSource, /deletePtoRowsFromMysql\([\s\S]*options: PtoInlineWriteOptions = \{\},[\s\S]*await assertPtoVersionMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, execute\);/);
