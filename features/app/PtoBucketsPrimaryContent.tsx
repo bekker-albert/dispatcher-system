@@ -40,6 +40,7 @@ export function PtoBucketsPrimaryContent({
     markPtoDatabaseInlineWriteSaved: runtime.markPtoDatabaseInlineWriteSaved,
     getPtoDatabaseExpectedUpdatedAt: runtime.getPtoDatabaseExpectedUpdatedAt,
     requestPtoDatabaseSave: runtime.requestPtoDatabaseSave,
+    showSaveStatus: appState.showSaveStatus,
     addAdminLog: appState.addAdminLog,
   });
   const shellProps = createAppPtoSectionShellProps({ appState, models, navigation });

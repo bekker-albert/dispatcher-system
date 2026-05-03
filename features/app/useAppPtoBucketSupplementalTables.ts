@@ -4,12 +4,15 @@ import type { Dispatch, RefObject, SetStateAction } from "react";
 
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
+import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import type { PtoBucketRowLookupSource } from "@/features/pto/ptoDateLookupModel";
+import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 type AddAdminLog = (entry: AdminLogInput) => void;
+type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type UseAppPtoBucketSupplementalTablesOptions = {
   active: boolean;
@@ -21,9 +24,10 @@ type UseAppPtoBucketSupplementalTablesOptions = {
   setPtoBucketManualRows: Dispatch<SetStateAction<PtoBucketRow[]>>;
   databaseConfigured: boolean;
   ptoDatabaseLoadedRef: RefObject<boolean>;
-  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null) => void;
+  markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
   requestPtoDatabaseSave: () => void;
+  showSaveStatus: ShowSaveStatus;
   addAdminLog: AddAdminLog;
 };
 
@@ -40,6 +44,7 @@ export function useAppPtoBucketSupplementalTables({
   markPtoDatabaseInlineWriteSaved,
   getPtoDatabaseExpectedUpdatedAt,
   requestPtoDatabaseSave,
+  showSaveStatus,
   addAdminLog,
 }: UseAppPtoBucketSupplementalTablesOptions) {
   const {
@@ -69,6 +74,7 @@ export function useAppPtoBucketSupplementalTables({
     ptoDatabaseLoadedRef,
     markPtoDatabaseInlineWriteSaved,
     getPtoDatabaseExpectedUpdatedAt,
+    showSaveStatus,
     requestSave: requestPtoDatabaseSave,
     addAdminLog,
   });

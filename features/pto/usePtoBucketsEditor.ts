@@ -7,12 +7,14 @@ import {
   normalizePtoBucketDraftValue,
   removePtoBucketManualRowValues,
 } from "@/features/pto/ptoBucketsEditorModel";
-import { enqueuePtoDatabaseWrite } from "@/features/pto/ptoSaveQueue";
+import { enqueuePtoInlineDatabaseWrite } from "@/features/pto/ptoInlineDatabaseWrite";
 import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
+import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 type AddAdminLog = (entry: AdminLogInput) => void;
+type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type UsePtoBucketsEditorOptions = {
   ptoAreaFilter: string;
@@ -25,6 +27,7 @@ type UsePtoBucketsEditorOptions = {
   ptoDatabaseLoadedRef: RefObject<boolean>;
   markPtoDatabaseInlineWriteSaved: (updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => void;
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
+  showSaveStatus: ShowSaveStatus;
   requestSave: () => void;
   addAdminLog: AddAdminLog;
 };
@@ -40,6 +43,7 @@ export function usePtoBucketsEditor({
   ptoDatabaseLoadedRef,
   markPtoDatabaseInlineWriteSaved,
   getPtoDatabaseExpectedUpdatedAt,
+  showSaveStatus,
   requestSave,
   addAdminLog,
 }: UsePtoBucketsEditorOptions) {
@@ -53,17 +57,20 @@ export function usePtoBucketsEditor({
 
     setPtoBucketValues((current) => applyPtoBucketValueDraft(current, cellKey, draft).values);
     if (databaseReady()) {
-      void enqueuePtoDatabaseWrite(async () => {
-        const { savePtoBucketValueToDatabase } = await import("@/lib/data/pto");
-        const result = await savePtoBucketValueToDatabase(cellKey, nextValue, {
-          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
-        });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+      enqueuePtoInlineDatabaseWrite({
+        label: "ковш",
+        showSaveStatus,
+        write: async () => {
+          const { savePtoBucketValueToDatabase } = await import("@/lib/data/pto");
+          return await savePtoBucketValueToDatabase(cellKey, nextValue, {
+            expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+          });
+        },
+        onSaved: (result) => markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
           kind: "bucket-values",
           values: [{ cellKey, value: nextValue }],
-        });
-      })
-        .catch((error) => console.warn("Database PTO bucket value save failed:", error));
+        }),
+      });
     }
     requestSave();
     addAdminLog({
@@ -71,24 +78,27 @@ export function usePtoBucketsEditor({
       section: "ПТО: Ковши",
       details: `Изменена ячейка${bucketRow ? ` ${bucketRow.area} / ${bucketRow.structure}` : ""}${bucketColumn ? `, ${bucketColumn.label}` : ""}.`,
     });
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoBucketColumns, ptoBucketRows, requestSave, setPtoBucketValues]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoBucketColumns, ptoBucketRows, requestSave, setPtoBucketValues, showSaveStatus]);
 
   const clearPtoBucketCells = useCallback((cellKeys: string[]) => {
     if (cellKeys.length === 0) return;
 
     setPtoBucketValues((current) => clearPtoBucketValueKeys(current, cellKeys));
     if (databaseReady()) {
-      void enqueuePtoDatabaseWrite(async () => {
-        const { deletePtoBucketValuesFromDatabase } = await import("@/lib/data/pto");
-        const result = await deletePtoBucketValuesFromDatabase(cellKeys, {
-          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
-        });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+      enqueuePtoInlineDatabaseWrite({
+        label: "очистка ковшей",
+        showSaveStatus,
+        write: async () => {
+          const { deletePtoBucketValuesFromDatabase } = await import("@/lib/data/pto");
+          return await deletePtoBucketValuesFromDatabase(cellKeys, {
+            expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+          });
+        },
+        onSaved: (result) => markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
           kind: "bucket-values",
           values: cellKeys.map((cellKey) => ({ cellKey, value: null })),
-        });
-      })
-        .catch((error) => console.warn("Database PTO bucket values delete failed:", error));
+        }),
+      });
     }
     requestSave();
     addAdminLog({
@@ -96,7 +106,7 @@ export function usePtoBucketsEditor({
       section: "ПТО: Ковши",
       details: `Очищены выбранные ячейки ковшей: ${cellKeys.length}.`,
     });
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoBucketValues]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoBucketValues, showSaveStatus]);
 
   const addPtoBucketManualRow = useCallback((areaValue: string, structureValue: string) => {
     const row = createPtoBucketManualRowDraft(areaValue, structureValue, ptoAreaFilter, [
@@ -107,19 +117,22 @@ export function usePtoBucketsEditor({
 
     setPtoBucketManualRows((current) => [...current, row]);
     if (databaseReady()) {
-      void enqueuePtoDatabaseWrite(async () => {
-        const { savePtoBucketRowToDatabase } = await import("@/lib/data/pto");
-        const result = await savePtoBucketRowToDatabase(row, ptoBucketManualRows.length, {
-          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
-        });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+      enqueuePtoInlineDatabaseWrite({
+        label: "строка ковшей",
+        showSaveStatus,
+        write: async () => {
+          const { savePtoBucketRowToDatabase } = await import("@/lib/data/pto");
+          return await savePtoBucketRowToDatabase(row, ptoBucketManualRows.length, {
+            expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+          });
+        },
+        onSaved: (result) => markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
           kind: "bucket-row",
           action: "upsert",
           row,
           index: ptoBucketManualRows.length,
-        });
-      })
-        .catch((error) => console.warn("Database PTO bucket row save failed:", error));
+        }),
+      });
     }
     requestSave();
     addAdminLog({
@@ -128,7 +141,7 @@ export function usePtoBucketsEditor({
       details: `Добавлена строка ковшей: ${row.area} / ${row.structure}.`,
     });
     return true;
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoAreaFilter, ptoBucketManualRows, ptoBucketRows, requestSave, setPtoBucketManualRows]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoAreaFilter, ptoBucketManualRows, ptoBucketRows, requestSave, setPtoBucketManualRows, showSaveStatus]);
 
   const deletePtoBucketManualRow = useCallback((row: PtoBucketRow) => {
     if (!window.confirm(`Удалить временную строку "${row.area} / ${row.structure}" из ковшей?`)) return;
@@ -136,18 +149,21 @@ export function usePtoBucketsEditor({
     setPtoBucketManualRows((current) => current.filter((item) => item.key !== row.key));
     setPtoBucketValues((current) => removePtoBucketManualRowValues(current, row.key));
     if (databaseReady()) {
-      void enqueuePtoDatabaseWrite(async () => {
-        const { deletePtoBucketRowFromDatabase } = await import("@/lib/data/pto");
-        const result = await deletePtoBucketRowFromDatabase(row.key, {
-          expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
-        });
-        markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
+      enqueuePtoInlineDatabaseWrite({
+        label: "удаление строки ковшей",
+        showSaveStatus,
+        write: async () => {
+          const { deletePtoBucketRowFromDatabase } = await import("@/lib/data/pto");
+          return await deletePtoBucketRowFromDatabase(row.key, {
+            expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt(),
+          });
+        },
+        onSaved: (result) => markPtoDatabaseInlineWriteSaved(result?.updatedAt ?? null, {
           kind: "bucket-row",
           action: "delete",
           rowKey: row.key,
-        });
-      })
-        .catch((error) => console.warn("Database PTO bucket row delete failed:", error));
+        }),
+      });
     }
     requestSave();
     addAdminLog({
@@ -155,7 +171,7 @@ export function usePtoBucketsEditor({
       section: "ПТО: Ковши",
       details: `Удалена строка ковшей: ${row.area} / ${row.structure}.`,
     });
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoBucketManualRows, setPtoBucketValues]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoBucketManualRows, setPtoBucketValues, showSaveStatus]);
 
   return {
     commitPtoBucketValue,

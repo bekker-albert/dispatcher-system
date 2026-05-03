@@ -21,6 +21,7 @@ const ptoDateRowValueEditorSource = readFileSync(resolve(testDir, "../features/p
 const ptoDateTableContextSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateTableContext.ts"), "utf8");
 const ptoLinkedRowsEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoLinkedRowsEditor.ts"), "utf8");
 const ptoYearEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoYearEditor.ts"), "utf8");
+const ptoBucketsEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsEditor.ts"), "utf8");
 const ptoInlineDatabaseWriteSource = readFileSync(resolve(testDir, "../features/pto/ptoInlineDatabaseWrite.ts"), "utf8");
 const dataPtoSource = readFileSync(resolve(testDir, "../lib/data/pto.ts"), "utf8");
 const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
@@ -124,6 +125,11 @@ assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]
 assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "значения месяца"[\s\S]*showSaveStatus[\s\S]*savePtoDayValuesWithRowToDatabase/);
 assert.match(ptoLinkedRowsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление строки"[\s\S]*deletePtoRowsFromDatabase/);
 assert.match(ptoYearEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление года"[\s\S]*deletePtoYearFromDatabase/);
+assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "ковш"[\s\S]*showSaveStatus[\s\S]*savePtoBucketValueToDatabase/);
+assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "очистка ковшей"[\s\S]*deletePtoBucketValuesFromDatabase/);
+assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "строка ковшей"[\s\S]*savePtoBucketRowToDatabase/);
+assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление строки ковшей"[\s\S]*deletePtoBucketRowFromDatabase/);
+assert.doesNotMatch(ptoBucketsEditorSource, /Database PTO bucket .* failed/);
 assert.match(ptoDatabaseSaveSource, /markPtoDatabaseInlineWriteSaved/);
 assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseStateChanged\(ptoDatabaseStateRef\.current, ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*ptoDatabaseDirtyRef\.current = false;[\s\S]*\}/);
 
