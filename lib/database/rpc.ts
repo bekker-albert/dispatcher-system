@@ -106,6 +106,22 @@ function assertDatabaseReadyStatus(status: DatabaseStatusPayload) {
   }
 }
 
+function markDatabaseReadyForCachedWindow() {
+  databaseReadinessCheckedUntil = Date.now() + databaseReadinessCacheMs;
+}
+
+function rememberDatabaseReadiness<T>(resource: DatabaseResource, action: DatabaseAction, result: T) {
+  if (isDatabaseStatusRequest(resource, action)) {
+    const status = result as DatabaseStatusPayload;
+    if (status.configured === false) {
+      databaseReadinessCheckedUntil = 0;
+      return;
+    }
+  }
+
+  markDatabaseReadyForCachedWindow();
+}
+
 async function runDatabaseReadinessCheck() {
   try {
     const status = await sendDatabaseRequest<DatabaseStatusPayload>(
@@ -115,7 +131,7 @@ async function runDatabaseReadinessCheck() {
       databaseReadinessTimeoutMs,
     );
     assertDatabaseReadyStatus(status);
-    databaseReadinessCheckedUntil = Date.now() + databaseReadinessCacheMs;
+    markDatabaseReadyForCachedWindow();
   } catch (error) {
     const message = errorToMessage(error);
     throw new Error(`Сервер базы данных не готов: ${message}`);
@@ -139,5 +155,7 @@ export async function databaseRequest<T>(
   payload?: unknown,
 ): Promise<T> {
   await ensureDatabaseReady(resource, action);
-  return sendDatabaseRequest<T>(resource, action, payload);
+  const result = await sendDatabaseRequest<T>(resource, action, payload);
+  rememberDatabaseReadiness(resource, action, result);
+  return result;
 }

@@ -48,7 +48,7 @@ try {
   });
   assert.deepEqual(await databaseRequest<{ ok: boolean }>("pto", "load-updated-at"), { ok: true });
   assert.deepEqual(await databaseRequest<{ ok: boolean }>("pto", "load-buckets"), { ok: true });
-  assert.equal(fetchCalls.length, 4);
+  assert.equal(fetchCalls.length, 3);
   assert.equal(fetchCalls[0]?.input, "/api/database");
   assert.equal(fetchCalls[0]?.init?.method, "POST");
   assert.deepEqual(JSON.parse(String(fetchCalls[0]?.init?.body)), {
@@ -56,14 +56,10 @@ try {
     action: "status",
   });
   assert.deepEqual(JSON.parse(String(fetchCalls[1]?.init?.body)), {
-    resource: "status",
-    action: "status",
-  });
-  assert.deepEqual(JSON.parse(String(fetchCalls[2]?.init?.body)), {
     resource: "pto",
     action: "load-updated-at",
   });
-  assert.deepEqual(JSON.parse(String(fetchCalls[3]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(fetchCalls[2]?.init?.body)), {
     resource: "pto",
     action: "load-buckets",
   });
