@@ -8,6 +8,7 @@ import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import { useAppScreenProps } from "@/features/app/useAppScreenProps";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import { AiAssistantProvider } from "@/features/ai-assistant/lib/useAiAssistantState";
 import { databaseConfigured } from "@/lib/data/config";
 
 export default function App() {
@@ -34,9 +35,11 @@ export default function App() {
   });
 
   return (
-    <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
-      <AppHeader {...appHeaderProps} />
-      <AppPrimaryContent {...primaryContentProps} />
-    </AppPageShell>
+    <AiAssistantProvider>
+      <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
+        <AppHeader {...appHeaderProps} />
+        <AppPrimaryContent {...primaryContentProps} />
+      </AppPageShell>
+    </AiAssistantProvider>
   );
 }

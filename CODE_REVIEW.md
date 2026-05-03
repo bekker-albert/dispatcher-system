@@ -36,6 +36,7 @@ Use this checklist before every commit.
 - `.env.local` is not staged.
 - Secrets are not printed in logs or committed to docs.
 - Public keys are treated as public only when the provider explicitly defines them that way.
+- AI prompts, model outputs, request identifiers, and provider errors do not include `.env.local`, database credentials, raw customer secrets, or full production snapshots.
 - Imports/exports do not silently drop required columns.
 - Database migrations or schema assumptions are documented when required.
 

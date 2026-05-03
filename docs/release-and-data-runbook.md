@@ -74,6 +74,21 @@ After running it:
 - Keep the original browser storage and source database unchanged until the
   recovery is accepted.
 
+## External AI Provider Safety
+
+The product `AI-ассистент` must use server-side provider calls only.
+
+Before enabling a real provider:
+
+- Put provider keys only in server environment variables or a secret manager.
+- Keep product AI variables separate from local refactor-agent variables.
+- Confirm no provider key uses a `NEXT_PUBLIC_` prefix.
+- Define who can rotate keys and who can disable the connector.
+- Keep logs to request status, counts, source references, correlation IDs, and normalized error codes.
+- Do not log raw prompts, full customer data snapshots, provider tokens, database credentials, or source documents unless retention and access rules explicitly allow it.
+- Confirm the production host has the required variables before deploying a connector that depends on them.
+- Keep every external write behind a human approval path until a specific low-risk rule is approved.
+
 ## What Not To Do During An Incident
 
 - Do not redeploy repeatedly before identifying whether this is a storage,

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { AiAssistantFloatingDockHost } from "@/features/app/AiAssistantFloatingDockHost";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { SaveStatusIndicator, type SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
@@ -33,11 +34,12 @@ export function AppPageShell({
 }: AppPageShellProps) {
   return (
     <div className="app-print-root" style={appRootStyle}>
-      <style>{`${reportPrintCss}\n@media print { .app-save-status { display: none !important; } }`}</style>
+      <style>{`${reportPrintCss}\n@media print { .app-save-status, .ai-floating-dock { display: none !important; } }`}</style>
       <SaveStatusIndicator status={saveStatus} onClose={onCloseSaveStatus} />
       <div className="app-print-shell" style={appShellStyle}>
         {children}
       </div>
+      <AiAssistantFloatingDockHost />
     </div>
   );
 }

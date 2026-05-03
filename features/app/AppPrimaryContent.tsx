@@ -3,6 +3,7 @@
 import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTypes";
 import {
   AdminPrimaryContent,
+  AiAssistantPrimaryContent,
   ContractorsPrimaryContent,
   CustomTabPrimaryContent,
   DispatchPrimaryContent,
@@ -103,6 +104,8 @@ export function AppPrimaryContent({
       {renderedTopTab === "tb" && (
         <SafetyPrimaryContent tbTab={tbTab} subTabs={subTabs.tb} onSelectTab={setTbTab} />
       )}
+
+      {renderedTopTab === "ai-assistant" && <AiAssistantPrimaryContent />}
 
       {renderedTopTab === "user" && <UserPrimaryContent />}
 

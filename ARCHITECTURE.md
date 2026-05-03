@@ -104,11 +104,14 @@ Each feature owns its UI, local hooks, feature-specific models, and feature-spec
 - `features/reports`: report view, report table, print CSS, report admin settings.
 - `features/admin/vehicles`: vehicle administration grid.
 - `features/dispatch`: shift summary and dispatch forms.
+- `features/ai-assistant`: AI assistant tab, UI components, local screen state, connector contracts, and static seed data for future AI workflows.
 - `features/app`: app-level composition hooks only. These hooks may wire feature hooks together, but they must not become a new home for domain calculations or table internals.
 
 ### `lib/domain/`
 
 Use for pure business rules. These modules should not depend on React. They should be easy to test through `tests/domain-checks.ts`.
+
+`lib/domain/ai-assistant` owns assistant permissions, task statuses, connector contracts, and pure view-model logic. Real provider calls must stay out of this domain layer.
 
 ### `lib/data/` and `lib/server/`
 

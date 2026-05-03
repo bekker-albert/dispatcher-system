@@ -7,6 +7,10 @@ import { clientSnapshotStorageSignature } from "../lib/storage/client-snapshot-s
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, buildDispatchSummaryRowView, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "../lib/domain/navigation/tabs";
+import { createAiAssistantViewModel } from "../lib/domain/ai-assistant/view-model";
+import { canApproveAiAssistantAction, canManageAiAssistantConnectors, resolveAiAssistantPermissions } from "../lib/domain/ai-assistant/permissions";
+import { getAiAssistantTaskStatusForApprovalDecision } from "../lib/domain/ai-assistant/status";
+import { defaultAiAssistantDataset } from "../features/ai-assistant/data";
 import { createPtoBucketColumns, createPtoBucketRows, createPtoBucketRowsModel, isLoadingEquipment, loadingEquipmentLabel, normalizePtoBucketManualRows, ptoBucketCellKey, ptoBucketRowKey, ptoBucketRowsSignature, ptoBucketSelectionKey } from "../lib/domain/pto/buckets";
 import { dateRange, distributeMonthlyTotal, emptyPtoDraftRowFields, isPtoDateTableKey, nextDate, normalizePtoCustomerCode, normalizePtoPlanRow, ptoColumnDefaults, ptoDateTableKeyFromTab } from "../lib/domain/pto/date-table";
 import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultReportDate } from "../lib/domain/pto/defaults";
@@ -151,12 +155,51 @@ assert.equal(defaultFuelContractors[0].contractor, "Qaz Trucks");
 assert.equal(defaultUserCard.fullName, "Альберт");
 const defaultSubTabs = createDefaultSubTabs(["AA Mining"]);
 assert.equal(defaultSubTabs.contractors[0].value, "AA Mining");
+assert.equal(defaultTopTabs.some((tab) => tab.id === "ai-assistant" && tab.label === "AI-ассистент"), true);
+assert.equal(
+  normalizeStoredTopTabs(defaultTopTabs.filter((tab) => tab.id !== "ai-assistant"))
+    .some((tab) => tab.id === "ai-assistant"),
+  true,
+);
 assert.equal(normalizeStoredTopTabs([{ id: "admin", label: "", visible: false }]).find((tab) => tab.id === "admin")?.visible, true);
 assert.equal(normalizeStoredSubTabs({ pto: [{ id: "custom", label: " Custom ", value: "", visible: true }] }, defaultSubTabs).pto.some((tab) => tab.id === "custom" && tab.label === "Custom"), true);
 assert.equal(customTabKey("abc"), "custom:abc");
 assert.equal(compactTopTabLabel(defaultTopTabs.find((tab) => tab.id === "dispatch")!), defaultTopTabs.find((tab) => tab.id === "dispatch")?.label);
+assert.equal(compactTopTabLabel(defaultTopTabs.find((tab) => tab.id === "ai-assistant")!), "AI");
 assert.equal(compactSubTabLabel("pto", { id: "x", label: "Custom", value: "custom", visible: true }), "Custom");
 assert.deepEqual(normalizeStoredCustomTabs([{ id: "c", title: " Custom ", description: " Text ", items: ["a", 1], visible: true }]), [{ id: "c", title: "Custom", description: "Text", items: ["a"], visible: true }]);
+
+const aiAssistantViewModel = createAiAssistantViewModel(defaultAiAssistantDataset);
+assert.equal(aiAssistantViewModel.summary.activeTasks, 2);
+assert.equal(aiAssistantViewModel.summary.approvalsRequired, 2);
+assert.equal(aiAssistantViewModel.summary.connectorWarnings, 1);
+assert.equal(aiAssistantViewModel.chatMessages[0].role, "system");
+assert.equal(aiAssistantViewModel.approvalActions.filter((approval) => approval.status === "required").length, 2);
+assert.equal(aiAssistantViewModel.evidenceById.get("ev-001")?.source.type, "dispatch-summary");
+assert.equal(aiAssistantViewModel.currentWorkDate, defaultAiAssistantDataset.currentWorkDate);
+assert.equal(aiAssistantViewModel.currentTasks.every((task) => task.workDate === aiAssistantViewModel.currentWorkDate), true);
+assert.equal(aiAssistantViewModel.currentTasks.some((task) => task.id === "ai-task-002"), true);
+assert.equal(
+  aiAssistantViewModel.currentNotifications.every((notification) => (
+    notification.workDate === aiAssistantViewModel.currentWorkDate ||
+    Boolean(notification.linkedTaskId && aiAssistantViewModel.currentTasks.some((task) => task.id === notification.linkedTaskId))
+  )),
+  true,
+);
+assert.equal(aiAssistantViewModel.plannerItems.some((item) => item.plannedDate > aiAssistantViewModel.currentWorkDate), true);
+assert.equal(aiAssistantViewModel.plannerItems.some((item) => item.plannedDate === aiAssistantViewModel.currentWorkDate && item.status === "needs-decision"), true);
+assert.equal(defaultAiAssistantDataset.plannerItems.every((item) => item.target.trim().length > 0), true);
+assert.equal(defaultAiAssistantDataset.plannerItems.every((item) => item.preparedText.trim().length > 0), true);
+assert.equal(defaultAiAssistantDataset.plannerItems.some((item) => item.actionType === "send-whatsapp" && item.requireApproval), true);
+const aiAssistantTaskIds = new Set(defaultAiAssistantDataset.tasks.map((task) => task.id));
+const aiAssistantEvidenceIds = new Set(defaultAiAssistantDataset.evidence.map((evidence) => evidence.id));
+assert.equal(defaultAiAssistantDataset.approvalActions.every((approval) => aiAssistantTaskIds.has(approval.taskId)), true);
+assert.equal(defaultAiAssistantDataset.tasks.every((task) => task.evidenceIds.every((id) => aiAssistantEvidenceIds.has(id))), true);
+assert.equal(getAiAssistantTaskStatusForApprovalDecision("approved"), "approved");
+assert.equal(getAiAssistantTaskStatusForApprovalDecision("rejected"), "cancelled");
+assert.equal(resolveAiAssistantPermissions("operator").includes("ai.external.draft"), true);
+assert.equal(canApproveAiAssistantAction("supervisor"), true);
+assert.equal(canManageAiAssistantConnectors("operator"), false);
 
 const defaultVehicle = {
   id: 0,

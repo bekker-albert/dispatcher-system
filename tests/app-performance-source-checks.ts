@@ -7,6 +7,7 @@ import { repairAdminReportText } from "../features/reports/admin/adminReportText
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const appPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/AppPrimaryContent.tsx"), "utf8");
+const lazyPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/lazyPrimaryContent.tsx"), "utf8");
 const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features/app/initialAppDataLoadSteps.ts"), "utf8");
 const initialAppDatabaseBootstrapSource = readFileSync(resolve(testDir, "../features/app/initialAppDatabaseBootstrap.ts"), "utf8");
 const navigationSelectionHandlersSource = readFileSync(resolve(testDir, "../features/navigation/useNavigationSelectionHandlers.ts"), "utf8");
@@ -239,9 +240,13 @@ assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreload
 assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
 assert.match(useAppSectionPreloaderSource, /const primarySectionPreloaders: SectionPreloader\[\] = \[/);
 assert.match(useAppSectionPreloaderSource, /const ptoSectionPreloaders: SectionPreloader\[\] = \[/);
+assert.match(lazyPrimaryContentSource, /export const AiAssistantPrimaryContent = dynamic\(/);
+assert.match(lazyPrimaryContentSource, /import\("\.\/AiAssistantPrimaryContent"\)/);
+assert.match(appPrimaryContentSource, /renderedTopTab === "ai-assistant"/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /ReportsPrimaryContent/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /AdminPrimaryContent/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /PtoPrimaryContent/);
+assert.doesNotMatch(useAppSectionPreloaderSource, /AiAssistantPrimaryContent/);
 assert.match(useAppSectionPreloaderSource, /includePto[\s\S]*\? \[\.\.\.primarySectionPreloaders, \.\.\.ptoSectionPreloaders\][\s\S]*: primarySectionPreloaders/);
 assert.match(useAppSectionPreloaderSource, /\.filter\(\(preloader\) => preloader\.key !== activeTab\)/);
 assert.match(useAppSectionPreloaderSource, /const completedPreloaders = new Set<string>\(\);/);

@@ -1,12 +1,16 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
 import { useAppHeaderProps } from "@/features/app/useAppHeaderProps";
 import type { AppScreenPropsArgs } from "@/features/app/appScreenPropsTypes";
+import {
+  appNavigationEventName,
+  isAppNavigationEvent,
+} from "@/lib/domain/navigation/appNavigationEvents";
 
 type UseAppScreenPropsResult = {
   appHeaderProps: ComponentProps<typeof AppHeader>;
@@ -63,6 +67,16 @@ export function useAppScreenProps({
     if (tab === ptoTab) return;
     selectPtoTab(tab);
   }, [selectPtoTab, ptoTab]);
+
+  useEffect(() => {
+    const handleNavigation = (event: Event) => {
+      if (!isAppNavigationEvent(event)) return;
+      guardedSelectTopTab(event.detail.topTab as typeof topTab);
+    };
+
+    window.addEventListener(appNavigationEventName, handleNavigation);
+    return () => window.removeEventListener(appNavigationEventName, handleNavigation);
+  }, [guardedSelectTopTab, topTab]);
 
   const appHeaderProps = useAppHeaderProps({
     topTabs,
