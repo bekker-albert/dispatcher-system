@@ -14,6 +14,7 @@ import {
   ptoBucketRowLookupSourcesSignature,
   ptoDateLookupSourcesSignature,
 } from "../features/pto/ptoDateLookupModel";
+import { createPtoDateVisibleRowHeightsModel } from "../features/pto/ptoDateVirtualRowsViewModel";
 import type { usePtoDateRowsColumnsModel } from "../features/pto/ptoDateRowsColumnsModel";
 import type { usePtoDateViewportRefresh } from "../features/pto/ptoDateViewportModel";
 
@@ -106,10 +107,22 @@ const combinedLookupBundle = createPtoAreaAndBucketRowLookupSourceBundle([lookup
 assert.deepEqual(combinedLookupBundle.areaSources.map((source) => source.area), [lookupBaseRows[0].area]);
 assert.deepEqual(combinedLookupBundle.bucketRowSources.map((source) => source.structure), [lookupBaseRows[0].structure, lookupChangedStructureRows[0].structure]);
 
+const visibleHeights = createPtoDateVisibleRowHeightsModel(lookupBaseRows, {
+  "plan:row-1": 56,
+  "oper:row-1": 88,
+  "plan:missing": 120,
+}, "plan");
+assert.deepEqual(visibleHeights.rowHeights, { "plan:row-1": 56 });
+assert.equal(visibleHeights.signature, "row-1:56");
+
 assert.match(ptoDateTableModelSource, /const rowsByYearAndSignature = new Map<string, Map<string, PtoPlanRow\[]>>\(\);/);
 assert.match(ptoDateTableModelSource, /const cache = new WeakMap<PtoPlanRow, PtoRowDateTotals>\(\);/);
 assert.match(ptoDateTableModelSource, /const indexedRowsForYear = \(targetYear: string\) => \{/);
 assert.match(ptoDateTableModelSource, /const totalWithCarryover = \(row: PtoPlanRow, targetYear: string\): number => \{/);
+assert.match(ptoDateRowsColumnsModelSource, /createPtoDateVisibleRowHeightsModel\(filteredRows, ptoRowHeights, ptoTab\)/);
+assert.match(ptoDateRowsColumnsModelSource, /rowHeights: visibleRowHeights\.rowHeights/);
+assert.match(ptoDateRowsColumnsModelSource, /visibleRowHeights\.signature/);
+assert.match(ptoDateRowsColumnsModelSource, /\[filteredRows, ptoTab, visibleRowHeights\.signature\]/);
 assert.match(ptoDateRowsColumnsModelSource, /const virtualRowsModel = useMemo\(\(\) => createPtoDateVirtualRowsViewModel\(\{/);
 assert.match(ptoDateReadonlyTableSource, /const PtoDateReadonlyRow = memo\(function PtoDateReadonlyRow/);
 assert.match(ptoDateReadonlyTableSource, /<PtoDateReadonlyRow[\s\S]*row=\{row\}/);

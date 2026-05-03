@@ -13,6 +13,32 @@ type PtoDateVirtualRowsViewModelOptions = {
   viewport: PtoVirtualViewport;
 };
 
+export type PtoDateVisibleRowHeightsModel = {
+  rowHeights: Record<string, number>;
+  signature: string;
+};
+
+export function createPtoDateVisibleRowHeightsModel(
+  rows: PtoPlanRow[],
+  rowHeights: Record<string, number>,
+  table: string,
+): PtoDateVisibleRowHeightsModel {
+  const visibleRowHeights: Record<string, number> = {};
+  const signatureParts: string[] = [];
+
+  rows.forEach((row) => {
+    const key = `${table}:${row.id}`;
+    const height = rowHeights[key];
+    signatureParts.push(`${row.id}:${height ?? ""}`);
+    if (height !== undefined) visibleRowHeights[key] = height;
+  });
+
+  return {
+    rowHeights: visibleRowHeights,
+    signature: signatureParts.join("\u001e"),
+  };
+}
+
 export function createPtoDateVirtualRowsViewModel({
   rows,
   rowHeights,

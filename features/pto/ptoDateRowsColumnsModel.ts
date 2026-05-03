@@ -14,6 +14,7 @@ import {
   createPtoRowDateTotalsGetter,
 } from "@/features/pto/ptoDateTableModel";
 import {
+  createPtoDateVisibleRowHeightsModel,
   createPtoDateVirtualRowsLayoutModel,
   createPtoDateVirtualRowsViewModel,
 } from "@/features/pto/ptoDateVirtualRowsViewModel";
@@ -91,11 +92,17 @@ export function usePtoDateRowsColumnsModel({
     showCustomerCode,
     showLocation,
   ]);
+  const visibleRowHeights = useMemo(() => (
+    createPtoDateVisibleRowHeightsModel(filteredRows, ptoRowHeights, ptoTab)
+  ), [filteredRows, ptoRowHeights, ptoTab]);
   const virtualRowsLayout = useMemo(() => createPtoDateVirtualRowsLayoutModel({
     rows: filteredRows,
-    rowHeights: ptoRowHeights,
+    rowHeights: visibleRowHeights.rowHeights,
     table: ptoTab,
-  }), [filteredRows, ptoRowHeights, ptoTab]);
+  // `visibleRowHeights.signature` is enough here: unrelated row-height edits
+  // should not rebuild the virtual layout for the current filtered table.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [filteredRows, ptoTab, visibleRowHeights.signature]);
   const virtualRowsModel = useMemo(() => createPtoDateVirtualRowsViewModel({
     layout: virtualRowsLayout,
     viewport: ptoDateViewport,
