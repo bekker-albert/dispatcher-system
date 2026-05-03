@@ -2,8 +2,6 @@
 
 import dynamic from "next/dynamic";
 import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTypes";
-import { useAppPtoBucketsModel } from "@/features/app/useAppPtoBucketsModel";
-import { useAppPtoDateModel } from "@/features/app/useAppPtoDateModel";
 import { createEmptyPtoDateModel } from "@/features/app/emptyPtoDateModel";
 import type { AppPtoModels } from "@/features/app/appPtoScreenPropsTypes";
 import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
@@ -11,15 +9,15 @@ import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
 
 type PtoDataPrimaryContentProps = Pick<AppPrimaryContentProps, "appState" | "models" | "runtime" | "navigation">;
 
-const PtoDatePrimaryContent = dynamic(
-  () => import("@/features/app/PtoDatePrimaryContent")
-    .then((module) => module.PtoDatePrimaryContent),
+const PtoDateDataPrimaryContent = dynamic(
+  () => import("@/features/app/PtoDateDataPrimaryContent")
+    .then((module) => module.PtoDateDataPrimaryContent),
   { ssr: false },
 );
 
-const PtoBucketsPrimaryContent = dynamic(
-  () => import("@/features/app/PtoBucketsPrimaryContent")
-    .then((module) => module.PtoBucketsPrimaryContent),
+const PtoBucketsDataPrimaryContent = dynamic(
+  () => import("@/features/app/PtoBucketsDataPrimaryContent")
+    .then((module) => module.PtoBucketsDataPrimaryContent),
   { ssr: false },
 );
 
@@ -62,60 +60,4 @@ export function PtoDataPrimaryContent({
   };
 
   return <PtoStaticPrimaryContent appState={appState} models={ptoModels} navigation={navigation} />;
-}
-
-function PtoDateDataPrimaryContent({
-  appState,
-  models,
-  runtime,
-  navigation,
-}: PtoDataPrimaryContentProps) {
-  const {
-    ptoTab,
-    ptoDateEditing,
-    ptoPlanYear,
-    ptoManualYears,
-    expandedPtoMonths,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-  } = appState;
-
-  const ptoDateModel = useAppPtoDateModel({
-    renderedTopTab: models.renderedTopTab,
-    ptoTab,
-    ptoDateEditing,
-    ptoPlanYear,
-    ptoManualYears,
-    expandedPtoMonths,
-    ptoPlanRows,
-    ptoOperRows,
-    ptoSurveyRows,
-    deferredPtoPlanRows: models.deferredPtoPlanRows,
-    deferredPtoOperRows: models.deferredPtoOperRows,
-    deferredPtoSurveyRows: models.deferredPtoSurveyRows,
-  });
-  const ptoModels: AppPtoModels = { ...models, ...ptoDateModel };
-
-  return <PtoDatePrimaryContent appState={appState} models={ptoModels} runtime={runtime} navigation={navigation} />;
-}
-
-function PtoBucketsDataPrimaryContent({
-  appState,
-  models,
-  runtime,
-  navigation,
-}: PtoDataPrimaryContentProps) {
-  const ptoBucketsModel = useAppPtoBucketsModel({
-    renderedTopTab: models.renderedTopTab,
-    ptoTab: appState.ptoTab,
-    ptoPlanYear: appState.ptoPlanYear,
-    deferredPtoPlanRows: models.deferredPtoPlanRows,
-    deferredPtoOperRows: models.deferredPtoOperRows,
-    deferredPtoSurveyRows: models.deferredPtoSurveyRows,
-    ptoBucketManualRows: appState.ptoBucketManualRows,
-  });
-  const ptoModels: AppPtoModels = { ...models, ...ptoBucketsModel };
-
-  return <PtoBucketsPrimaryContent appState={appState} models={ptoModels} runtime={runtime} navigation={navigation} />;
 }
