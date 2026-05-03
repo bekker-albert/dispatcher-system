@@ -5,9 +5,7 @@ import {
 } from "./pto-index";
 import { createReportRowFromPtoPlan } from "./row-normalization";
 import { deriveReportRowFromPtoIndex } from "./pto-facts";
-import { reportReasonAccumulationStartDateFromIndexes } from "./reason-accumulation";
-import { delta, reportRowKey } from "./display";
-import { reportYearFact } from "./facts";
+import { reportRowKey } from "./display";
 import type { ReportRow } from "./types";
 import { cleanAreaName } from "../../utils/text";
 
@@ -73,18 +71,4 @@ export function deriveReportRowsFromPtoIndexes(
   return rows.map((row) => (
     deriveReportRowFromPtoIndex(row, reportDate, indexes.plan, indexes.survey, indexes.oper)
   ));
-}
-
-export function createReportReasonAccumulationStartDateByRowKey(
-  rows: ReportRow[],
-  reportDate: string,
-  indexes: ReportPtoIndexes,
-) {
-  return new Map(rows.flatMap((derivedRow) => {
-    const rowKey = reportRowKey(derivedRow);
-    const yearDelta = delta(derivedRow.yearPlan, reportYearFact(derivedRow));
-    return yearDelta < 0
-      ? [[rowKey, reportReasonAccumulationStartDateFromIndexes(derivedRow, reportDate, indexes.plan, indexes.survey, indexes.oper)] as const]
-      : [];
-  }));
 }

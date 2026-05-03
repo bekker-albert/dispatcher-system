@@ -3,11 +3,11 @@ import { useMemo, useRef } from "react";
 import {
   createReportBaseRows,
   createReportPtoIndexes,
-  createReportReasonAccumulationStartDateByRowKey,
   deriveReportRowsFromPtoIndexes,
 } from "@/lib/domain/reports/rows-model";
 import { delta, reportRowKey } from "@/lib/domain/reports/display";
 import { reportYearFact } from "@/lib/domain/reports/facts";
+import { reportReasonAccumulationStartDateFromIndexes } from "@/lib/domain/reports/reason-accumulation";
 import { createReportReasonIndex, reportReasonEntryKey, reportYearReasonValueFromIndex } from "@/lib/domain/reports/reasons";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
@@ -60,12 +60,6 @@ export function useReportRowsModel({
       : []
   ), [needsAutoReportRows, reportBaseRows, reportDate, reportPtoIndexes]);
 
-  const reasonAccumulationStartDateByRowKey = useMemo(() => {
-    if (!needsAutoReportRows || !needsReportReasons || !reportPtoIndexes) return new Map<string, string>();
-
-    return createReportReasonAccumulationStartDateByRowKey(calculatedReportRows, reportDate, reportPtoIndexes);
-  }, [calculatedReportRows, needsAutoReportRows, needsReportReasons, reportDate, reportPtoIndexes]);
-
   const derivedReportRows = useMemo(() => {
     if (!needsAutoReportRows || calculatedReportRows.length === 0) {
       derivedReportRowsCacheRef.current = new Map();
@@ -75,6 +69,7 @@ export function useReportRowsModel({
     if (!needsReportReasons) return calculatedReportRows;
 
     let reasonIndex: ReturnType<typeof createReportReasonIndex> | null = null;
+    const accumulationStartDateCache = new Map<string, string>();
     const previousCache = derivedReportRowsCacheRef.current;
     const nextCache = new Map<string, CachedDerivedReportRow>();
 
@@ -82,7 +77,24 @@ export function useReportRowsModel({
       const rowKey = reportRowKey(derivedRow);
       const dayReason = reportReasons[reportReasonEntryKey(reportDate, rowKey)] ?? derivedRow.dayReason;
       const yearDelta = delta(derivedRow.yearPlan, reportYearFact(derivedRow));
-      const accumulationStartDate = reasonAccumulationStartDateByRowKey.get(rowKey) ?? reportDate;
+      let accumulationStartDate = reportDate;
+
+      if (yearDelta < 0 && reportPtoIndexes) {
+        const cachedStartDate = accumulationStartDateCache.get(rowKey);
+        if (cachedStartDate) {
+          accumulationStartDate = cachedStartDate;
+        } else {
+          accumulationStartDate = reportReasonAccumulationStartDateFromIndexes(
+            derivedRow,
+            reportDate,
+            reportPtoIndexes.plan,
+            reportPtoIndexes.survey,
+            reportPtoIndexes.oper,
+          );
+          accumulationStartDateCache.set(rowKey, accumulationStartDate);
+        }
+      }
+
       const fallbackYearReason = yearDelta < 0 && accumulationStartDate === `${reportDate.slice(0, 4)}-01-01`
         ? derivedRow.yearReason
         : "";
@@ -119,7 +131,7 @@ export function useReportRowsModel({
 
     derivedReportRowsCacheRef.current = nextCache;
     return rows;
-  }, [calculatedReportRows, needsAutoReportRows, needsReportReasons, reasonAccumulationStartDateByRowKey, reportDate, reportReasons]);
+  }, [calculatedReportRows, needsAutoReportRows, needsReportReasons, reportDate, reportPtoIndexes, reportReasons]);
 
   return {
     reportBaseRows,

@@ -121,9 +121,11 @@ assert.match(useTableResizeHandlersSource, /if \(!resizeActive\) return;\s*ptoRe
 assert.match(useTableResizeHandlersSource, /if \(!resizeActive\) return;\s*reportResizeStateRef\.current/);
 assert.equal((useTableResizeHandlersSource.match(/setResizeDragActive\(true\)/g) ?? []).length, 3);
 assert.match(useReportRowsModelSource, /if \(!needsAutoReportRows \|\| calculatedReportRows\.length === 0\) \{\s*derivedReportRowsCacheRef\.current = new Map\(\);\s*return \[\];\s*\}/);
-assert.match(useReportRowsModelSource, /if \(!needsAutoReportRows \|\| !needsReportReasons \|\| !reportPtoIndexes\) return new Map<string, string>\(\);/);
 assert.match(useReportRowsModelSource, /if \(!needsReportReasons\) return calculatedReportRows;/);
 assert.match(useReportRowsModelSource, /let reasonIndex: ReturnType<typeof createReportReasonIndex> \| null = null;/);
+assert.match(useReportRowsModelSource, /const accumulationStartDateCache = new Map<string, string>\(\);/);
+assert.match(useReportRowsModelSource, /if \(yearDelta < 0 && reportPtoIndexes\) \{/);
+assert.match(useReportRowsModelSource, /reportReasonAccumulationStartDateFromIndexes\(/);
 assert.match(useReportRowsModelSource, /reasonIndex \?\?= createReportReasonIndex\(reportReasons\)/);
 assert.match(useReportRowsModelSource, /const derivedReportRowsCacheRef = useRef\(new Map<string, CachedDerivedReportRow>\(\)\);/);
 assert.match(useReportRowsModelSource, /previous\?\.base === derivedRow/);

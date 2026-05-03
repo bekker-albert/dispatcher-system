@@ -1,4 +1,4 @@
-import { dateRange, nextDate, type PtoPlanRow } from "../pto/date-table";
+import { nextDate, type PtoPlanRow } from "../pto/date-table";
 import { reportYearFact } from "./facts";
 import {
   buildReportPtoIndex,
@@ -109,7 +109,7 @@ function reportReasonAccumulationStartDateFromEntries(
     surveyTotal: 0,
   };
 
-  dateRange(yearStart, reportDateValue).forEach((date) => {
+  for (let date = yearStart; date <= reportDateValue; date = nextDate(date)) {
     if (planEntry) {
       yearPlan += consumeReportPtoDailyCursor(planCursor, date);
     }
@@ -120,7 +120,7 @@ function reportReasonAccumulationStartDateFromEntries(
     if (yearDelta >= 0) {
       startDate = nextDate(date);
     }
-  });
+  }
 
   return startDate;
 }
