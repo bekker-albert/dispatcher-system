@@ -242,24 +242,35 @@ assert.match(useVehicleExcelTransferSource, /databaseSaveSnapshotRef\.current = 
 assert.equal(resolveInitialVehicleRowsSource({
   savedVehicles: [],
   databaseUpdatedAt: "2026-04-24T10:00:00.000Z",
+  databaseRowsCount: 0,
   vehicleLocalUpdatedAt: "2026-04-24T12:00:00.000Z",
   appLocalUpdatedAt: null,
 }), "local");
 assert.equal(resolveInitialVehicleRowsSource({
   savedVehicles: rows,
+  databaseUpdatedAt: "2026-04-24T10:00:00.000Z",
+  databaseRowsCount: 881,
+  vehicleLocalUpdatedAt: "2026-04-24T12:00:00.000Z",
+  appLocalUpdatedAt: null,
+}), "database");
+assert.equal(resolveInitialVehicleRowsSource({
+  savedVehicles: rows,
   databaseUpdatedAt: "2026-04-24T12:00:00.000Z",
+  databaseRowsCount: rows.length,
   vehicleLocalUpdatedAt: "2026-04-24T10:00:00.000Z",
   appLocalUpdatedAt: "2026-04-24T13:00:00.000Z",
 }), "database");
 assert.equal(resolveInitialVehicleRowsSource({
   savedVehicles: rows,
   databaseUpdatedAt: "2026-04-24T10:00:00.000Z",
+  databaseRowsCount: rows.length,
   vehicleLocalUpdatedAt: null,
   appLocalUpdatedAt: "2026-04-24T12:00:00.000Z",
 }), "local");
 assert.equal(resolveInitialVehicleRowsSource({
   savedVehicles: null,
   databaseUpdatedAt: "2026-04-24T10:00:00.000Z",
+  databaseRowsCount: 881,
   vehicleLocalUpdatedAt: "2026-04-24T12:00:00.000Z",
   appLocalUpdatedAt: null,
 }), "database");
