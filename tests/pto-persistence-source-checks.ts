@@ -169,10 +169,11 @@ assert.match(sharedDatabaseSaveQueueSource, /type SharedDatabaseSaveQueue = \{[\
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSaveQueueRef = useRef<SharedDatabaseSaveQueue \| null>\(null\);/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseSavingRef = useRef\(false\);/);
 assert.match(sharedDatabaseSaveQueueSource, /const sharedDatabaseRetryTimerRef = useRef<ReturnType<typeof setTimeout> \| null>\(null\);/);
+assert.match(sharedDatabaseSaveQueueSource, /const sharedSettingsFallbackWarning =[\s\S]*Таблица app_settings недоступна[\s\S]*резервную таблицу app_state/);
 assert.match(sharedDatabaseSaveQueueSource, /clearTimeout\(sharedDatabaseRetryTimerRef\.current\);/);
 assert.match(sharedDatabaseSaveQueueSource, /useEffect\(\(\) => clearSharedDatabaseRetryTimer, \[clearSharedDatabaseRetryTimer\]\);/);
 assert.match(sharedDatabaseSaveQueueSource, /createAppStateStorageSnapshot/);
-assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);[\s\S]*if \(!appSettingsDatabaseLoadedRef\.current\) \{[\s\S]*await saveSharedAppStateToDatabase\(queuedSave\.storage\);[\s\S]*\}/);
+assert.match(sharedDatabaseSaveQueueSource, /const runSharedDatabaseSaveQueue = useCallback\(async \(\) => \{[\s\S]*while \(sharedDatabaseSaveQueueRef\.current\)[\s\S]*await saveSharedAppSettingsToDatabase\(queuedSave\.settings\);[\s\S]*if \(!appSettingsDatabaseLoadedRef\.current\) \{[\s\S]*const fallbackSaved = await saveSharedAppStateToDatabase\(queuedSave\.storage\);[\s\S]*if \(fallbackSaved\) \{[\s\S]*showSaveStatus\("error", sharedSettingsFallbackWarning\);[\s\S]*\}/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /conflictRetries/);
 assert.match(sharedDatabaseSaveQueueSource, /let failed = false;/);
 assert.match(sharedDatabaseSaveQueueSource, /if \(!isDatabaseConflictError\(error\)\) \{[\s\S]*sharedDatabaseSaveQueueRef\.current = sharedDatabaseSaveQueueRef\.current \?\? queuedSave;[\s\S]*failed = true;[\s\S]*throw error;/);
@@ -181,7 +182,8 @@ assert.match(sharedDatabaseSaveQueueSource, /if \(sharedDatabaseSaveQueueRef\.cu
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /refreshSharedDatabaseSaveBaselines/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /loadAppSettingsFromDatabase/);
 assert.match(sharedDatabaseSaveQueueSource, /const savedSettings = await saveAppSettingsToDatabase\(delta\.settings/);
-assert.match(sharedDatabaseSaveQueueSource, /if \(storageSnapshot === checkpoint\.storageSnapshot\) return;/);
+assert.match(sharedDatabaseSaveQueueSource, /if \(storageSnapshot === checkpoint\.storageSnapshot\) return false;/);
+assert.match(sharedDatabaseSaveQueueSource, /showSaveStatus\("saved", "Общие данные сохранены\."\);[\s\S]*return true;/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /const storageSnapshot = JSON\.stringify\(storage\)/);
 assert.doesNotMatch(sharedDatabaseSaveQueueSource, /JSON\.stringify\(checkpoint\.storage\)/);
 assert.match(sharedDatabaseSaveQueueSource, /sharedDatabaseSaveQueueRef\.current = null;[\s\S]*failed = true;[\s\S]*showSaveStatus\([\s\S]*break;/);

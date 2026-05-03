@@ -15,6 +15,8 @@ import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 const sharedDatabaseRetryInitialDelayMs = 2_000;
 const sharedDatabaseRetryMaxDelayMs = 30_000;
+const sharedSettingsFallbackWarning =
+  "Таблица app_settings недоступна. Общие данные сохранены в резервную таблицу app_state; проверь схему базы данных.";
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
@@ -51,7 +53,7 @@ export function useSharedDatabaseSaveQueue({
   useEffect(() => clearSharedDatabaseRetryTimer, [clearSharedDatabaseRetryTimer]);
 
   const saveSharedAppStateToDatabase = useCallback(async (storage: Record<string, string>) => {
-    if (!databaseConfigured) return;
+    if (!databaseConfigured) return false;
 
     const {
       createAppStateStorageSnapshot,
@@ -61,7 +63,7 @@ export function useSharedDatabaseSaveQueue({
     } = await import("@/lib/data/app-state");
     const storageSnapshot = createAppStateStorageSnapshot(storage);
     const checkpoint = parseAppStateSaveCheckpoint(appDatabaseSaveSnapshotRef.current);
-    if (storageSnapshot === checkpoint.storageSnapshot) return;
+    if (storageSnapshot === checkpoint.storageSnapshot) return false;
 
     showSaveStatus("saving", "Сохраняю общие данные...");
 
@@ -72,6 +74,7 @@ export function useSharedDatabaseSaveQueue({
         savedState?.updatedAt ?? null,
       );
       showSaveStatus("saved", "Общие данные сохранены.");
+      return true;
     } catch (error) {
       showSaveStatus("error", `Общие данные не сохранены: ${errorToMessage(error)}`);
       throw error;
@@ -120,7 +123,10 @@ export function useSharedDatabaseSaveQueue({
         try {
           await saveSharedAppSettingsToDatabase(queuedSave.settings);
           if (!appSettingsDatabaseLoadedRef.current) {
-            await saveSharedAppStateToDatabase(queuedSave.storage);
+            const fallbackSaved = await saveSharedAppStateToDatabase(queuedSave.storage);
+            if (fallbackSaved) {
+              showSaveStatus("error", sharedSettingsFallbackWarning);
+            }
           }
         } catch (error) {
           if (!isDatabaseConflictError(error)) {
