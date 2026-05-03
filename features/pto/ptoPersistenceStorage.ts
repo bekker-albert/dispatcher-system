@@ -26,6 +26,27 @@ function jsonFromCache(
   return JSON.stringify(ref ?? fallbackValue);
 }
 
+function readBrowserStorageValue(storageKey: string, failedLocalKeys: string[]) {
+  try {
+    return window.localStorage.getItem(storageKey);
+  } catch (error) {
+    console.warn("PTO local storage read failed:", storageKey, error);
+    failedLocalKeys.push(storageKey);
+    return null;
+  }
+}
+
+function writeBrowserStorageValue(storageKey: string, value: string, failedLocalKeys: string[]) {
+  try {
+    window.localStorage.setItem(storageKey, value);
+    return true;
+  } catch (error) {
+    console.warn("PTO local storage write failed:", storageKey, error);
+    failedLocalKeys.push(storageKey);
+    return false;
+  }
+}
+
 function ptoBrowserStorageSnapshot(
   state: DataPtoState,
   previousCache: PtoBrowserStorageSnapshotCache | null,
@@ -79,24 +100,26 @@ export function savePtoStateToBrowserStorage(
   const cache = ptoBrowserStorageSnapshot(state, previousCache, options.includeBuckets ?? true);
   const { snapshot } = cache;
   let changed = false;
+  const failedLocalKeys: string[] = [];
 
   Object.entries(snapshot).forEach(([storageKey, value]) => {
-    const previousValue = previousCache?.snapshot[storageKey] ?? window.localStorage.getItem(storageKey);
+    const previousValue = previousCache?.snapshot[storageKey] ?? readBrowserStorageValue(storageKey, failedLocalKeys);
     if (previousValue === value) return;
 
-    window.localStorage.setItem(storageKey, value);
-    changed = true;
+    if (writeBrowserStorageValue(storageKey, value, failedLocalKeys)) {
+      changed = true;
+    }
   });
 
-  if (!changed) return { changed, snapshot, cache };
+  if (!changed) return { changed, snapshot, cache, failedLocalKeys };
 
   const updatedAt = options.localUpdatedAt === undefined ? new Date().toISOString() : options.localUpdatedAt;
   if (options.markLocalUpdatedAt && updatedAt) {
-    window.localStorage.setItem(adminStorageKeys.ptoLocalUpdatedAt, updatedAt);
+    writeBrowserStorageValue(adminStorageKeys.ptoLocalUpdatedAt, updatedAt, failedLocalKeys);
   }
-  window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt ?? new Date().toISOString());
+  writeBrowserStorageValue(adminStorageKeys.appLocalUpdatedAt, updatedAt ?? new Date().toISOString(), failedLocalKeys);
 
-  return { changed, snapshot, cache };
+  return { changed, snapshot, cache, failedLocalKeys };
 }
 
 export async function savePtoDatabaseSnapshot(

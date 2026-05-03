@@ -202,6 +202,7 @@ export function useAppPtoPersistence({
     getPtoDatabaseExpectedUpdatedAt,
     isPtoDatabaseDirty,
     requestClientSnapshotSave,
+    showSaveStatus,
     ptoManualYears,
     ptoPlanRows,
     ptoOperRows,

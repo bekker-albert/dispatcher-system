@@ -8,6 +8,9 @@ import {
   type PtoBrowserStorageSnapshotCache,
   type PtoDatabaseState,
 } from "@/features/pto/ptoPersistenceModel";
+import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
+
+type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
 type PtoLocalPersistenceOptions = {
   adminDataLoaded: boolean;
@@ -19,6 +22,7 @@ type PtoLocalPersistenceOptions = {
   getPtoDatabaseExpectedUpdatedAt: () => string | null;
   isPtoDatabaseDirty: () => boolean;
   requestClientSnapshotSave: (reason?: string) => void;
+  showSaveStatus: ShowSaveStatus;
   ptoManualYears: string[];
   ptoPlanRows: PtoPlanRow[];
   ptoOperRows: PtoPlanRow[];
@@ -44,6 +48,7 @@ export function usePtoLocalPersistence({
   getPtoDatabaseExpectedUpdatedAt,
   isPtoDatabaseDirty,
   requestClientSnapshotSave,
+  showSaveStatus,
   ptoManualYears,
   ptoPlanRows,
   ptoOperRows,
@@ -82,6 +87,9 @@ export function usePtoLocalPersistence({
       ptoLocalSaveSnapshotRef.current,
     );
     ptoLocalSaveSnapshotRef.current = result.cache;
+    if (result.failedLocalKeys.length > 0) {
+      showSaveStatus("error", "Локальная копия ПТО не сохранена полностью. Проверь свободное место браузера.");
+    }
     if (!result.changed) return;
 
     if (markLocalUpdatedAt) {
@@ -98,6 +106,7 @@ export function usePtoLocalPersistence({
     ptoPlanYear,
     ptoTab,
     requestClientSnapshotSave,
+    showSaveStatus,
     skipUntilDatabaseLoaded,
   ]);
 

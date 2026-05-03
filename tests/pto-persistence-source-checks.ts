@@ -130,11 +130,14 @@ assert.match(ptoPersistenceStorageSource, /export type PtoBrowserStorageSaveOpti
 assert.match(ptoPersistenceStorageSource, /includeBuckets\?: boolean;/);
 assert.match(ptoPersistenceStorageSource, /ptoBrowserStorageSnapshot\(state, previousCache, options\.includeBuckets \?\? true\)/);
 assert.match(ptoPersistenceStorageSource, /if \(cache && cache\.refs\[storageKey\] === ref && typeof cache\.snapshot\[storageKey\] === "string"\)/);
-assert.match(ptoPersistenceStorageSource, /const previousValue = previousCache\?\.snapshot\[storageKey\] \?\? window\.localStorage\.getItem\(storageKey\);/);
+assert.match(ptoPersistenceStorageSource, /function readBrowserStorageValue\(storageKey: string, failedLocalKeys: string\[\]\)/);
+assert.match(ptoPersistenceStorageSource, /function writeBrowserStorageValue\(storageKey: string, value: string, failedLocalKeys: string\[\]\)/);
+assert.match(ptoPersistenceStorageSource, /const failedLocalKeys: string\[\] = \[\];/);
+assert.match(ptoPersistenceStorageSource, /const previousValue = previousCache\?\.snapshot\[storageKey\] \?\? readBrowserStorageValue\(storageKey, failedLocalKeys\);/);
 assert.match(ptoPersistenceStorageSource, /if \(previousValue === value\) return;/);
 assert.match(ptoPersistenceStorageSource, /const updatedAt = options\.localUpdatedAt === undefined \? new Date\(\)\.toISOString\(\) : options\.localUpdatedAt;/);
-assert.match(ptoPersistenceStorageSource, /if \(options\.markLocalUpdatedAt && updatedAt\) \{[\s\S]*window\.localStorage\.setItem\(adminStorageKeys\.ptoLocalUpdatedAt, updatedAt\);/);
-assert.match(ptoPersistenceStorageSource, /window\.localStorage\.setItem\(adminStorageKeys\.appLocalUpdatedAt, updatedAt \?\? new Date\(\)\.toISOString\(\)\);/);
+assert.match(ptoPersistenceStorageSource, /if \(options\.markLocalUpdatedAt && updatedAt\) \{[\s\S]*writeBrowserStorageValue\(adminStorageKeys\.ptoLocalUpdatedAt, updatedAt, failedLocalKeys\);/);
+assert.match(ptoPersistenceStorageSource, /writeBrowserStorageValue\(adminStorageKeys\.appLocalUpdatedAt, updatedAt \?\? new Date\(\)\.toISOString\(\), failedLocalKeys\);/);
 assert.match(ptoLocalPersistenceSource, /useRef<PtoBrowserStorageSnapshotCache \| null>\(null\)/);
 assert.match(ptoLocalPersistenceSource, /ptoDatabaseLoadedBucketsYearRef: RefObject<string \| null>;/);
 assert.match(ptoLocalPersistenceSource, /const includeBuckets = !skipUntilDatabaseLoaded[\s\S]*\|\| ptoTab === "buckets"[\s\S]*\|\| ptoDatabaseLoadedBucketsYearRef\.current === ptoPlanYear;/);
@@ -142,6 +145,7 @@ assert.match(ptoLocalPersistenceSource, /const localUpdatedAt = markLocalUpdated
 assert.match(ptoLocalPersistenceSource, /savePtoStateToBrowserStorage\([\s\S]*markLocalUpdatedAt,[\s\S]*localUpdatedAt,/);
 assert.match(ptoLocalPersistenceSource, /savePtoStateToBrowserStorage\([\s\S]*includeBuckets,[\s\S]*markLocalUpdatedAt,[\s\S]*localUpdatedAt,/);
 assert.match(ptoLocalPersistenceSource, /ptoLocalSaveSnapshotRef\.current = result\.cache;/);
+assert.match(ptoLocalPersistenceSource, /if \(result\.failedLocalKeys\.length > 0\) \{[\s\S]*showSaveStatus\("error", "Локальная копия ПТО не сохранена полностью\. Проверь свободное место браузера\."\);/);
 assert.match(ptoDatabaseSaveSource, /ptoDatabaseFullSaveNextRef\.current = false;/);
 assert.match(ptoDateTableContextSource, /kind: "day-values"/);
 assert.match(ptoInlineDatabaseWriteSource, /export function enqueuePtoInlineDatabaseWrite/);
@@ -192,6 +196,7 @@ assert.match(appLocalPersistenceSource, /const appStateSaveIdleRef = useRef<numb
 assert.match(appLocalPersistenceSource, /const firstAppLocalSaveRef = useRef\(true\);/);
 assert.match(appLocalPersistenceSource, /window\.cancelIdleCallback\?\.\(appStateSaveIdleRef\.current\)/);
 assert.match(appLocalPersistenceSource, /const persistAppLocalState = useCallback\(\(reason: string\) => \{[\s\S]*if \(savedLocalState\.changedKeys\.length > 0\) \{[\s\S]*enqueueSharedDatabaseSave\(savedLocalState\);[\s\S]*requestClientSnapshotSave\(reason\);/);
+assert.match(appLocalPersistenceSource, /if \(savedLocalState\.failedLocalKeys\.length > 0\) \{[\s\S]*showSaveStatus\("error", "Локальная копия общих данных не сохранена полностью\. Проверь свободное место браузера\."\);/);
 assert.match(appLocalPersistenceSource, /if \(isFirstSave && window\.requestIdleCallback\) \{[\s\S]*window\.requestIdleCallback\(runSave, \{[\s\S]*timeout: firstAppLocalIdleTimeoutMs/);
 assert.match(appLocalPersistenceSource, /isFirstSave \? firstAppLocalSaveDelayMs : appLocalSaveDelayMs/);
 assert.match(appLocalPersistenceSource, /persistAppLocalState\("app-state-save"\)/);

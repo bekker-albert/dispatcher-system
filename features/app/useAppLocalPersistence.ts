@@ -135,11 +135,14 @@ export function useAppLocalPersistence({
   const persistAppLocalState = useCallback((reason: string) => {
     const savedLocalState: SharedAppStorageWriteResult = saveAppLocalState();
 
+    if (savedLocalState.failedLocalKeys.length > 0) {
+      showSaveStatus("error", "Локальная копия общих данных не сохранена полностью. Проверь свободное место браузера.");
+    }
     if (savedLocalState.changedKeys.length > 0) {
       enqueueSharedDatabaseSave(savedLocalState);
       requestClientSnapshotSave(reason);
     }
-  }, [enqueueSharedDatabaseSave, requestClientSnapshotSave, saveAppLocalState]);
+  }, [enqueueSharedDatabaseSave, requestClientSnapshotSave, saveAppLocalState, showSaveStatus]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
