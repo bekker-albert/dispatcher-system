@@ -42,6 +42,7 @@ type AdminVehicleTableRowProps = {
   adminVehiclesEditing: boolean;
   vehicle: VehicleRow;
   vehicleCellInputProps: (id: number, field: VehicleInlineField) => VehicleCellShellProps;
+  vehicleRowCellStateSignature: string;
   onVehicleCellChange: (id: number, field: VehicleInlineField, value: string) => void;
   onToggleVehicleVisibility: (id: number) => void;
   onDeleteVehicle: (id: number) => void;
@@ -218,7 +219,7 @@ export const AdminVehicleTableRow = memo(
   (previous, next) => (
     previous.adminVehiclesEditing === next.adminVehiclesEditing
     && previous.vehicle === next.vehicle
-    && previous.vehicleCellInputProps === next.vehicleCellInputProps
+    && previous.vehicleRowCellStateSignature === next.vehicleRowCellStateSignature
     && previous.onVehicleCellChange === next.onVehicleCellChange
     && previous.onToggleVehicleVisibility === next.onToggleVehicleVisibility
     && previous.onDeleteVehicle === next.onDeleteVehicle

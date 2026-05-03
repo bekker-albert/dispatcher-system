@@ -33,6 +33,8 @@ const useAdminVehicleRowsViewModelSource = readFileSync(resolve(testDir, "../fea
 const useVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleFilterMenu.ts"), "utf8");
 const useAppVehicleViewModelSource = readFileSync(resolve(testDir, "../features/app/useAppVehicleViewModel.ts"), "utf8");
 const vehicleInlineGridModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/vehicleInlineGridModel.ts"), "utf8");
+const useVehicleInlineCellInputPropsSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleInlineCellInputProps.ts"), "utf8");
+const adminVehicleTableRowSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleTableRow.tsx"), "utf8");
 
 const rows = [
   { id: 1 },
@@ -112,8 +114,16 @@ assert.equal(vehicleKeyStartsInlineEdit("brand", ""), false);
 assert.match(adminVehiclesTableSource, /createAdminVehicleVirtualRows\(visibleVehicleRows, vehicleRowsViewport, !adminVehiclesEditing\)/);
 assert.match(adminVehiclesTableSource, /onScroll=\{scheduleVehicleRowsViewportUpdate\}/);
 assert.match(adminVehiclesTableSource, /virtualVehicleRows\.topSpacerHeight/);
-assert.match(readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleTableRow.tsx"), "utf8"), /export const AdminVehicleTableRow = memo/);
-assert.match(readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleTableRow.tsx"), "utf8"), /previous\.vehicle === next\.vehicle/);
+assert.match(adminVehiclesTableSource, /vehicleRowCellStateSignature=\{vehicleRowCellStateSignature\(vehicle\.id\)\}/);
+assert.match(adminVehicleTableRowSource, /export const AdminVehicleTableRow = memo/);
+assert.match(adminVehicleTableRowSource, /previous\.vehicle === next\.vehicle/);
+assert.match(adminVehicleTableRowSource, /previous\.vehicleRowCellStateSignature === next\.vehicleRowCellStateSignature/);
+assert.doesNotMatch(adminVehicleTableRowSource, /previous\.vehicleCellInputProps === next\.vehicleCellInputProps/);
+assert.match(useVehicleInlineCellInputPropsSource, /const editingVehicleCellRef = useRef/);
+assert.match(useVehicleInlineCellInputPropsSource, /const handlersRef = useRef/);
+assert.match(useVehicleInlineCellInputPropsSource, /useLayoutEffect\(\(\) => \{/);
+assert.match(useVehicleInlineCellInputPropsSource, /vehicleRowCellStateSignature = useCallback/);
+assert.match(useVehicleInlineCellInputPropsSource, /handlersRef\.current\.startVehicleInlineSelection/);
 
 const virtualSourceRows = Array.from({ length: 120 }, (_, index) => index);
 assert.deepEqual(

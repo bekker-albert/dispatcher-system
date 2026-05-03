@@ -38,6 +38,7 @@ type UseAppAdminVehiclesPropsOptions = {
   closeVehicleFilterMenu: () => void;
   toggleVehicleVisibility: AdminVehiclesSectionProps["onToggleVehicleVisibility"];
   vehicleCellInputProps: AdminVehiclesSectionProps["vehicleCellInputProps"];
+  vehicleRowCellStateSignature: AdminVehiclesSectionProps["vehicleRowCellStateSignature"];
   updateVehicleRow: AdminVehiclesSectionProps["onVehicleCellChange"];
   deleteVehicle: AdminVehiclesSectionProps["onDeleteVehicle"];
   setShowAllVehicleRows: Dispatch<SetStateAction<boolean>>;
@@ -75,6 +76,7 @@ export function useAppAdminVehiclesProps({
   closeVehicleFilterMenu,
   toggleVehicleVisibility,
   vehicleCellInputProps,
+  vehicleRowCellStateSignature,
   updateVehicleRow,
   deleteVehicle,
   setShowAllVehicleRows,
@@ -119,6 +121,7 @@ export function useAppAdminVehiclesProps({
     onCloseVehicleFilterMenu: closeVehicleFilterMenu,
     onToggleVehicleVisibility: toggleVehicleVisibility,
     vehicleCellInputProps,
+    vehicleRowCellStateSignature,
     onVehicleCellChange: updateVehicleRow,
     onDeleteVehicle: deleteVehicle,
     onShowAllVehicleRows: handleShowAllVehicleRows,

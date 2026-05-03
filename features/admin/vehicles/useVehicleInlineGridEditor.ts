@@ -132,6 +132,7 @@ export function useVehicleInlineGridEditor({
 
   return {
     commitVehicleInlineCellEdit,
-    vehicleCellInputProps,
+    vehicleCellInputProps: vehicleCellInputProps.vehicleCellInputProps,
+    vehicleRowCellStateSignature: vehicleCellInputProps.vehicleRowCellStateSignature,
   };
 }

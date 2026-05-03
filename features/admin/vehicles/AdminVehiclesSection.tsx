@@ -40,6 +40,7 @@ export type AdminVehiclesSectionProps = {
   onCloseVehicleFilterMenu: () => void;
   onToggleVehicleVisibility: (id: number) => void;
   vehicleCellInputProps: (id: number, field: VehicleInlineField) => VehicleCellShellProps;
+  vehicleRowCellStateSignature: (id: number) => string;
   onVehicleCellChange: (id: number, field: VehicleInlineField, value: string) => void;
   onDeleteVehicle: (id: number) => void;
   onShowAllVehicleRows: () => void;
@@ -77,6 +78,7 @@ export default function AdminVehiclesSection({
   onCloseVehicleFilterMenu,
   onToggleVehicleVisibility,
   vehicleCellInputProps,
+  vehicleRowCellStateSignature,
   onVehicleCellChange,
   onDeleteVehicle,
   onShowAllVehicleRows,
@@ -120,6 +122,7 @@ export default function AdminVehiclesSection({
         onCloseVehicleFilterMenu={onCloseVehicleFilterMenu}
         onToggleVehicleVisibility={onToggleVehicleVisibility}
         vehicleCellInputProps={vehicleCellInputProps}
+        vehicleRowCellStateSignature={vehicleRowCellStateSignature}
         onVehicleCellChange={onVehicleCellChange}
         onDeleteVehicle={onDeleteVehicle}
       />

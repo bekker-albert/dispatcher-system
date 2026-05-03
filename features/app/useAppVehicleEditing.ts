@@ -114,6 +114,7 @@ export function useAppVehicleEditing({
   const {
     commitVehicleInlineCellEdit,
     vehicleCellInputProps,
+    vehicleRowCellStateSignature,
   } = useVehicleInlineGridEditor({
     vehicleRows,
     visibleVehicleRows,
@@ -179,6 +180,7 @@ export function useAppVehicleEditing({
     toggleVehicleVisibility,
     deleteVehicle,
     vehicleCellInputProps,
+    vehicleRowCellStateSignature,
     startAdminVehiclesEditing,
     finishAdminVehiclesEditing,
     openVehicleImportFilePicker,

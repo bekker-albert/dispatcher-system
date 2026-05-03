@@ -43,6 +43,7 @@ export function AdminVehiclesTable({
   onCloseVehicleFilterMenu,
   onToggleVehicleVisibility,
   vehicleCellInputProps,
+  vehicleRowCellStateSignature,
   onVehicleCellChange,
   onDeleteVehicle,
 }: {
@@ -65,6 +66,7 @@ export function AdminVehiclesTable({
   onCloseVehicleFilterMenu: () => void;
   onToggleVehicleVisibility: (id: number) => void;
   vehicleCellInputProps: (id: number, field: VehicleInlineField) => VehicleCellShellProps;
+  vehicleRowCellStateSignature: (id: number) => string;
   onVehicleCellChange: (id: number, field: VehicleInlineField, value: string) => void;
   onDeleteVehicle: (id: number) => void;
 }) {
@@ -159,6 +161,7 @@ export function AdminVehiclesTable({
               adminVehiclesEditing={adminVehiclesEditing}
               vehicle={vehicle}
               vehicleCellInputProps={vehicleCellInputProps}
+              vehicleRowCellStateSignature={vehicleRowCellStateSignature(vehicle.id)}
               onVehicleCellChange={onVehicleCellChange}
               onToggleVehicleVisibility={onToggleVehicleVisibility}
               onDeleteVehicle={onDeleteVehicle}
