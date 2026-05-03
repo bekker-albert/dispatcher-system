@@ -196,6 +196,8 @@ assert.match(ptoDateFormulaControllerSource, /if \(!ptoDateEditing\) return null
 assert.match(ptoDateFormulaControllerSource, /createPtoDateFormulaModel\(\{/);
 assert.match(ptoDateFormulaControllerSource, /if \(!ptoDateEditing \|\| !formulaModel\) \{/);
 assert.match(ptoDateFormulaControllerSource, /\} = formulaModel;/);
+assert.match(ptoDateFormulaControllerSource, /createPtoDateFormulaSelectionModel\(\{/);
+assert.match(ptoDateFormulaControllerSource, /\[formulaModel, ptoSelectedCellKeys\]/);
 assert.match(usePtoBucketsGridEditingSource, /editingMode \? rows\.map\(\(row\) => row\.key\) : \[\]/);
 assert.match(usePtoBucketsGridEditingSource, /editingMode \? columns\.map\(\(column\) => column\.key\) : \[\]/);
 assert.doesNotMatch(ptoDateEditableTableBodySource, /formulaCellsByRowId\.get\(row\.id\)/);

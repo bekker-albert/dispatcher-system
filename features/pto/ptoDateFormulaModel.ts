@@ -17,7 +17,6 @@ type PtoDateFormulaModelOptions = {
   displayMonthGroups: PtoMonthGroupView[];
   editableMonthTotal: boolean;
   carryoverHeader: string;
-  selectedCellKeys: string[];
 };
 
 function createPtoFormulaCellTemplates(
@@ -68,7 +67,6 @@ export function createPtoDateFormulaModel({
   displayMonthGroups,
   editableMonthTotal,
   carryoverHeader,
-  selectedCellKeys,
 }: PtoDateFormulaModelOptions) {
   const formulaCellTemplates = createPtoFormulaCellTemplates(displayMonthGroups, editableMonthTotal, carryoverHeader);
   const formulaCellFromTemplate = (
@@ -85,7 +83,6 @@ export function createPtoDateFormulaModel({
   const formulaSelectionKey = formulaCellDomKey;
   const formulaCellsByRowId = new Map(formulaCellRows.map((formulaRow) => [formulaRow.row.id, formulaRow.cells] as const));
   const formulaSelectionScope = `${table}:${year}:`;
-  const selectedFormulaCellKeys = new Set(selectedCellKeys.filter((key) => key.startsWith(formulaSelectionScope)));
   const formulaTemplateIndexByKey = new Map(formulaCellTemplates.map((cell, index) => [ptoFormulaTemplateKey(cell), index] as const));
   const formulaTemplateByKey = new Map(formulaCellTemplates.map((cell) => [ptoFormulaTemplateKey(cell), cell] as const));
   const formulaRowIndexById = new Map(filteredRows.map((row, index) => [row.id, index] as const));
@@ -132,9 +129,6 @@ export function createPtoDateFormulaModel({
 
     return keys.length ? keys : [formulaSelectionKey(target)];
   };
-  const formulaCellSelected = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
-    selectedFormulaCellKeys.has(formulaSelectionKey(ptoFormulaCellFromParts(rowId, kind, key)))
-  );
 
   return {
     formulaCellRows,
@@ -143,7 +137,6 @@ export function createPtoDateFormulaModel({
     formulaSelectionKey,
     formulaCellsByRowId,
     formulaSelectionScope,
-    selectedFormulaCellKeys,
     formulaCellTemplates,
     formulaTemplateKey: ptoFormulaTemplateKey,
     formulaTemplateIndexByKey,
@@ -152,6 +145,25 @@ export function createPtoDateFormulaModel({
     formulaCellFromTemplate,
     formulaCellFromSelectionKey,
     formulaRangeKeys,
+  };
+}
+
+export function createPtoDateFormulaSelectionModel({
+  formulaSelectionKey,
+  formulaSelectionScope,
+  selectedCellKeys,
+}: {
+  formulaSelectionKey: (cell: PtoFormulaCellIdentity) => string;
+  formulaSelectionScope: string;
+  selectedCellKeys: string[];
+}) {
+  const selectedFormulaCellKeys = new Set(selectedCellKeys.filter((key) => key.startsWith(formulaSelectionScope)));
+  const formulaCellSelected = (rowId: string, kind: PtoFormulaCell["kind"], key?: string) => (
+    selectedFormulaCellKeys.has(formulaSelectionKey(ptoFormulaCellFromParts(rowId, kind, key)))
+  );
+
+  return {
+    selectedFormulaCellKeys,
     formulaCellSelected,
   };
 }

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import {
   createPtoDateFormulaModel,
+  createPtoDateFormulaSelectionModel,
   ptoFormulaCellMatches,
 } from "@/features/pto/ptoDateFormulaModel";
 import type { PtoFormulaCell } from "@/features/pto/ptoDateFormulaTypes";
@@ -57,7 +58,6 @@ export function usePtoDateFormulaController({
       displayMonthGroups: displayPtoMonthGroups,
       editableMonthTotal,
       carryoverHeader,
-      selectedCellKeys: ptoSelectedCellKeys,
     });
   }, [
     carryoverHeader,
@@ -66,10 +66,21 @@ export function usePtoDateFormulaController({
     filteredRows,
     ptoDateEditing,
     ptoPlanYear,
-    ptoSelectedCellKeys,
     ptoTab,
     renderedRows,
   ]);
+  const formulaSelectionModel = useMemo(() => (
+    formulaModel
+      ? createPtoDateFormulaSelectionModel({
+          formulaSelectionKey: formulaModel.formulaSelectionKey,
+          formulaSelectionScope: formulaModel.formulaSelectionScope,
+          selectedCellKeys: ptoSelectedCellKeys,
+        })
+      : {
+          selectedFormulaCellKeys: new Set<string>(),
+          formulaCellSelected: () => false,
+        }
+  ), [formulaModel, ptoSelectedCellKeys]);
 
   if (!ptoDateEditing || !formulaModel) {
     return inactiveFormulaController.createInactivePtoDateFormulaController();
@@ -98,15 +109,17 @@ export function usePtoDateFormulaController({
     formulaSelectionKey,
     formulaCellsByRowId,
     formulaSelectionScope,
-    selectedFormulaCellKeys,
     formulaCellTemplates,
     formulaTemplateIndexByKey,
     formulaRowIndexById,
     formulaCellFromTemplate,
     formulaCellFromSelectionKey,
     formulaRangeKeys,
-    formulaCellSelected,
   } = formulaModel;
+  const {
+    selectedFormulaCellKeys,
+    formulaCellSelected,
+  } = formulaSelectionModel;
 
   const {
     cancelInlineFormulaEdit,

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createPtoDateFormulaModel, ptoFormulaCellMatches } from "../features/pto/ptoDateFormulaModel";
+import { createPtoDateFormulaModel, createPtoDateFormulaSelectionModel, ptoFormulaCellMatches } from "../features/pto/ptoDateFormulaModel";
 import { createPtoDateFormulaSelectionActions } from "../features/pto/ptoDateFormulaSelectionActions";
 import type { PtoFormulaCell, PtoFormulaCellWithoutScope } from "../features/pto/ptoDateFormulaTypes";
 import {
@@ -143,13 +143,17 @@ const formulaModel = createPtoDateFormulaModel({
   }] as never,
   editableMonthTotal: true,
   carryoverHeader: "Остатки",
+});
+const formulaSelectionModel = createPtoDateFormulaSelectionModel({
+  formulaSelectionKey: formulaModel.formulaSelectionKey,
+  formulaSelectionScope: formulaModel.formulaSelectionScope,
   selectedCellKeys: ["plan:2026:row-1:day:2026-01-01"],
 });
 assert.equal(
   formulaModel.formulaSelectionKey({ rowId: "row-1", kind: "day", day: "2026-01-01" }),
   "plan:2026:row-1:day:2026-01-01",
 );
-assert.equal(formulaModel.formulaCellSelected("row-1", "day", "2026-01-01"), true);
+assert.equal(formulaSelectionModel.formulaCellSelected("row-1", "day", "2026-01-01"), true);
 assert.equal(
   ptoFormulaCellMatches({ ...firstCell, table: "plan", year: "2026" }, "plan", "2026", "row-1", "day", "2026-01-01"),
   true,
