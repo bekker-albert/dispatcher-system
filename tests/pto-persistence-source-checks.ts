@@ -242,7 +242,9 @@ assert.match(supabasePtoCommandsSource, /supabasePtoInlineWriteResult\(client\)/
 assert.match(supabasePtoFreshnessSource, /export async function assertSupabasePtoInlineMatchesExpectedUpdatedAt/);
 assert.match(supabasePtoFreshnessSource, /export async function loadSupabasePtoCurrentUpdatedAt/);
 assert.match(mysqlPtoCommandsSource, /type PtoInlineWriteOptions = Pick<PtoSnapshotWriteOptions, "expectedUpdatedAt">;/);
-assert.match(mysqlPtoCommandsSource, /const inlineDeleteBatchSize = 250;/);
+assert.match(mysqlPtoCommandsSource, /import \{ chunkValues \} from "\.\/pto-write-utils";/);
+assert.doesNotMatch(mysqlPtoCommandsSource, /const inlineDeleteBatchSize = 250;/);
+assert.match(mysqlPtoCommandsSource, /for \(const rowIdBatch of chunkValues\(rowIds\)\) \{[\s\S]*DELETE FROM pto_day_values[\s\S]*DELETE FROM pto_rows/);
 assert.match(mysqlPtoCommandsSource, /DELETE FROM pto_day_values[\s\S]*AND \(row_id, work_date\) IN/);
 assert.match(mysqlPtoCommandsSource, /DELETE FROM pto_bucket_values[\s\S]*WHERE \(row_key, equipment_key\) IN/);
 assert.match(mysqlPtoFreshnessSource, /function mysqlUpdatedAfterExpectedClause/);

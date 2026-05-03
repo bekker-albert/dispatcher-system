@@ -45,6 +45,8 @@ assert.match(mysqlPtoDayValueWritesSource, /export async function deletePtoDayVa
 assert.match(mysqlPtoDayValueWritesSource, /SELECT DISTINCT row_id[\s\S]*FROM pto_day_values[\s\S]*WHERE table_type = \?[\s\S]*AND work_date >= \?[\s\S]*AND work_date <= \?/);
 assert.match(mysqlPtoDayValueWritesSource, /const staleRowIds = existingRows[\s\S]*filter\(\(rowId\) => !rowIds\.has\(rowId\)\)/);
 assert.match(mysqlPtoDayValueWritesSource, /DELETE FROM pto_day_values[\s\S]*AND row_id IN/);
+assert.match(mysqlBucketWritesSource, /import \{ chunkValues \} from "\.\/pto-write-utils";/);
+assert.doesNotMatch(mysqlBucketWritesSource, /const batchSize = 250/);
 assert.match(mysqlBucketWritesSource, /for \(const batch of chunkValues\(records\)\) \{[\s\S]*INSERT INTO pto_bucket_rows/);
 assert.match(mysqlBucketWritesSource, /SELECT row_key FROM pto_bucket_rows[\s\S]*DELETE FROM pto_bucket_rows[\s\S]*WHERE row_key IN/);
 assert.match(mysqlBucketWritesSource, /SELECT row_key, equipment_key FROM pto_bucket_values[\s\S]*DELETE FROM pto_bucket_values[\s\S]*WHERE \(row_key, equipment_key\) IN/);

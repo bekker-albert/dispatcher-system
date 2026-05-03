@@ -4,8 +4,7 @@ import type {
   PtoPersistenceBucketValueRecord,
 } from "../../domain/pto/persistence-shared";
 import { dbExecute, dbRows, type DbExecutor } from "./pool";
-
-const batchSize = 250;
+import { chunkValues } from "./pto-write-utils";
 
 type PtoBucketRowKeyRecord = RowDataPacket & {
   row_key: string;
@@ -14,14 +13,6 @@ type PtoBucketRowKeyRecord = RowDataPacket & {
 type PtoBucketValueKeyRecord = PtoBucketRowKeyRecord & {
   equipment_key: string;
 };
-
-function chunkValues<T>(values: T[], size = batchSize) {
-  const chunks: T[][] = [];
-  for (let index = 0; index < values.length; index += size) {
-    chunks.push(values.slice(index, index + size));
-  }
-  return chunks;
-}
 
 async function selectRows<T extends RowDataPacket>(
   execute: DbExecutor,
