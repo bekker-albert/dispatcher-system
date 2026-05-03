@@ -195,7 +195,11 @@ assert.match(initialAppDatabaseBootstrapSource, /resolvedStorage\[setting\.key\]
 assert.match(initialAppDatabaseBootstrapSource, /parseInitialStoredAppStateFromStorage\(resolvedStorage, \{ includePto: false \}\)/);
 assert.match(initialAppDatabaseBootstrapSource, /adminStorageKeys\.appStateLocalUpdatedAt/);
 assert.match(initialAppDatabaseBootstrapSource, /adminStorageKeys\.appSettingsLocalUpdatedAt/);
-assert.match(initialAppDatabaseBootstrapSource, /window\.localStorage\.getItem\(adminStorageKeys\.appSettingsLocalUpdatedAt\)[\s\S]*window\.localStorage\.getItem\(adminStorageKeys\.appLocalUpdatedAt\)/);
+assert.match(initialAppDatabaseBootstrapSource, /const databaseStorageIncludesSharedSettings = sharedAppSettingKeys\.some/);
+assert.match(initialAppDatabaseBootstrapSource, /if \(databaseStorageIncludesSharedSettings\) \{[\s\S]*window\.localStorage\.setItem\(adminStorageKeys\.appSettingsLocalUpdatedAt, databaseAppState\.updatedAt\);/);
+assert.match(initialAppDatabaseBootstrapSource, /const currentAppSettingsLocalUpdatedAt = window\.localStorage\.getItem\(adminStorageKeys\.appSettingsLocalUpdatedAt\);/);
+assert.match(initialAppDatabaseBootstrapSource, /const currentAppLocalUpdatedAt = window\.localStorage\.getItem\(adminStorageKeys\.appLocalUpdatedAt\);/);
+assert.match(initialAppDatabaseBootstrapSource, /const currentLocalUpdatedTime = Math\.max\([\s\S]*timestampToMs\(currentAppSettingsLocalUpdatedAt\),[\s\S]*timestampToMs\(currentAppLocalUpdatedAt\),[\s\S]*\);/);
 assert.doesNotMatch(initialAppDatabaseBootstrapSource, /const currentLocalUpdatedAt = window\.localStorage\.getItem\(adminStorageKeys\.appLocalUpdatedAt\);/);
 assert.match(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged && databaseBootstrap\.storedState\) \{\s*storedState = databaseBootstrap\.storedState;\s*initialReportState = applySharedState\(storedState\);\s*\}/);
 assert.doesNotMatch(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged\) \{\s*storedState = readInitialStoredAppState\(\{ includePto: false \}\)/);

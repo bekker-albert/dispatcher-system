@@ -28,6 +28,13 @@ export type InitialAppDatabaseBootstrapResult = {
   storedState: InitialStoredAppState | null;
 };
 
+function timestampToMs(value: string | null | undefined) {
+  if (!value) return 0;
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
 export async function loadInitialAppDatabaseBootstrap({
   hasLocalAppState,
   isCancelled,
@@ -64,14 +71,15 @@ export async function loadInitialAppDatabaseBootstrap({
     if (isCancelled()) return { completed: false, storageChanged, storedState: null };
 
     const databaseStorage = databaseAppState?.storage ?? {};
+    const databaseStorageIncludesSharedSettings = sharedAppSettingKeys.some((key) => typeof databaseStorage[key] === "string");
     appDatabaseSaveSnapshotRef.current = createAppStateSaveCheckpoint(
       databaseStorage,
       databaseAppState?.updatedAt ?? null,
     );
     const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.appStateLocalUpdatedAt)
       ?? window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
-    const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
-    const databaseUpdatedTime = databaseAppState?.updatedAt ? Date.parse(databaseAppState.updatedAt) : 0;
+    const localUpdatedTime = timestampToMs(localUpdatedAt);
+    const databaseUpdatedTime = timestampToMs(databaseAppState?.updatedAt);
     const shouldUseDatabaseAppState = Object.keys(databaseStorage).length > 0
       && (
         !hasLocalAppState
@@ -89,6 +97,9 @@ export async function loadInitialAppDatabaseBootstrap({
       if (databaseAppState?.updatedAt) {
         window.localStorage.setItem(adminStorageKeys.appStateLocalUpdatedAt, databaseAppState.updatedAt);
         window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseAppState.updatedAt);
+        if (databaseStorageIncludesSharedSettings) {
+          window.localStorage.setItem(adminStorageKeys.appSettingsLocalUpdatedAt, databaseAppState.updatedAt);
+        }
       }
       storageChanged = true;
     } else if (hasLocalAppState && !localUpdatedAt) {
@@ -109,12 +120,15 @@ export async function loadInitialAppDatabaseBootstrap({
     const databaseSettingsUpdatedTime = Math.max(
       0,
       ...databaseSettings.map((setting) => (
-        setting.updated_at ? Date.parse(setting.updated_at) || 0 : 0
+        timestampToMs(setting.updated_at)
       )),
     );
-    const currentLocalUpdatedAt = window.localStorage.getItem(adminStorageKeys.appSettingsLocalUpdatedAt)
-      ?? window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
-    const currentLocalUpdatedTime = currentLocalUpdatedAt ? Date.parse(currentLocalUpdatedAt) : 0;
+    const currentAppSettingsLocalUpdatedAt = window.localStorage.getItem(adminStorageKeys.appSettingsLocalUpdatedAt);
+    const currentAppLocalUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
+    const currentLocalUpdatedTime = Math.max(
+      timestampToMs(currentAppSettingsLocalUpdatedAt),
+      timestampToMs(currentAppLocalUpdatedAt),
+    );
     const shouldUseDatabaseSettings = databaseSettings.length > 0
       && (
         !hasLocalAppState
