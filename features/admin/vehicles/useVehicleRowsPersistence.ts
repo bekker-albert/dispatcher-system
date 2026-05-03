@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
+import { isDatabaseConflictError } from "@/lib/data/errors";
 import { createVehicleRowsSavePlan } from "@/lib/domain/vehicles/persistence";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { adminStorageKeys } from "@/lib/storage/keys";
@@ -9,6 +10,9 @@ import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 import { createVehicleRowsSaveQueue, type VehicleRowsSaveQueue } from "./vehicleRowsSaveQueue";
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
+
+const vehicleDatabaseRetryInitialDelayMs = 2000;
+const vehicleDatabaseRetryMaxDelayMs = 30000;
 
 function copyVehicleRows(rows: VehicleRow[]) {
   return rows.map((vehicle) => ({ ...vehicle }));
@@ -80,6 +84,8 @@ export function useVehicleRowsPersistence({
   const databaseSaveQueueRef = useRef<VehicleRowsSaveQueue | null>(null);
   const vehicleRowsVersionRef = useRef(0);
   const vehicleLocalSaveSnapshotRef = useRef<string | null>(null);
+  const vehicleDatabaseRetryTimerRef = useRef<number | null>(null);
+  const vehicleDatabaseRetryDelayRef = useRef(vehicleDatabaseRetryInitialDelayMs);
 
   if (databaseSaveQueueRef.current === null) {
     databaseSaveQueueRef.current = createVehicleRowsSaveQueue();
@@ -89,12 +95,87 @@ export function useVehicleRowsPersistence({
     vehicleRowsVersionRef.current += 1;
   }, [vehicleRows]);
 
+  useEffect(() => () => {
+    if (vehicleDatabaseRetryTimerRef.current !== null) {
+      window.clearTimeout(vehicleDatabaseRetryTimerRef.current);
+      vehicleDatabaseRetryTimerRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
 
     if (vehicleSaveTimerRef.current !== null) {
       window.clearTimeout(vehicleSaveTimerRef.current);
     }
+    if (vehicleDatabaseRetryTimerRef.current !== null) {
+      window.clearTimeout(vehicleDatabaseRetryTimerRef.current);
+      vehicleDatabaseRetryTimerRef.current = null;
+    }
+
+    const queueDatabaseVehicleSave = (
+      rowsSnapshot: VehicleRow[],
+      snapshot: string,
+      snapshotVersion: number,
+    ) => {
+      if (!databaseConfigured || !databaseLoadedRef.current) return;
+      if (snapshot === databaseSaveSnapshotRef.current) {
+        vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
+        return;
+      }
+
+      const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
+      const savePlan = createVehicleRowsSavePlan(rowsSnapshot, expectedSnapshot);
+      if (savePlan.kind === "none") {
+        databaseSaveSnapshotRef.current = snapshot;
+        vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
+        return;
+      }
+
+      showSaveStatus("saving", "\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u044e \u0442\u0435\u0445\u043d\u0438\u043a\u0443...");
+      databaseSaveQueueRef.current?.enqueue(async (isLatest) => {
+        try {
+          const { replaceVehiclesInDatabase, saveVehicleRowsPatchToDatabase } = await import("@/lib/data/vehicles");
+          if (!isLatest()) return;
+
+          if (savePlan.kind === "patch") {
+            await saveVehicleRowsPatchToDatabase(savePlan.patchRows, { expectedSnapshot: savePlan.expectedSnapshot });
+          } else if (savePlan.kind === "replace") {
+            await replaceVehiclesInDatabase(savePlan.rows, { expectedSnapshot: savePlan.expectedSnapshot });
+          }
+
+          if (!isLatest() || snapshotVersion !== vehicleRowsVersionRef.current) return;
+
+          databaseSaveSnapshotRef.current = snapshot;
+          vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
+          showSaveStatus("saved", "\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430.");
+        } catch (error) {
+          console.warn("Database vehicles save failed:", error);
+          if (!isLatest() || snapshotVersion !== vehicleRowsVersionRef.current) return;
+
+          if (isDatabaseConflictError(error)) {
+            showSaveStatus("error", `\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430: ${errorToMessage(error)}`);
+            return;
+          }
+
+          const retryDelay = vehicleDatabaseRetryDelayRef.current;
+          showSaveStatus("saving", `\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430. \u041f\u043e\u0432\u0442\u043e\u0440\u044e \u0447\u0435\u0440\u0435\u0437 ${Math.round(retryDelay / 1000)} \u0441\u0435\u043a.`);
+          vehicleDatabaseRetryDelayRef.current = Math.min(
+            retryDelay * 2,
+            vehicleDatabaseRetryMaxDelayMs,
+          );
+          vehicleDatabaseRetryTimerRef.current = window.setTimeout(() => {
+            vehicleDatabaseRetryTimerRef.current = null;
+            const retryRowsSnapshot = copyVehicleRows(vehicleRowsRef.current);
+            queueDatabaseVehicleSave(
+              retryRowsSnapshot,
+              JSON.stringify(retryRowsSnapshot),
+              vehicleRowsVersionRef.current,
+            );
+          }, retryDelay);
+        }
+      });
+    };
 
     vehicleSaveTimerRef.current = window.setTimeout(() => {
       const rowsSnapshot = copyVehicleRows(vehicleRowsRef.current);
@@ -110,36 +191,7 @@ export function useVehicleRowsPersistence({
 
       vehicleLocalSaveSnapshotRef.current = snapshot;
 
-      if (databaseConfigured && databaseLoadedRef.current) {
-        if (snapshot !== databaseSaveSnapshotRef.current) {
-          const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
-          const savePlan = createVehicleRowsSavePlan(rowsSnapshot, expectedSnapshot);
-
-          showSaveStatus("saving", "\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u044e \u0442\u0435\u0445\u043d\u0438\u043a\u0443...");
-          databaseSaveQueueRef.current?.enqueue(async (isLatest) => {
-            try {
-              const { replaceVehiclesInDatabase, saveVehicleRowsPatchToDatabase } = await import("@/lib/data/vehicles");
-              if (!isLatest()) return;
-
-              if (savePlan.kind === "patch") {
-                await saveVehicleRowsPatchToDatabase(savePlan.patchRows, { expectedSnapshot: savePlan.expectedSnapshot });
-              } else if (savePlan.kind === "replace") {
-                await replaceVehiclesInDatabase(savePlan.rows, { expectedSnapshot: savePlan.expectedSnapshot });
-              }
-
-              if (!isLatest() || snapshotVersion !== vehicleRowsVersionRef.current) return;
-
-              databaseSaveSnapshotRef.current = snapshot;
-              showSaveStatus("saved", "\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430.");
-            } catch (error) {
-              console.warn("Database vehicles save failed:", error);
-              if (isLatest() && snapshotVersion === vehicleRowsVersionRef.current) {
-                showSaveStatus("error", `\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u043d\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430: ${errorToMessage(error)}`);
-              }
-            }
-          });
-        }
-      }
+      queueDatabaseVehicleSave(rowsSnapshot, snapshot, snapshotVersion);
       if (localBackupChanged) {
         requestClientSnapshotSave("vehicles-save");
       }
