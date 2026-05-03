@@ -8,6 +8,9 @@ const apiBaseUrl = (
 ).replace(/\/+$/, "");
 const minVehicleRows = Number(process.env.PRODUCTION_SMOKE_MIN_VEHICLE_ROWS || 100);
 
+console.log(`site url: ${baseUrl}`);
+console.log(`api url: ${apiBaseUrl}`);
+
 async function checkUrl(label, url, validate) {
   const response = await fetch(url, {
     method: "GET",
@@ -31,7 +34,7 @@ await checkUrl("site", baseUrl, async (response) => {
   }
 });
 
-await checkUrl("database status", `${baseUrl}/api/database`, async (response) => {
+await checkUrl("database status", `${apiBaseUrl}/api/database`, async (response) => {
   const payload = await response.json();
   const status = payload?.data ?? payload;
   if (!status || typeof status !== "object") {
@@ -50,8 +53,8 @@ async function databasePost(label, resource, action, payload = null, validate) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Origin": apiBaseUrl,
-      "Referer": `${apiBaseUrl}/`,
+      "Origin": baseUrl,
+      "Referer": `${baseUrl}/`,
       "X-Dispatcher-Request": "same-origin",
       "User-Agent": "dispatcher-production-smoke/1.0",
     },

@@ -227,6 +227,19 @@ assert.equal(proxiedWriteResponse.status, 202);
 assert.equal(proxiedWriteResponse.headers.get("Access-Control-Allow-Origin"), "https://www.aam-dispatch.kz");
 assert.deepEqual(routedCalls.at(-1), { action: "save", payload: { id: 9 } });
 
+const apexPageToCanonicalApiResponse = await routedPost(new Request("https://www.aam-dispatch.kz/api/database", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    origin,
+    referer: `${origin}/`,
+  },
+  body: JSON.stringify({ resource: "fake", action: "save", payload: { id: 12 } }),
+}));
+assert.equal(apexPageToCanonicalApiResponse.status, 202);
+assert.equal(apexPageToCanonicalApiResponse.headers.get("Access-Control-Allow-Origin"), origin);
+assert.deepEqual(routedCalls.at(-1), { action: "save", payload: { id: 12 } });
+
 const rejectedWriteResponse = await routedPost(new Request("https://aam-dispatch.kz/api/database", {
   method: "POST",
   headers: { "Content-Type": "application/json", origin: "https://evil.example" },
@@ -239,6 +252,7 @@ assert.deepEqual(routedCalls, [
   { action: "save", payload: { id: 7 } },
   { action: "save", payload: { id: 10 } },
   { action: "save", payload: { id: 9 } },
+  { action: "save", payload: { id: 12 } },
 ]);
 assert.deepEqual(await responseJson(rejectedWriteResponse), {
   error: "Запись в базу данных отклонена: запрос должен идти с этого же сайта.",

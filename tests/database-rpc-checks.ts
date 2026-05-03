@@ -49,7 +49,11 @@ try {
   assert.deepEqual(await databaseRequest<{ ok: boolean }>("pto", "load-updated-at"), { ok: true });
   assert.deepEqual(await databaseRequest<{ ok: boolean }>("pto", "load-buckets"), { ok: true });
   assert.equal(fetchCalls.length, 3);
-  assert.equal(fetchCalls[0]?.input, "https://www.aam-dispatch.kz/api/database");
+  assert.deepEqual(fetchCalls.map(({ input }) => input), [
+    "https://www.aam-dispatch.kz/api/database",
+    "https://www.aam-dispatch.kz/api/database",
+    "https://www.aam-dispatch.kz/api/database",
+  ]);
   assert.equal(fetchCalls[0]?.init?.method, "POST");
   assert.deepEqual(JSON.parse(String(fetchCalls[0]?.init?.body)), {
     resource: "status",
@@ -63,6 +67,22 @@ try {
     resource: "pto",
     action: "load-buckets",
   });
+
+  installWindowHostname("www.aam-dispatch.kz");
+  fetchCalls.length = 0;
+  assert.deepEqual(await databaseRequest<{ provider: string; configured: boolean }>("status", "status"), {
+    provider: "mysql",
+    configured: true,
+  });
+  assert.equal(fetchCalls[0]?.input, "/api/database");
+
+  installWindowHostname("localhost");
+  fetchCalls.length = 0;
+  assert.deepEqual(await databaseRequest<{ provider: string; configured: boolean }>("status", "status"), {
+    provider: "mysql",
+    configured: true,
+  });
+  assert.equal(fetchCalls[0]?.input, "/api/database");
 
   nowMs += 20000;
   statusConfigured = false;

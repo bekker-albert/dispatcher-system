@@ -79,7 +79,9 @@ jobs:
             node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 20 || (major === 20 && minor < 9)) { throw new Error(`Node ${process.versions.node} is too old for Next.js 16`); }'
 
             git fetch --prune origin main
+            git cat-file -e "${DEPLOY_SHA}^{commit}"
             git reset --hard "${DEPLOY_SHA}"
+            test "$(git rev-parse HEAD)" = "${DEPLOY_SHA}"
             npm ci --omit=dev --no-audit --no-fund
 
             next_archive="next-build-${DEPLOY_SHA}.tar.gz"
@@ -88,6 +90,14 @@ jobs:
             rm -rf "${next_tmp}" "${next_previous}"
             mkdir "${next_tmp}"
             tar -xzf "${next_archive}" -C "${next_tmp}" --strip-components=1 .next
+            test -f "${next_tmp}/BUILD_ID"
+
+            rollback_next() {
+              if [ -d "${next_previous}" ] && [ ! -d .next ]; then
+                mv "${next_previous}" .next
+              fi
+            }
+            trap rollback_next ERR INT TERM
 
             if [ -d .next ]; then
               mv .next "${next_previous}"
@@ -95,6 +105,7 @@ jobs:
             mv "${next_tmp}" .next
 
             if /usr/lib/ispnodejs/bin/pm2 reload aam-dispatch --update-env; then
+              trap - ERR INT TERM
               rm -rf "${next_previous}" "${next_archive}"
             else
               rm -rf .next
@@ -104,3 +115,9 @@ jobs:
               exit 1
             fi
           EOF
+
+      - name: Production smoke
+        env:
+          PRODUCTION_SMOKE_URL: https://aam-dispatch.kz
+          PRODUCTION_SMOKE_API_URL: https://www.aam-dispatch.kz
+        run: npm run smoke:production

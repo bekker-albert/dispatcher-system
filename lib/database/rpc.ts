@@ -1,4 +1,5 @@
 import { errorToMessage } from "../utils/normalizers";
+import { databaseApiUrlForHostname } from "./api-url";
 
 export type DatabaseResource = "status" | "vehicles" | "settings" | "app-state" | "pto";
 
@@ -39,18 +40,12 @@ type DatabaseStatusPayload = {
 const databaseRequestTimeoutMs = 30000;
 const databaseReadinessTimeoutMs = 3000;
 const databaseReadinessCacheMs = 10000;
-const productionApexHost = "aam-dispatch.kz";
-const productionCanonicalApiUrl = "https://www.aam-dispatch.kz/api/database";
 
 let databaseReadinessCheckedUntil = 0;
 let activeDatabaseReadinessCheck: Promise<void> | null = null;
 
 function databaseApiUrl() {
-  if (typeof window !== "undefined" && window.location.hostname === productionApexHost) {
-    return productionCanonicalApiUrl;
-  }
-
-  return "/api/database";
+  return databaseApiUrlForHostname(typeof window === "undefined" ? undefined : window.location.hostname);
 }
 
 function databaseTimeoutMessage(timeoutMs: number) {

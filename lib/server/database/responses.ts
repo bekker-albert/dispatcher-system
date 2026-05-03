@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
+import { defaultDatabaseCorsAllowedOrigins } from "../../database/api-url";
 import { errorToMessage } from "../../utils/normalizers";
 import { databaseConflictCode, isDatabaseConflictResponseError } from "./conflicts";
 import { isDatabasePayloadError } from "./validation";
-
-const defaultCorsAllowedOrigins = [
-  "https://aam-dispatch.kz",
-  "https://www.aam-dispatch.kz",
-];
 
 function parseAllowedOrigins(value: string | undefined) {
   return (value ?? "")
@@ -17,7 +13,7 @@ function parseAllowedOrigins(value: string | undefined) {
 
 export function getCorsAllowedOrigins() {
   return new Set([
-    ...defaultCorsAllowedOrigins,
+    ...defaultDatabaseCorsAllowedOrigins,
     ...parseAllowedOrigins(process.env.DATABASE_ALLOWED_ORIGINS),
   ]);
 }
