@@ -29,8 +29,8 @@ type UsePtoDateRowValueEditorOptions = {
   setPtoPlanRows: PtoRowsSetter;
   setPtoOperRows: PtoRowsSetter;
   setPtoSurveyRows: PtoRowsSetter;
-  saveDayPatch: (row: PtoPlanRow, day: string, value: number | null) => void;
-  saveDayPatches: (row: PtoPlanRow, values: PtoDayPatch[]) => void;
+  saveDayPatch: (row: PtoPlanRow, day: string, value: number | null, onError?: () => void) => boolean;
+  saveDayPatches: (row: PtoPlanRow, values: PtoDayPatch[], onError?: () => void) => boolean;
   requestSave: () => void;
   addAdminLog: (entry: AdminLogInput) => void;
 };
@@ -125,8 +125,8 @@ export function usePtoDateRowValueEditor({
     if (!rowToSave && currentRow) {
       rowToSave = updatePtoDayValue(currentRow, day, parsedValue);
     }
-    if (rowToSave) saveDayPatch(rowToSave, day, parsedValue);
-    requestSave();
+    const inlineSaveQueued = rowToSave ? saveDayPatch(rowToSave, day, parsedValue, requestSave) : false;
+    if (!inlineSaveQueued) requestSave();
     addAdminLog({
       action: "Редактирование",
       section: "ПТО",
@@ -156,8 +156,8 @@ export function usePtoDateRowValueEditor({
     if (!rowToSave && currentRow) {
       rowToSave = updatePtoMonthValues(currentRow, days, distributedValues);
     }
-    if (rowToSave) saveDayPatches(rowToSave, patches);
-    requestSave();
+    const inlineSaveQueued = rowToSave ? saveDayPatches(rowToSave, patches, requestSave) : false;
+    if (!inlineSaveQueued) requestSave();
     addAdminLog({
       action: "Редактирование",
       section: "ПТО",

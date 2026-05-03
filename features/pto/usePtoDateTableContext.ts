@@ -35,9 +35,9 @@ export function usePtoDateTableContext({
     ptoDateTableKeyFromTab(ptoTab)
   ), [ptoTab]);
 
-  const savePtoDayPatchToDatabase = useCallback((row: PtoPlanRow, day: string, value: number | null) => {
+  const savePtoDayPatchToDatabase = useCallback((row: PtoPlanRow, day: string, value: number | null, onError?: () => void) => {
     const table = currentPtoDateTableKey();
-    if (!table || !databaseConfigured || !databaseLoadedRef.current) return;
+    if (!table || !databaseConfigured || !databaseLoadedRef.current) return false;
 
     enqueuePtoInlineDatabaseWrite({
       label: "ячейка дня",
@@ -53,12 +53,14 @@ export function usePtoDateTableContext({
         table,
         values: [{ rowId: row.id, day, value }],
       }),
+      onError,
     });
+    return true;
   }, [currentPtoDateTableKey, databaseConfigured, databaseLoadedRef, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, showSaveStatus]);
 
-  const savePtoDayPatchesToDatabase = useCallback((row: PtoPlanRow, values: PtoDayPatch[]) => {
+  const savePtoDayPatchesToDatabase = useCallback((row: PtoPlanRow, values: PtoDayPatch[], onError?: () => void) => {
     const table = currentPtoDateTableKey();
-    if (!table || !databaseConfigured || !databaseLoadedRef.current || values.length === 0) return;
+    if (!table || !databaseConfigured || !databaseLoadedRef.current || values.length === 0) return false;
 
     enqueuePtoInlineDatabaseWrite({
       label: "значения месяца",
@@ -74,7 +76,9 @@ export function usePtoDateTableContext({
         table,
         values,
       }),
+      onError,
     });
+    return true;
   }, [currentPtoDateTableKey, databaseConfigured, databaseLoadedRef, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, showSaveStatus]);
 
   return {

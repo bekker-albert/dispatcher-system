@@ -182,6 +182,8 @@ assert.match(ptoInlineDatabaseWriteSource, /export function enqueuePtoInlineData
 assert.match(ptoInlineDatabaseWriteSource, /isDatabaseConflictError/);
 assert.match(ptoInlineDatabaseWriteSource, /showSaveStatus\("error", inlineWriteErrorMessage\(label, error\)\)/);
 assert.match(ptoInlineDatabaseWriteSource, /const result = await write\(\);[\s\S]*onSaved\(result\);[\s\S]*return result;/);
+assert.match(ptoInlineDatabaseWriteSource, /onError\?: \(error: unknown\) => void;/);
+assert.match(ptoInlineDatabaseWriteSource, /onError\?\.\(error\);/);
 assert.doesNotMatch(ptoInlineDatabaseWriteSource, /\.then\(onSaved\)/);
 assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "ячейка дня"[\s\S]*showSaveStatus[\s\S]*savePtoDayValueWithRowToDatabase/);
 assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "значения месяца"[\s\S]*showSaveStatus[\s\S]*savePtoDayValuesWithRowToDatabase/);
@@ -235,8 +237,11 @@ assert.match(appLocalPersistenceSource, /persistAppLocalState\("app-state-save"\
 assert.match(appLocalPersistenceSource, /window\.addEventListener\("pagehide", flushAppLocalState\)/);
 assert.match(appLocalPersistenceSource, /clearScheduledAppLocalStateSave\(\);[\s\S]*persistAppLocalState\("app-state-pagehide"\);/);
 
-assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatch\(rowToSave, day, parsedValue\);\s*requestSave\(\);/);
-assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatches\(rowToSave, patches\);\s*requestSave\(\);/);
+assert.match(ptoDateRowValueEditorSource, /const inlineSaveQueued = rowToSave \? saveDayPatch\(rowToSave, day, parsedValue, requestSave\) : false;\s*if \(!inlineSaveQueued\) requestSave\(\);/);
+assert.match(ptoDateRowValueEditorSource, /const inlineSaveQueued = rowToSave \? saveDayPatches\(rowToSave, patches, requestSave\) : false;\s*if \(!inlineSaveQueued\) requestSave\(\);/);
+assert.match(ptoDateTableContextSource, /if \(!table \|\| !databaseConfigured \|\| !databaseLoadedRef\.current\) return false;/);
+assert.match(ptoDateTableContextSource, /if \(!table \|\| !databaseConfigured \|\| !databaseLoadedRef\.current \|\| values\.length === 0\) return false;/);
+assert.match(ptoDateTableContextSource, /onError,\s*\}\);\s*return true;/);
 assert.match(ptoDateTableContextSource, /savePtoDayValueWithRowToDatabase\(table, row, day, value, \{\s*expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt\(\),\s*\}\)/);
 assert.match(ptoDateTableContextSource, /savePtoDayValuesWithRowToDatabase\(table, row, values, \{\s*expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt\(\),\s*\}\)/);
 assert.match(ptoLinkedRowsEditorSource, /markPtoDatabaseInlineWriteSaved\(result\?\.updatedAt \?\? null,\s*\{[\s\S]*kind: "date-row"[\s\S]*action: "delete"[\s\S]*rowIds: \[row\.id\]/);
