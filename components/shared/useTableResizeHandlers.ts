@@ -7,6 +7,7 @@ import type { ReportResizeState } from "@/features/reports/lib/reportResizeState
 type AddAdminLog = (entry: AdminLogInput) => void;
 
 type UseTableResizeHandlersOptions = {
+  resizeActive: boolean;
   ptoRowHeights: Record<string, number>;
   setPtoColumnWidths: Dispatch<SetStateAction<Record<string, number>>>;
   setPtoRowHeights: Dispatch<SetStateAction<Record<string, number>>>;
@@ -21,6 +22,7 @@ function clearResizeCursor() {
 }
 
 export function useTableResizeHandlers({
+  resizeActive,
   ptoRowHeights,
   setPtoColumnWidths,
   setPtoRowHeights,
@@ -34,6 +36,18 @@ export function useTableResizeHandlers({
   const resizePointerRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
+    if (!resizeActive) {
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+      resizePointerRef.current = null;
+      ptoResizeStateRef.current = null;
+      reportResizeStateRef.current = null;
+      clearResizeCursor();
+      return;
+    }
+
     const flushResizeMove = () => {
       resizeFrameRef.current = null;
       const pointer = resizePointerRef.current;
@@ -103,34 +117,37 @@ export function useTableResizeHandlers({
       }
       clearResizeCursor();
     };
-  }, [addAdminLog, requestSave, setPtoColumnWidths, setPtoRowHeights, setReportColumnWidths]);
+  }, [addAdminLog, requestSave, resizeActive, setPtoColumnWidths, setPtoRowHeights, setReportColumnWidths]);
 
   const startPtoColumnResize = useCallback((event: React.MouseEvent<HTMLElement>, key: string, width: number) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!resizeActive) return;
     ptoResizeStateRef.current = { type: "column", key, startX: event.clientX, startWidth: width };
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-  }, []);
+  }, [resizeActive]);
 
   const startReportColumnResize = useCallback((event: React.MouseEvent<HTMLElement>, key: string, width: number) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!resizeActive) return;
     reportResizeStateRef.current = { key, startX: event.clientX, startWidth: width };
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-  }, []);
+  }, [resizeActive]);
 
   const startPtoRowResize = useCallback((event: React.MouseEvent<HTMLElement>, key: string) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!resizeActive) return;
     const rowElement = event.currentTarget.closest("tr");
     const startHeight = rowElement?.getBoundingClientRect().height ?? ptoRowHeights[key] ?? 34;
 
     ptoResizeStateRef.current = { type: "row", key, startY: event.clientY, startHeight };
     document.body.style.cursor = "row-resize";
     document.body.style.userSelect = "none";
-  }, [ptoRowHeights]);
+  }, [ptoRowHeights, resizeActive]);
 
   return {
     startPtoColumnResize,

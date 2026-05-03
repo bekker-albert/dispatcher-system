@@ -110,6 +110,7 @@ export function useAppRuntimeControllers({
   });
 
   const tableInteractionEffects = useAppTableInteractionEffects({
+    resizeActive: (topTab === "pto" && ptoDateEditing) || topTab === "reports",
     ptoSelectionActive: topTab === "pto" && ptoDateEditing,
     vehicleSelectionActive: topTab === "admin" && adminSection === "vehicles",
     ptoRowHeights,

@@ -79,6 +79,11 @@ assert.doesNotMatch(useAppSectionPreloaderSource, /PtoDateEditableTableContainer
 assert.doesNotMatch(useAppSectionPreloaderSource, /PtoBucketsSection/);
 assert.match(useTableResizeHandlersSource, /requestAnimationFrame\(flushResizeMove\)/);
 assert.match(useTableResizeHandlersSource, /cancelAnimationFrame\(resizeFrameRef\.current\)/);
+assert.match(useTableResizeHandlersSource, /resizeActive: boolean;/);
+assert.match(useTableResizeHandlersSource, /if \(!resizeActive\) \{[\s\S]*resizePointerRef\.current = null;[\s\S]*ptoResizeStateRef\.current = null;[\s\S]*reportResizeStateRef\.current = null;[\s\S]*clearResizeCursor\(\);[\s\S]*return;[\s\S]*\}/);
+assert.match(useTableResizeHandlersSource, /\[addAdminLog, requestSave, resizeActive, setPtoColumnWidths, setPtoRowHeights, setReportColumnWidths\]/);
+assert.match(useTableResizeHandlersSource, /if \(!resizeActive\) return;\s*ptoResizeStateRef\.current/);
+assert.match(useTableResizeHandlersSource, /if \(!resizeActive\) return;\s*reportResizeStateRef\.current/);
 assert.match(useReportRowsModelSource, /if \(!needsAutoReportRows \|\| calculatedReportRows\.length === 0\) \{\s*derivedReportRowsCacheRef\.current = new Map\(\);\s*return \[\];\s*\}/);
 assert.match(useReportRowsModelSource, /if \(!needsAutoReportRows \|\| !needsReportReasons \|\| !reportPtoIndexes\) return new Map<string, string>\(\);/);
 assert.match(useReportRowsModelSource, /if \(!needsReportReasons\) return calculatedReportRows;/);
@@ -158,6 +163,7 @@ assert.match(useAppSectionPreloaderSource, /completedPreloaders\.add\(preloadSec
 assert.match(useAppSectionPreloaderSource, /runNextPreload\(\);/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /function preloadCoreSections/);
 assert.match(useAppRuntimeControllersSource, /ptoSelectionActive: topTab === "pto" && ptoDateEditing/);
+assert.match(useAppRuntimeControllersSource, /resizeActive: \(topTab === "pto" && ptoDateEditing\) \|\| topTab === "reports"/);
 assert.doesNotMatch(useAppRuntimeControllersSource, /ptoSelectionActive: topTab === "pto",/);
 assert.match(useAppAdminDatabasePropsSource, /const ptoMemoryTotal = useMemo\(\(\) => \(/);
 assert.match(useAppAdminDatabasePropsSource, /const clientSnapshotStatsByKey = useMemo\(\(\) => new Map\(/);
