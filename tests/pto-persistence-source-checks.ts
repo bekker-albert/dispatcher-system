@@ -17,10 +17,12 @@ const ptoDatabaseLoadApplySource = readFileSync(resolve(testDir, "../features/pt
 const ptoPersistenceComparisonSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceComparison.ts"), "utf8");
 const ptoPersistenceStorageSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceStorage.ts"), "utf8");
 const ptoLocalPersistenceSource = readFileSync(resolve(testDir, "../features/pto/usePtoLocalPersistence.ts"), "utf8");
+const ptoTabsSource = readFileSync(resolve(testDir, "../lib/domain/pto/tabs.ts"), "utf8");
 const ptoDatabaseSaveSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseSave.ts"), "utf8");
 const initialAppDataLoadStepsSource = readFileSync(resolve(testDir, "../features/app/initialAppDataLoadSteps.ts"), "utf8");
 const ptoDateRowValueEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateRowValueEditor.ts"), "utf8");
 const ptoDateTableContextSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateTableContext.ts"), "utf8");
+const ptoDateEditingToggleSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateEditingToggle.ts"), "utf8");
 const ptoLinkedRowsEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoLinkedRowsEditor.ts"), "utf8");
 const ptoYearEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoYearEditor.ts"), "utf8");
 const ptoBucketsEditorSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsEditor.ts"), "utf8");
@@ -36,7 +38,12 @@ assert.match(appPtoPersistenceSource, /usePtoDatabaseLoad\(\{[\s\S]*adminDataLoa
 assert.match(appPtoPersistenceSource, /usePtoDatabaseSave\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceSource, /usePtoLocalPersistence\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*skipUntilDatabaseLoaded: databaseConfigured,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceControllerSource, /const reportsNeedPtoDatabase = appState\.topTab === "reports"\s*\|\|\s*\(appState\.topTab === "admin" && appState\.adminSection === "reports"\);/);
-assert.match(appPtoPersistenceControllerSource, /const activePtoTabNeedsDatabase = appState\.topTab === "pto"\s*&& \(isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets"\);/);
+assert.match(ptoTabsSource, /export const ptoMatrixTableKeys = \["buckets", "cycle", "bodies", "performance"\] as const;/);
+assert.match(ptoTabsSource, /export function ptoTabNeedsDatabase\(value: string\)/);
+assert.match(ptoTabsSource, /return isPtoDateTableKey\(value\) \|\| isPtoMatrixTableKey\(value\);/);
+assert.match(ptoTabsSource, /export function ptoTabIncludesBucketState\(value: string\)/);
+assert.match(ptoTabsSource, /return isPtoMatrixTableKey\(value\);/);
+assert.match(appPtoPersistenceControllerSource, /const activePtoTabNeedsDatabase = appState\.topTab === "pto"\s*&& ptoTabNeedsDatabase\(appState\.ptoTab\);/);
 assert.match(appPtoPersistenceControllerSource, /const ptoDatabaseLoadEnabled = appState\.ptoDatabaseLoadStarted\s*\|\|\s*\([\s\S]*appState\.ptoBootstrapLoaded[\s\S]*&& \(!databaseConfigured \|\| reportsNeedPtoDatabase \|\| activePtoTabNeedsDatabase\)[\s\S]*\);/);
 assert.match(initialAppStorageSource, /export const initialPtoStorageKeys = \[/);
 assert.match(initialAppStorageSource, /initialAppStorageKeys = Object\.values\(adminStorageKeys\)\.filter\(\(key\) => !initialPtoStorageKeySet\.has\(key\)\)/);
@@ -50,7 +57,7 @@ assert.match(initialAppStorageSource, /export function collectInitialStoredAppSt
 assert.match(initialAppStorageSource, /export function parseInitialStoredAppStateFromStorage/);
 assert.match(ptoDatabaseLoadSource, /runPtoDatabaseLoadOnce\(\{[\s\S]*isCancelled: \(\) => cancelled,[\s\S]*\}\)/);
 assert.doesNotMatch(ptoDatabaseLoadSource, /\n\s*options,\n\s*\]\);/);
-assert.match(ptoDatabaseLoadRunnerSource, /const includeBuckets = ptoTab === "buckets";/);
+assert.match(ptoDatabaseLoadRunnerSource, /const includeBuckets = ptoTabIncludesBucketState\(ptoTab\);/);
 assert.match(ptoDatabaseLoadRunnerSource, /createPtoDatabaseLoadMetrics\(\{ includeBuckets, year: ptoPlanYear \}\)/);
 assert.match(ptoDatabaseLoadRunnerSource, /loadMetrics\.mark\("freshness-checked"/);
 assert.match(ptoDatabaseLoadRunnerSource, /loadMetrics\.mark\("year-state-loaded"/);
@@ -161,7 +168,7 @@ assert.match(ptoLocalPersistenceSource, /ptoDatabaseLoadedBucketsYearRef: RefObj
 assert.match(ptoLocalPersistenceSource, /const currentPtoTabRef = useRef\(ptoTab\);/);
 assert.match(ptoLocalPersistenceSource, /const currentPtoPlanYearRef = useRef\(ptoPlanYear\);/);
 assert.match(ptoLocalPersistenceSource, /useEffect\(\(\) => \{[\s\S]*currentPtoTabRef\.current = ptoTab;[\s\S]*currentPtoPlanYearRef\.current = ptoPlanYear;[\s\S]*\}, \[ptoPlanYear, ptoTab\]\);/);
-assert.match(ptoLocalPersistenceSource, /const includeBuckets = !skipUntilDatabaseLoaded[\s\S]*\|\| currentPtoTab === "buckets"[\s\S]*\|\| ptoDatabaseLoadedBucketsYearRef\.current === currentPtoPlanYear;/);
+assert.match(ptoLocalPersistenceSource, /const includeBuckets = !skipUntilDatabaseLoaded[\s\S]*\|\| ptoTabIncludesBucketState\(currentPtoTab\)[\s\S]*\|\| ptoDatabaseLoadedBucketsYearRef\.current === currentPtoPlanYear;/);
 assert.match(ptoLocalPersistenceSource, /const localUpdatedAt = markLocalUpdatedAt && !isPtoDatabaseDirty\(\)[\s\S]*\? getPtoDatabaseExpectedUpdatedAt\(\)[\s\S]*: undefined;/);
 assert.match(ptoLocalPersistenceSource, /savePtoStateToBrowserStorage\([\s\S]*markLocalUpdatedAt,[\s\S]*localUpdatedAt,/);
 assert.match(ptoLocalPersistenceSource, /savePtoStateToBrowserStorage\([\s\S]*includeBuckets,[\s\S]*markLocalUpdatedAt,[\s\S]*localUpdatedAt,/);
@@ -183,8 +190,8 @@ assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]
 assert.match(ptoDateTableContextSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "значения месяца"[\s\S]*showSaveStatus[\s\S]*savePtoDayValuesWithRowToDatabase/);
 assert.match(ptoLinkedRowsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление строки"[\s\S]*deletePtoRowsFromDatabase/);
 assert.match(ptoYearEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление года"[\s\S]*deletePtoYearFromDatabase/);
-assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "ковш"[\s\S]*showSaveStatus[\s\S]*savePtoBucketValueToDatabase/);
-assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "очистка ковшей"[\s\S]*deletePtoBucketValuesFromDatabase/);
+assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: valueLabel[\s\S]*showSaveStatus[\s\S]*savePtoBucketValueToDatabase/);
+assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: `очистка: \$\{valueLabel\}`[\s\S]*deletePtoBucketValuesFromDatabase/);
 assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "строка ковшей"[\s\S]*savePtoBucketRowToDatabase/);
 assert.match(ptoBucketsEditorSource, /enqueuePtoInlineDatabaseWrite\(\{[\s\S]*label: "удаление строки ковшей"[\s\S]*deletePtoBucketRowFromDatabase/);
 assert.doesNotMatch(ptoBucketsEditorSource, /Database PTO bucket .* failed/);
@@ -238,6 +245,8 @@ assert.match(ptoDateTableContextSource, /if \(!table \|\| !databaseConfigured \|
 assert.match(ptoDateTableContextSource, /onError,\s*\}\);\s*return true;/);
 assert.match(ptoDateTableContextSource, /savePtoDayValueWithRowToDatabase\(table, row, day, value, \{\s*expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt\(\),\s*\}\)/);
 assert.match(ptoDateTableContextSource, /savePtoDayValuesWithRowToDatabase\(table, row, values, \{\s*expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt\(\),\s*\}\)/);
+assert.doesNotMatch(ptoDateEditingToggleSource, /requestPtoDatabaseSave/);
+assert.match(ptoDateEditingToggleSource, /if \(!nextEditing\) \{[\s\S]*savePtoLocalState\(\);[\s\S]*savePtoDatabaseChanges\("manual"\)/);
 assert.match(ptoLinkedRowsEditorSource, /markPtoDatabaseInlineWriteSaved\(result\?\.updatedAt \?\? null,\s*\{[\s\S]*kind: "date-row"[\s\S]*action: "delete"[\s\S]*rowIds: \[row\.id\]/);
 assert.match(ptoYearEditorSource, /markPtoDatabaseInlineWriteSaved\(result\?\.updatedAt \?\? null,\s*\{[\s\S]*kind: "year"[\s\S]*action: "delete"[\s\S]*year,/);
 assert.doesNotMatch(supabasePtoCommandsSource, /databaseRequest|shouldRoutePtoThroughServerDatabase|pto-routing/);

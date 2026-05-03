@@ -15,6 +15,8 @@ npm run dev
 http://localhost:3000
 ```
 
+Для обычной работы на этом компьютере можно запускать `start-local-server.cmd`: он откроет уже запущенный локальный сервер или стартует свободный порт, начиная с `3011`.
+
 ## Проверка перед сохранением
 
 ```bash
@@ -26,6 +28,7 @@ npm run verify
 - `npm run lint`
 - `npm run build`
 - `npm run check:domain`
+- `npm run check:project`
 
 ## База данных
 
@@ -39,6 +42,7 @@ DB_PORT=3306
 DB_NAME=aam_dispatch
 DB_USER=dispatcher_ad
 DB_PASSWORD=
+DATABASE_ALLOWED_ORIGINS=
 ```
 
 Таблицы создаются автоматически при первом обращении к базе, если пользователь MySQL имеет права внутри своей базы.

@@ -1,11 +1,13 @@
 "use client";
 
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type { ChangeEvent, Dispatch, ReactNode, SetStateAction } from "react";
 
 import type { PtoSectionProps } from "@/features/pto/PtoSection";
 import { usePtoDateTableRenderer } from "@/features/pto/usePtoDateTableRenderer";
+import type { PtoBodyColumn } from "@/lib/domain/pto/bodies";
 import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { PtoPerformanceColumn, PtoPerformanceRow } from "@/lib/domain/pto/performance";
 
 type PtoDateTableRendererOptions = Parameters<typeof usePtoDateTableRenderer>[0];
 
@@ -18,6 +20,12 @@ type UseAppPtoSectionPropsOptions = PtoDateTableRendererOptions & {
   ptoAreaFilter: string;
   ptoBucketRows: PtoBucketRow[];
   ptoBucketColumns: PtoBucketColumn[];
+  ptoCycleRows: PtoBucketRow[];
+  ptoCycleColumns: PtoBucketColumn[];
+  ptoBodyRows: PtoBucketRow[];
+  ptoBodyColumns: PtoBodyColumn[];
+  ptoPerformanceRows: PtoPerformanceRow[];
+  ptoPerformanceColumns: PtoPerformanceColumn[];
   ptoBucketValues: Record<string, number>;
   ptoPlanRows: PtoPlanRow[];
   ptoOperRows: PtoPlanRow[];
@@ -30,6 +38,8 @@ type UseAppPtoSectionPropsOptions = PtoDateTableRendererOptions & {
   clearPtoBucketCells: (cellKeys: string[]) => void;
   addPtoBucketManualRow: (area: string, structure: string) => boolean;
   deletePtoBucketManualRow: (row: PtoBucketRow) => void;
+  exportPtoMatrixToExcel: () => void | Promise<void>;
+  importPtoMatrixFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
 };
 
 export function useAppPtoSectionProps({
@@ -41,6 +51,12 @@ export function useAppPtoSectionProps({
   ptoAreaFilter,
   ptoBucketRows,
   ptoBucketColumns,
+  ptoCycleRows,
+  ptoCycleColumns,
+  ptoBodyRows,
+  ptoBodyColumns,
+  ptoPerformanceRows,
+  ptoPerformanceColumns,
   ptoBucketValues,
   ptoPlanRows,
   ptoOperRows,
@@ -53,6 +69,8 @@ export function useAppPtoSectionProps({
   clearPtoBucketCells,
   addPtoBucketManualRow,
   deletePtoBucketManualRow,
+  exportPtoMatrixToExcel,
+  importPtoMatrixFromExcel,
   ...dateTableRendererOptions
 }: UseAppPtoSectionPropsOptions): PtoSectionProps {
   const renderPtoDateTable = usePtoDateTableRenderer({
@@ -88,11 +106,19 @@ export function useAppPtoSectionProps({
     onSelectArea: selectPtoArea,
     ptoBucketRows,
     ptoBucketColumns,
+    ptoCycleRows,
+    ptoCycleColumns,
+    ptoBodyRows,
+    ptoBodyColumns,
+    ptoPerformanceRows,
+    ptoPerformanceColumns,
     ptoBucketValues,
     onCommitBucketValue: commitPtoBucketValue,
     onClearBucketCells: clearPtoBucketCells,
     onAddBucketManualRow: addPtoBucketManualRow,
     onDeleteBucketManualRow: deletePtoBucketManualRow,
+    onExportPtoMatrixToExcel: exportPtoMatrixToExcel,
+    onImportPtoMatrixFromExcel: importPtoMatrixFromExcel,
     renderPlanTable,
     renderOperTable,
     renderSurveyTable,

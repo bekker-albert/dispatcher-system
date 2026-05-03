@@ -30,6 +30,8 @@ type UsePtoBucketsEditorOptions = {
   showSaveStatus: ShowSaveStatus;
   requestSave: () => void;
   addAdminLog: AddAdminLog;
+  sectionLabel?: string;
+  valueLabel?: string;
 };
 
 export function usePtoBucketsEditor({
@@ -46,6 +48,8 @@ export function usePtoBucketsEditor({
   showSaveStatus,
   requestSave,
   addAdminLog,
+  sectionLabel = "ПТО: Ковши",
+  valueLabel = "значение",
 }: UsePtoBucketsEditorOptions) {
   const databaseReady = useCallback(() => databaseConfigured && ptoDatabaseLoadedRef.current, [databaseConfigured, ptoDatabaseLoadedRef]);
 
@@ -58,7 +62,7 @@ export function usePtoBucketsEditor({
     setPtoBucketValues((current) => applyPtoBucketValueDraft(current, cellKey, draft).values);
     if (databaseReady()) {
       enqueuePtoInlineDatabaseWrite({
-        label: "ковш",
+        label: valueLabel,
         showSaveStatus,
         write: async () => {
           const { savePtoBucketValueToDatabase } = await import("@/lib/data/pto");
@@ -75,10 +79,10 @@ export function usePtoBucketsEditor({
     requestSave();
     addAdminLog({
       action: "Редактирование",
-      section: "ПТО: Ковши",
+      section: sectionLabel,
       details: `Изменена ячейка${bucketRow ? ` ${bucketRow.area} / ${bucketRow.structure}` : ""}${bucketColumn ? `, ${bucketColumn.label}` : ""}.`,
     });
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoBucketColumns, ptoBucketRows, requestSave, setPtoBucketValues, showSaveStatus]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoBucketColumns, ptoBucketRows, requestSave, sectionLabel, setPtoBucketValues, showSaveStatus, valueLabel]);
 
   const clearPtoBucketCells = useCallback((cellKeys: string[]) => {
     if (cellKeys.length === 0) return;
@@ -86,7 +90,7 @@ export function usePtoBucketsEditor({
     setPtoBucketValues((current) => clearPtoBucketValueKeys(current, cellKeys));
     if (databaseReady()) {
       enqueuePtoInlineDatabaseWrite({
-        label: "очистка ковшей",
+        label: `очистка: ${valueLabel}`,
         showSaveStatus,
         write: async () => {
           const { deletePtoBucketValuesFromDatabase } = await import("@/lib/data/pto");
@@ -103,10 +107,10 @@ export function usePtoBucketsEditor({
     requestSave();
     addAdminLog({
       action: "Редактирование",
-      section: "ПТО: Ковши",
+      section: sectionLabel,
       details: `Очищены выбранные ячейки ковшей: ${cellKeys.length}.`,
     });
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoBucketValues, showSaveStatus]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, sectionLabel, setPtoBucketValues, showSaveStatus, valueLabel]);
 
   const addPtoBucketManualRow = useCallback((areaValue: string, structureValue: string) => {
     const row = createPtoBucketManualRowDraft(areaValue, structureValue, ptoAreaFilter, [
@@ -137,11 +141,11 @@ export function usePtoBucketsEditor({
     requestSave();
     addAdminLog({
       action: "Добавление",
-      section: "ПТО: Ковши",
+      section: sectionLabel,
       details: `Добавлена строка ковшей: ${row.area} / ${row.structure}.`,
     });
     return true;
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoAreaFilter, ptoBucketManualRows, ptoBucketRows, requestSave, setPtoBucketManualRows, showSaveStatus]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, ptoAreaFilter, ptoBucketManualRows, ptoBucketRows, requestSave, sectionLabel, setPtoBucketManualRows, showSaveStatus]);
 
   const deletePtoBucketManualRow = useCallback((row: PtoBucketRow) => {
     if (!window.confirm(`Удалить временную строку "${row.area} / ${row.structure}" из ковшей?`)) return;
@@ -168,10 +172,10 @@ export function usePtoBucketsEditor({
     requestSave();
     addAdminLog({
       action: "Удаление",
-      section: "ПТО: Ковши",
+      section: sectionLabel,
       details: `Удалена строка ковшей: ${row.area} / ${row.structure}.`,
     });
-  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, setPtoBucketManualRows, setPtoBucketValues, showSaveStatus]);
+  }, [addAdminLog, databaseReady, getPtoDatabaseExpectedUpdatedAt, markPtoDatabaseInlineWriteSaved, requestSave, sectionLabel, setPtoBucketManualRows, setPtoBucketValues, showSaveStatus]);
 
   return {
     commitPtoBucketValue,

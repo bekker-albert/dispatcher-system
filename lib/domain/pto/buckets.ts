@@ -13,6 +13,7 @@ export type PtoBucketRow = {
 export type PtoBucketColumn = {
   key: string;
   label: string;
+  duplicate?: boolean;
 };
 
 export type PtoBucketColumnsModel = {
@@ -119,7 +120,7 @@ export function createPtoBucketColumns(vehicles: VehicleRow[]) {
 }
 
 export function ptoBucketColumnsSourceSignature(vehicles: readonly VehicleRow[]) {
-  const columnKeys = new Set<string>();
+  const columnCounts = new Map<string, { label: string; count: number }>();
 
   vehicles.forEach((vehicle) => {
     if (vehicle.visible === false || !isLoadingEquipment(vehicle)) return;
@@ -127,14 +128,24 @@ export function ptoBucketColumnsSourceSignature(vehicles: readonly VehicleRow[])
     const label = loadingEquipmentLabel(vehicle);
     if (!label) return;
 
-    columnKeys.add([normalizeLookupValue(label), label].join("\u001f"));
+    const key = loadingEquipmentDuplicateKey(label);
+    const column = columnCounts.get(key);
+    if (column) {
+      column.count += 1;
+      return;
+    }
+
+    columnCounts.set(key, { label, count: 1 });
   });
 
-  return Array.from(columnKeys).sort((left, right) => left.localeCompare(right, "ru")).join("\u001e");
+  return Array.from(columnCounts.entries())
+    .map(([key, column]) => [key, column.label, column.count].join("\u001f"))
+    .sort((left, right) => left.localeCompare(right, "ru"))
+    .join("\u001e");
 }
 
 export function createPtoBucketColumnsModel(vehicles: VehicleRow[]): PtoBucketColumnsModel {
-  const columnsByKey = new Map<string, PtoBucketColumn>();
+  const columnsByKey = new Map<string, PtoBucketColumn & { count: number }>();
 
   vehicles.forEach((vehicle) => {
     if (vehicle.visible === false || !isLoadingEquipment(vehicle)) return;
@@ -142,17 +153,34 @@ export function createPtoBucketColumnsModel(vehicles: VehicleRow[]): PtoBucketCo
     const label = loadingEquipmentLabel(vehicle);
     if (!label) return;
 
-    const key = normalizeLookupValue(label);
-    if (!columnsByKey.has(key)) columnsByKey.set(key, { key, label });
+    const key = loadingEquipmentDuplicateKey(label);
+    const column = columnsByKey.get(key);
+    if (column) {
+      column.count += 1;
+      return;
+    }
+
+    columnsByKey.set(key, { key, label, count: 1 });
   });
 
   const columns = Array.from(columnsByKey.values())
+    .map((column) => ({
+      key: column.key,
+      label: column.label,
+      ...(column.count > 1 ? { duplicate: true } : null),
+    }))
     .sort((left, right) => left.label.localeCompare(right.label, "ru"));
 
   return {
     columns,
-    signature: columns.map((column) => [column.key, column.label].join("\u001f")).join("\u001e"),
+    signature: columns
+      .map((column) => [column.key, column.label, column.duplicate ? "duplicate" : ""].join("\u001f"))
+      .join("\u001e"),
   };
+}
+
+function loadingEquipmentDuplicateKey(label: string) {
+  return normalizeLookupValue(label);
 }
 
 function ptoAreaMatchesForBucket(area: string, filter: string) {

@@ -16,6 +16,7 @@ import {
   createPtoBucketRowsModel,
   ptoBucketColumnsSourceSignature,
 } from "../lib/domain/pto/buckets";
+import { createPtoBodyColumns } from "../lib/domain/pto/bodies";
 
 const rowKeys = ["row-a", "row-b", "row-c"];
 const columnKeys = ["eq-1", "eq-2", "eq-3"];
@@ -44,6 +45,24 @@ const bucketColumnsModel = createPtoBucketColumnsModel([
   },
 ] as never);
 assert.deepEqual(bucketColumnsModel.columns.map((column) => column.label), ["CAT 336", "Liebherr 566"]);
+const duplicateBucketColumnsModel = createPtoBucketColumnsModel([
+  {
+    visible: true,
+    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+    brand: "CAT",
+    model: "336",
+    name: "CAT 336 A",
+  },
+  {
+    visible: true,
+    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+    brand: "C AT",
+    model: "3 36",
+    name: "CAT 336 B",
+  },
+] as never);
+assert.equal(duplicateBucketColumnsModel.columns.length, 1);
+assert.equal(duplicateBucketColumnsModel.columns[0].duplicate, true);
 assert.equal(
   ptoBucketColumnsSourceSignature([
     {
@@ -65,6 +84,14 @@ assert.equal(
       owner: "Owner B",
     },
   ] as never),
+);
+assert.deepEqual(
+  createPtoBodyColumns([{ area: "\u0410\u043a\u0441\u0443", structure: "\u0421\u0443\u0433\u043b\u0438\u043d\u043e\u043a" }] as never, "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043a\u0438"),
+  [],
+);
+assert.deepEqual(
+  createPtoBodyColumns([{ area: "\u0410\u043a\u0441\u0443", material: "\u0421\u0443\u0433\u043b\u0438\u043d\u043e\u043a" }], "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043a\u0438").map((column) => column.label),
+  ["\u0421\u0443\u0433\u043b\u0438\u043d\u043e\u043a"],
 );
 
 assert.equal(

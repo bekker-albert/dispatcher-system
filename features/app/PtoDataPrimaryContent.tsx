@@ -6,6 +6,7 @@ import { createEmptyPtoDateModel } from "@/features/app/emptyPtoDateModel";
 import type { AppPtoModels } from "@/features/app/appPtoScreenPropsTypes";
 import { usePtoDateEditingReset } from "@/features/pto/usePtoDateEditingReset";
 import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
+import { isPtoMatrixTableKey } from "@/lib/domain/pto/tabs";
 
 type PtoDataPrimaryContentProps = Pick<AppPrimaryContentProps, "appState" | "models" | "runtime" | "navigation">;
 
@@ -34,7 +35,7 @@ export function PtoDataPrimaryContent({
   navigation,
 }: PtoDataPrimaryContentProps) {
   const isPtoDateTab = isPtoDateTableKey(appState.ptoTab);
-  const isPtoBucketsSection = appState.ptoTab === "buckets";
+  const isPtoBucketsSection = isPtoMatrixTableKey(appState.ptoTab);
 
   usePtoDateEditingReset({
     active: models.renderedTopTab === "pto" && isPtoDateTab,

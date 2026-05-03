@@ -16,7 +16,6 @@ type UsePtoDateEditingToggleOptions = Pick<
   | "setPtoSelectionAnchorCell"
   | "setPtoSelectedCellKeys"
   | "savePtoLocalState"
-  | "requestPtoDatabaseSave"
   | "savePtoDatabaseChanges"
 >;
 
@@ -32,7 +31,6 @@ export function usePtoDateEditingToggle({
   setPtoSelectionAnchorCell,
   setPtoSelectedCellKeys,
   savePtoLocalState,
-  requestPtoDatabaseSave,
   savePtoDatabaseChanges,
 }: UsePtoDateEditingToggleOptions) {
   return useCallback(() => {
@@ -48,14 +46,12 @@ export function usePtoDateEditingToggle({
     setPtoSelectedCellKeys([]);
     if (!nextEditing) {
       savePtoLocalState();
-      requestPtoDatabaseSave();
       window.setTimeout(() => {
         void savePtoDatabaseChanges("manual");
       }, 0);
     }
   }, [
     ptoDateEditing,
-    requestPtoDatabaseSave,
     savePtoDatabaseChanges,
     savePtoLocalState,
     setDraggedPtoRowId,

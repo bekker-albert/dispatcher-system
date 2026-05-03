@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Fragment, memo } from "react";
 import { PtoPlanTd, PtoPlanTh, PtoReadonlyNumberCell, PtoReadonlyTextCell, PtoVirtualSpacerRow } from "@/features/pto/PtoDateTableParts";
-import { monthToggleStyle, ptoDateTableLayoutStyle, ptoDateTableScrollStyle, ptoPlanTableStyle, ptoStatusBadgeStyle } from "@/features/pto/ptoDateTableStyles";
+import { monthToggleStyle, ptoDateReadonlyTableLayoutStyle, ptoDateTableScrollStyle, ptoPlanTableStyle, ptoStatusBadgeStyle } from "@/features/pto/ptoDateTableStyles";
 import type { PtoDateReadonlyTableProps } from "@/features/pto/ptoDateTableTypes";
 import { normalizePtoCustomerCode, normalizePtoUnit, ptoAutomatedStatus, ptoStatusRowBackground } from "@/lib/domain/pto/date-table";
 import { statusControlStyle } from "@/shared/ui/statusBadge";
@@ -33,7 +33,7 @@ export function PtoDateReadonlyTable({
   toolbar,
 }: PtoDateReadonlyTableProps) {
   return (
-    <div style={ptoDateTableLayoutStyle}>
+    <div style={ptoDateReadonlyTableLayoutStyle}>
       {toolbar}
 
       <div ref={scrollRef} onScroll={onScroll} style={ptoDateTableScrollStyle}>

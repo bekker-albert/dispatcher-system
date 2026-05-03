@@ -4,8 +4,10 @@ import type { Dispatch, RefObject, SetStateAction } from "react";
 
 import { usePtoDateExcelTransfer } from "@/features/pto/usePtoDateExcelTransfer";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
+import type { PtoBodyColumn } from "@/lib/domain/pto/bodies";
 import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
+import type { PtoPerformanceColumn, PtoPerformanceRow } from "@/lib/domain/pto/performance";
 
 type AddAdminLog = (entry: AdminLogInput) => void;
 type PtoRowsSetter = Dispatch<SetStateAction<PtoPlanRow[]>>;
@@ -29,10 +31,15 @@ type UseAppPtoSupplementalTablesOptions = {
 
 const emptyPtoBucketRows: PtoBucketRow[] = [];
 const emptyPtoBucketColumns: PtoBucketColumn[] = [];
+const emptyPtoBodyColumns: PtoBodyColumn[] = [];
+const emptyPtoPerformanceRows: PtoPerformanceRow[] = [];
+const emptyPtoPerformanceColumns: PtoPerformanceColumn[] = [];
 const noopCommitPtoBucketValue = () => undefined;
 const noopClearPtoBucketCells = () => undefined;
 const noopAddPtoBucketManualRow = () => false;
 const noopDeletePtoBucketManualRow = () => undefined;
+const noopExportPtoMatrixToExcel = () => undefined;
+const noopImportPtoMatrixFromExcel = () => undefined;
 
 export function useAppPtoSupplementalTables({
   ptoTab,
@@ -75,6 +82,12 @@ export function useAppPtoSupplementalTables({
   return {
     ptoBucketRows: emptyPtoBucketRows,
     ptoBucketColumns: emptyPtoBucketColumns,
+    ptoCycleRows: emptyPtoBucketRows,
+    ptoCycleColumns: emptyPtoBucketColumns,
+    ptoBodyRows: emptyPtoBucketRows,
+    ptoBodyColumns: emptyPtoBodyColumns,
+    ptoPerformanceRows: emptyPtoPerformanceRows,
+    ptoPerformanceColumns: emptyPtoPerformanceColumns,
     openPtoDateImportFilePicker,
     currentPtoDateExcelMeta,
     exportPtoDateTableToExcel,
@@ -83,5 +96,7 @@ export function useAppPtoSupplementalTables({
     clearPtoBucketCells: noopClearPtoBucketCells,
     addPtoBucketManualRow: noopAddPtoBucketManualRow,
     deletePtoBucketManualRow: noopDeletePtoBucketManualRow,
+    exportPtoMatrixToExcel: noopExportPtoMatrixToExcel,
+    importPtoMatrixFromExcel: noopImportPtoMatrixFromExcel,
   };
 }

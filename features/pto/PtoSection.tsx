@@ -1,9 +1,13 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ChangeEvent, ReactNode } from "react";
 import dynamic from "next/dynamic";
+import type { PtoBodyColumn } from "@/lib/domain/pto/bodies";
 import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
+import type { PtoPerformanceColumn, PtoPerformanceRow } from "@/lib/domain/pto/performance";
+import { isPtoDataTableKey } from "@/lib/domain/pto/tabs";
 import { SectionCard } from "@/shared/ui/layout";
+import { createPtoMatrixHeaderEditor, type PtoMatrixHeaderEditorBase } from "./ptoMatrixHeaderEditing";
 import { PtoStaticTabContent, ptoInfoBlockStyle } from "./PtoStaticTabContent";
 
 export type PtoSectionProps = {
@@ -16,11 +20,20 @@ export type PtoSectionProps = {
   onSelectArea: (area: string) => void;
   ptoBucketRows: PtoBucketRow[];
   ptoBucketColumns: PtoBucketColumn[];
+  ptoCycleRows: PtoBucketRow[];
+  ptoCycleColumns: PtoBucketColumn[];
+  ptoBodyRows: PtoBucketRow[];
+  ptoBodyColumns: PtoBodyColumn[];
+  ptoPerformanceRows: PtoPerformanceRow[];
+  ptoPerformanceColumns: PtoPerformanceColumn[];
   ptoBucketValues: Record<string, number>;
+  ptoMatrixHeaderEditor?: PtoMatrixHeaderEditorBase;
   onCommitBucketValue: (cellKey: string, draft: string) => void;
   onClearBucketCells: (cellKeys: string[]) => void;
   onAddBucketManualRow: (area: string, structure: string) => boolean;
   onDeleteBucketManualRow: (row: PtoBucketRow) => void;
+  onExportPtoMatrixToExcel: () => void | Promise<void>;
+  onImportPtoMatrixFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   renderPlanTable: () => ReactNode;
   renderOperTable: () => ReactNode;
   renderSurveyTable: () => ReactNode;
@@ -29,6 +42,16 @@ export type PtoSectionProps = {
 const PtoBucketsSection = dynamic(() => import("./PtoBucketsSection"), {
   ssr: false,
   loading: () => <div style={ptoInfoBlockStyle}>Загружаю таблицу ковшей...</div>,
+});
+
+const PtoBodiesSection = dynamic(() => import("./PtoBodiesSection"), {
+  ssr: false,
+  loading: () => <div style={ptoInfoBlockStyle}>Загружаю таблицу кузовов...</div>,
+});
+
+const PtoPerformanceSection = dynamic(() => import("./PtoPerformanceSection"), {
+  ssr: false,
+  loading: () => <div style={ptoInfoBlockStyle}>Загружаю таблицу производительности...</div>,
 });
 
 export default function PtoSection({
@@ -41,21 +64,35 @@ export default function PtoSection({
   onSelectArea,
   ptoBucketRows,
   ptoBucketColumns,
+  ptoCycleRows,
+  ptoCycleColumns,
+  ptoBodyRows,
+  ptoBodyColumns,
+  ptoPerformanceRows,
+  ptoPerformanceColumns,
   ptoBucketValues,
+  ptoMatrixHeaderEditor,
   onCommitBucketValue,
   onClearBucketCells,
   onAddBucketManualRow,
   onDeleteBucketManualRow,
+  onExportPtoMatrixToExcel,
+  onImportPtoMatrixFromExcel,
   renderPlanTable,
   renderOperTable,
   renderSurveyTable,
 }: PtoSectionProps) {
   const content = activePtoSubtabContent || "";
+  const bucketHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "buckets");
+  const cycleHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "cycle");
+  const bodiesHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "bodies");
+  const performanceHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "performance");
+  const showStaticContent = !isPtoDataTableKey(ptoTab);
 
   return (
     <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
       <SectionCard title={isPtoDateTab ? "" : `ПТО: ${activePtoSubtabLabel || ptoTab}`} fill={isPtoDateTab}>
-        <PtoStaticTabContent content={content} ptoTab={ptoTab} />
+        {showStaticContent ? <PtoStaticTabContent content={content} ptoTab={ptoTab} /> : null}
         {ptoTab === "buckets" && (
           <div style={ptoBucketsPanelStyle}>
             {content ? <div style={ptoInfoBlockStyle}>{content}</div> : null}
@@ -66,10 +103,62 @@ export default function PtoSection({
               rows={ptoBucketRows}
               columns={ptoBucketColumns}
               values={ptoBucketValues}
+              headerEditor={bucketHeaderEditor}
               onCommitValue={onCommitBucketValue}
               onClearCells={onClearBucketCells}
               onAddManualRow={onAddBucketManualRow}
               onDeleteManualRow={onDeleteBucketManualRow}
+              onExportToExcel={onExportPtoMatrixToExcel}
+              onImportFromExcel={onImportPtoMatrixFromExcel}
+            />
+          </div>
+        )}
+        {ptoTab === "cycle" && (
+          <div style={ptoBucketsPanelStyle}>
+            <PtoBucketsSection
+              ptoAreaTabs={ptoAreaTabs}
+              ptoAreaFilter={ptoAreaFilter}
+              onSelectArea={onSelectArea}
+              rows={ptoCycleRows}
+              columns={ptoCycleColumns}
+              values={ptoBucketValues}
+              headerEditor={cycleHeaderEditor}
+              onCommitValue={onCommitBucketValue}
+              onClearCells={onClearBucketCells}
+              onAddManualRow={onAddBucketManualRow}
+              onDeleteManualRow={onDeleteBucketManualRow}
+              onExportToExcel={onExportPtoMatrixToExcel}
+              onImportFromExcel={onImportPtoMatrixFromExcel}
+            />
+          </div>
+        )}
+        {ptoTab === "bodies" && (
+          <div style={ptoBucketsPanelStyle}>
+            <PtoBodiesSection
+              ptoAreaTabs={ptoAreaTabs}
+              ptoAreaFilter={ptoAreaFilter}
+              onSelectArea={onSelectArea}
+              rows={ptoBodyRows}
+              columns={ptoBodyColumns}
+              values={ptoBucketValues}
+              headerEditor={bodiesHeaderEditor}
+              onCommitValue={onCommitBucketValue}
+              onClearCells={onClearBucketCells}
+            />
+          </div>
+        )}
+        {ptoTab === "performance" && (
+          <div style={ptoBucketsPanelStyle}>
+            <PtoPerformanceSection
+              ptoAreaTabs={ptoAreaTabs}
+              ptoAreaFilter={ptoAreaFilter}
+              onSelectArea={onSelectArea}
+              rows={ptoPerformanceRows}
+              columns={ptoPerformanceColumns}
+              values={ptoBucketValues}
+              headerEditor={performanceHeaderEditor}
+              onCommitValue={onCommitBucketValue}
+              onClearCells={onClearBucketCells}
             />
           </div>
         )}

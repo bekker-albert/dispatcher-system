@@ -5,6 +5,7 @@ import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTyp
 import { createEmptyPtoDateModel } from "@/features/app/emptyPtoDateModel";
 import type { AppPtoModels } from "@/features/app/appPtoScreenPropsTypes";
 import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
+import { isPtoMatrixTableKey } from "@/lib/domain/pto/tabs";
 
 type PtoPrimaryContentProps = Pick<AppPrimaryContentProps, "appState" | "models" | "runtime" | "navigation">;
 
@@ -27,7 +28,7 @@ export function PtoPrimaryContent({
   navigation,
 }: PtoPrimaryContentProps) {
   const isPtoDateTab = isPtoDateTableKey(appState.ptoTab);
-  const isPtoBucketsSection = appState.ptoTab === "buckets";
+  const isPtoBucketsSection = isPtoMatrixTableKey(appState.ptoTab);
 
   if (!isPtoDateTab && !isPtoBucketsSection) {
     const ptoModels: AppPtoModels = {

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
+import { isPtoMatrixTableKey } from "@/lib/domain/pto/tabs";
 import { cleanAreaName, uniqueSorted } from "@/lib/utils/text";
 import {
   createPtoAreaAndBucketRowLookupSourceBundle,
@@ -53,7 +54,8 @@ export function usePtoBucketsNavigationModel({
   deferredPtoSurveyRows,
   ptoBucketManualRows,
 }: UsePtoBucketsNavigationModelOptions) {
-  const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
+  const isPtoBucketsSection = renderedTopTab === "pto"
+    && isPtoMatrixTableKey(ptoTab);
   const referenceLookupBundleSnapshot = useMemo(
     () => (
       isPtoBucketsSection

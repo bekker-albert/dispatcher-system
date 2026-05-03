@@ -21,6 +21,7 @@ import {
   resolvePtoDatabaseLoadResolution,
   validatePtoDatabaseLoadState,
 } from "@/features/pto/ptoPersistenceModel";
+import { ptoTabIncludesBucketState } from "@/lib/domain/pto/tabs";
 
 export type PtoDatabaseLoadRunOptions = PtoDatabaseLoadOptions & {
   isCancelled: () => boolean;
@@ -60,7 +61,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
     setPtoHeaderLabels,
   } = options;
 
-  const includeBuckets = ptoTab === "buckets";
+  const includeBuckets = ptoTabIncludesBucketState(ptoTab);
   const loadMetrics = createPtoDatabaseLoadMetrics({ includeBuckets, year: ptoPlanYear });
   const localHydration = createPtoDatabaseLocalHydration({
     hasStoredPtoStateRef,

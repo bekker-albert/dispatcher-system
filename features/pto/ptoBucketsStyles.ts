@@ -46,10 +46,16 @@ export const ptoBucketsThStyle: CSSProperties = {
   textAlign: "left",
   verticalAlign: "middle",
   whiteSpace: "normal",
-  overflowWrap: "normal",
+  overflow: "hidden",
+  overflowWrap: "break-word",
   wordBreak: "normal",
   hyphens: "none",
   lineHeight: 1.2,
+};
+
+export const ptoBucketDuplicateColumnHeaderStyle: CSSProperties = {
+  background: "#fee2e2",
+  borderColor: "#fecaca",
 };
 
 export const ptoBucketsTdStyle: CSSProperties = {
@@ -59,6 +65,10 @@ export const ptoBucketsTdStyle: CSSProperties = {
   padding: 4,
   verticalAlign: "middle",
   background: "#ffffff",
+};
+
+export const ptoBucketDuplicateColumnCellStyle: CSSProperties = {
+  background: "#fff1f2",
 };
 
 export const ptoBucketSpacerCellStyle: CSSProperties = {

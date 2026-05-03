@@ -1,34 +1,31 @@
 "use client";
 
-import type { ChangeEvent } from "react";
-
-import { PtoBucketsTable } from "@/features/pto/PtoBucketsTable";
 import { PtoBucketsToolbar } from "@/features/pto/PtoBucketsToolbar";
 import { allAreasLabel } from "@/features/pto/ptoBucketsConfig";
 import { ptoBucketsHintStyle, ptoBucketsLayoutStyle } from "@/features/pto/ptoBucketsStyles";
+import { PtoBodiesTable } from "@/features/pto/PtoBodiesTable";
 import { usePtoBucketsGridEditing } from "@/features/pto/usePtoBucketsGridEditing";
-import { usePtoBucketsVirtualGrid } from "@/features/pto/usePtoBucketsVirtualGrid";
 import { usePtoGridViewport } from "@/features/pto/usePtoGridViewport";
 import type { PtoMatrixHeaderEditor } from "@/features/pto/ptoMatrixHeaderEditing";
-import type { PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
+import type { PtoBodyColumn } from "@/lib/domain/pto/bodies";
+import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 
-type PtoBucketsSectionProps = {
+type PtoBodiesSectionProps = {
   ptoAreaTabs: string[];
   ptoAreaFilter: string;
   onSelectArea: (area: string) => void;
   rows: PtoBucketRow[];
-  columns: PtoBucketColumn[];
+  columns: PtoBodyColumn[];
   values: Record<string, number>;
   headerEditor: PtoMatrixHeaderEditor;
   onCommitValue: (cellKey: string, draft: string) => void;
   onClearCells: (cellKeys: string[]) => void;
-  onAddManualRow: (area: string, structure: string) => boolean;
-  onDeleteManualRow: (row: PtoBucketRow) => void;
-  onExportToExcel: () => void | Promise<void>;
-  onImportFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
 };
 
-export default function PtoBucketsSection({
+const emptyDumpTrucksHint = "\u0412 \u0430\u0434\u043c\u0438\u043d\u043a\u0435 \u0434\u043e\u0431\u0430\u0432\u044c \u0441\u0430\u043c\u043e\u0441\u0432\u0430\u043b\u044b. \u0417\u0434\u0435\u0441\u044c \u0441\u0442\u0440\u043e\u043a\u0438 \u0444\u043e\u0440\u043c\u0438\u0440\u0443\u044e\u0442\u0441\u044f \u0438\u0437 \u0443\u043d\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0445 \u0441\u043e\u0447\u0435\u0442\u0430\u043d\u0438\u0439 \u041c\u0430\u0440\u043a\u0430 \u041c\u043e\u0434\u0435\u043b\u044c.";
+const emptyMaterialsHint = "\u041c\u0430\u0442\u0435\u0440\u0438\u0430\u043b\u044b \u043f\u043e\u0433\u0440\u0443\u0437\u043a\u0438 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u044b. \u041a\u043e\u043b\u043e\u043d\u043a\u0438 \u043f\u043e\u044f\u0432\u044f\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u0438\u044f \u043c\u0430\u0442\u0435\u0440\u0438\u0430\u043b\u0430 \u043f\u043e\u0433\u0440\u0443\u0437\u043a\u0438.";
+
+export default function PtoBodiesSection({
   ptoAreaTabs,
   ptoAreaFilter,
   onSelectArea,
@@ -38,24 +35,12 @@ export default function PtoBucketsSection({
   headerEditor,
   onCommitValue,
   onClearCells,
-  onAddManualRow,
-  onDeleteManualRow,
-  onExportToExcel,
-  onImportFromExcel,
-}: PtoBucketsSectionProps) {
+}: PtoBodiesSectionProps) {
   const defaultDraftArea = ptoAreaFilter === allAreasLabel ? "" : ptoAreaFilter;
-  const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
-  const {
-    tableMinWidth,
-    virtualRows,
-    virtualColumns,
-    renderedColumnSpan,
-  } = usePtoBucketsVirtualGrid({ rows, columns, viewport });
+  const { scrollRef, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
   const {
     activeCell,
-    addManualRow,
     draft,
-    draftRow,
     editKey,
     editingMode,
     handleCellBlur,
@@ -64,8 +49,6 @@ export default function PtoBucketsSection({
     handleCellMouseDown,
     selectCell,
     selectedBucketKeys,
-    setDraftRowArea,
-    setDraftRowStructure,
     startEdit,
     toggleEditingMode,
   } = usePtoBucketsGridEditing({
@@ -76,7 +59,7 @@ export default function PtoBucketsSection({
     updateViewport,
     onCommitValue,
     onClearCells,
-    onAddManualRow,
+    onAddManualRow: () => false,
   });
 
   return (
@@ -85,54 +68,37 @@ export default function PtoBucketsSection({
         editingMode={editingMode}
         onSelectArea={onSelectArea}
         onToggleEditingMode={toggleEditingMode}
-        onExportToExcel={onExportToExcel}
-        onImportFromExcel={onImportFromExcel}
         ptoAreaFilter={ptoAreaFilter}
         ptoAreaTabs={ptoAreaTabs}
       />
 
-      {columns.length === 0 ? (
-        <div style={ptoBucketsHintStyle}>
-          Добавь в админке погрузочную технику с видом &quot;Экскаватор&quot; или &quot;Погрузчик&quot;. Здесь автоматически появятся столбцы Марка Модель.
-        </div>
+      {rows.length === 0 ? (
+        <div style={ptoBucketsHintStyle}>{emptyDumpTrucksHint}</div>
       ) : null}
 
-      <PtoBucketsTable
+      {columns.length === 0 ? (
+        <div style={ptoBucketsHintStyle}>{emptyMaterialsHint}</div>
+      ) : null}
+
+      <PtoBodiesTable
         activeCell={activeCell}
+        columns={columns}
         draft={draft}
-        draftRow={draftRow}
         editKey={editKey}
         editingMode={editingMode}
-        ptoAreaFilter={ptoAreaFilter}
-        renderedColumnSpan={renderedColumnSpan}
         headerEditor={headerEditor}
         rows={rows}
         scrollRef={scrollRef}
         selectedBucketKeys={selectedBucketKeys}
-        tableMinWidth={tableMinWidth}
         values={values}
-        virtualColumns={virtualColumns}
-        virtualRows={virtualRows}
-        onAddManualRow={addManualRow}
         onCellBlur={handleCellBlur}
         onCellDraftChange={handleCellDraftChange}
         onCellKeyDown={handleCellKeyDown}
         onCellMouseDown={handleCellMouseDown}
-        onDeleteManualRow={onDeleteManualRow}
         onScheduleViewportUpdate={scheduleViewportUpdate}
         onSelectCell={selectCell}
-        onSetDraftRowArea={setDraftRowArea}
-        onSetDraftRowStructure={setDraftRowStructure}
         onStartEdit={startEdit}
       />
-
-      {editingMode ? (
-        <datalist id="pto-bucket-area-options">
-          {ptoAreaTabs.filter((area) => area !== allAreasLabel).map((area) => (
-            <option key={area} value={area} />
-          ))}
-        </datalist>
-      ) : null}
     </div>
   );
 }

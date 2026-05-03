@@ -16,7 +16,7 @@ import {
 import { useAppSectionPreloader } from "@/features/app/useAppSectionPreloader";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
 import { databaseConfigured } from "@/lib/data/config";
-import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
+import { ptoTabNeedsDatabase } from "@/lib/domain/pto/tabs";
 
 export function AppPrimaryContent({
   appState,
@@ -49,11 +49,11 @@ export function AppPrimaryContent({
     includePto: !databaseConfigured || ptoDatabaseReady,
   });
 
-  const ptoTabNeedsDatabase = isPtoDateTableKey(appState.ptoTab) || appState.ptoTab === "buckets";
+  const activePtoTabNeedsDatabase = ptoTabNeedsDatabase(appState.ptoTab);
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
   const shouldShowPtoDatabaseGateOnly = shouldGatePtoDatabase
     && renderedTopTab === "pto"
-    && ptoTabNeedsDatabase;
+    && activePtoTabNeedsDatabase;
 
   if (shouldShowPtoDatabaseGateOnly) {
     return <PtoDatabaseGate message={ptoDatabaseMessage} />;

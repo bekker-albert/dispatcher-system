@@ -2,6 +2,7 @@
 
 import { PtoDateToolbar } from "@/features/pto/PtoDateToolbar";
 import type { PtoDateTableContainerProps } from "@/features/pto/ptoDateTableTypes";
+import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
 
 type PtoDateToolbarPanelProps = Pick<
   PtoDateTableContainerProps,
@@ -55,7 +56,7 @@ export function PtoDateToolbarPanel({
       areaTabs={ptoAreaTabs}
       areaFilter={ptoAreaFilter}
       onSelectArea={selectPtoArea}
-      showExcelControls={["plan", "oper", "survey"].includes(ptoTab)}
+      showExcelControls={isPtoDateTableKey(ptoTab)}
       excelLabel={excelLabel}
       editing={ptoDateEditing}
       onExport={exportPtoDateTableToExcel}

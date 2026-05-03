@@ -14,12 +14,18 @@ import { PtoBucketsDraftRow } from "@/features/pto/PtoBucketsDraftRow";
 import { PtoBucketsTableRow } from "@/features/pto/PtoBucketsTableRow";
 import {
   ptoBucketHorizontalSpacerStyle,
+  ptoBucketDuplicateColumnHeaderStyle,
   ptoBucketsScrollStyle,
   ptoBucketsTableStyle,
   ptoBucketsTdStyle,
   ptoBucketsThStyle,
   ptoBucketSpacerCellStyle,
 } from "@/features/pto/ptoBucketsStyles";
+import {
+  renderPtoMatrixHeaderText,
+  renderReadonlyPtoMatrixHeaderText,
+  type PtoMatrixHeaderEditor,
+} from "@/features/pto/ptoMatrixHeaderEditing";
 import type { PtoBucketCell, PtoBucketColumn, PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type {
   PtoBucketsCellHandlers,
@@ -36,6 +42,7 @@ type PtoBucketsTableProps = PtoBucketsCellHandlers & {
   editingMode: boolean;
   ptoAreaFilter: string;
   renderedColumnSpan: number;
+  headerEditor: PtoMatrixHeaderEditor;
   rows: PtoBucketRow[];
   scrollRef: RefObject<HTMLDivElement | null>;
   selectedBucketKeys: ReadonlySet<string>;
@@ -58,6 +65,7 @@ export function PtoBucketsTable({
   editingMode,
   ptoAreaFilter,
   renderedColumnSpan,
+  headerEditor,
   rows,
   scrollRef,
   selectedBucketKeys,
@@ -86,7 +94,11 @@ export function PtoBucketsTable({
     <div ref={scrollRef} onScroll={onScheduleViewportUpdate} style={ptoBucketsScrollStyle}>
       <table style={{ ...ptoBucketsTableStyle, width: tableMinWidth, minWidth: tableMinWidth }}>
         <PtoBucketsColGroup virtualColumns={virtualColumns} />
-        <PtoBucketsTableHeader virtualColumns={virtualColumns} />
+        <PtoBucketsTableHeader
+          editingMode={editingMode}
+          headerEditor={headerEditor}
+          virtualColumns={virtualColumns}
+        />
         <tbody>
           {virtualRows.topSpacerHeight > 0 ? (
             <tr aria-hidden>
@@ -159,15 +171,32 @@ function PtoBucketsColGroup({ virtualColumns }: { virtualColumns: PtoBucketsVirt
   );
 }
 
-function PtoBucketsTableHeader({ virtualColumns }: { virtualColumns: PtoBucketsVirtualColumnsView }) {
+function PtoBucketsTableHeader({
+  editingMode,
+  headerEditor,
+  virtualColumns,
+}: {
+  editingMode: boolean;
+  headerEditor: PtoMatrixHeaderEditor;
+  virtualColumns: PtoBucketsVirtualColumnsView;
+}) {
   return (
     <thead>
       <tr>
-        <th style={{ ...ptoBucketsThStyle, width: bucketAreaColumnWidth }}>Участок</th>
-        <th style={{ ...ptoBucketsThStyle, width: bucketStructureColumnWidth }}>Структура</th>
+        <th style={{ ...ptoBucketsThStyle, width: bucketAreaColumnWidth }}>
+          {renderPtoMatrixHeaderText(headerEditor, editingMode, "area", "Участок")}
+        </th>
+        <th style={{ ...ptoBucketsThStyle, width: bucketStructureColumnWidth }}>
+          {renderPtoMatrixHeaderText(headerEditor, editingMode, "structure", "Структура")}
+        </th>
         {virtualColumns.leftSpacerWidth > 0 ? <th aria-hidden style={ptoBucketHorizontalSpacerStyle} /> : null}
         {virtualColumns.columns.map((column) => (
-          <th key={column.key} style={ptoBucketsThStyle}>{column.label}</th>
+          <th
+            key={column.key}
+            style={column.duplicate ? { ...ptoBucketsThStyle, ...ptoBucketDuplicateColumnHeaderStyle } : ptoBucketsThStyle}
+          >
+            {renderReadonlyPtoMatrixHeaderText(column.label, "center")}
+          </th>
         ))}
         {virtualColumns.rightSpacerWidth > 0 ? <th aria-hidden style={ptoBucketHorizontalSpacerStyle} /> : null}
       </tr>

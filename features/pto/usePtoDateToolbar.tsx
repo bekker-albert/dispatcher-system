@@ -23,7 +23,6 @@ type UsePtoDateToolbarOptions = Pick<
   | "ptoYearDialogOpen"
   | "ptoYearInput"
   | "ptoYearTabs"
-  | "requestPtoDatabaseSave"
   | "savePtoDatabaseChanges"
   | "savePtoLocalState"
   | "selectPtoArea"
@@ -57,7 +56,6 @@ export function usePtoDateToolbar({
   ptoYearDialogOpen,
   ptoYearInput,
   ptoYearTabs,
-  requestPtoDatabaseSave,
   savePtoDatabaseChanges,
   savePtoLocalState,
   selectPtoArea,
@@ -86,7 +84,6 @@ export function usePtoDateToolbar({
     setPtoSelectionAnchorCell,
     setPtoSelectedCellKeys,
     savePtoLocalState,
-    requestPtoDatabaseSave,
     savePtoDatabaseChanges,
   });
 

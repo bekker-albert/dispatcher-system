@@ -8,6 +8,7 @@ import {
   type PtoBrowserStorageSnapshotCache,
   type PtoDatabaseState,
 } from "@/features/pto/ptoPersistenceModel";
+import { ptoTabIncludesBucketState } from "@/lib/domain/pto/tabs";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
@@ -80,7 +81,7 @@ export function usePtoLocalPersistence({
     const currentPtoTab = currentPtoTabRef.current;
     const currentPtoPlanYear = currentPtoPlanYearRef.current;
     const includeBuckets = !skipUntilDatabaseLoaded
-      || currentPtoTab === "buckets"
+      || ptoTabIncludesBucketState(currentPtoTab)
       || ptoDatabaseLoadedBucketsYearRef.current === currentPtoPlanYear;
     const result = savePtoStateToBrowserStorage(
       state,

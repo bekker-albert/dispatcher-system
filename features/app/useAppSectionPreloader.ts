@@ -27,13 +27,12 @@ function scheduleIdlePreload(callback: () => void) {
 const completedPreloaders = new Set<string>();
 
 const primarySectionPreloaders: SectionPreloader[] = [
-  { key: "reports", load: () => import("@/features/app/ReportsPrimaryContent") },
   { key: "dispatch", load: () => import("@/features/app/DispatchPrimaryContent") },
-  { key: "admin", load: () => import("@/features/app/AdminPrimaryContent") },
 ];
 
 const ptoSectionPreloaders: SectionPreloader[] = [
-  { key: "pto", load: () => import("@/features/app/PtoPrimaryContent") },
+  // PTO is intentionally not preloaded: the date tables and bucket grids are heavy.
+  // Load them only when the user opens the section.
 ];
 
 export function useAppSectionPreloader(

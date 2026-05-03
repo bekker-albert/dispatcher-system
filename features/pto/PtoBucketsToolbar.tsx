@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Pencil } from "lucide-react";
+import { useId, type ChangeEvent } from "react";
+import { Check, Download, Pencil, Upload } from "lucide-react";
 
 import { PtoToolbarButton, PtoToolbarIconButton } from "@/features/pto/PtoToolbarButtons";
 import {
@@ -14,6 +15,8 @@ type PtoBucketsToolbarProps = {
   editingMode: boolean;
   onSelectArea: (area: string) => void;
   onToggleEditingMode: () => void;
+  onExportToExcel?: () => void | Promise<void>;
+  onImportFromExcel?: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   ptoAreaFilter: string;
   ptoAreaTabs: string[];
 };
@@ -22,9 +25,20 @@ export function PtoBucketsToolbar({
   editingMode,
   onSelectArea,
   onToggleEditingMode,
+  onExportToExcel,
+  onImportFromExcel,
   ptoAreaFilter,
   ptoAreaTabs,
 }: PtoBucketsToolbarProps) {
+  const importInputId = useId();
+  const excelTransferEnabled = Boolean(onExportToExcel && onImportFromExcel);
+  const handleExportToExcel = () => {
+    void onExportToExcel?.();
+  };
+  const handleImportFromExcel = (event: ChangeEvent<HTMLInputElement>) => {
+    void onImportFromExcel?.(event);
+  };
+
   return (
     <div style={ptoToolbarStyle}>
       <div style={ptoToolbarBlockStyle}>
@@ -37,14 +51,32 @@ export function PtoBucketsToolbar({
       </div>
 
       <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
-        <span style={ptoToolbarLabelStyle}>Редактирование</span>
         <div style={ptoToolbarRowStyle}>
+          {excelTransferEnabled ? (
+            <>
+              <PtoToolbarIconButton label="Загрузить таблицу из Excel" onClick={() => document.getElementById(importInputId)?.click()}>
+                <Upload size={14} aria-hidden />
+              </PtoToolbarIconButton>
+              <PtoToolbarIconButton label="Выгрузить таблицу в Excel" onClick={handleExportToExcel}>
+                <Download size={14} aria-hidden />
+              </PtoToolbarIconButton>
+            </>
+          ) : null}
           <PtoToolbarIconButton
             label={editingMode ? "Завершить редактирование таблицы" : "Редактировать таблицу"}
             onClick={onToggleEditingMode}
           >
             {editingMode ? <Check size={14} aria-hidden /> : <Pencil size={14} aria-hidden />}
           </PtoToolbarIconButton>
+          {excelTransferEnabled ? (
+            <input
+              id={importInputId}
+              type="file"
+              accept=".xlsx,.csv"
+              onChange={handleImportFromExcel}
+              style={{ display: "none" }}
+            />
+          ) : null}
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ export const ptoPlanThStyle: CSSProperties = {
   verticalAlign: "middle",
   whiteSpace: "normal",
   position: "relative",
-  overflow: "visible",
+  overflow: "hidden",
 };
 
 export const ptoHeaderContentStyle: CSSProperties = {
@@ -18,9 +18,11 @@ export const ptoHeaderContentStyle: CSSProperties = {
   width: "100%",
   alignItems: "center",
   minWidth: 0,
-  overflow: "visible",
+  maxWidth: "100%",
+  boxSizing: "border-box",
+  overflow: "hidden",
   whiteSpace: "normal",
-  overflowWrap: "normal",
+  overflowWrap: "break-word",
   wordBreak: "normal",
   hyphens: "none",
   lineHeight: 1.15,

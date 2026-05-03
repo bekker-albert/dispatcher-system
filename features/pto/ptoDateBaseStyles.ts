@@ -20,19 +20,24 @@ export const monthToggleStyle: CSSProperties = {
   gap: 4,
   padding: 0,
   cursor: "pointer",
+  minWidth: 0,
   maxWidth: "100%",
-  overflow: "visible",
+  boxSizing: "border-box",
+  overflow: "hidden",
   textAlign: "left",
   whiteSpace: "normal",
-  overflowWrap: "normal",
+  overflowWrap: "break-word",
   wordBreak: "normal",
   hyphens: "none",
   lineHeight: 1.15,
 };
 
 export const ptoHeaderLabelButtonStyle: CSSProperties = {
+  display: "block",
   width: "100%",
   minWidth: 0,
+  maxWidth: "100%",
+  boxSizing: "border-box",
   border: "none",
   background: "transparent",
   color: "inherit",
@@ -41,10 +46,10 @@ export const ptoHeaderLabelButtonStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
   padding: 0,
-  overflow: "visible",
+  overflow: "hidden",
   textOverflow: "clip",
   whiteSpace: "normal",
-  overflowWrap: "normal",
+  overflowWrap: "break-word",
   wordBreak: "normal",
   hyphens: "none",
   lineHeight: 1.15,
@@ -53,6 +58,7 @@ export const ptoHeaderLabelButtonStyle: CSSProperties = {
 export const ptoHeaderInputStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
+  maxWidth: "100%",
   boxSizing: "border-box",
   border: "1px solid #60a5fa",
   borderRadius: 4,
@@ -70,6 +76,14 @@ export const ptoDateTableLayoutStyle: CSSProperties = {
   minHeight: 0,
   display: "grid",
   gridTemplateRows: "auto auto minmax(0, 1fr)",
+  gap: 10,
+};
+
+export const ptoDateReadonlyTableLayoutStyle: CSSProperties = {
+  height: "100%",
+  minHeight: 0,
+  display: "grid",
+  gridTemplateRows: "auto minmax(0, 1fr)",
   gap: 10,
 };
 

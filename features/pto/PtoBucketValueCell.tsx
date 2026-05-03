@@ -6,6 +6,7 @@ import { formatBucketNumber } from "../../lib/domain/pto/formatting";
 import {
   ptoActiveFormulaCellStyle,
   ptoBucketControlStyle,
+  ptoBucketDuplicateColumnCellStyle,
   ptoBucketReadonlyValueStyle,
   ptoBucketsTdStyle,
   ptoEditingFormulaCellStyle,
@@ -54,10 +55,13 @@ export const PtoBucketValueCell = memo(function PtoBucketValueCell({
   onStartEdit,
 }: PtoBucketValueCellProps) {
   const formattedValue = formatBucketNumber(value);
+  const cellStyle = column.duplicate
+    ? { ...ptoBucketsTdStyle, ...ptoBucketDuplicateColumnCellStyle }
+    : ptoBucketsTdStyle;
 
   if (!editingMode) {
     return (
-      <td style={ptoBucketsTdStyle}>
+      <td style={cellStyle}>
         <div style={ptoBucketReadonlyValueStyle} title={formattedValue || undefined}>{formattedValue}</div>
       </td>
     );
@@ -72,7 +76,7 @@ export const PtoBucketValueCell = memo(function PtoBucketValueCell({
   const cell = { rowKey: row.key, equipmentKey: column.key };
 
   return (
-    <td style={ptoBucketsTdStyle}>
+    <td style={cellStyle}>
       {isEditing ? (
         <input
           key={cellKey}

@@ -3,7 +3,7 @@
 import { useAppPtoPersistence } from "@/features/app/useAppPtoPersistence";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { databaseConfigured } from "@/lib/data/config";
-import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
+import { ptoTabNeedsDatabase } from "@/lib/domain/pto/tabs";
 
 type UseAppPtoPersistenceControllerOptions = {
   appState: AppStateBundle;
@@ -17,7 +17,7 @@ export function useAppPtoPersistenceController({
   const reportsNeedPtoDatabase = appState.topTab === "reports"
     || (appState.topTab === "admin" && appState.adminSection === "reports");
   const activePtoTabNeedsDatabase = appState.topTab === "pto"
-    && (isPtoDateTableKey(appState.ptoTab) || appState.ptoTab === "buckets");
+    && ptoTabNeedsDatabase(appState.ptoTab);
   const ptoDatabaseLoadEnabled = appState.ptoDatabaseLoadStarted
     || (
       appState.ptoBootstrapLoaded

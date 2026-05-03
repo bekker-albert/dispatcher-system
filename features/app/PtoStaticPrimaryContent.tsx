@@ -27,6 +27,10 @@ function noopAddBucketManualRow() {
 
 function noopDeleteBucketManualRow() {}
 
+function noopExportPtoMatrixToExcel() {}
+
+function noopImportPtoMatrixFromExcel() {}
+
 export function PtoStaticPrimaryContent({
   appState,
   models,
@@ -40,11 +44,19 @@ export function PtoStaticPrimaryContent({
       onSelectArea={shellProps.selectPtoArea}
       ptoBucketRows={[]}
       ptoBucketColumns={[]}
+      ptoCycleRows={[]}
+      ptoCycleColumns={[]}
+      ptoBodyRows={[]}
+      ptoBodyColumns={[]}
+      ptoPerformanceRows={[]}
+      ptoPerformanceColumns={[]}
       ptoBucketValues={{}}
       onCommitBucketValue={noopCommitBucketValue}
       onClearBucketCells={noopClearBucketCells}
       onAddBucketManualRow={noopAddBucketManualRow}
       onDeleteBucketManualRow={noopDeleteBucketManualRow}
+      onExportPtoMatrixToExcel={noopExportPtoMatrixToExcel}
+      onImportPtoMatrixFromExcel={noopImportPtoMatrixFromExcel}
       renderPlanTable={renderEmptyPtoDateTable}
       renderOperTable={renderEmptyPtoDateTable}
       renderSurveyTable={renderEmptyPtoDateTable}
