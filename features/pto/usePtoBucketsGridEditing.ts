@@ -13,6 +13,7 @@ type UsePtoBucketsGridEditingOptions = {
   rows: PtoBucketRow[];
   columns: PtoBucketColumn[];
   defaultDraftArea: string;
+  frozenWidth?: number;
   scrollRef: RefObject<HTMLDivElement | null>;
   updateViewport: () => void;
   onCommitValue: (cellKey: string, draft: string) => void;
@@ -24,6 +25,7 @@ export function usePtoBucketsGridEditing({
   rows,
   columns,
   defaultDraftArea,
+  frozenWidth,
   scrollRef,
   updateViewport,
   onCommitValue,
@@ -61,6 +63,7 @@ export function usePtoBucketsGridEditing({
   const { focusCell, moveCell } = usePtoBucketsCellNavigation({
     columnKeys,
     editingMode,
+    frozenWidth,
     rowKeys,
     scrollRef,
     selectCell,

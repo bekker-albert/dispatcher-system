@@ -15,9 +15,12 @@ import {
 
 const rows = Array.from({ length: 50 }, (_, index) => `row-${index}`);
 const columns = Array.from({ length: 20 }, (_, index) => `column-${index}`);
+const bodyTechniqueColumnWidth = 230;
 
 assert.equal(ptoBucketsTableMinWidth(0), bucketFrozenWidth + bucketValueColumnWidth);
 assert.equal(ptoBucketsTableMinWidth(3), bucketFrozenWidth + bucketValueColumnWidth * 3);
+assert.equal(ptoBucketsTableMinWidth(0, bodyTechniqueColumnWidth), bodyTechniqueColumnWidth + bucketValueColumnWidth);
+assert.equal(ptoBucketsTableMinWidth(3, bodyTechniqueColumnWidth), bodyTechniqueColumnWidth + bucketValueColumnWidth * 3);
 
 const firstRows = createPtoBucketsVirtualRows(rows, { height: bucketRowHeight * 5, scrollTop: 0 });
 assert.deepEqual(firstRows.rows, rows.slice(0, 5 + bucketOverscanRows * 2));
@@ -49,3 +52,11 @@ const middleColumns = createPtoBucketsVirtualColumns(columns, {
 assert.equal(middleColumns.columns[0], columns[10 - bucketOverscanColumns]);
 assert.equal(middleColumns.leftSpacerWidth, (10 - bucketOverscanColumns) * bucketValueColumnWidth);
 assert.equal(ptoBucketsRenderedColumnSpan(middleColumns), 2 + middleColumns.columns.length + 2);
+
+const bodyColumns = createPtoBucketsVirtualColumns(columns, {
+  scrollLeft: bodyTechniqueColumnWidth + bucketValueColumnWidth * 10,
+  width: bucketValueColumnWidth * 3,
+}, bodyTechniqueColumnWidth);
+assert.equal(bodyColumns.columns[0], columns[10 - bucketOverscanColumns]);
+assert.equal(bodyColumns.leftSpacerWidth, (10 - bucketOverscanColumns) * bucketValueColumnWidth);
+assert.equal(ptoBucketsRenderedColumnSpan(bodyColumns, 1), 1 + bodyColumns.columns.length + 2);

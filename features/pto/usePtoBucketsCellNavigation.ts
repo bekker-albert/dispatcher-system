@@ -13,6 +13,7 @@ import { ptoBucketSelectionKey, type PtoBucketCell } from "@/lib/domain/pto/buck
 type UsePtoBucketsCellNavigationOptions = {
   columnKeys: string[];
   editingMode: boolean;
+  frozenWidth?: number;
   rowKeys: string[];
   scrollRef: RefObject<HTMLDivElement | null>;
   selectCell: (cell: PtoBucketCell) => void;
@@ -22,6 +23,7 @@ type UsePtoBucketsCellNavigationOptions = {
 export function usePtoBucketsCellNavigation({
   columnKeys,
   editingMode,
+  frozenWidth = bucketFrozenWidth,
   rowKeys,
   scrollRef,
   selectCell,
@@ -40,7 +42,7 @@ export function usePtoBucketsCellNavigation({
 
     const rowTop = rowIndex * bucketRowHeight;
     const rowBottom = rowTop + bucketRowHeight;
-    const columnLeft = bucketFrozenWidth + columnIndex * bucketValueColumnWidth;
+    const columnLeft = frozenWidth + columnIndex * bucketValueColumnWidth;
     const columnRight = columnLeft + bucketValueColumnWidth;
     const viewportBottom = element.scrollTop + element.clientHeight;
     const viewportRight = element.scrollLeft + element.clientWidth;
@@ -58,7 +60,7 @@ export function usePtoBucketsCellNavigation({
     }
 
     updateViewport();
-  }, [scrollRef, updateViewport]);
+  }, [frozenWidth, scrollRef, updateViewport]);
 
   const moveCell = useCallback((cell: PtoBucketCell, rowOffset: number, columnOffset: number) => {
     if (!editingMode || rowKeys.length === 0 || columnKeys.length === 0) return;

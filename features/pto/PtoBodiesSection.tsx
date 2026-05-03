@@ -2,8 +2,10 @@
 
 import { PtoBucketsToolbar } from "@/features/pto/PtoBucketsToolbar";
 import { allAreasLabel } from "@/features/pto/ptoBucketsConfig";
+import { bodyTechniqueColumnWidth } from "@/features/pto/ptoBodiesConfig";
 import { ptoBucketsHintStyle, ptoBucketsLayoutStyle } from "@/features/pto/ptoBucketsStyles";
 import { PtoBodiesTable } from "@/features/pto/PtoBodiesTable";
+import { usePtoBodiesVirtualGrid } from "@/features/pto/usePtoBodiesVirtualGrid";
 import { usePtoBucketsGridEditing } from "@/features/pto/usePtoBucketsGridEditing";
 import { usePtoGridViewport } from "@/features/pto/usePtoGridViewport";
 import type { PtoMatrixHeaderEditor } from "@/features/pto/ptoMatrixHeaderEditing";
@@ -37,7 +39,7 @@ export default function PtoBodiesSection({
   onClearCells,
 }: PtoBodiesSectionProps) {
   const defaultDraftArea = ptoAreaFilter === allAreasLabel ? "" : ptoAreaFilter;
-  const { scrollRef, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
+  const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
   const {
     activeCell,
     draft,
@@ -55,11 +57,18 @@ export default function PtoBodiesSection({
     rows,
     columns,
     defaultDraftArea,
+    frozenWidth: bodyTechniqueColumnWidth,
     scrollRef,
     updateViewport,
     onCommitValue,
     onClearCells,
     onAddManualRow: () => false,
+  });
+  const virtualGrid = usePtoBodiesVirtualGrid({
+    rows,
+    columns,
+    viewport,
+    suspendVirtualization: Boolean(editKey),
   });
 
   return (
@@ -87,10 +96,14 @@ export default function PtoBodiesSection({
         editKey={editKey}
         editingMode={editingMode}
         headerEditor={headerEditor}
+        renderedColumnSpan={virtualGrid.renderedColumnSpan}
         rows={rows}
         scrollRef={scrollRef}
         selectedBucketKeys={selectedBucketKeys}
+        tableMinWidth={virtualGrid.tableMinWidth}
         values={values}
+        virtualColumns={virtualGrid.virtualColumns}
+        virtualRows={virtualGrid.virtualRows}
         onCellBlur={handleCellBlur}
         onCellDraftChange={handleCellDraftChange}
         onCellKeyDown={handleCellKeyDown}

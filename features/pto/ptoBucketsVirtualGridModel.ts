@@ -19,8 +19,8 @@ export type PtoBucketsVirtualColumns<T> = {
   rightSpacerWidth: number;
 };
 
-export function ptoBucketsTableMinWidth(columnCount: number) {
-  return bucketFrozenWidth + Math.max(1, columnCount) * bucketValueColumnWidth;
+export function ptoBucketsTableMinWidth(columnCount: number, frozenWidth = bucketFrozenWidth) {
+  return frozenWidth + Math.max(1, columnCount) * bucketValueColumnWidth;
 }
 
 export function createPtoBucketsVirtualRows<T>(rows: T[], viewport: Pick<PtoGridViewport, "height" | "scrollTop">): PtoBucketsVirtualRows<T> {
@@ -38,6 +38,7 @@ export function createPtoBucketsVirtualRows<T>(rows: T[], viewport: Pick<PtoGrid
 export function createPtoBucketsVirtualColumns<T>(
   columns: T[],
   viewport: Pick<PtoGridViewport, "scrollLeft" | "width">,
+  frozenWidth = bucketFrozenWidth,
 ): PtoBucketsVirtualColumns<T> {
   if (columns.length === 0) {
     return {
@@ -47,8 +48,8 @@ export function createPtoBucketsVirtualColumns<T>(
     };
   }
 
-  const valueViewportLeft = Math.max(0, viewport.scrollLeft - bucketFrozenWidth);
-  const valueViewportRight = Math.max(0, viewport.scrollLeft + viewport.width - bucketFrozenWidth);
+  const valueViewportLeft = Math.max(0, viewport.scrollLeft - frozenWidth);
+  const valueViewportRight = Math.max(0, viewport.scrollLeft + viewport.width - frozenWidth);
   const start = Math.max(0, Math.floor(valueViewportLeft / bucketValueColumnWidth) - bucketOverscanColumns);
   const end = Math.min(
     columns.length,
@@ -62,8 +63,8 @@ export function createPtoBucketsVirtualColumns<T>(
   };
 }
 
-export function ptoBucketsRenderedColumnSpan<T>(virtualColumns: PtoBucketsVirtualColumns<T>) {
-  return 2
+export function ptoBucketsRenderedColumnSpan<T>(virtualColumns: PtoBucketsVirtualColumns<T>, frozenColumnCount = 2) {
+  return frozenColumnCount
     + virtualColumns.columns.length
     + (virtualColumns.leftSpacerWidth > 0 ? 1 : 0)
     + (virtualColumns.rightSpacerWidth > 0 ? 1 : 0);

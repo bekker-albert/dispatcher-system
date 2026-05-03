@@ -27,8 +27,8 @@ export type PtoBucketsVirtualRowsView = {
   bottomSpacerHeight: number;
 };
 
-export type PtoBucketsVirtualColumnsView = {
-  columns: PtoBucketColumn[];
+export type PtoBucketsVirtualColumnsView<TColumn extends PtoBucketColumn = PtoBucketColumn> = {
+  columns: TColumn[];
   leftSpacerWidth: number;
   rightSpacerWidth: number;
 };
