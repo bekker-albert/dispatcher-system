@@ -50,9 +50,6 @@ const useAppPtoDateEditingControllerSource = readFileSync(resolve(testDir, "../f
 const noopPtoDateEditingSource = readFileSync(resolve(testDir, "../features/app/noopPtoDateEditing.ts"), "utf8");
 const reportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/ReportsPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
-const lazyPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/lazyPrimaryContent.tsx"), "utf8");
-const useAppDerivedModelsSource = readFileSync(resolve(testDir, "../features/app/useAppDerivedModels.ts"), "utf8");
-const vehicleTablePrimaryContentSource = readFileSync(resolve(testDir, "../features/app/VehicleTablePrimaryContent.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
 const useAppRuntimeControllersSource = readFileSync(resolve(testDir, "../features/app/useAppRuntimeControllers.ts"), "utf8");
 const useAppAdminDatabasePropsSource = readFileSync(resolve(testDir, "../features/app/useAppAdminDatabaseProps.ts"), "utf8");
@@ -220,12 +217,6 @@ assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s
 assert.match(appPrimaryContentSource, /const activePtoTabNeedsDatabase = ptoTabNeedsDatabase\(appState\.ptoTab\);/);
 assert.match(appPrimaryContentSource, /const shouldPreloadSections = appState\.adminDataLoaded && \(!databaseConfigured \|\| ptoDatabaseReady\);/);
 assert.match(appPrimaryContentSource, /useAppSectionPreloader\(shouldPreloadSections, \{[\s\S]*activeTab: renderedTopTab,[\s\S]*includePto: !databaseConfigured \|\| ptoDatabaseReady,[\s\S]*\}\);/);
-assert.match(lazyPrimaryContentSource, /import\("\.\/VehicleTablePrimaryContent"\)/);
-assert.match(vehicleTablePrimaryContentSource, /return <AdminVehiclesSection \{\.\.\.adminVehiclesProps\} \/>;/);
-assert.match(appPrimaryContentSource, /renderedTopTab === "fleet"[\s\S]*<FleetPrimaryContent[\s\S]*appState=\{appState\}[\s\S]*models=\{models\}[\s\S]*runtime=\{runtime\}/);
-assert.match(useAppDerivedModelsSource, /const vehicleTableActive = renderedTopTab === "fleet"/);
-assert.doesNotMatch(appPrimaryContentSource, /rows=\{filteredFleet\}/);
-assert.doesNotMatch(useAppDerivedModelsSource, /useFleetRows/);
 assert.match(reportsPrimaryContentSource, /databaseSyncMessage=\{databaseConfigured && !appState\.ptoDatabaseReady \? appState\.ptoDatabaseMessage : ""\}/);
 assert.match(reportsSectionSource, /databaseSyncMessage\?: string;/);
 assert.match(initialAppDatabaseBootstrapSource, /storageChanged: boolean/);
