@@ -3,6 +3,7 @@ import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSe
 import { cloneUndoSnapshot, type UndoSnapshot } from "../lib/domain/app/undo";
 import { adminLogLimit, normalizeAdminLogEntry } from "../lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navigation";
+import { clientSnapshotStorageSignature } from "../lib/storage/client-snapshot-signature";
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, buildDispatchSummaryRowView, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
 import { compactSubTabLabel, compactTopTabLabel, createDefaultSubTabs, customTabKey, defaultTopTabs, normalizeStoredCustomTabs, normalizeStoredSubTabs, normalizeStoredTopTabs } from "../lib/domain/navigation/tabs";
@@ -87,6 +88,10 @@ assert.notEqual(undoClone, undoSource);
 assert.notEqual(undoClone.reportCustomers, undoSource.reportCustomers);
 assert.equal(clientSnapshotSaveDelayMs, 1500);
 assert.equal(clientSnapshotAutoMinIntervalMs, 120000);
+assert.notEqual(
+  clientSnapshotStorageSignature("client-1", { data: "prefix-111111-suffix" }),
+  clientSnapshotStorageSignature("client-1", { data: "prefix-222222-suffix" }),
+);
 assert.equal(sharedAppSettingKeys.includes(adminStorageKeys.reportCustomers), true);
 assert.equal(adminStorageKeys.vehicles, "dispatcher:vehicles");
 assert.equal(ptoBucketRowKey("Уч_Аксу", "Подача"), "аксу:подача");

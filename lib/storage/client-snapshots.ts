@@ -1,6 +1,7 @@
 import type { DataClientSnapshot } from "@/lib/data/app-state";
 import { createId } from "@/lib/utils/id";
 import { adminStorageKeys } from "./keys";
+export { clientSnapshotStorageSignature } from "./client-snapshot-signature";
 
 export const clientIdStorageKey = "dispatcher:client-id";
 export const ptoLocalRecoveryBackupKey = "dispatcher:pto-local-recovery-backup";
@@ -59,14 +60,6 @@ export function collectLocalStorageBackup() {
       return value === null ? [] : [[key, value] as const];
     }),
   );
-}
-
-export function clientSnapshotStorageSignature(clientId: string, storage: Record<string, string>) {
-  return Object.entries(storage)
-    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-    .map(([key, value]) => `${key}:${value.length}:${value.slice(0, 12)}:${value.slice(-12)}`)
-    .join("|")
-    .concat(`|client:${clientId}`);
 }
 
 function readSnapshotJson<T>(storage: Record<string, string>, key: string, fallback: T): T {
