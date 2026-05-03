@@ -109,8 +109,10 @@ export function useAppRuntimeControllers({
     addAdminLog,
   });
 
+  const tableResizeActive = (topTab === "pto" && ptoDateEditing) || topTab === "reports";
+
   const tableInteractionEffects = useAppTableInteractionEffects({
-    resizeActive: (topTab === "pto" && ptoDateEditing) || topTab === "reports",
+    resizeActive: tableResizeActive,
     ptoSelectionActive: topTab === "pto" && ptoDateEditing,
     vehicleSelectionActive: topTab === "admin" && adminSection === "vehicles",
     ptoRowHeights,

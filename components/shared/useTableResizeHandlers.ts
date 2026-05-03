@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { PtoResizeState } from "@/features/pto/ptoDateInteractionTypes";
@@ -34,19 +34,10 @@ export function useTableResizeHandlers({
   const reportResizeStateRef = useRef<ReportResizeState | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
   const resizePointerRef = useRef<{ x: number; y: number } | null>(null);
+  const [resizeDragActive, setResizeDragActive] = useState(false);
 
   useEffect(() => {
-    if (!resizeActive) {
-      if (resizeFrameRef.current !== null) {
-        window.cancelAnimationFrame(resizeFrameRef.current);
-        resizeFrameRef.current = null;
-      }
-      resizePointerRef.current = null;
-      ptoResizeStateRef.current = null;
-      reportResizeStateRef.current = null;
-      clearResizeCursor();
-      return;
-    }
+    if (!resizeActive || !resizeDragActive) return undefined;
 
     const flushResizeMove = () => {
       resizeFrameRef.current = null;
@@ -84,7 +75,10 @@ export function useTableResizeHandlers({
     const handleResizeEnd = () => {
       const resizeState = ptoResizeStateRef.current;
       const reportResizeState = reportResizeStateRef.current;
-      if (!resizeState && !reportResizeState) return;
+      if (!resizeState && !reportResizeState) {
+        setResizeDragActive(false);
+        return;
+      }
 
       if (resizeFrameRef.current !== null) {
         window.cancelAnimationFrame(resizeFrameRef.current);
@@ -95,6 +89,7 @@ export function useTableResizeHandlers({
       ptoResizeStateRef.current = null;
       reportResizeStateRef.current = null;
       clearResizeCursor();
+      setResizeDragActive(false);
       requestSave();
       addAdminLog({
         action: "Редактирование",
@@ -115,15 +110,20 @@ export function useTableResizeHandlers({
         window.cancelAnimationFrame(resizeFrameRef.current);
         resizeFrameRef.current = null;
       }
+      resizePointerRef.current = null;
+      ptoResizeStateRef.current = null;
+      reportResizeStateRef.current = null;
       clearResizeCursor();
+      setResizeDragActive(false);
     };
-  }, [addAdminLog, requestSave, resizeActive, setPtoColumnWidths, setPtoRowHeights, setReportColumnWidths]);
+  }, [addAdminLog, requestSave, resizeActive, resizeDragActive, setPtoColumnWidths, setPtoRowHeights, setReportColumnWidths]);
 
   const startPtoColumnResize = useCallback((event: React.MouseEvent<HTMLElement>, key: string, width: number) => {
     event.preventDefault();
     event.stopPropagation();
     if (!resizeActive) return;
     ptoResizeStateRef.current = { type: "column", key, startX: event.clientX, startWidth: width };
+    setResizeDragActive(true);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }, [resizeActive]);
@@ -133,6 +133,7 @@ export function useTableResizeHandlers({
     event.stopPropagation();
     if (!resizeActive) return;
     reportResizeStateRef.current = { key, startX: event.clientX, startWidth: width };
+    setResizeDragActive(true);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }, [resizeActive]);
@@ -145,6 +146,7 @@ export function useTableResizeHandlers({
     const startHeight = rowElement?.getBoundingClientRect().height ?? ptoRowHeights[key] ?? 34;
 
     ptoResizeStateRef.current = { type: "row", key, startY: event.clientY, startHeight };
+    setResizeDragActive(true);
     document.body.style.cursor = "row-resize";
     document.body.style.userSelect = "none";
   }, [ptoRowHeights, resizeActive]);

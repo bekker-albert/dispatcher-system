@@ -6,6 +6,7 @@ import {
   createVehicleFilterOptionsByKey,
   createVehicleFilterSets,
   vehicleMatchesFilterSets,
+  type VehicleFilterSets,
 } from "@/lib/domain/vehicles/filtering";
 import {
   adminVehicleFallbackPreviewRows,
@@ -20,6 +21,7 @@ import type { VehicleRow } from "@/lib/domain/vehicles/types";
 const emptyVehicleRows: VehicleRow[] = [];
 const emptyVehicleFilterOptions: string[] = [];
 const emptyVehicleAutocompleteOptions: Partial<Record<VehicleFilterKey, string[]>> = {};
+const emptyVehicleFilterSets: VehicleFilterSets = {};
 
 type UseAdminVehicleRowsViewModelOptions = {
   active: boolean;
@@ -65,7 +67,7 @@ export function useAdminVehicleRowsViewModel({
   }, [setShowAllVehicleRows, vehicleFilters]);
 
   const vehicleFilterSets = useMemo(() => (
-    active ? createVehicleFilterSets(vehicleFilters) : {}
+    active ? createVehicleFilterSets(vehicleFilters) : emptyVehicleFilterSets
   ), [active, vehicleFilters]);
 
   const vehicleAutocompleteOptions = useMemo(() => (
