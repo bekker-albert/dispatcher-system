@@ -72,6 +72,61 @@ const ptoSettingSelectColumns = [
   "updated_at",
 ].join(", ");
 
+function isMissingPtoRowYearsTableError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const code = "code" in error ? (error as { code?: unknown }).code : undefined;
+  const message = "message" in error ? String((error as { message?: unknown }).message) : "";
+  return code === "ER_NO_SUCH_TABLE" && message.includes("pto_row_years");
+}
+
+function ptoRowsForYearSelect(whereClause: string) {
+  return `SELECT ${ptoRowSelectColumns.split(", ").map((column) => `rows_for_year.${column}`).join(", ")}
+    FROM pto_rows AS rows_for_year
+    WHERE ${whereClause}
+    ORDER BY rows_for_year.table_type ASC, rows_for_year.sort_index ASC`;
+}
+
+async function loadPtoRowsFromMysqlForYear(
+  year: string,
+  start: string,
+  end: string,
+  carryoverJsonPath: string,
+) {
+  const fallbackWhereClause = `EXISTS (
+      SELECT 1
+      FROM pto_day_values AS values_for_year
+      WHERE values_for_year.table_type = rows_for_year.table_type
+        AND values_for_year.row_id = rows_for_year.row_id
+        AND values_for_year.work_date >= ?
+        AND values_for_year.work_date <= ?
+    )
+      OR JSON_CONTAINS(COALESCE(rows_for_year.years, JSON_ARRAY()), JSON_QUOTE(?))
+      OR JSON_CONTAINS(COALESCE(rows_for_year.carryover_manual_years, JSON_ARRAY()), JSON_QUOTE(?))
+      OR JSON_EXTRACT(COALESCE(rows_for_year.carryovers, JSON_OBJECT()), ?) IS NOT NULL`;
+
+  try {
+    return await dbRows<PtoRowRecord>(
+      ptoRowsForYearSelect(`EXISTS (
+        SELECT 1
+        FROM pto_row_years AS row_years
+        WHERE row_years.table_type = rows_for_year.table_type
+          AND row_years.row_id = rows_for_year.row_id
+          AND row_years.year_value = ?
+      )
+        OR ${fallbackWhereClause}`),
+      [year, start, end, year, year, carryoverJsonPath],
+    );
+  } catch (error) {
+    if (!isMissingPtoRowYearsTableError(error)) throw error;
+
+    return await dbRows<PtoRowRecord>(
+      ptoRowsForYearSelect(fallbackWhereClause),
+      [start, end, year, year, carryoverJsonPath],
+    );
+  }
+}
+
 export async function loadPtoBucketsFromMysql() {
   const [ptoBucketRows, ptoBucketValues, ptoVersionUpdatedAt] = await Promise.all([
     dbRows<PtoBucketRowRecord>(`SELECT ${ptoBucketRowSelectColumns} FROM pto_bucket_rows ORDER BY sort_index ASC`),
@@ -115,30 +170,7 @@ export async function loadPtoStateFromMysqlForYear(
   const carryoverJsonPath = `$."${year}"`;
   const includeBuckets = options.includeBuckets === true;
   const [ptoRows, ptoDayValues, ptoSettings, ptoBucketRows, ptoBucketValues, ptoVersionUpdatedAt] = await Promise.all([
-    dbRows<PtoRowRecord>(
-      `SELECT ${ptoRowSelectColumns.split(", ").map((column) => `rows_for_year.${column}`).join(", ")}
-      FROM pto_rows AS rows_for_year
-      WHERE EXISTS (
-        SELECT 1
-        FROM pto_row_years AS row_years
-        WHERE row_years.table_type = rows_for_year.table_type
-          AND row_years.row_id = rows_for_year.row_id
-          AND row_years.year_value = ?
-      )
-        OR EXISTS (
-          SELECT 1
-          FROM pto_day_values AS values_for_year
-          WHERE values_for_year.table_type = rows_for_year.table_type
-            AND values_for_year.row_id = rows_for_year.row_id
-            AND values_for_year.work_date >= ?
-            AND values_for_year.work_date <= ?
-        )
-        OR JSON_CONTAINS(COALESCE(rows_for_year.years, JSON_ARRAY()), JSON_QUOTE(?))
-        OR JSON_CONTAINS(COALESCE(rows_for_year.carryover_manual_years, JSON_ARRAY()), JSON_QUOTE(?))
-        OR JSON_EXTRACT(COALESCE(rows_for_year.carryovers, JSON_OBJECT()), ?) IS NOT NULL
-      ORDER BY rows_for_year.table_type ASC, rows_for_year.sort_index ASC`,
-      [year, start, end, year, year, carryoverJsonPath],
-    ),
+    loadPtoRowsFromMysqlForYear(year, start, end, carryoverJsonPath),
     dbRows<PtoDayValueRecord>(
       `SELECT ${ptoDayValueSelectColumns} FROM pto_day_values
       WHERE work_date >= ? AND work_date <= ?

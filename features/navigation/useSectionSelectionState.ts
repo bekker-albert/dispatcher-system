@@ -5,7 +5,6 @@ import type { AdminSection, StructureSection } from "@/lib/domain/admin/navigati
 
 export function useSectionSelectionState() {
   const [dispatchTab, setDispatchTab] = useState("daily");
-  const [fleetTab, setFleetTab] = useState("all");
   const [contractorTab, setContractorTab] = useState("AA Mining");
   const [fuelTab, setFuelTab] = useState("general");
   const [ptoTab, setPtoTab] = useState("bodies");
@@ -16,8 +15,6 @@ export function useSectionSelectionState() {
   return {
     dispatchTab,
     setDispatchTab,
-    fleetTab,
-    setFleetTab,
     contractorTab,
     setContractorTab,
     fuelTab,

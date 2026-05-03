@@ -15,6 +15,7 @@ export function AdminVehiclesPrimaryContent({
       appState={appState}
       models={models}
       runtime={runtime}
+      mode="admin"
     />
   );
 }

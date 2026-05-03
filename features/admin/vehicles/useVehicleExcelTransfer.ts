@@ -6,6 +6,7 @@ import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
+import { downloadVehicleRowsToExcel } from "./downloadVehicleRowsToExcel";
 
 function parseExpectedVehicleSnapshot(snapshot: string) {
   if (!snapshot) return null;
@@ -116,20 +117,7 @@ export function useVehicleExcelTransfer({
   ]);
 
   const exportVehiclesToExcel = useCallback(async () => {
-    const [{ createVehicleExportRows }, { createXlsxBlob }] = await Promise.all([
-      import("@/lib/domain/vehicles/import-export"),
-      import("@/lib/utils/xlsx"),
-    ]);
-    const blob = createXlsxBlob(createVehicleExportRows(vehicleRows));
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = "spisok-tehniki.xlsx";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    await downloadVehicleRowsToExcel(vehicleRows);
     addAdminLog({
       action: "Выгрузка",
       section: "Техника",

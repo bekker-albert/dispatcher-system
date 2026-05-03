@@ -7,6 +7,7 @@ export function AdminVehiclesToolbar({
   filteredVehicleRowsCount,
   totalVehicleRowsCount,
   adminVehiclesEditing,
+  canManageVehicles,
   vehicleImportInputRef,
   onClearAllVehicleFilters,
   onStartEditing,
@@ -20,6 +21,7 @@ export function AdminVehiclesToolbar({
   filteredVehicleRowsCount: number;
   totalVehicleRowsCount: number;
   adminVehiclesEditing: boolean;
+  canManageVehicles: boolean;
   vehicleImportInputRef: RefObject<HTMLInputElement | null>;
   onClearAllVehicleFilters: () => void;
   onStartEditing: () => void;
@@ -41,29 +43,35 @@ export function AdminVehiclesToolbar({
         ) : null}
       </div>
       <div style={{ display: "flex", gap: 6 }}>
-        <IconButton label={adminVehiclesEditing ? "Сохранить редактирование" : "Редактировать список техники"} onClick={adminVehiclesEditing ? onFinishEditing : onStartEditing}>
-          {adminVehiclesEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
-        </IconButton>
-        {adminVehiclesEditing ? (
+        {canManageVehicles ? (
           <>
-            <IconButton label="Добавить технику" onClick={onAddVehicleRow}>
-              <Plus size={16} aria-hidden />
+            <IconButton label={adminVehiclesEditing ? "Сохранить редактирование" : "Редактировать список техники"} onClick={adminVehiclesEditing ? onFinishEditing : onStartEditing}>
+              {adminVehiclesEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
             </IconButton>
-            <IconButton label="Загрузить список из Excel" onClick={onOpenVehicleImportFilePicker}>
-              <RotateCcw size={16} aria-hidden />
-            </IconButton>
+            {adminVehiclesEditing ? (
+              <>
+                <IconButton label="Добавить технику" onClick={onAddVehicleRow}>
+                  <Plus size={16} aria-hidden />
+                </IconButton>
+                <IconButton label="Загрузить список из Excel" onClick={onOpenVehicleImportFilePicker}>
+                  <RotateCcw size={16} aria-hidden />
+                </IconButton>
+              </>
+            ) : null}
           </>
         ) : null}
         <IconButton label="Выгрузить список техники в Excel" onClick={onExportVehiclesToExcel}>
           <Download size={16} aria-hidden />
         </IconButton>
-        <input
-          ref={vehicleImportInputRef}
-          accept=".xlsx,.csv"
-          onChange={onImportVehiclesFromExcel}
-          style={{ display: "none" }}
-          type="file"
-        />
+        {canManageVehicles ? (
+          <input
+            ref={vehicleImportInputRef}
+            accept=".xlsx,.csv"
+            onChange={onImportVehiclesFromExcel}
+            style={{ display: "none" }}
+            type="file"
+          />
+        ) : null}
       </div>
     </div>
   );

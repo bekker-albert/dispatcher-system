@@ -15,6 +15,7 @@ export type AdminVehiclesSectionProps = {
   adminVehiclesEditing: boolean;
   visibleVehicleRows: VehicleRow[];
   hiddenVehicleRowsCount: number;
+  canManageVehicles?: boolean;
   vehicleAutocompleteOptions: Partial<Record<VehicleFilterKey, string[]>>;
   vehicleFilterColumns: VehicleFilterColumnWithIcon[];
   openVehicleFilter: VehicleFilterKey | null;
@@ -53,6 +54,7 @@ export default function AdminVehiclesSection({
   adminVehiclesEditing,
   visibleVehicleRows,
   hiddenVehicleRowsCount,
+  canManageVehicles = false,
   vehicleAutocompleteOptions,
   vehicleFilterColumns,
   openVehicleFilter,
@@ -90,6 +92,7 @@ export default function AdminVehiclesSection({
         filteredVehicleRowsCount={filteredVehicleRowsCount}
         totalVehicleRowsCount={totalVehicleRowsCount}
         adminVehiclesEditing={adminVehiclesEditing}
+        canManageVehicles={canManageVehicles}
         vehicleImportInputRef={vehicleImportInputRef}
         onClearAllVehicleFilters={onClearAllVehicleFilters}
         onStartEditing={onStartEditing}

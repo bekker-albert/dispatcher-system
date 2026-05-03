@@ -70,6 +70,7 @@ export function AppPrimaryContent({
         <FleetPrimaryContent
           appState={appState}
           models={models}
+          mode="readonly"
           runtime={runtime}
         />
       )}

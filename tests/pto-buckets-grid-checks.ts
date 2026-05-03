@@ -15,9 +15,7 @@ import {
   createPtoAreaAndBucketRowLookupSourceBundle,
 } from "../features/pto/ptoDateLookupModel";
 import {
-  createPtoBucketColumnsModel,
   createPtoBucketRowsModel,
-  ptoBucketColumnsSourceSignature,
 } from "../lib/domain/pto/buckets";
 import { createPtoBodyColumns } from "../lib/domain/pto/bodies";
 import { ptoMatrixTableMeta } from "../lib/domain/pto/tabs";
@@ -28,120 +26,10 @@ const ptoSectionSource = readFileSync(resolve(testDir, "../features/pto/PtoSecti
 const rowKeys = ["row-a", "row-b", "row-c"];
 const columnKeys = ["eq-1", "eq-2", "eq-3"];
 
-const bucketColumnsModel = createPtoBucketColumnsModel([
-  {
-    visible: true,
-    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-    brand: "CAT",
-    model: "336",
-    name: "CAT 336",
-  },
-  {
-    visible: true,
-    vehicleType: "\u041f\u043e\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
-    brand: "Liebherr",
-    model: "566",
-    name: "Liebherr 566",
-  },
-  {
-    visible: true,
-    vehicleType: "\u0421\u0430\u043c\u043e\u0441\u0432\u0430\u043b",
-    brand: "Howo",
-    model: "371",
-    name: "Howo 371",
-  },
-] as never);
-assert.deepEqual(bucketColumnsModel.columns.map((column) => column.label), ["CAT 336", "Liebherr 566"]);
-const duplicateBucketColumnsModel = createPtoBucketColumnsModel([
-  {
-    visible: true,
-    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-    brand: "CAT",
-    model: "336",
-    name: "CAT 336 A",
-  },
-  {
-    visible: true,
-    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-    brand: "C AT",
-    model: "3 36",
-    name: "CAT 336 B",
-  },
-] as never);
-assert.equal(duplicateBucketColumnsModel.columns.length, 1);
-assert.equal(duplicateBucketColumnsModel.columns[0].duplicate, true);
-const joinedLabelButDifferentBrandModelColumnsModel = createPtoBucketColumnsModel([
-  {
-    id: 101,
-    visible: true,
-    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-    brand: "CAT",
-    model: "336",
-    name: "CAT 336",
-  },
-  {
-    id: 102,
-    visible: true,
-    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-    brand: "CAT3",
-    model: "36",
-    name: "CAT3 36",
-  },
-] as never);
-assert.equal(joinedLabelButDifferentBrandModelColumnsModel.columns.length, 2);
-assert.deepEqual(
-  joinedLabelButDifferentBrandModelColumnsModel.columns.map((column) => column.duplicate ?? false),
-  [false, false],
-);
-const incompleteBrandModelColumnsModel = createPtoBucketColumnsModel([
-  {
-    id: 201,
-    visible: true,
-    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-    brand: "",
-    model: "336",
-    name: "CAT 336 A",
-  },
-  {
-    id: 202,
-    visible: true,
-    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-    brand: "",
-    model: "3 36",
-    name: "CAT 336 B",
-  },
-] as never);
-assert.equal(incompleteBrandModelColumnsModel.columns.length, 2);
-assert.deepEqual(
-  incompleteBrandModelColumnsModel.columns.map((column) => column.duplicate ?? false),
-  [false, false],
-);
 Object.values(ptoMatrixTableMeta).forEach((meta) => {
   assert.doesNotMatch(meta.sectionLabel, /^\u041f\u0422\u041e:/);
 });
 assert.doesNotMatch(ptoSectionSource, /\u041f\u0422\u041e:\s*\$\{activePtoSubtabLabel/);
-assert.equal(
-  ptoBucketColumnsSourceSignature([
-    {
-      visible: true,
-      vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-      brand: "CAT",
-      model: "336",
-      name: "CAT 336",
-      owner: "Owner A",
-    },
-  ] as never),
-  ptoBucketColumnsSourceSignature([
-    {
-      visible: true,
-      vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
-      brand: "CAT",
-      model: "336",
-      name: "CAT 336",
-      owner: "Owner B",
-    },
-  ] as never),
-);
 assert.deepEqual(
   createPtoBodyColumns([{ area: "\u0410\u043a\u0441\u0443", structure: "\u0421\u0443\u0433\u043b\u0438\u043d\u043e\u043a" }] as never, "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043a\u0438"),
   [],

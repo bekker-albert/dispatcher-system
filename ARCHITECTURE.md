@@ -150,3 +150,6 @@ Avoid large rewrites that change data shape, persistence, UI, and calculations a
 - Initial database reads must not trigger automatic backup writes before the app decides whether local state or database state wins.
 - Report accumulated reasons are calculated in the report model and must be consumed through the calculated row value in screen and print code. UI code must not re-read raw year override keys when a calculated reason is already available.
 - Future heavy tabs such as bodies, performance, and cycle must follow the PTO/Buckets pattern: feature component, domain model, virtualization if table-like, view mode by default, edit mode behind an explicit action.
+- The main `Техника` tab is a read-only operational table. Full vehicle editing, adding, Excel import, visibility toggles, deletion, and inline cell editing belong to `Админка -> Техника`.
+- PTO matrix tabs (`Ковши`, `Цикл`, `Кузова`, `Произв.`) should not render visible `ПТО: ...` section headers because the active tab already provides context.
+- PTO `Ковши` and `Цикл` duplicate equipment-column highlighting is based only on the exact `Марка + Модель` pair. Compare each part after removing spaces, require both parts to be non-empty, and do not include display name, plate, garage number, owner, equipment type, or category in duplicate detection.

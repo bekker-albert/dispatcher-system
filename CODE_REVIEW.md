@@ -55,6 +55,21 @@ git diff --check
 git status --ignored --short .env.local .env.example
 ```
 
+Before pushing to `main`, run the combined release gate:
+
+```powershell
+npm run release:check
+```
+
+After the deploy workflow finishes, run the read-only production smoke check:
+
+```powershell
+npm run smoke:production
+```
+
+The smoke check must stay read-only. Do not use migration scripts, browser
+storage cleanup, or database writes as a deploy verification step.
+
 For larger architecture tasks, run the AI review agent before coding:
 
 ```powershell

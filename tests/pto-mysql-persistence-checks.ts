@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  loadPtoStateFromMysqlForYear,
   deletePtoYearFromMysql,
   savePtoDayValueWithRowToMysql,
   savePtoDayValuesWithRowToMysql,
@@ -22,6 +21,7 @@ const mysqlPtoWritesSource = readFileSync(new URL("../lib/server/mysql/pto-write
 const mysqlPtoRowWritesSource = readFileSync(new URL("../lib/server/mysql/pto-row-writes.ts", import.meta.url), "utf8");
 const mysqlPtoDayValueWritesSource = readFileSync(new URL("../lib/server/mysql/pto-day-value-writes.ts", import.meta.url), "utf8");
 const mysqlPtoRowYearMembershipSource = readFileSync(new URL("../lib/server/mysql/pto-row-year-membership.ts", import.meta.url), "utf8");
+const mysqlPtoLoadSource = readFileSync(new URL("../lib/server/mysql/pto-load.ts", import.meta.url), "utf8");
 assert.match(mysqlFullSaveSource, /writePtoTransaction/);
 assert.match(mysqlFullSaveSource, /assertMysqlPtoMatchesExpectedUpdatedAt\(state,\s*options\.expectedUpdatedAt,\s*\{[\s\S]*yearScope: options\.yearScope[\s\S]*\}\)/);
 assert.match(mysqlFullSaveSource, /if \(options\.yearScope\) \{[\s\S]*upsertPtoRowsForYearScope\(rowRecords,\s*options\.yearScope,\s*execute\);[\s\S]*\} else \{[\s\S]*upsertPtoRows\(rowRecords,\s*execute\);[\s\S]*\}/);
@@ -72,8 +72,12 @@ assert.ok(mysqlDaysWithRowSaveSource.indexOf("insertPtoRowsIfMissing") < mysqlDa
 assert.doesNotMatch(mysqlDaysWithRowSaveSource, /upsertPtoRows/);
 assert.match(mysqlDaysWithRowSaveSource, /refreshPtoRowYearMembershipForRows/);
 
-const mysqlYearLoadSource = loadPtoStateFromMysqlForYear.toString();
+const mysqlYearLoadSource = mysqlPtoLoadSource;
 assert.match(mysqlYearLoadSource, /ptoYearDateRange/);
+assert.match(mysqlYearLoadSource, /isMissingPtoRowYearsTableError/);
+assert.match(mysqlYearLoadSource, /code === "ER_NO_SUCH_TABLE" && message\.includes\("pto_row_years"\)/);
+assert.match(mysqlYearLoadSource, /if \(!isMissingPtoRowYearsTableError\(error\)\) throw error;/);
+assert.match(mysqlYearLoadSource, /loadPtoRowsFromMysqlForYear\(year,\s*start,\s*end,\s*carryoverJsonPath\)/);
 assert.match(mysqlYearLoadSource, /FROM pto_row_years AS row_years/);
 assert.match(mysqlYearLoadSource, /FROM pto_rows AS rows_for_year/);
 assert.match(mysqlYearLoadSource, /row_years\.table_type = rows_for_year\.table_type[\s\S]*row_years\.row_id = rows_for_year\.row_id[\s\S]*row_years\.year_value = \?/);
@@ -82,6 +86,7 @@ assert.match(mysqlYearLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years
 assert.match(mysqlYearLoadSource, /JSON_EXTRACT\(COALESCE\(rows_for_year\.carryovers, JSON_OBJECT\(\)\), \?\) IS NOT NULL/);
 assert.match(mysqlYearLoadSource, /SELECT \$\{ptoDayValueSelectColumns\} FROM pto_day_values[\s\S]*WHERE work_date >= \? AND work_date <= \?/);
 assert.match(mysqlYearLoadSource, /\[year,\s*start,\s*end,\s*year,\s*year,\s*carryoverJsonPath\]/);
+assert.match(mysqlYearLoadSource, /\[start,\s*end,\s*year,\s*year,\s*carryoverJsonPath\]/);
 assert.doesNotMatch(mysqlYearLoadSource, /ptoDayValueRecordsForYear/);
 assert.match(mysqlYearLoadSource, /SELECT \$\{ptoBucketRowSelectColumns\} FROM pto_bucket_rows ORDER BY sort_index ASC/);
 assert.doesNotMatch(mysqlYearLoadSource, /SELECT rows_for_year\.\*/);

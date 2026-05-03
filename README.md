@@ -30,6 +30,15 @@ npm run verify
 - `npm run check:domain`
 - `npm run check:project`
 
+Release gate before push:
+
+```bash
+npm run release:check
+```
+
+This also checks whitespace in the current diff and shows whether local env
+files are ignored. Do not print or commit values from `.env.local`.
+
 ## База данных
 
 Production использует серверную MySQL-базу через Next.js API route `/api/database`.
