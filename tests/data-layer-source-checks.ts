@@ -23,8 +23,12 @@ assert.match(dataPtoSource, /databaseRequest<DataPtoState \| null>\("pto", "load
 assert.match(dataPtoSource, /databaseRequest<string \| null \| undefined>\("pto", "load-updated-at"\)/);
 assert.match(dataPtoSource, /databaseRequest<DataPtoBucketRecordsLoadResult>\("pto", "load-buckets"\)/);
 assert.match(dataPtoSource, /databaseRequest<PtoPersistenceSnapshotWriteResult>\("pto", "save", \{/);
-assert.match(dataPtoSource, /databaseRequest<PtoPersistenceSnapshotWriteResult>\("pto", "save-day", \{/);
-assert.match(dataPtoSource, /databaseRequest<PtoPersistenceSnapshotWriteResult>\("pto", "delete-bucket-values", \{/);
+assert.match(dataPtoSource, /function writePtoInline<T>/);
+assert.match(dataPtoSource, /type DataPtoInlineAction = Extract/);
+assert.match(dataPtoSource, /writeMysqlPtoInline\(action, payload\)/);
+assert.match(dataPtoSource, /return writePtoInline\(\s*"save-day",\s*\{/);
+assert.match(dataPtoSource, /return writePtoInline\(\s*"delete-bucket-values",\s*\{/);
+assert.equal((dataPtoSource.match(/function writePtoInline/g) ?? []).length, 1);
 assert.match(dataPtoSource, /import\("@\/lib\/supabase\/pto"\)/);
 
 assert.doesNotMatch(dataSettingsSource, /from ["']@\/lib\/supabase\/settings["']/);

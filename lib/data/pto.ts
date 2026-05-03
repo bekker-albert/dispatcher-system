@@ -1,4 +1,4 @@
-import { databaseRequest } from "@/lib/database/rpc";
+import { databaseRequest, type DatabaseAction } from "@/lib/database/rpc";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import {
@@ -29,6 +29,19 @@ type DataPtoBucketRecordsLoadResult = {
   bucketValues: PtoPersistenceBucketValueRecord[];
   updatedAt?: string | null;
 };
+type DataPtoInlineAction = Extract<
+  DatabaseAction,
+  | "delete"
+  | "delete-bucket-row"
+  | "delete-bucket-values"
+  | "delete-year"
+  | "save-bucket-row"
+  | "save-bucket-value"
+  | "save-day"
+  | "save-day-with-row"
+  | "save-days"
+  | "save-days-with-row"
+>;
 
 const ptoLoadRequestCache = new Map<string, Promise<unknown>>();
 
@@ -60,6 +73,22 @@ function mysqlPtoYearLoadKey(year: string, includeBuckets: boolean) {
 
 async function loadSupabasePtoAdapter() {
   return import("@/lib/supabase/pto");
+}
+
+function writeMysqlPtoInline(action: DataPtoInlineAction, payload: Record<string, unknown>) {
+  return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", action, payload);
+}
+
+function writePtoInline<T>(
+  action: DataPtoInlineAction,
+  payload: Record<string, unknown>,
+  supabaseWrite: (adapter: Awaited<ReturnType<typeof loadSupabasePtoAdapter>>) => Promise<T>,
+) {
+  if (serverDatabaseConfigured) {
+    return writeMysqlPtoInline(action, payload);
+  }
+
+  return loadSupabasePtoAdapter().then(supabaseWrite);
 }
 
 export function loadPtoStateFromDatabase(options: DataPtoLoadOptions = {}) {
@@ -148,18 +177,17 @@ export function savePtoDayValueToDatabase(
   value: number | null,
   options: DataPtoInlineSaveOptions = {},
 ) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "save-day", {
+  return writePtoInline(
+    "save-day",
+    {
       table,
       rowId,
       day,
       value,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ savePtoDayValueToSupabase }) => savePtoDayValueToSupabase(table, rowId, day, value, options));
+    },
+    ({ savePtoDayValueToSupabase }) => savePtoDayValueToSupabase(table, rowId, day, value, options),
+  );
 }
 
 export function savePtoDayValueWithRowToDatabase(
@@ -169,18 +197,17 @@ export function savePtoDayValueWithRowToDatabase(
   value: number | null,
   options: DataPtoInlineSaveOptions = {},
 ) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "save-day-with-row", {
+  return writePtoInline(
+    "save-day-with-row",
+    {
       table,
       row,
       day,
       value,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ savePtoDayValueWithRowToSupabase }) => savePtoDayValueWithRowToSupabase(table, row, day, value, options));
+    },
+    ({ savePtoDayValueWithRowToSupabase }) => savePtoDayValueWithRowToSupabase(table, row, day, value, options),
+  );
 }
 
 export function savePtoDayValuesToDatabase(
@@ -188,16 +215,15 @@ export function savePtoDayValuesToDatabase(
   values: Array<{ rowId: string; day: string; value: number | null }>,
   options: DataPtoInlineSaveOptions = {},
 ) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "save-days", {
+  return writePtoInline(
+    "save-days",
+    {
       table,
       values,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ savePtoDayValuesToSupabase }) => savePtoDayValuesToSupabase(table, values, options));
+    },
+    ({ savePtoDayValuesToSupabase }) => savePtoDayValuesToSupabase(table, values, options),
+  );
 }
 
 export function savePtoDayValuesWithRowToDatabase(
@@ -206,90 +232,83 @@ export function savePtoDayValuesWithRowToDatabase(
   values: Array<{ rowId: string; day: string; value: number | null }>,
   options: DataPtoInlineSaveOptions = {},
 ) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "save-days-with-row", {
+  return writePtoInline(
+    "save-days-with-row",
+    {
       table,
       row,
       values,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ savePtoDayValuesWithRowToSupabase }) => savePtoDayValuesWithRowToSupabase(table, row, values, options));
+    },
+    ({ savePtoDayValuesWithRowToSupabase }) => savePtoDayValuesWithRowToSupabase(table, row, values, options),
+  );
 }
 
 export function deletePtoRowsFromDatabase(table: DataPtoTable, rowIds: string[], options: DataPtoInlineSaveOptions = {}) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "delete", {
+  return writePtoInline(
+    "delete",
+    {
       table,
       rowIds,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ deletePtoRowsFromSupabase }) => deletePtoRowsFromSupabase(table, rowIds, options));
+    },
+    ({ deletePtoRowsFromSupabase }) => deletePtoRowsFromSupabase(table, rowIds, options),
+  );
 }
 
 export function deletePtoYearFromDatabase(year: string, options: DataPtoInlineSaveOptions = {}) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "delete-year", {
+  return writePtoInline(
+    "delete-year",
+    {
       year,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ deletePtoYearFromSupabase }) => deletePtoYearFromSupabase(year, options));
+    },
+    ({ deletePtoYearFromSupabase }) => deletePtoYearFromSupabase(year, options),
+  );
 }
 
 export function savePtoBucketRowToDatabase(row: PtoBucketRow, sortIndex = 0, options: DataPtoInlineSaveOptions = {}) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "save-bucket-row", {
+  return writePtoInline(
+    "save-bucket-row",
+    {
       row,
       sortIndex,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ savePtoBucketRowToSupabase }) => savePtoBucketRowToSupabase(row, sortIndex, options));
+    },
+    ({ savePtoBucketRowToSupabase }) => savePtoBucketRowToSupabase(row, sortIndex, options),
+  );
 }
 
 export function deletePtoBucketRowFromDatabase(rowKey: string, options: DataPtoInlineSaveOptions = {}) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "delete-bucket-row", {
+  return writePtoInline(
+    "delete-bucket-row",
+    {
       rowKey,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ deletePtoBucketRowFromSupabase }) => deletePtoBucketRowFromSupabase(rowKey, options));
+    },
+    ({ deletePtoBucketRowFromSupabase }) => deletePtoBucketRowFromSupabase(rowKey, options),
+  );
 }
 
 export function savePtoBucketValueToDatabase(cellKey: string, value: number | null, options: DataPtoInlineSaveOptions = {}) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "save-bucket-value", {
+  return writePtoInline(
+    "save-bucket-value",
+    {
       cellKey,
       value,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ savePtoBucketValueToSupabase }) => savePtoBucketValueToSupabase(cellKey, value, options));
+    },
+    ({ savePtoBucketValueToSupabase }) => savePtoBucketValueToSupabase(cellKey, value, options),
+  );
 }
 
 export function deletePtoBucketValuesFromDatabase(cellKeys: string[], options: DataPtoInlineSaveOptions = {}) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<PtoPersistenceSnapshotWriteResult>("pto", "delete-bucket-values", {
+  return writePtoInline(
+    "delete-bucket-values",
+    {
       cellKeys,
       ...ptoInlineSavePayload(options),
-    });
-  }
-
-  return loadSupabasePtoAdapter()
-    .then(({ deletePtoBucketValuesFromSupabase }) => deletePtoBucketValuesFromSupabase(cellKeys, options));
+    },
+    ({ deletePtoBucketValuesFromSupabase }) => deletePtoBucketValuesFromSupabase(cellKeys, options),
+  );
 }
