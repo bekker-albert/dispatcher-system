@@ -12,6 +12,7 @@ import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "@/lib/utils/t
 import {
   createPtoAreaLookupSourceBundle,
   createPtoDateLookupSourceBundle,
+  ptoDateRowsLookupSignature,
   type PtoAreaLookupSource,
   type PtoDateLookupSource,
 } from "./ptoDateLookupModel";
@@ -80,12 +81,18 @@ export function usePtoDateViewModel({
     return [];
   }, [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoSection, ptoTab]);
 
+  const activePtoDateLookupRowsSignature = useMemo(() => (
+    isPtoDateTab ? ptoDateRowsLookupSignature(activePtoDateLookupRows) : ""
+  ), [activePtoDateLookupRows, isPtoDateTab]);
+
   const activePtoDateLookupSources = useStablePtoDateLookupSources(
-    useMemo(() => createPtoDateLookupSourceBundle(activePtoDateLookupRows), [activePtoDateLookupRows]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useMemo(() => createPtoDateLookupSourceBundle(activePtoDateLookupRows), [activePtoDateLookupRowsSignature]),
   );
   const activePtoAreaLookupBundle = useMemo(() => (
     isPtoDateTab ? createPtoAreaLookupSourceBundle(activePtoDateLookupRows) : emptyAreaLookupBundle
-  ), [activePtoDateLookupRows, isPtoDateTab]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [activePtoDateLookupRowsSignature, isPtoDateTab]);
   const allPtoAreaLookupSources = useStablePtoAreaLookupSources(activePtoAreaLookupBundle);
 
   const ptoYearTabs = useMemo(() => (

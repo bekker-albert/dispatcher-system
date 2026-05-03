@@ -45,31 +45,37 @@ export function createPtoDateLookupSources(rows: readonly PtoPlanRow[]): PtoDate
   return createPtoDateLookupSourceBundle(rows).sources;
 }
 
+function createPtoDateLookupSource(row: PtoPlanRow) {
+  const years = sortedValues(row.years);
+  const source = {
+    area: row.area,
+    location: row.location,
+    structure: row.structure,
+    years,
+    carryoverYears: sortedKeys(row.carryovers),
+    carryoverManualYears: sortedValues(row.carryoverManualYears),
+    legacyDailyPlanYears: years.length === 0
+      ? sortedValues(Object.keys(row.dailyPlans).map(validYearFromDateKey).filter(Boolean))
+      : [],
+  };
+  const signature = [
+    source.area,
+    source.location,
+    source.structure,
+    source.years.join(","),
+    source.carryoverYears.join(","),
+    source.carryoverManualYears.join(","),
+    source.legacyDailyPlanYears.join(","),
+  ].join("\u001f");
+
+  return { source, signature };
+}
+
 export function createPtoDateLookupSourceBundle(rows: readonly PtoPlanRow[]): LookupSourceBundle<PtoDateLookupSource> {
   const signatureParts: string[] = [];
   const sources = rows.map((row) => {
-    const years = sortedValues(row.years);
-    const source = {
-      area: row.area,
-      location: row.location,
-      structure: row.structure,
-      years,
-      carryoverYears: sortedKeys(row.carryovers),
-      carryoverManualYears: sortedValues(row.carryoverManualYears),
-      legacyDailyPlanYears: years.length === 0
-        ? sortedValues(Object.keys(row.dailyPlans).map(validYearFromDateKey).filter(Boolean))
-        : [],
-    };
-
-    signatureParts.push([
-      source.area,
-      source.location,
-      source.structure,
-      source.years.join(","),
-      source.carryoverYears.join(","),
-      source.carryoverManualYears.join(","),
-      source.legacyDailyPlanYears.join(","),
-    ].join("\u001f"));
+    const { source, signature } = createPtoDateLookupSource(row);
+    signatureParts.push(signature);
 
     return source;
   });
@@ -78,6 +84,10 @@ export function createPtoDateLookupSourceBundle(rows: readonly PtoPlanRow[]): Lo
     sources,
     signature: signatureParts.join("\u001e"),
   };
+}
+
+export function ptoDateRowsLookupSignature(rows: readonly PtoPlanRow[]) {
+  return rows.map((row) => createPtoDateLookupSource(row).signature).join("\u001e");
 }
 
 export function createPtoAreaLookupSources(rows: readonly PtoPlanRow[]): PtoAreaLookupSource[] {

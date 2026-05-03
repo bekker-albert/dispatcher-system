@@ -5,6 +5,7 @@ import { cleanAreaName, uniqueSorted } from "@/lib/utils/text";
 import {
   createPtoAreaAndBucketRowLookupSourceBundle,
   createPtoBucketAreaLookupSourceBundle,
+  ptoAreaAndBucketRowGroupsSignature,
   type PtoAreaLookupSource,
   type PtoBucketRowLookupSource,
 } from "./ptoDateLookupModel";
@@ -48,12 +49,21 @@ export function usePtoBucketsNavigationModel({
   ptoBucketManualRows,
 }: UsePtoBucketsNavigationModelOptions) {
   const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
-
-  const referenceLookupBundle = useMemo(() => (
+  const referenceRowGroupsSignature = useMemo(() => (
     isPtoBucketsSection
-      ? createPtoAreaAndBucketRowLookupSourceBundle([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
-      : emptyAreaAndBucketRowLookupBundle
+      ? ptoAreaAndBucketRowGroupsSignature([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
+      : ""
   ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
+
+  const referenceLookupBundle = useMemo(
+    () => (
+      isPtoBucketsSection
+        ? createPtoAreaAndBucketRowLookupSourceBundle([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
+        : emptyAreaAndBucketRowLookupBundle
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isPtoBucketsSection, referenceRowGroupsSignature],
+  );
 
   const bucketAreaLookupSources = useStablePtoAreaLookupSources(
     useMemo(() => ({
