@@ -1,4 +1,14 @@
-import { reportPrintProfile } from "./reportPrintProfile";
+import { reportPrintProfile, type ReportPrintTextColumnKey } from "./reportPrintProfile";
+
+function reportPrintTextColumnCssVariable(key: ReportPrintTextColumnKey) {
+  return `--report-print-${key}-width`;
+}
+
+const reportPrintTextColumnFallbackCss = (Object.keys(reportPrintProfile.columns.cssFallbackWidths) as ReportPrintTextColumnKey[])
+  .map((key) => `  .report-print-table col.report-print-col-${key} {
+    width: var(${reportPrintTextColumnCssVariable(key)}, ${reportPrintProfile.columns.cssFallbackWidths[key]}px) !important;
+  }`)
+  .join("\n\n");
 
 export const reportPrintMediaTableLayoutCss = `  .report-print-table-scroll {
     display: block !important;
@@ -24,17 +34,7 @@ export const reportPrintMediaTableLayoutCss = `  .report-print-table-scroll {
     width: var(--report-print-column-width, auto) !important;
   }
 
-  .report-print-table col.report-print-col-work-name {
-    width: var(--report-print-work-name-width, ${reportPrintProfile.columns.cssFallbackWidths["work-name"]}px) !important;
-  }
-
-  .report-print-table col.report-print-col-day-reason {
-    width: var(--report-print-day-reason-width, ${reportPrintProfile.columns.cssFallbackWidths["day-reason"]}px) !important;
-  }
-
-  .report-print-table col.report-print-col-year-reason {
-    width: var(--report-print-year-reason-width, ${reportPrintProfile.columns.cssFallbackWidths["year-reason"]}px) !important;
-  }`;
+${reportPrintTextColumnFallbackCss}`;
 
 export const reportPrintMediaCellMetricsCss = `  .report-print-table th,
   .report-print-table td {
