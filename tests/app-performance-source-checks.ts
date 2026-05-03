@@ -277,8 +277,7 @@ assert.match(usePtoBucketsViewModelSource, /createPtoBucketRowsModel\(bucketRowS
 assert.match(usePtoBucketsViewModelSource, /useStableBucketRows\(ptoBucketRowsModel\.rows, ptoBucketRowsModel\.signature\)/);
 assert.match(usePtoBucketsViewModelSource, /active \? createPtoBucketColumnsModel\(vehicleRows\) : inactivePtoBucketColumnsModel/);
 assert.match(usePtoBucketsViewModelSource, /useStableBucketColumns/);
-assert.match(usePtoBucketsNavigationModelSource, /ptoAreaAndBucketRowGroupsSignature/);
-assert.match(usePtoBucketsNavigationModelSource, /Numeric PTO edits change row identity but must not rebuild bucket rows/);
+assert.doesNotMatch(usePtoBucketsNavigationModelSource, /ptoAreaAndBucketRowGroupsSignature/);
 assert.match(ptoDateTableViewModelSource, /const emptyPtoRowById = new Map<string, PtoPlanRow>\(\);/);
 assert.match(ptoDateTableViewModelSource, /export function createPtoDateFilteredRows/);
 assert.match(ptoDateTableViewModelSource, /export function createPtoDateRowById/);
@@ -308,6 +307,6 @@ assert.match(useAppPtoBucketsModelSource, /isPtoBucketsSection: bucketModel\.isP
 assert.match(useAppPtoBucketsModelSource, /ptoAreaTabs: bucketModel\.ptoBucketAreaTabs/);
 assert.match(usePtoBucketsNavigationModelSource, /const referenceLookupBundle = useMemo/);
 assert.match(usePtoBucketsNavigationModelSource, /createPtoAreaAndBucketRowLookupSourceBundle\(\[deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows\]\)/);
-assert.match(usePtoBucketsNavigationModelSource, /\[isPtoBucketsSection, referenceLookupSignature\]/);
+assert.match(usePtoBucketsNavigationModelSource, /\[deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection\]/);
 assert.match(usePtoBucketsNavigationModelSource, /createPtoBucketAreaLookupSourceBundle\(ptoBucketManualRows\)/);
 assert.match(usePtoBucketsNavigationModelSource, /ptoBucketAreaTabs: ptoAreaTabs/);

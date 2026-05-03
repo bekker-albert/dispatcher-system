@@ -5,7 +5,6 @@ import { cleanAreaName, uniqueSorted } from "@/lib/utils/text";
 import {
   createPtoAreaAndBucketRowLookupSourceBundle,
   createPtoBucketAreaLookupSourceBundle,
-  ptoAreaAndBucketRowGroupsSignature,
   type PtoAreaLookupSource,
   type PtoBucketRowLookupSource,
 } from "./ptoDateLookupModel";
@@ -50,19 +49,11 @@ export function usePtoBucketsNavigationModel({
 }: UsePtoBucketsNavigationModelOptions) {
   const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
 
-  const referenceLookupSignature = useMemo(() => (
-    isPtoBucketsSection
-      ? ptoAreaAndBucketRowGroupsSignature([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
-      : ""
-  ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
-
   const referenceLookupBundle = useMemo(() => (
     isPtoBucketsSection
       ? createPtoAreaAndBucketRowLookupSourceBundle([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
       : emptyAreaAndBucketRowLookupBundle
-  // The bundle only depends on area/structure. Numeric PTO edits change row identity but must not rebuild bucket rows.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [isPtoBucketsSection, referenceLookupSignature]);
+  ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
 
   const bucketAreaLookupSources = useStablePtoAreaLookupSources(
     useMemo(() => ({
