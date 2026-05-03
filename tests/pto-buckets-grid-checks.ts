@@ -8,9 +8,47 @@ import {
   resolvePtoBucketKeyboardAction,
 } from "../features/pto/ptoBucketsGridModel";
 import { createPtoAreaAndBucketRowLookupSourceBundle } from "../features/pto/ptoDateLookupModel";
+import {
+  createPtoBucketColumnsModel,
+  createPtoBucketRowsModel,
+} from "../lib/domain/pto/buckets";
 
 const rowKeys = ["row-a", "row-b", "row-c"];
 const columnKeys = ["eq-1", "eq-2", "eq-3"];
+
+const bucketColumnsModel = createPtoBucketColumnsModel([
+  {
+    visible: true,
+    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+    brand: "CAT",
+    model: "336",
+    name: "CAT 336",
+  },
+  {
+    visible: true,
+    vehicleType: "\u041f\u043e\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
+    brand: "Liebherr",
+    model: "566",
+    name: "Liebherr 566",
+  },
+  {
+    visible: true,
+    vehicleType: "\u0421\u0430\u043c\u043e\u0441\u0432\u0430\u043b",
+    brand: "Howo",
+    model: "371",
+    name: "Howo 371",
+  },
+] as never);
+assert.deepEqual(bucketColumnsModel.columns.map((column) => column.label), ["CAT 336", "Liebherr 566"]);
+
+assert.equal(
+  createPtoBucketRowsModel(
+    [{ area: "\u0410\u043a\u0441\u0443", structure: "\u041f\u043e\u0434\u0430\u0447\u0430 \u0440\u0443\u0434\u044b" }],
+    [],
+    "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043a\u0438",
+  ).rows.length,
+  1,
+);
 
 assert.deepEqual(createPtoBucketGridKeys(rowKeys, columnKeys), [
   ["row-a::eq-1", "row-a::eq-2", "row-a::eq-3"],

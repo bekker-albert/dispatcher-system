@@ -56,6 +56,13 @@ export function loadingEquipmentLabel(vehicle: Pick<VehicleRow, "brand" | "model
 export function isLoadingEquipment(vehicle: VehicleRow) {
   const type = normalizeLookupValue(vehicle.vehicleType);
 
+  if (
+    type.includes("\u044d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440")
+    || type.includes("\u043f\u043e\u0433\u0440\u0443\u0437")
+  ) {
+    return true;
+  }
+
   return type.includes("экскаватор")
     || type.includes("погруз")
     || type.includes("loader")
@@ -134,6 +141,8 @@ export function createPtoBucketColumnsModel(vehicles: VehicleRow[]): PtoBucketCo
 }
 
 function ptoAreaMatchesForBucket(area: string, filter: string) {
+  if (filter === "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043a\u0438") return true;
+
   return filter === "Все участки" || cleanAreaName(area) === cleanAreaName(filter);
 }
 
