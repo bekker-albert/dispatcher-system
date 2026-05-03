@@ -86,10 +86,9 @@ export function PtoDateReadonlyTable({
                 displayMonthGroups={displayMonthGroups}
                 getEffectiveCarryover={getEffectiveCarryover}
                 getRowDateTotals={getRowDateTotals}
-                ptoTab={ptoTab}
                 reportDate={reportDate}
                 row={row}
-                rowHeights={rowHeights}
+                rowHeight={rowHeights[`${ptoTab}:${row.id}`]}
                 showCustomerCode={showCustomerCode}
                 showLocation={showLocation}
               />
@@ -107,31 +106,27 @@ type PtoDateReadonlyRowProps = Pick<
   | "displayMonthGroups"
   | "getEffectiveCarryover"
   | "getRowDateTotals"
-  | "ptoTab"
   | "reportDate"
-  | "rowHeights"
   | "showCustomerCode"
   | "showLocation"
 > & {
   row: PtoDateReadonlyTableProps["rows"][number];
+  rowHeight?: number;
 };
 
 const PtoDateReadonlyRow = memo(function PtoDateReadonlyRow({
   displayMonthGroups,
   getEffectiveCarryover,
   getRowDateTotals,
-  ptoTab,
   reportDate,
   row,
-  rowHeights,
+  rowHeight,
   showCustomerCode,
   showLocation,
 }: PtoDateReadonlyRowProps) {
   const rowStatus = ptoAutomatedStatus(row, reportDate);
   const effectiveCarryover = getEffectiveCarryover(row);
   const rowDateTotals = getRowDateTotals(row);
-  const rowHeightKey = `${ptoTab}:${row.id}`;
-  const rowHeight = rowHeights[rowHeightKey];
   const rowYearTotalWithCarryover = Math.round(((rowDateTotals.yearDailyTotal ?? 0) + effectiveCarryover) * 1000000) / 1000000;
 
   return (

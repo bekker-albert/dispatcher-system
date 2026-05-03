@@ -34,6 +34,7 @@ const usePtoDateViewModelSource = readFileSync(resolve(testDir, "../features/pto
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
 const ptoDataPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoDataPrimaryContent.tsx"), "utf8");
 const ptoDatePrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoDatePrimaryContent.tsx"), "utf8");
+const ptoDateReadonlyTableSource = readFileSync(resolve(testDir, "../features/pto/PtoDateReadonlyTable.tsx"), "utf8");
 const useAppPtoControllersSource = readFileSync(resolve(testDir, "../features/app/useAppPtoControllers.ts"), "utf8");
 const useAppPtoDateEditingControllerSource = readFileSync(resolve(testDir, "../features/app/useAppPtoDateEditingController.ts"), "utf8");
 const noopPtoDateEditingSource = readFileSync(resolve(testDir, "../features/app/noopPtoDateEditing.ts"), "utf8");
@@ -222,6 +223,10 @@ assert.doesNotMatch(useAppPtoControllersSource, /useAppPtoDateEditing/);
 assert.match(ptoDatePrimaryContentSource, /if \(appState\.ptoDateEditing\) \{/);
 assert.match(ptoDatePrimaryContentSource, /function PtoDateReadonlyPrimaryContent/);
 assert.match(ptoDatePrimaryContentSource, /ptoDateEditing: noopPtoDateEditing/);
+assert.match(ptoDateReadonlyTableSource, /rowHeight=\{rowHeights\[`[$]\{ptoTab\}:[$]\{row\.id\}`\]\}/);
+assert.match(ptoDateReadonlyTableSource, /rowHeight\?: number;/);
+assert.doesNotMatch(ptoDateReadonlyTableSource, /rowHeights,\s*showCustomerCode/);
+assert.doesNotMatch(ptoDateReadonlyTableSource, /const rowHeightKey = `[$]\{ptoTab\}:[$]\{row\.id\}`;/);
 assert.match(ptoDatePrimaryContentSource, /function PtoDateEditingPrimaryContent/);
 assert.match(ptoDatePrimaryContentSource, /useAppPtoDateEditingController\(\{ appState, models, runtime \}\)/);
 assert.match(useAppPtoDateEditingControllerSource, /useAppPtoDateEditing\(\{/);
