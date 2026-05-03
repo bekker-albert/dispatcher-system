@@ -44,6 +44,8 @@ assert.match(dataSettingsSource, /expectedUpdatedAt: options\.expectedUpdatedAt/
 assert.match(dataSettingsSource, /import\("@\/lib\/supabase\/settings"\)/);
 assert.match(supabaseSettingsSource, /async function assertAppSettingsMatchExpectedUpdatedAt/);
 assert.match(supabaseSettingsSource, /await assertAppSettingsMatchExpectedUpdatedAt\(entries, options\.expectedUpdatedAt, client\);[\s\S]*\.upsert\(records, \{ onConflict: "key" \}\)/);
+assert.doesNotMatch(supabaseSettingsSource, /databaseRequest/);
+assert.doesNotMatch(supabaseSettingsSource, /serverDatabaseConfigured/);
 assert.doesNotMatch(supabaseSettingsSource, /\.insert\(\{ key, value, updated_at: updatedAt \}\)/);
 assert.doesNotMatch(supabaseSettingsSource, /\.update\(\{ value, updated_at: updatedAt \}\)[\s\S]*\.eq\("updated_at"/);
 

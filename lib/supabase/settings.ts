@@ -1,7 +1,5 @@
-import { databaseRequest } from "../database/rpc";
 import type { SaveAppSettingsOptions } from "../domain/app/settings";
 import { supabase, supabaseConfigured } from "./client";
-import { serverDatabaseConfigured } from "./config";
 
 export type SupabaseSettingRecord = {
   key: string;
@@ -22,10 +20,6 @@ function requireSupabase() {
 }
 
 export async function loadAppSettingsFromSupabase(keys: string[]) {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<SupabaseSettingRecord[]>("settings", "load", { keys });
-  }
-
   if (keys.length === 0) return [];
   const client = requireSupabase();
   return await loadAppSettingsFromSupabaseClient(keys, client);
@@ -81,10 +75,6 @@ export async function saveAppSettingsToSupabase(
   options: SaveAppSettingsOptions = {},
 ) {
   const keys = Object.keys(settings);
-
-  if (serverDatabaseConfigured) {
-    return await databaseRequest<SupabaseSettingRecord[]>("settings", "save", { settings, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
 
   if (keys.length === 0) return;
 
