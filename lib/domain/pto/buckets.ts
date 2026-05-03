@@ -118,6 +118,21 @@ export function createPtoBucketColumns(vehicles: VehicleRow[]) {
   return createPtoBucketColumnsModel(vehicles).columns;
 }
 
+export function ptoBucketColumnsSourceSignature(vehicles: readonly VehicleRow[]) {
+  const columnKeys = new Set<string>();
+
+  vehicles.forEach((vehicle) => {
+    if (vehicle.visible === false || !isLoadingEquipment(vehicle)) return;
+
+    const label = loadingEquipmentLabel(vehicle);
+    if (!label) return;
+
+    columnKeys.add([normalizeLookupValue(label), label].join("\u001f"));
+  });
+
+  return Array.from(columnKeys).sort((left, right) => left.localeCompare(right, "ru")).join("\u001e");
+}
+
 export function createPtoBucketColumnsModel(vehicles: VehicleRow[]): PtoBucketColumnsModel {
   const columnsByKey = new Map<string, PtoBucketColumn>();
 

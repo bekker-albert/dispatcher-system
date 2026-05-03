@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import {
   createPtoBucketColumnsModel,
   createPtoBucketRowsModel,
+  ptoBucketColumnsSourceSignature,
   ptoBucketRowsSignature,
   type PtoBucketColumn,
   type PtoBucketRow,
@@ -20,6 +21,7 @@ type UsePtoBucketsViewModelOptions = {
 
 const emptyPtoBucketRows: PtoBucketRow[] = [];
 const emptyPtoBucketColumns: PtoBucketColumn[] = [];
+const emptyVehicleRows: VehicleRow[] = [];
 const inactivePtoBucketColumnsModel = {
   columns: emptyPtoBucketColumns,
   signature: "",
@@ -31,6 +33,11 @@ function useStableBucketRows(rows: PtoBucketRow[], signature: string) {
 }
 
 function useStableBucketColumns(rows: PtoBucketColumn[], signature: string) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => rows, [signature]);
+}
+
+function useStableBucketColumnVehicleRows(rows: VehicleRow[], signature: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => rows, [signature]);
 }
@@ -53,9 +60,16 @@ export function usePtoBucketsViewModel({
 
   const ptoBucketRows = useStableBucketRows(ptoBucketRowsModel.rows, ptoBucketRowsModel.signature);
 
-  const ptoBucketColumnsModel = useMemo(() => (
-    active ? createPtoBucketColumnsModel(vehicleRows) : inactivePtoBucketColumnsModel
+  const ptoBucketColumnVehiclesSignature = useMemo(() => (
+    active ? ptoBucketColumnsSourceSignature(vehicleRows) : ""
   ), [active, vehicleRows]);
+  const stableVehicleRowsForBucketColumns = useStableBucketColumnVehicleRows(
+    active ? vehicleRows : emptyVehicleRows,
+    ptoBucketColumnVehiclesSignature,
+  );
+  const ptoBucketColumnsModel = useMemo(() => (
+    active ? createPtoBucketColumnsModel(stableVehicleRowsForBucketColumns) : inactivePtoBucketColumnsModel
+  ), [active, stableVehicleRowsForBucketColumns]);
   const ptoBucketColumns = useStableBucketColumns(
     ptoBucketColumnsModel.columns,
     ptoBucketColumnsModel.signature,

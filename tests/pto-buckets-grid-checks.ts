@@ -15,6 +15,7 @@ import {
 import {
   createPtoBucketColumnsModel,
   createPtoBucketRowsModel,
+  ptoBucketColumnsSourceSignature,
 } from "../lib/domain/pto/buckets";
 
 const rowKeys = ["row-a", "row-b", "row-c"];
@@ -44,6 +45,28 @@ const bucketColumnsModel = createPtoBucketColumnsModel([
   },
 ] as never);
 assert.deepEqual(bucketColumnsModel.columns.map((column) => column.label), ["CAT 336", "Liebherr 566"]);
+assert.equal(
+  ptoBucketColumnsSourceSignature([
+    {
+      visible: true,
+      vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+      brand: "CAT",
+      model: "336",
+      name: "CAT 336",
+      owner: "Owner A",
+    },
+  ] as never),
+  ptoBucketColumnsSourceSignature([
+    {
+      visible: true,
+      vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+      brand: "CAT",
+      model: "336",
+      name: "CAT 336",
+      owner: "Owner B",
+    },
+  ] as never),
+);
 
 assert.equal(
   createPtoBucketRowsModel(

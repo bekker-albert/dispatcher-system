@@ -323,7 +323,10 @@ assert.match(usePtoBucketsViewModelSource, /ptoBucketRowsSignature\(manualRows\)
 assert.match(usePtoBucketsViewModelSource, /active \? ptoBucketRowsSignature\(manualRows\) : ""/);
 assert.match(usePtoBucketsViewModelSource, /createPtoBucketRowsModel\(bucketRowSources, stableManualRows, areaFilter\)/);
 assert.match(usePtoBucketsViewModelSource, /useStableBucketRows\(ptoBucketRowsModel\.rows, ptoBucketRowsModel\.signature\)/);
-assert.match(usePtoBucketsViewModelSource, /active \? createPtoBucketColumnsModel\(vehicleRows\) : inactivePtoBucketColumnsModel/);
+assert.match(usePtoBucketsViewModelSource, /active \? ptoBucketColumnsSourceSignature\(vehicleRows\) : ""/);
+assert.match(usePtoBucketsViewModelSource, /useStableBucketColumnVehicleRows/);
+assert.match(usePtoBucketsViewModelSource, /createPtoBucketColumnsModel\(stableVehicleRowsForBucketColumns\)/);
+assert.doesNotMatch(usePtoBucketsViewModelSource, /createPtoBucketColumnsModel\(vehicleRows\)/);
 assert.match(usePtoBucketsViewModelSource, /useStableBucketColumns/);
 assert.match(usePtoBucketsNavigationModelSource, /ptoAreaAndBucketRowGroupsSignature/);
 assert.match(ptoDateTableViewModelSource, /const emptyPtoRowById = new Map<string, PtoPlanRow>\(\);/);
