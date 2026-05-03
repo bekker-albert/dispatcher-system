@@ -71,7 +71,11 @@ export function useVehicleExcelTransfer({
       setVehicleFilters({});
       setVehicleFilterDrafts({});
       setOpenVehicleFilter(null);
-      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(importedVehicles));
+      const importedVehiclesSnapshot = JSON.stringify(importedVehicles);
+      const importedAt = new Date().toISOString();
+
+      window.localStorage.setItem(adminStorageKeys.vehicles, importedVehiclesSnapshot);
+      window.localStorage.setItem(adminStorageKeys.vehiclesLocalUpdatedAt, importedAt);
       window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
       if (databaseConfigured && databaseLoadedRef.current) {
         const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
@@ -80,7 +84,7 @@ export function useVehicleExcelTransfer({
         void import("@/lib/data/vehicles")
           .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles, { expectedSnapshot }))
           .then(() => {
-            databaseSaveSnapshotRef.current = JSON.stringify(importedVehicles);
+            databaseSaveSnapshotRef.current = importedVehiclesSnapshot;
             showSaveStatus("saved", "Загруженная техника сохранена.");
           })
           .catch((error) => {

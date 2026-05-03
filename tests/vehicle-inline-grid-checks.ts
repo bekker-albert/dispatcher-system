@@ -34,6 +34,7 @@ const useAdminVehicleRowsViewModelSource = readFileSync(resolve(testDir, "../fea
 const useVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleFilterMenu.ts"), "utf8");
 const vehicleFilteringSource = readFileSync(resolve(testDir, "../lib/domain/vehicles/filtering.ts"), "utf8");
 const useAppVehicleViewModelSource = readFileSync(resolve(testDir, "../features/app/useAppVehicleViewModel.ts"), "utf8");
+const useVehicleExcelTransferSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleExcelTransfer.ts"), "utf8");
 const vehicleInlineGridModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/vehicleInlineGridModel.ts"), "utf8");
 const useVehicleInlineCellInputPropsSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleInlineCellInputProps.ts"), "utf8");
 const adminVehicleTableRowSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleTableRow.tsx"), "utf8");
@@ -234,6 +235,10 @@ assert.equal(vehicleInlineClearLogEntry(3).details, "Очищены выбран
 assert.match(vehicleInlineEditLogEntry(vehicleRows, 10, "brand").details, /Изменено поле/);
 
 assert.equal(adminStorageKeys.vehiclesLocalUpdatedAt, "dispatcher:vehicles-local-updated-at");
+assert.match(useVehicleExcelTransferSource, /const importedVehiclesSnapshot = JSON\.stringify\(importedVehicles\);/);
+assert.match(useVehicleExcelTransferSource, /const importedAt = new Date\(\)\.toISOString\(\);/);
+assert.match(useVehicleExcelTransferSource, /window\.localStorage\.setItem\(adminStorageKeys\.vehiclesLocalUpdatedAt, importedAt\);/);
+assert.match(useVehicleExcelTransferSource, /databaseSaveSnapshotRef\.current = importedVehiclesSnapshot;/);
 assert.equal(resolveInitialVehicleRowsSource({
   savedVehicles: [],
   databaseUpdatedAt: "2026-04-24T10:00:00.000Z",
