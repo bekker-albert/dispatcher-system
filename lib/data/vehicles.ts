@@ -10,7 +10,6 @@ export type DataVehiclesState = {
 
 export type VehicleSnapshotWriteOptions = {
   expectedSnapshot?: VehicleRow[] | null;
-  allowLargeSnapshotShrink?: boolean;
 };
 
 export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
@@ -32,7 +31,6 @@ export function saveVehiclesToDatabase(rows: VehicleRow[], options?: VehicleSnap
     return databaseRequest("vehicles", "save", {
       rows,
       expectedSnapshot: options?.expectedSnapshot,
-      allowLargeSnapshotShrink: options?.allowLargeSnapshotShrink,
     });
   }
 
@@ -44,7 +42,6 @@ export function saveVehicleRowsPatchToDatabase(patchRows: VehicleRowsPatchItem[]
     return databaseRequest("vehicles", "savePatch", {
       patchRows,
       expectedSnapshot: options?.expectedSnapshot,
-      allowLargeSnapshotShrink: options?.allowLargeSnapshotShrink,
     });
   }
 
@@ -57,7 +54,6 @@ export function replaceVehiclesInDatabase(rows: VehicleRow[], options?: VehicleS
     return databaseRequest("vehicles", "replace", {
       rows,
       expectedSnapshot: options?.expectedSnapshot,
-      allowLargeSnapshotShrink: options?.allowLargeSnapshotShrink,
     });
   }
 

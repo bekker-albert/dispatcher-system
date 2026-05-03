@@ -42,7 +42,7 @@ jobs:
         run: npm run build
 
       - name: Pack production build
-        run: tar -czf next-build.tar.gz .next public package.json package-lock.json next.config.ts
+        run: tar -czf "next-build-${GITHUB_SHA}.tar.gz" .next
 
       - name: Configure SSH
         env:
@@ -61,24 +61,46 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" next-build.tar.gz "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/aam-dispatch.kz/next-build.tar.gz"
+          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" "next-build-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/aam-dispatch.kz/next-build-${GITHUB_SHA}.tar.gz"
 
       - name: Deploy to production
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" <<'EOF'
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" <<'EOF'
             set -euo pipefail
             export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
             export PM2_HOME="/var/www/dispatcher/data/.pm2"
             cd /var/www/dispatcher/data/www/aam-dispatch.kz
+
+            node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 20 || (major === 20 && minor < 9)) { throw new Error(`Node ${process.versions.node} is too old for Next.js 16`); }'
+
             git fetch --prune origin main
-            git reset --hard origin/main
+            git reset --hard "${DEPLOY_SHA}"
             npm ci --omit=dev --no-audit --no-fund
-            rm -rf .next
-            tar -xzf next-build.tar.gz
-            rm -f next-build.tar.gz
-            /usr/lib/ispnodejs/bin/pm2 reload aam-dispatch --update-env
+
+            next_archive="next-build-${DEPLOY_SHA}.tar.gz"
+            next_tmp=".next-${DEPLOY_SHA}"
+            next_previous=".next-previous-${DEPLOY_SHA}"
+            rm -rf "${next_tmp}" "${next_previous}"
+            mkdir "${next_tmp}"
+            tar -xzf "${next_archive}" -C "${next_tmp}" --strip-components=1 .next
+
+            if [ -d .next ]; then
+              mv .next "${next_previous}"
+            fi
+            mv "${next_tmp}" .next
+
+            if /usr/lib/ispnodejs/bin/pm2 reload aam-dispatch --update-env; then
+              rm -rf "${next_previous}" "${next_archive}"
+            else
+              rm -rf .next
+              if [ -d "${next_previous}" ]; then
+                mv "${next_previous}" .next
+              fi
+              exit 1
+            fi
           EOF

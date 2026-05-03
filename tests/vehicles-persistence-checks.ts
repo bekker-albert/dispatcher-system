@@ -3,7 +3,12 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
-import { createVehicleRowsSavePlan, shouldBlockVehicleRowsAutoSave, vehicleRowsSnapshotEquals } from "../lib/domain/vehicles/persistence";
+import {
+  createVehicleRowsSavePlan,
+  isUnexpectedLargeVehicleSnapshotShrink,
+  shouldBlockVehicleRowsAutoSave,
+  vehicleRowsSnapshotEquals,
+} from "../lib/domain/vehicles/persistence";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.ts"), "utf8");
@@ -39,13 +44,11 @@ const mysqlReplaceSource = exportedFunctionSource(mysqlVehiclesSource, "replaceV
 assert.match(mysqlReplaceSource, /dbTransaction/);
 assert.match(mysqlReplaceSource, /loadVehiclesFromMysqlWithExecutor\(execute,\s*true\)/);
 assert.match(mysqlReplaceSource, /assertMysqlVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot,\s*execute,\s*currentRows\)/);
-assert.match(mysqlReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\(rows,\s*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows,\s*options\)/);
+assert.match(mysqlReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\(rows,\s*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows\)/);
 assert.match(mysqlReplaceSource, /upsertVehiclesToMysql\(rows,\s*execute\)/);
 assert.match(mysqlReplaceSource, /deleteVehiclesMissingFromMysqlSnapshot\(rows,\s*execute\)/);
-assert.match(mysqlVehiclesSource, /defaultVehicleSeedReplaceLimit/);
 assert.match(mysqlVehiclesSource, /function assertNoUnexpectedLargeVehicleSnapshotShrink/);
-assert.match(mysqlVehiclesSource, /baselineRows\.length <= defaultVehicleSeedReplaceLimit/);
-assert.match(mysqlVehiclesSource, /if \(rows\.length > defaultVehicleSeedReplaceLimit\) return;/);
+assert.match(mysqlVehiclesSource, /isUnexpectedLargeVehicleSnapshotShrink\(rows,\s*baselineRows\)/);
 assert.match(mysqlVehiclesSource, /vehicleSnapshotKey\(currentRows\) !== vehicleSnapshotKey\(expectedSnapshot\)/);
 assert.match(mysqlVehiclesSource, /FOR UPDATE/);
 
@@ -57,7 +60,8 @@ assert.equal(supabaseVehiclesSource.includes('.not("vehicle_id", "is", null)'), 
 assert.equal(supabaseVehiclesSource.includes('.not("vehicle_id", "in", `(${vehicleIds.join(",")})`)'), true);
 
 const supabaseReplaceSource = exportedFunctionSource(supabaseVehiclesSource, "replaceVehiclesInSupabase");
-assert.match(supabaseReplaceSource, /assertSupabaseVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot\)/);
+assert.match(supabaseReplaceSource, /assertSupabaseVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot,\s*currentRows\)/);
+assert.match(supabaseReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\(rows,\s*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows\)/);
 assert.match(
   supabaseReplaceSource,
   /await upsertVehiclesToSupabase\(client,\s*records\);[\s\S]*await deleteVehiclesMissingFromSupabaseSnapshot\(client,\s*vehicleIds\);/,
@@ -69,18 +73,18 @@ assert.match(dataVehiclesSource, /replaceVehiclesInDatabase\(rows: VehicleRow\[]
 assert.doesNotMatch(dataVehiclesSource, /from ["']@\/lib\/supabase\/vehicles["']/);
 assert.match(dataVehiclesSource, /serverDatabaseConfigured/);
 assert.match(dataVehiclesSource, /databaseRequest<DataVehiclesState \| null>\("vehicles", "load"\)/);
-assert.match(dataVehiclesSource, /allowLargeSnapshotShrink\?: boolean/);
-assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "save", \{[\s\S]*rows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*allowLargeSnapshotShrink: options\?\.allowLargeSnapshotShrink/);
-assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "savePatch", \{[\s\S]*patchRows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*allowLargeSnapshotShrink: options\?\.allowLargeSnapshotShrink/);
-assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "replace", \{[\s\S]*rows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*allowLargeSnapshotShrink: options\?\.allowLargeSnapshotShrink/);
+assert.doesNotMatch(dataVehiclesSource, /allowLargeSnapshotShrink/);
+assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "save", \{[\s\S]*rows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*\}\)/);
+assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "savePatch", \{[\s\S]*patchRows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*\}\)/);
+assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "replace", \{[\s\S]*rows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*\}\)/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "delete", \{ id \}\)/);
 assert.match(dataVehiclesSource, /import\("@\/lib\/supabase\/vehicles"\)/);
 assert.doesNotMatch(supabaseVehiclesSource, /databaseRequest/);
 assert.doesNotMatch(supabaseVehiclesSource, /serverDatabaseConfigured/);
 assert.match(databaseVehiclesSource, /function expectedVehicleSnapshotFromPayload/);
-assert.match(databaseVehiclesSource, /function allowLargeSnapshotShrinkFromPayload/);
-assert.match(databaseVehiclesSource, /return value === null \|\| value === undefined[\s\S]*requirePayloadBoolean\(value, "allowLargeSnapshotShrink"\)/);
-assert.equal((databaseVehiclesSource.match(/allowLargeSnapshotShrink: allowLargeSnapshotShrinkFromPayload\(record\.allowLargeSnapshotShrink\)/g) ?? []).length, 3);
+assert.doesNotMatch(databaseVehiclesSource, /allowLargeSnapshotShrink/);
+assert.doesNotMatch(mysqlVehiclesSource, /allowLargeSnapshotShrink/);
+assert.doesNotMatch(supabaseVehiclesSource, /allowLargeSnapshotShrink/);
 assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSnapshotFromPayload\(record\.expectedSnapshot\)/g) ?? []).length, 3);
 assert.doesNotMatch(vehicleRowsEditorSource, /deleteVehicleFromDatabase/);
 assert.match(vehicleRowsPersistenceSource, /const vehicleRowsVersionRef = useRef\(0\);/);
@@ -110,6 +114,7 @@ assert.doesNotMatch(vehicleRowsPersistenceSource, /JSON\.stringify\(vehicleRowsR
 assert.match(vehicleRowsPersistenceSource, /shouldBlockVehicleRowsAutoSave\(snapshot, databaseAutoSaveBlockedSnapshotRef\.current\)/);
 assert.match(vehicleRowsPersistenceSource, /if \(localBackupChanged && !autoSaveBlocked\) \{\s*requestClientSnapshotSave\("vehicles-save"\);/);
 assert.match(initialVehicleRowsSource, /databaseRowsCount > savedVehicles\.length/);
+assert.match(initialVehicleRowsSource, /!databaseRowsCount[\s\S]*localUpdatedTime > 0[\s\S]*localUpdatedTime > databaseUpdatedTime/);
 assert.match(initialVehicleRowsSource, /function shouldTrustLocalVehicleRows/);
 assert.match(initialVehicleRowsSource, /vehicleRowsSnapshotEquals\(savedVehicles, defaultVehicleSeed\)/);
 assert.match(initialVehicleRowsSource, /shouldTrustLocalVehicleRows\(savedVehicles, databaseVehicles\.rows, defaultVehicleSeed\.vehicles\)/);
@@ -142,4 +147,9 @@ assert.equal(shouldBlockVehicleRowsAutoSave("[1,2]", "[1,3]"), false);
 assert.equal(shouldBlockVehicleRowsAutoSave("[1,2]", ""), false);
 assert.equal(vehicleRowsSnapshotEquals([vehicleOne, vehicleTwo], [vehicleOne, vehicleTwo]), true);
 assert.equal(vehicleRowsSnapshotEquals([vehicleOne], [vehicleOne, vehicleTwo]), false);
+const restoredVehicleRows = Array.from({ length: 881 }, (_, index) => normalizeVehicleRow({ id: index + 1 }));
+const unsafeShrinkRows = Array.from({ length: 20 }, (_, index) => normalizeVehicleRow({ id: index + 1 }));
+const singleDeleteRows = Array.from({ length: 880 }, (_, index) => normalizeVehicleRow({ id: index + 1 }));
+assert.equal(isUnexpectedLargeVehicleSnapshotShrink(unsafeShrinkRows, restoredVehicleRows), true);
+assert.equal(isUnexpectedLargeVehicleSnapshotShrink(singleDeleteRows, restoredVehicleRows), false);
 assert.equal(vehicleRowsSnapshotEquals([vehicleOne, vehicleTwo], [vehicleTwo, vehicleOne]), false);

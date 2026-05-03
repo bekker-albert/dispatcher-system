@@ -1,7 +1,10 @@
 const baseUrl = (process.env.PRODUCTION_SMOKE_URL || "https://aam-dispatch.kz").replace(/\/+$/, "");
+const defaultApiBaseUrl = new URL(baseUrl).hostname === "aam-dispatch.kz"
+  ? "https://www.aam-dispatch.kz"
+  : baseUrl;
 const apiBaseUrl = (
   process.env.PRODUCTION_SMOKE_API_URL
-  || baseUrl.replace("https://aam-dispatch.kz", "https://www.aam-dispatch.kz")
+  || defaultApiBaseUrl
 ).replace(/\/+$/, "");
 const minVehicleRows = Number(process.env.PRODUCTION_SMOKE_MIN_VEHICLE_ROWS || 100);
 

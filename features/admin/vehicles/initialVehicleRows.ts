@@ -61,7 +61,12 @@ export function resolveInitialVehicleRowsSource({
     return "database";
   }
 
-  if (Array.isArray(savedVehicles) && localUpdatedTime > 0 && localUpdatedTime > databaseUpdatedTime) {
+  if (
+    !databaseRowsCount
+    && Array.isArray(savedVehicles)
+    && localUpdatedTime > 0
+    && localUpdatedTime > databaseUpdatedTime
+  ) {
     return "local";
   }
 
@@ -84,6 +89,7 @@ function shouldTrustLocalVehicleRows(
   defaultVehicleSeed: VehicleRow[] | null,
 ) {
   if (!Array.isArray(savedVehicles)) return false;
+  if (databaseVehicles.length > 0) return false;
   if (savedVehicles.length <= defaultVehicleSeedReplaceLimit && databaseVehicles.length > savedVehicles.length) return false;
   if (defaultVehicleSeed && vehicleRowsSnapshotEquals(savedVehicles, defaultVehicleSeed)) return false;
 

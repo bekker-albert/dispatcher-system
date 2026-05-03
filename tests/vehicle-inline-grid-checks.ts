@@ -266,7 +266,7 @@ assert.equal(resolveInitialVehicleRowsSource({
   databaseRowsCount: rows.length,
   vehicleLocalUpdatedAt: null,
   appLocalUpdatedAt: "2026-04-24T12:00:00.000Z",
-}), "local");
+}), "database");
 assert.equal(resolveInitialVehicleRowsSource({
   savedVehicles: null,
   databaseUpdatedAt: "2026-04-24T10:00:00.000Z",

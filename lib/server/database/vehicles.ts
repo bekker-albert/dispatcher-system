@@ -2,7 +2,7 @@ import type { VehicleRow } from "../../domain/vehicles/types";
 import type { VehicleRowsPatchItem } from "../../domain/vehicles/persistence";
 import { payloadRecord } from "./payload";
 import type { DatabaseResourceHandler } from "./types";
-import { requirePayloadArray, requirePayloadBoolean, requirePayloadNumber, requirePayloadRecord } from "./validation";
+import { requirePayloadArray, requirePayloadNumber, requirePayloadRecord } from "./validation";
 
 function vehicleRowsFromPayload(value: unknown) {
   return requirePayloadArray<VehicleRow>(value, "rows");
@@ -10,12 +10,6 @@ function vehicleRowsFromPayload(value: unknown) {
 
 function expectedVehicleSnapshotFromPayload(value: unknown) {
   return Array.isArray(value) ? value as VehicleRow[] : undefined;
-}
-
-function allowLargeSnapshotShrinkFromPayload(value: unknown) {
-  return value === null || value === undefined
-    ? undefined
-    : requirePayloadBoolean(value, "allowLargeSnapshotShrink");
 }
 
 function vehiclePatchRowsFromPayload(value: unknown): VehicleRowsPatchItem[] {
@@ -40,21 +34,18 @@ export const handleVehiclesDatabaseAction: DatabaseResourceHandler = async ({
   if (action === "save") {
     await vehicles.saveVehiclesToMysql(vehicleRowsFromPayload(record.rows), {
       expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
-      allowLargeSnapshotShrink: allowLargeSnapshotShrinkFromPayload(record.allowLargeSnapshotShrink),
     });
     return json({ ok: true });
   }
   if (action === "savePatch") {
     await vehicles.saveVehicleRowsPatchToMysql(vehiclePatchRowsFromPayload(record.patchRows), {
       expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
-      allowLargeSnapshotShrink: allowLargeSnapshotShrinkFromPayload(record.allowLargeSnapshotShrink),
     });
     return json({ ok: true });
   }
   if (action === "replace") {
     await vehicles.replaceVehiclesInMysql(vehicleRowsFromPayload(record.rows), {
       expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
-      allowLargeSnapshotShrink: allowLargeSnapshotShrinkFromPayload(record.allowLargeSnapshotShrink),
     });
     return json({ ok: true });
   }

@@ -1,6 +1,6 @@
 import type { RowDataPacket } from "mysql2/promise";
-import { defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "../../domain/vehicles/defaults";
-import type { VehicleRowsPatchItem } from "../../domain/vehicles/persistence";
+import { normalizeVehicleRow } from "../../domain/vehicles/defaults";
+import { isUnexpectedLargeVehicleSnapshotShrink, type VehicleRowsPatchItem } from "../../domain/vehicles/persistence";
 import type { VehicleRow } from "../../domain/vehicles/types";
 import { DatabaseConflictError } from "../database/conflicts";
 import { dbExecute, dbRows, dbTransaction, type DbExecutor } from "./pool";
@@ -13,7 +13,6 @@ export type MysqlVehiclesState = {
 
 export type VehicleSnapshotWriteOptions = {
   expectedSnapshot?: VehicleRow[] | null;
-  allowLargeSnapshotShrink?: boolean;
 };
 
 export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
@@ -148,11 +147,8 @@ function createVehiclesShrinkGuardError() {
 function assertNoUnexpectedLargeVehicleSnapshotShrink(
   rows: VehicleRow[],
   baselineRows: VehicleRow[],
-  options: VehicleSnapshotReplaceOptions,
 ) {
-  if (options.allowLargeSnapshotShrink) return;
-  if (baselineRows.length <= defaultVehicleSeedReplaceLimit) return;
-  if (rows.length > defaultVehicleSeedReplaceLimit) return;
+  if (!isUnexpectedLargeVehicleSnapshotShrink(rows, baselineRows)) return;
 
   throw createVehiclesShrinkGuardError();
 }
@@ -217,7 +213,7 @@ export async function replaceVehiclesInMysql(rows: VehicleRow[], options: Vehicl
     const currentRows = current?.rows ?? [];
 
     await assertMysqlVehiclesMatchExpectedSnapshot(options.expectedSnapshot, execute, currentRows);
-    assertNoUnexpectedLargeVehicleSnapshotShrink(rows, Array.isArray(options.expectedSnapshot) ? options.expectedSnapshot : currentRows, options);
+    assertNoUnexpectedLargeVehicleSnapshotShrink(rows, Array.isArray(options.expectedSnapshot) ? options.expectedSnapshot : currentRows);
     await upsertVehiclesToMysql(rows, execute);
     await deleteVehiclesMissingFromMysqlSnapshot(rows, execute);
   });

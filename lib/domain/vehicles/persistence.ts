@@ -1,4 +1,4 @@
-import { normalizeVehicleRow } from "./defaults";
+import { defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "./defaults";
 import type { VehicleRow } from "./types";
 
 export type VehicleRowsPatchItem = {
@@ -36,6 +36,15 @@ export function vehicleRowsSnapshotEquals(leftRows: unknown[], rightRows: Vehicl
   const rightKey = JSON.stringify(rightRows.map((vehicle) => normalizeVehicleRow(vehicle)));
 
   return leftKey === rightKey;
+}
+
+export function isUnexpectedLargeVehicleSnapshotShrink(rows: VehicleRow[], baselineRows: VehicleRow[]) {
+  const removedRowsCount = baselineRows.length - rows.length;
+
+  if (baselineRows.length <= defaultVehicleSeedReplaceLimit) return false;
+  if (removedRowsCount <= 1) return false;
+
+  return true;
 }
 
 function hasSameVehicleOrder(currentRows: VehicleRow[], expectedRows: VehicleRow[]) {

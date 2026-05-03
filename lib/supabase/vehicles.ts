@@ -1,5 +1,5 @@
 import { normalizeVehicleRow } from "../domain/vehicles/defaults";
-import type { VehicleRowsPatchItem } from "../domain/vehicles/persistence";
+import { isUnexpectedLargeVehicleSnapshotShrink, type VehicleRowsPatchItem } from "../domain/vehicles/persistence";
 import type { VehicleRow } from "../domain/vehicles/types";
 import { supabase, supabaseConfigured } from "./client";
 
@@ -85,6 +85,10 @@ function vehicleSnapshotKey(rows: VehicleRow[]) {
   return JSON.stringify(rows.map((vehicle) => normalizeVehicleRow(vehicle)));
 }
 
+function createVehiclesShrinkGuardError() {
+  return new Error("Список техники не сохранен: защита остановила замену большого списка меньшим списком. Обновите страницу и повторите ручное действие.");
+}
+
 async function upsertVehiclesToSupabase(client: SupabaseVehiclesClient, records: VehicleRecord[]) {
   if (records.length === 0) return;
 
@@ -111,15 +115,23 @@ async function deleteVehiclesMissingFromSupabaseSnapshot(client: SupabaseVehicle
   if (error) throw error;
 }
 
-async function assertSupabaseVehiclesMatchExpectedSnapshot(expectedSnapshot: VehicleRow[] | null | undefined) {
+async function assertSupabaseVehiclesMatchExpectedSnapshot(
+  expectedSnapshot: VehicleRow[] | null | undefined,
+  currentRowsOverride?: VehicleRow[],
+) {
   if (!Array.isArray(expectedSnapshot)) return;
 
-  const current = await loadVehiclesFromSupabase();
-  const currentRows = current?.rows ?? [];
+  const currentRows = currentRowsOverride ?? (await loadVehiclesFromSupabase())?.rows ?? [];
 
   if (vehicleSnapshotKey(currentRows) !== vehicleSnapshotKey(expectedSnapshot)) {
     throw new Error("Vehicle list changed in database. Reload before replacing it.");
   }
+}
+
+function assertNoUnexpectedLargeVehicleSnapshotShrink(rows: VehicleRow[], baselineRows: VehicleRow[]) {
+  if (!isUnexpectedLargeVehicleSnapshotShrink(rows, baselineRows)) return;
+
+  throw createVehiclesShrinkGuardError();
 }
 
 export async function loadVehiclesFromSupabase(): Promise<SupabaseVehiclesState | null> {
@@ -164,12 +176,14 @@ export async function saveVehicleRowsPatchToSupabase(patchRows: VehicleRowsPatch
 }
 
 export async function replaceVehiclesInSupabase(rows: VehicleRow[], options: VehicleSnapshotReplaceOptions = {}) {
-  await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
+  const client = requireSupabase();
+  const currentRows = (await loadVehiclesFromSupabase())?.rows ?? [];
+
+  await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot, currentRows);
+  assertNoUnexpectedLargeVehicleSnapshotShrink(rows, Array.isArray(options.expectedSnapshot) ? options.expectedSnapshot : currentRows);
 
   const records = rows.map(vehicleToRecord);
   const vehicleIds = vehicleSnapshotIds(rows);
-  const client = requireSupabase();
-
   await upsertVehiclesToSupabase(client, records);
   await deleteVehiclesMissingFromSupabaseSnapshot(client, vehicleIds);
 }
