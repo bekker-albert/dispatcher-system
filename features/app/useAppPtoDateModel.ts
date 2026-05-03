@@ -1,7 +1,6 @@
 "use client";
 
 import { usePtoDateViewModel } from "@/features/pto/usePtoDateViewModel";
-import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { PtoBucketRowLookupSource } from "@/features/pto/ptoDateLookupModel";
 
@@ -18,7 +17,6 @@ type UseAppPtoDateModelOptions = {
   deferredPtoPlanRows: PtoPlanRow[];
   deferredPtoOperRows: PtoPlanRow[];
   deferredPtoSurveyRows: PtoPlanRow[];
-  ptoBucketManualRows: PtoBucketRow[];
 };
 
 export function useAppPtoDateModel(options: UseAppPtoDateModelOptions) {

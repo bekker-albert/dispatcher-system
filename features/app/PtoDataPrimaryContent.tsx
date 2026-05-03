@@ -94,7 +94,6 @@ function PtoDateDataPrimaryContent({
     deferredPtoPlanRows: models.deferredPtoPlanRows,
     deferredPtoOperRows: models.deferredPtoOperRows,
     deferredPtoSurveyRows: models.deferredPtoSurveyRows,
-    ptoBucketManualRows: appState.ptoBucketManualRows,
   });
   const ptoModels: AppPtoModels = { ...models, ...ptoDateModel };
 
