@@ -1,10 +1,6 @@
 import { assertSupabasePtoMatchesExpectedUpdatedAt } from "./pto-freshness";
 import { ptoSupabaseStateToRecords } from "./pto-records";
 import {
-  ptoDatabaseRequest,
-  shouldRoutePtoThroughServerDatabase,
-} from "./pto-routing";
-import {
   deletePtoBucketRowsMissingFromState,
   deletePtoBucketValuesMissingFromState,
   deletePtoDayValuesMissingFromState,
@@ -27,14 +23,6 @@ export async function savePtoStateToSupabase(
   state: SupabasePtoState,
   options: PtoSnapshotWriteOptions = {},
 ): Promise<PtoSnapshotWriteResult> {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("save", {
-      state,
-      expectedUpdatedAt: options.expectedUpdatedAt,
-      yearScope: options.yearScope,
-    });
-  }
-
   return savePtoStateToSupabaseClient(state, requireSupabase(), options);
 }
 

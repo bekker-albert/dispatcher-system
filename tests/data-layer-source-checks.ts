@@ -9,6 +9,9 @@ const dataPtoSource = readFileSync(resolve(testDir, "../lib/data/pto.ts"), "utf8
 const dataSettingsSource = readFileSync(resolve(testDir, "../lib/data/settings.ts"), "utf8");
 const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.ts"), "utf8");
 const supabaseAppStateSource = readFileSync(resolve(testDir, "../lib/supabase/app-state.ts"), "utf8");
+const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase/pto-commands.ts"), "utf8");
+const supabasePtoSnapshotLoadSource = readFileSync(resolve(testDir, "../lib/supabase/pto-snapshot-load.ts"), "utf8");
+const supabasePtoSnapshotSaveSource = readFileSync(resolve(testDir, "../lib/supabase/pto-snapshot-save.ts"), "utf8");
 const supabaseSettingsSource = readFileSync(resolve(testDir, "../lib/supabase/settings.ts"), "utf8");
 const supabaseVehiclesSource = readFileSync(resolve(testDir, "../lib/supabase/vehicles.ts"), "utf8");
 
@@ -35,6 +38,9 @@ assert.match(dataPtoSource, /return writePtoInline\(\s*"save-day",\s*\{/);
 assert.match(dataPtoSource, /return writePtoInline\(\s*"delete-bucket-values",\s*\{/);
 assert.equal((dataPtoSource.match(/function writePtoInline/g) ?? []).length, 1);
 assert.match(dataPtoSource, /import\("@\/lib\/supabase\/pto"\)/);
+assert.doesNotMatch(supabasePtoCommandsSource, /databaseRequest|shouldRoutePtoThroughServerDatabase|pto-routing/);
+assert.doesNotMatch(supabasePtoSnapshotLoadSource, /databaseRequest|shouldRoutePtoThroughServerDatabase|pto-routing/);
+assert.doesNotMatch(supabasePtoSnapshotSaveSource, /databaseRequest|shouldRoutePtoThroughServerDatabase|pto-routing/);
 
 assert.doesNotMatch(dataSettingsSource, /from ["']@\/lib\/supabase\/settings["']/);
 assert.match(dataSettingsSource, /serverDatabaseConfigured/);

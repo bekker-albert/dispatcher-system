@@ -246,7 +246,7 @@ assert.match(ptoDateTableContextSource, /savePtoDayValueWithRowToDatabase\(table
 assert.match(ptoDateTableContextSource, /savePtoDayValuesWithRowToDatabase\(table, row, values, \{\s*expectedUpdatedAt: getPtoDatabaseExpectedUpdatedAt\(\),\s*\}\)/);
 assert.match(ptoLinkedRowsEditorSource, /markPtoDatabaseInlineWriteSaved\(result\?\.updatedAt \?\? null,\s*\{[\s\S]*kind: "date-row"[\s\S]*action: "delete"[\s\S]*rowIds: \[row\.id\]/);
 assert.match(ptoYearEditorSource, /markPtoDatabaseInlineWriteSaved\(result\?\.updatedAt \?\? null,\s*\{[\s\S]*kind: "year"[\s\S]*action: "delete"[\s\S]*year,/);
-assert.match(supabasePtoCommandsSource, /expectedUpdatedAt: options\.expectedUpdatedAt/);
+assert.doesNotMatch(supabasePtoCommandsSource, /databaseRequest|shouldRoutePtoThroughServerDatabase|pto-routing/);
 assert.match(supabasePtoCommandsSource, /assertSupabasePtoInlineMatchesExpectedUpdatedAt\(options\.expectedUpdatedAt, client\)/);
 assert.match(supabasePtoCommandsSource, /supabasePtoInlineWriteResult\(client\)/);
 assert.match(supabasePtoFreshnessSource, /export async function assertSupabasePtoInlineMatchesExpectedUpdatedAt/);

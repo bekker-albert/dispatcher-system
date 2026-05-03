@@ -9,7 +9,6 @@ import {
   handleDatabaseOptions,
   handleDatabasePost,
 } from "../lib/server/database/router";
-import { shouldRoutePtoThroughServerDatabase } from "../lib/supabase/pto";
 import {
   createSharedAppSettingsDatabaseSnapshot,
   createSharedAppSettingsSaveDelta,
@@ -64,10 +63,6 @@ async function responseJson(response: Response) {
 }
 
 const origin = "https://aam-dispatch.kz";
-
-assert.equal(shouldRoutePtoThroughServerDatabase({ configured: true, hasWindow: true }), true);
-assert.equal(shouldRoutePtoThroughServerDatabase({ configured: true, hasWindow: false }), false);
-assert.equal(shouldRoutePtoThroughServerDatabase({ configured: false, hasWindow: true }), false);
 
 const settingsSnapshot = createSharedAppSettingsDatabaseSnapshot([
   { key: adminStorageKeys.reportCustomers, value: ["old"], updated_at: "2026-04-28T01:00:00.000Z" },

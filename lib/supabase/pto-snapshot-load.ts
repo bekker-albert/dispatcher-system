@@ -12,10 +12,6 @@ import {
   type PtoSettingRecord,
 } from "./pto-records";
 import {
-  ptoDatabaseRequest,
-  shouldRoutePtoThroughServerDatabase,
-} from "./pto-routing";
-import {
   ptoBucketRowsTable,
   ptoBucketValuesTable,
   ptoDayValuesTable,
@@ -219,10 +215,6 @@ function loadSupabasePtoBucketValues(client: ReturnType<typeof requireSupabase>)
 }
 
 export async function loadPtoStateFromSupabase(): Promise<SupabasePtoState | null> {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<SupabasePtoState | null>("load");
-  }
-
   const client = requireSupabase();
 
   const [ptoRows, ptoDayValues, { data: settings, error: settingsError }, ptoBucketRows, ptoBucketValues] = await Promise.all([
@@ -248,13 +240,6 @@ export async function loadPtoStateFromSupabaseForYear(
   year: string,
   options: PtoLoadScopeOptions = {},
 ): Promise<SupabasePtoState | null> {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<SupabasePtoState | null>("load-year", {
-      year,
-      includeBuckets: options.includeBuckets === true,
-    });
-  }
-
   const client = requireSupabase();
   const includeBuckets = options.includeBuckets === true;
   const [ptoDayValues, { data: settings, error: settingsError }, ptoBucketRows, ptoBucketValues] = await Promise.all([
@@ -277,18 +262,10 @@ export async function loadPtoStateFromSupabaseForYear(
 }
 
 export async function loadPtoUpdatedAtFromSupabase(): Promise<string | null | undefined> {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<string | null>("load-updated-at");
-  }
-
   return undefined;
 }
 
 export async function loadPtoBucketsFromSupabase(): Promise<PtoBucketsLoadResult> {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoBucketsLoadResult>("load-buckets");
-  }
-
   const client = requireSupabase();
   const [bucketRows, bucketValues] = await Promise.all([
     loadSupabasePtoBucketRows(client),

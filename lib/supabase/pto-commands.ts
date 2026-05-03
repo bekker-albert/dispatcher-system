@@ -10,10 +10,6 @@ import {
   splitPtoBucketCellKey,
 } from "../domain/pto/persistence-shared";
 import {
-  ptoDatabaseRequest,
-  shouldRoutePtoThroughServerDatabase,
-} from "./pto-routing";
-import {
   assertSupabasePtoInlineMatchesExpectedUpdatedAt,
   loadSupabasePtoCurrentUpdatedAt,
 } from "./pto-freshness";
@@ -110,10 +106,6 @@ export async function savePtoDayValueToSupabase(
   value: number | null,
   options: PtoSnapshotWriteOptions = {},
 ) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-day", { table, rowId, day, value, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   return savePtoDayValueToSupabaseClient(table, rowId, day, value, requireSupabase(), options);
 }
 
@@ -138,10 +130,6 @@ export async function savePtoDayValueWithRowToSupabase(
   value: number | null,
   options: PtoSnapshotWriteOptions = {},
 ) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-day-with-row", { table, row, day, value, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   return savePtoDayValueWithRowToSupabaseClient(table, row, day, value, requireSupabase(), options);
 }
 
@@ -157,10 +145,6 @@ export async function savePtoDayValuesToSupabaseClient(
 }
 
 export async function savePtoDayValuesToSupabase(table: SupabasePtoTable, values: PtoDayValuePatch[], options: PtoSnapshotWriteOptions = {}) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-days", { table, values, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   return savePtoDayValuesToSupabaseClient(table, values, requireSupabase(), options);
 }
 
@@ -187,18 +171,10 @@ export async function savePtoDayValuesWithRowToSupabase(
   values: PtoDayValuePatch[],
   options: PtoSnapshotWriteOptions = {},
 ) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-days-with-row", { table, row, values, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   return savePtoDayValuesWithRowToSupabaseClient(table, row, values, requireSupabase(), options);
 }
 
 export async function deletePtoRowsFromSupabase(table: SupabasePtoTable, rowIds: string[], options: PtoSnapshotWriteOptions = {}) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("delete", { table, rowIds, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   if (rowIds.length === 0) return;
   const client = requireSupabase();
   await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
@@ -220,10 +196,6 @@ export async function deletePtoRowsFromSupabase(table: SupabasePtoTable, rowIds:
 }
 
 export async function deletePtoYearFromSupabase(year: string, options: PtoSnapshotWriteOptions = {}) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("delete-year", { year, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   const client = requireSupabase();
   await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
   const { start, end } = ptoYearDateRange(year);
@@ -237,10 +209,6 @@ export async function deletePtoYearFromSupabase(year: string, options: PtoSnapsh
 }
 
 export async function savePtoBucketRowToSupabase(row: PtoBucketRow, sortIndex = 0, options: PtoSnapshotWriteOptions = {}) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-bucket-row", { row, sortIndex, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   const client = requireSupabase();
   await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
   await upsertPtoBucketRows([ptoBucketRowToRecord(row, sortIndex)], client);
@@ -248,10 +216,6 @@ export async function savePtoBucketRowToSupabase(row: PtoBucketRow, sortIndex = 
 }
 
 export async function deletePtoBucketRowFromSupabase(rowKeyValue: string, options: PtoSnapshotWriteOptions = {}) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("delete-bucket-row", { rowKey: rowKeyValue, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   const client = requireSupabase();
   await assertSupabasePtoInlineMatchesExpectedUpdatedAt(options.expectedUpdatedAt, client);
   const { error: valueError } = await client
@@ -269,10 +233,6 @@ export async function deletePtoBucketRowFromSupabase(rowKeyValue: string, option
 }
 
 export async function savePtoBucketValueToSupabase(cellKey: string, value: number | null, options: PtoSnapshotWriteOptions = {}) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("save-bucket-value", { cellKey, value, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   const parsed = splitPtoBucketCellKey(cellKey);
   if (!parsed) return;
 
@@ -305,9 +265,5 @@ export async function deletePtoBucketValuesFromSupabaseClient(
 }
 
 export async function deletePtoBucketValuesFromSupabase(cellKeys: string[], options: PtoSnapshotWriteOptions = {}) {
-  if (shouldRoutePtoThroughServerDatabase()) {
-    return ptoDatabaseRequest<PtoSnapshotWriteResult>("delete-bucket-values", { cellKeys, expectedUpdatedAt: options.expectedUpdatedAt });
-  }
-
   return deletePtoBucketValuesFromSupabaseClient(cellKeys, requireSupabase(), options);
 }

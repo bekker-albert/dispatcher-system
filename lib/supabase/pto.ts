@@ -5,7 +5,6 @@ export type {
   SupabasePtoRow,
   SupabasePtoState,
 } from "./pto-types";
-export { shouldRoutePtoThroughServerDatabase } from "./pto-routing";
 export {
   loadPtoBucketsFromSupabase,
   loadPtoStateFromSupabase,
