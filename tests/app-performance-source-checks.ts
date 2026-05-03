@@ -26,6 +26,8 @@ const ptoBucketValueCellSource = readFileSync(resolve(testDir, "../features/pto/
 const ptoBucketsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoBucketsPrimaryContent.tsx"), "utf8");
 const useAppPtoSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoSupplementalTables.ts"), "utf8");
 const useAppPtoBucketSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoBucketSupplementalTables.ts"), "utf8");
+const useAppPtoDateModelSource = readFileSync(resolve(testDir, "../features/app/useAppPtoDateModel.ts"), "utf8");
+const usePtoBucketsNavigationModelSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsNavigationModel.ts"), "utf8");
 const usePtoBucketsViewModelSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsViewModel.ts"), "utf8");
 const usePtoDateViewModelSource = readFileSync(resolve(testDir, "../features/pto/usePtoDateViewModel.ts"), "utf8");
 const ptoPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoPrimaryContent.tsx"), "utf8");
@@ -239,5 +241,12 @@ assert.match(usePtoDateViewModelSource, /isPtoDateTab \? yearMonths\(ptoPlanYear
 assert.match(usePtoDateViewModelSource, /if \(!isPtoDateTab \|\| !ptoDateEditing\) \{/);
 assert.match(usePtoDateViewModelSource, /createPtoAreaLookupSourceBundle/);
 assert.match(usePtoDateViewModelSource, /const activePtoAreaLookupBundle = useMemo/);
-assert.match(usePtoDateViewModelSource, /const ptoBucketReferenceLookupBundle = useMemo/);
-assert.doesNotMatch(usePtoDateViewModelSource, /createPtoAreaAndBucketRowLookupSourceBundle\(\[activePtoDateRows\]\)/);
+assert.doesNotMatch(usePtoDateViewModelSource, /createPtoAreaAndBucketRowLookupSourceBundle/);
+assert.doesNotMatch(usePtoDateViewModelSource, /ptoBucketManualRows/);
+assert.match(useAppPtoDateModelSource, /usePtoBucketsNavigationModel/);
+assert.match(useAppPtoDateModelSource, /isPtoBucketsSection: bucketModel\.isPtoBucketsSection/);
+assert.match(useAppPtoDateModelSource, /ptoAreaTabs: bucketModel\.isPtoBucketsSection \? bucketModel\.ptoBucketAreaTabs : dateModel\.ptoAreaTabs/);
+assert.match(usePtoBucketsNavigationModelSource, /const referenceLookupBundle = useMemo/);
+assert.match(usePtoBucketsNavigationModelSource, /createPtoAreaAndBucketRowLookupSourceBundle\(\[deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows\]\)/);
+assert.match(usePtoBucketsNavigationModelSource, /createPtoBucketAreaLookupSourceBundle\(ptoBucketManualRows\)/);
+assert.match(usePtoBucketsNavigationModelSource, /ptoBucketAreaTabs: ptoAreaTabs/);
