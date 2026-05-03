@@ -1,8 +1,8 @@
 import type { ReportColumnKey } from "../../lib/domain/reports/columns";
-import { delta, formatNumber, formatPercent } from "../../lib/domain/reports/display";
-import { reportAnnualFact, reportMonthFact, reportYearFact } from "../../lib/domain/reports/facts";
+import { formatNumber, formatPercent } from "../../lib/domain/reports/display";
 import { reportReason } from "../../lib/domain/reports/reasons";
 import type { ReportRow } from "../../lib/domain/reports/types";
+import { createReportRowFacts, type ReportRowFacts } from "./reportRowFactsModel";
 
 export type ReportColumnTextModel = {
   valuesByKey: Partial<Record<ReportColumnKey, string[]>>;
@@ -16,11 +16,7 @@ export function createEmptyReportColumnValueLists(columnKeys: readonly ReportCol
   return valuesByKey;
 }
 
-function reportColumnTextValue(row: ReportRow, key: ReportColumnKey, facts: {
-  annualFact: number;
-  monthFact: number;
-  yearFact: number;
-}) {
+function reportColumnTextValue(row: ReportRow, key: ReportColumnKey, facts: ReportRowFacts) {
   switch (key) {
     case "area":
       return row.area;
@@ -33,9 +29,9 @@ function reportColumnTextValue(row: ReportRow, key: ReportColumnKey, facts: {
     case "day-fact":
       return formatNumber(row.dayFact);
     case "day-delta":
-      return formatNumber(delta(row.dayPlan, row.dayFact));
+      return formatNumber(facts.dayDelta);
     case "day-productivity":
-      return `${formatNumber(row.dayProductivity || row.dayFact)}\n${formatPercent(row.dayFact, row.dayPlan)}`;
+      return `${formatNumber(facts.dayProductivity)}\n${formatPercent(row.dayFact, row.dayPlan)}`;
     case "day-reason":
       return reportReason(row.dayFact, row.dayPlan, row.dayReason);
     case "month-total-plan":
@@ -45,23 +41,23 @@ function reportColumnTextValue(row: ReportRow, key: ReportColumnKey, facts: {
     case "month-fact":
       return `${formatNumber(facts.monthFact)}\nмарк ${formatNumber(row.monthSurveyFact)}`;
     case "month-delta":
-      return formatNumber(delta(row.monthPlan, facts.monthFact));
+      return formatNumber(facts.monthDelta);
     case "month-productivity":
-      return `${formatNumber(row.monthProductivity || facts.monthFact)}\n${formatPercent(facts.monthFact, row.monthPlan)}`;
+      return `${formatNumber(facts.monthProductivity)}\n${formatPercent(facts.monthFact, row.monthPlan)}`;
     case "year-plan":
       return formatNumber(row.yearPlan);
     case "year-fact":
       return `${formatNumber(facts.yearFact)}\nмарк ${formatNumber(row.yearSurveyFact)}`;
     case "year-delta":
-      return formatNumber(delta(row.yearPlan, facts.yearFact));
+      return formatNumber(facts.yearDelta);
     case "year-reason":
-      return delta(row.yearPlan, facts.yearFact) < 0 ? row.yearReason : "";
+      return facts.yearDelta < 0 ? row.yearReason : "";
     case "annual-plan":
       return formatNumber(row.annualPlan);
     case "annual-fact":
       return formatNumber(facts.annualFact);
     case "annual-remaining":
-      return formatNumber(delta(row.annualPlan, facts.annualFact));
+      return formatNumber(facts.annualRemaining);
   }
 }
 
@@ -74,11 +70,7 @@ export function createReportColumnTextModel(
   if (!enabled) return { valuesByKey };
 
   rows.forEach((row) => {
-    const facts = {
-      annualFact: reportAnnualFact(row),
-      monthFact: reportMonthFact(row),
-      yearFact: reportYearFact(row),
-    };
+    const facts = createReportRowFacts(row);
 
     columnKeys.forEach((key) => {
       valuesByKey[key]?.push(reportColumnTextValue(row, key, facts));

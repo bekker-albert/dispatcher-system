@@ -1,7 +1,7 @@
 import { delta, formatNumber, formatPercent, formatReportWorkName, reportRowDisplayKey } from "../../lib/domain/reports/display";
-import { reportAnnualFact, reportMonthFact, reportYearFact } from "../../lib/domain/reports/facts";
 import { reportReasonEmptyOverride, reportReasonEntryKey, reportYearReasonOverrideKey } from "../../lib/domain/reports/reasons";
 import type { ReportRow } from "../../lib/domain/reports/types";
+import { createReportRowFacts } from "./reportRowFactsModel";
 
 type ReportCellTone = "good" | "bad" | "warn";
 
@@ -110,20 +110,18 @@ export function createReportRowDisplayViewModel({
   rowPrintIndex,
   yearReasonText,
 }: CreateReportRowDisplayViewModelInput): ReportRowDisplayViewModel {
-  const monthFactValue = reportMonthFact(row);
-  const yearFactValue = reportYearFact(row);
-  const annualFactValue = reportAnnualFact(row);
+  const facts = createReportRowFacts(row);
   const dayDelta = createDeltaViewModel(row.dayPlan, row.dayFact);
-  const monthDelta = createDeltaViewModel(row.monthPlan, monthFactValue);
-  const yearDelta = createDeltaViewModel(row.yearPlan, yearFactValue);
-  const annualRemaining = createDeltaViewModel(row.annualPlan, annualFactValue);
+  const monthDelta = createDeltaViewModel(row.monthPlan, facts.monthFact);
+  const yearDelta = createDeltaViewModel(row.yearPlan, facts.yearFact);
+  const annualRemaining = createDeltaViewModel(row.annualPlan, facts.annualFact);
   const rowKey = providedRowKey ?? reportRowDisplayKey(row);
   const dayReasonKey = reportReasonEntryKey(reportDate, rowKey);
   const yearReasonKey = reportYearReasonOverrideKey(reportDate, rowKey);
   const showAreaCell = rowIndexInGroup === 0;
 
   return {
-    annualFact: formatNumber(annualFactValue),
+    annualFact: formatNumber(facts.annualFact),
     annualPlan: formatNumber(row.annualPlan),
     annualRemaining,
     area: row.area,
@@ -133,7 +131,7 @@ export function createReportRowDisplayViewModel({
     dayPlan: formatNumber(row.dayPlan),
     dayProductivity: {
       note: formatPercent(row.dayFact, row.dayPlan),
-      value: formatNumber(row.dayProductivity || row.dayFact),
+      value: formatNumber(facts.dayProductivity),
     },
     dayReason: createReasonViewModel({
       fallbackText: row.dayReason,
@@ -145,12 +143,12 @@ export function createReportRowDisplayViewModel({
     monthDelta,
     monthFact: {
       note: `марк ${formatNumber(row.monthSurveyFact)}`,
-      value: formatNumber(monthFactValue),
+      value: formatNumber(facts.monthFact),
     },
     monthPlan: formatNumber(row.monthPlan),
     monthProductivity: {
-      note: formatPercent(monthFactValue, row.monthPlan),
-      value: formatNumber(row.monthProductivity || monthFactValue),
+      note: formatPercent(facts.monthFact, row.monthPlan),
+      value: formatNumber(facts.monthProductivity),
     },
     monthTotalPlan: formatNumber(row.monthTotalPlan),
     rowClassName: reportShouldFillPrintRows && rowPrintIndex >= reportBodyRowCount - reportLastPrintPageRows
@@ -163,7 +161,7 @@ export function createReportRowDisplayViewModel({
     yearDelta,
     yearFact: {
       note: `марк ${formatNumber(row.yearSurveyFact)}`,
-      value: formatNumber(yearFactValue),
+      value: formatNumber(facts.yearFact),
     },
     yearPlan: formatNumber(row.yearPlan),
     yearReason: createReasonViewModel({

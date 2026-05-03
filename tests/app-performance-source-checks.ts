@@ -48,6 +48,8 @@ const sharedNavigationSource = readFileSync(resolve(testDir, "../shared/ui/navig
 const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../components/shared/useTableResizeHandlers.ts"), "utf8");
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const reportColumnTextModelSource = readFileSync(resolve(testDir, "../features/reports/reportColumnTextModel.ts"), "utf8");
+const reportRowDisplayViewModelSource = readFileSync(resolve(testDir, "../features/reports/reportRowDisplayViewModel.ts"), "utf8");
+const reportRowFactsModelSource = readFileSync(resolve(testDir, "../features/reports/reportRowFactsModel.ts"), "utf8");
 const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
 const reportTableBodyModelSource = readFileSync(resolve(testDir, "../features/reports/reportTableBodyModel.ts"), "utf8");
 const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
@@ -117,6 +119,12 @@ assert.match(useDispatchSummaryViewModelSource, /const dispatchVehicleSelectOpti
 assert.equal((useDispatchSummaryViewModelSource.match(/buildVehicleDisplayName\(vehicle\)/g) ?? []).length, 1);
 assert.doesNotMatch(dispatchSectionSource, /buildVehicleDisplayName/);
 assert.doesNotMatch(dispatchSectionSource, /useMemo/);
+assert.match(reportRowFactsModelSource, /export function createReportRowFacts\(row: ReportRow\): ReportRowFacts/);
+assert.match(reportColumnTextModelSource, /createReportRowFacts\(row\)/);
+assert.match(reportPrintLayoutSource, /const facts = createReportRowFacts\(row\)/);
+assert.match(reportRowDisplayViewModelSource, /const facts = createReportRowFacts\(row\)/);
+assert.doesNotMatch(reportColumnTextModelSource, /reportMonthFact/);
+assert.doesNotMatch(reportPrintLayoutSource, /reportYearFact/);
 assert.match(useReportColumnLayoutSource, /createReportColumnTextModel\(filteredReports, visibleReportColumnKeys, needsDerivedReportRows\)/);
 assert.doesNotMatch(useReportColumnLayoutSource, /reportColumnKeys\.forEach\(\(key\) => \{/);
 assert.match(reportColumnTextModelSource, /createEmptyReportColumnValueLists\(columnKeys/);

@@ -1,8 +1,8 @@
 import { reportColumnKeys, type ReportColumnKey } from "../../lib/domain/reports/columns";
-import { delta, formatReportWorkName, reportRowDisplayKey } from "../../lib/domain/reports/display";
-import { reportYearFact } from "../../lib/domain/reports/facts";
+import { formatReportWorkName, reportRowDisplayKey } from "../../lib/domain/reports/display";
 import { reportReasonEntryKey, reportYearReasonTextWithManualOverride } from "../../lib/domain/reports/reasons";
 import type { ReportRow } from "../../lib/domain/reports/types";
+import { createReportRowFacts } from "./reportRowFactsModel";
 import { reportPrintProfile, type ReportPrintTextColumnKey } from "./reportPrintProfile";
 
 const reportPrintRowsPerPage = reportPrintProfile.rows.perPage;
@@ -119,9 +119,10 @@ export function createReportPrintLayout({
 
   groups.forEach((group) => {
     group.rows.forEach((row) => {
+      const facts = createReportRowFacts(row);
       addReportPrintTextScore("work-name", formatReportWorkName(row.name));
 
-      if (delta(row.dayPlan, row.dayFact) < 0) {
+      if (facts.dayDelta < 0) {
         const rowKey = reportRowDisplayKey(row);
         addReportPrintTextScore(
           "day-reason",
@@ -129,7 +130,7 @@ export function createReportPrintLayout({
         );
       }
 
-      if (delta(row.yearPlan, reportYearFact(row)) < 0) {
+      if (facts.yearDelta < 0) {
         addReportPrintTextScore("year-reason", reportPrintYearReasonText(row, reportDate, reportReasons));
       }
     });

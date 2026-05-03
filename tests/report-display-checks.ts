@@ -13,6 +13,7 @@ import { reportPrintProfile } from "../features/reports/reportPrintProfile";
 import { createReportTableBodyGroups } from "../features/reports/reportTableBodyModel";
 import { createCustomerReportRows, createReportAreaGroups, createReportAreaTabs, filterReportAreaGroups, flattenReportAreaGroups } from "../features/reports/customerReportRowsModel";
 import { createReportColumnTextModel } from "../features/reports/reportColumnTextModel";
+import { createReportRowFacts } from "../features/reports/reportRowFactsModel";
 import { createReportRowDisplayViewModel } from "../features/reports/reportRowDisplayViewModel";
 import { normalizePtoPlanRow } from "../lib/domain/pto/date-table";
 import type { ReportRow } from "../lib/domain/reports/types";
@@ -73,6 +74,17 @@ const reportColumnTextModel = createReportColumnTextModel([reportRow], ["area", 
 assert.deepEqual(Object.keys(reportColumnTextModel.valuesByKey), ["area", "day-productivity"]);
 assert.deepEqual(reportColumnTextModel.valuesByKey.area, ["Аксу"]);
 assert.equal(reportColumnTextModel.valuesByKey["day-productivity"]?.[0], "8\n80%");
+assert.deepEqual(createReportRowFacts(reportRow), {
+  annualFact: 8,
+  annualRemaining: -2,
+  dayDelta: -2,
+  dayProductivity: 8,
+  monthDelta: -2,
+  monthFact: 8,
+  monthProductivity: 8,
+  yearDelta: -2,
+  yearFact: 8,
+});
 
 const summary = reportDisplay.createReportSummaryRow({ id: "sum-1", label: "Итого", unit: "м3", area: "Аксу", rowKeys: [] }, [reportRow]);
 assert.equal(summary?.displayKey, "summary:sum-1");
