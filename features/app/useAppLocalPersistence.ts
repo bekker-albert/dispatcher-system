@@ -11,6 +11,10 @@ import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
+const appLocalSaveDelayMs = 300;
+const firstAppLocalSaveDelayMs = 1200;
+const firstAppLocalIdleTimeoutMs = 2000;
+
 type AppLocalPersistenceOptions = {
   adminDataLoaded: boolean;
   appDatabaseSaveSnapshotRef: RefObject<string>;
@@ -59,8 +63,10 @@ export function useAppLocalPersistence({
   adminLogs,
 }: AppLocalPersistenceOptions) {
   const appStateSaveTimerRef = useRef<number | null>(null);
+  const appStateSaveIdleRef = useRef<number | null>(null);
   const appStateSerializedByKeyRef = useRef<Record<string, string>>({});
   const appStateLocalBaselineInitializedRef = useRef(false);
+  const firstAppLocalSaveRef = useRef(true);
   const enqueueSharedDatabaseSave = useSharedDatabaseSaveQueue({
     appDatabaseSaveSnapshotRef,
     appSettingsDatabaseLoadedRef,
@@ -111,6 +117,26 @@ export function useAppLocalPersistence({
     createCurrentSharedState,
   ]);
 
+  const clearScheduledAppLocalStateSave = useCallback(() => {
+    if (appStateSaveTimerRef.current !== null) {
+      window.clearTimeout(appStateSaveTimerRef.current);
+      appStateSaveTimerRef.current = null;
+    }
+    if (appStateSaveIdleRef.current !== null) {
+      window.cancelIdleCallback?.(appStateSaveIdleRef.current);
+      appStateSaveIdleRef.current = null;
+    }
+  }, []);
+
+  const persistAppLocalState = useCallback((reason: string) => {
+    const savedLocalState: SharedAppStorageWriteResult = saveAppLocalState();
+
+    if (savedLocalState.changedKeys.length > 0) {
+      enqueueSharedDatabaseSave(savedLocalState);
+      requestClientSnapshotSave(reason);
+    }
+  }, [enqueueSharedDatabaseSave, requestClientSnapshotSave, saveAppLocalState]);
+
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
 
@@ -119,49 +145,45 @@ export function useAppLocalPersistence({
       appStateLocalBaselineInitializedRef.current = true;
     }
 
-    if (appStateSaveTimerRef.current !== null) {
-      window.clearTimeout(appStateSaveTimerRef.current);
-    }
+    clearScheduledAppLocalStateSave();
 
+    const isFirstSave = firstAppLocalSaveRef.current;
+    firstAppLocalSaveRef.current = false;
     appStateSaveTimerRef.current = window.setTimeout(() => {
-      const savedLocalState: SharedAppStorageWriteResult = saveAppLocalState();
-
-      if (savedLocalState.changedKeys.length > 0) {
-        enqueueSharedDatabaseSave(savedLocalState);
-        requestClientSnapshotSave("app-state-save");
-      }
       appStateSaveTimerRef.current = null;
-    }, 300);
+      const runSave = () => {
+        appStateSaveIdleRef.current = null;
+        persistAppLocalState("app-state-save");
+      };
+
+      if (isFirstSave && window.requestIdleCallback) {
+        appStateSaveIdleRef.current = window.requestIdleCallback(runSave, {
+          timeout: firstAppLocalIdleTimeoutMs,
+        });
+        return;
+      }
+
+      runSave();
+    }, isFirstSave ? firstAppLocalSaveDelayMs : appLocalSaveDelayMs);
 
     return () => {
-      if (appStateSaveTimerRef.current !== null) {
-        window.clearTimeout(appStateSaveTimerRef.current);
-        appStateSaveTimerRef.current = null;
-      }
+      clearScheduledAppLocalStateSave();
     };
   }, [
     adminDataLoaded,
-    enqueueSharedDatabaseSave,
-    requestClientSnapshotSave,
-    saveAppLocalState,
+    clearScheduledAppLocalStateSave,
+    persistAppLocalState,
   ]);
 
   useEffect(() => {
     if (!adminDataLoaded) return undefined;
 
     const flushAppLocalState = () => {
-      if (appStateSaveTimerRef.current !== null) {
-        window.clearTimeout(appStateSaveTimerRef.current);
-        appStateSaveTimerRef.current = null;
-      }
-      const savedLocalState = saveAppLocalState();
-      if (savedLocalState.changedKeys.length > 0) {
-        enqueueSharedDatabaseSave(savedLocalState);
-        requestClientSnapshotSave("app-state-pagehide");
-      }
+      clearScheduledAppLocalStateSave();
+      persistAppLocalState("app-state-pagehide");
     };
 
     window.addEventListener("pagehide", flushAppLocalState);
     return () => window.removeEventListener("pagehide", flushAppLocalState);
-  }, [adminDataLoaded, enqueueSharedDatabaseSave, requestClientSnapshotSave, saveAppLocalState]);
+  }, [adminDataLoaded, clearScheduledAppLocalStateSave, persistAppLocalState]);
 }

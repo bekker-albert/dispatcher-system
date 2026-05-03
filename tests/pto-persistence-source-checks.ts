@@ -170,9 +170,18 @@ assert.match(sharedDatabaseSaveQueueSource, /Данные на сервере и
 assert.match(sharedDatabaseSaveQueueSource, /Сохранение в базу не прошло\. Повторю автоматически через/);
 assert.match(sharedDatabaseSaveQueueSource, /return useCallback\(\(savedLocalState: SharedAppStorageWriteResult\) => \{[\s\S]*sharedDatabaseSaveQueueRef\.current = \{[\s\S]*storage: savedLocalState\.storage,[\s\S]*settings: savedLocalState\.settings,[\s\S]*void runSharedDatabaseSaveQueue\(\);/);
 assert.match(appLocalPersistenceSource, /import \{ useSharedDatabaseSaveQueue \} from "@\/features\/app\/useSharedDatabaseSaveQueue";/);
-assert.match(appLocalPersistenceSource, /if \(savedLocalState\.changedKeys\.length > 0\) \{[\s\S]*enqueueSharedDatabaseSave\(savedLocalState\);[\s\S]*requestClientSnapshotSave\("app-state-save"\);/);
+assert.match(appLocalPersistenceSource, /const appLocalSaveDelayMs = 300;/);
+assert.match(appLocalPersistenceSource, /const firstAppLocalSaveDelayMs = 1200;/);
+assert.match(appLocalPersistenceSource, /const firstAppLocalIdleTimeoutMs = 2000;/);
+assert.match(appLocalPersistenceSource, /const appStateSaveIdleRef = useRef<number \| null>\(null\);/);
+assert.match(appLocalPersistenceSource, /const firstAppLocalSaveRef = useRef\(true\);/);
+assert.match(appLocalPersistenceSource, /window\.cancelIdleCallback\?\.\(appStateSaveIdleRef\.current\)/);
+assert.match(appLocalPersistenceSource, /const persistAppLocalState = useCallback\(\(reason: string\) => \{[\s\S]*if \(savedLocalState\.changedKeys\.length > 0\) \{[\s\S]*enqueueSharedDatabaseSave\(savedLocalState\);[\s\S]*requestClientSnapshotSave\(reason\);/);
+assert.match(appLocalPersistenceSource, /if \(isFirstSave && window\.requestIdleCallback\) \{[\s\S]*window\.requestIdleCallback\(runSave, \{[\s\S]*timeout: firstAppLocalIdleTimeoutMs/);
+assert.match(appLocalPersistenceSource, /isFirstSave \? firstAppLocalSaveDelayMs : appLocalSaveDelayMs/);
+assert.match(appLocalPersistenceSource, /persistAppLocalState\("app-state-save"\)/);
 assert.match(appLocalPersistenceSource, /window\.addEventListener\("pagehide", flushAppLocalState\)/);
-assert.match(appLocalPersistenceSource, /const savedLocalState = saveAppLocalState\(\);[\s\S]*if \(savedLocalState\.changedKeys\.length > 0\) \{[\s\S]*enqueueSharedDatabaseSave\(savedLocalState\);[\s\S]*requestClientSnapshotSave\("app-state-pagehide"\);/);
+assert.match(appLocalPersistenceSource, /clearScheduledAppLocalStateSave\(\);[\s\S]*persistAppLocalState\("app-state-pagehide"\);/);
 
 assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatch\(rowToSave, day, parsedValue\);\s*requestSave\(\);/);
 assert.match(ptoDateRowValueEditorSource, /if \(rowToSave\) saveDayPatches\(rowToSave, patches\);\s*requestSave\(\);/);
