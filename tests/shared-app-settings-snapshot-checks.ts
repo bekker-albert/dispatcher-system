@@ -6,7 +6,12 @@ import {
   parseSharedAppSettingsDatabaseSnapshot,
   serializeSharedAppSettingsDatabaseSnapshot,
 } from "../lib/domain/app/shared-settings-snapshot";
-import { parseSharedAppSettingsFromSerializedStorage } from "../features/app/sharedAppStorage";
+import {
+  createSharedAppStorageSerializationCache,
+  parseSharedAppSettingsFromSerializedStorage,
+  type SharedAppStorageState,
+  writeSharedAppStateToBrowserStorage,
+} from "../features/app/sharedAppStorage";
 import { adminStorageKeys } from "../lib/storage/keys";
 
 assert.deepEqual(parseSharedAppSettingsDatabaseSnapshot(""), { values: {}, updatedAtByKey: {} });
@@ -84,3 +89,56 @@ assert.deepEqual(parseSharedAppSettingsDatabaseSnapshot(updatedSnapshot), {
     [adminStorageKeys.reportReasons]: "2026-04-28T01:01:00.000Z",
   },
 });
+
+const sharedStateFixture: SharedAppStorageState = {
+  reportCustomers: [{ id: "aam" }],
+  reportAreaOrder: ["Аксу"],
+  reportWorkOrder: {},
+  reportHeaderLabels: {},
+  reportColumnWidths: {},
+  reportReasons: {},
+  areaShiftCutoffs: {},
+  customTabs: [],
+  topTabs: [],
+  subTabs: {},
+  dispatchSummaryRows: [],
+  orgMembers: [],
+  dependencyNodes: [],
+  dependencyLinks: [],
+  adminLogs: [],
+};
+const storageWrites: Record<string, string> = {};
+const testGlobal = globalThis as typeof globalThis & { window?: unknown };
+const originalWindow = testGlobal.window;
+
+Object.defineProperty(globalThis, "window", {
+  configurable: true,
+  value: {
+    localStorage: {
+      setItem(key: string, value: string) {
+        storageWrites[key] = value;
+      },
+      getItem(key: string) {
+        return storageWrites[key] ?? null;
+      },
+    },
+  },
+});
+
+try {
+  const cache = createSharedAppStorageSerializationCache();
+  const firstWrite = writeSharedAppStateToBrowserStorage(sharedStateFixture, cache);
+  assert.ok(firstWrite.changedKeys.includes(adminStorageKeys.reportCustomers));
+  assert.equal(storageWrites[adminStorageKeys.reportCustomers], JSON.stringify(sharedStateFixture.reportCustomers));
+
+  for (const key of Object.keys(storageWrites)) delete storageWrites[key];
+
+  const secondWrite = writeSharedAppStateToBrowserStorage(sharedStateFixture, cache);
+  assert.deepEqual(secondWrite.changedKeys, []);
+  assert.deepEqual(storageWrites, {});
+} finally {
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: originalWindow,
+  });
+}

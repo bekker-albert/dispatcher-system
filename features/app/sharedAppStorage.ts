@@ -26,6 +26,12 @@ export type SharedAppStorageWriteResult = {
   failedLocalKeys: string[];
 };
 
+export type SharedAppStorageSerializationCache = {
+  writtenByKey: Record<string, string>;
+  serializedByKey: Record<string, string>;
+  refsByKey: Record<string, unknown>;
+};
+
 const sharedAppStateEntries = [
   [adminStorageKeys.reportCustomers, "reportCustomers"],
   [adminStorageKeys.reportAreaOrder, "reportAreaOrder"],
@@ -48,12 +54,38 @@ function stringifyStorageValue(value: unknown) {
   return JSON.stringify(value) ?? "null";
 }
 
-export function serializeSharedAppState(state: SharedAppStorageState) {
+export function createSharedAppStorageSerializationCache(
+  writtenByKey: Record<string, string> = {},
+): SharedAppStorageSerializationCache {
+  return {
+    writtenByKey: { ...writtenByKey },
+    serializedByKey: { ...writtenByKey },
+    refsByKey: {},
+  };
+}
+
+export function serializeSharedAppState(
+  state: SharedAppStorageState,
+  cache?: SharedAppStorageSerializationCache,
+) {
   return Object.fromEntries(
-    sharedAppStateEntries.map(([storageKey, stateKey]) => [
-      storageKey,
-      stringifyStorageValue(state[stateKey]),
-    ] as const),
+    sharedAppStateEntries.map(([storageKey, stateKey]) => {
+      const value = state[stateKey];
+      if (
+        cache &&
+        cache.refsByKey[storageKey] === value &&
+        cache.serializedByKey[storageKey] !== undefined
+      ) {
+        return [storageKey, cache.serializedByKey[storageKey]] as const;
+      }
+
+      const serialized = stringifyStorageValue(value);
+      if (cache) {
+        cache.refsByKey[storageKey] = value;
+        cache.serializedByKey[storageKey] = serialized;
+      }
+      return [storageKey, serialized] as const;
+    }),
   );
 }
 
@@ -79,15 +111,15 @@ export function parseSharedAppSettingsFromSerializedStorage(
 
 export function writeSharedAppStateToBrowserStorage(
   state: SharedAppStorageState,
-  lastSerializedByKey?: Record<string, string>,
+  cache?: SharedAppStorageSerializationCache,
 ): SharedAppStorageWriteResult {
-  const storage = serializeSharedAppState(state);
+  const storage = serializeSharedAppState(state, cache);
   const changedKeys: string[] = [];
   const failedLocalKeys: string[] = [];
 
   for (const [storageKey] of sharedAppStateEntries) {
     const serialized = storage[storageKey];
-    if (lastSerializedByKey?.[storageKey] === serialized) continue;
+    if (cache?.writtenByKey[storageKey] === serialized) continue;
 
     try {
       window.localStorage.setItem(storageKey, serialized);
@@ -96,8 +128,8 @@ export function writeSharedAppStateToBrowserStorage(
       failedLocalKeys.push(storageKey);
     }
 
-    if (lastSerializedByKey && !failedLocalKeys.includes(storageKey)) {
-      lastSerializedByKey[storageKey] = serialized;
+    if (cache && !failedLocalKeys.includes(storageKey)) {
+      cache.writtenByKey[storageKey] = serialized;
     }
     changedKeys.push(storageKey);
   }

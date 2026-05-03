@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import {
   collectSharedAppStorageFromBrowserStorage,
+  createSharedAppStorageSerializationCache,
+  type SharedAppStorageSerializationCache,
   type SharedAppStorageWriteResult,
   writeSharedAppStateToBrowserStorage,
 } from "@/features/app/sharedAppStorage";
@@ -64,7 +66,9 @@ export function useAppLocalPersistence({
 }: AppLocalPersistenceOptions) {
   const appStateSaveTimerRef = useRef<number | null>(null);
   const appStateSaveIdleRef = useRef<number | null>(null);
-  const appStateSerializedByKeyRef = useRef<Record<string, string>>({});
+  const appStateStorageCacheRef = useRef<SharedAppStorageSerializationCache>(
+    createSharedAppStorageSerializationCache(),
+  );
   const appStateLocalBaselineInitializedRef = useRef(false);
   const firstAppLocalSaveRef = useRef(true);
   const enqueueSharedDatabaseSave = useSharedDatabaseSaveQueue({
@@ -111,7 +115,7 @@ export function useAppLocalPersistence({
   const saveAppLocalState = useCallback(() => {
     return writeSharedAppStateToBrowserStorage(
       createCurrentSharedState(),
-      appStateSerializedByKeyRef.current,
+      appStateStorageCacheRef.current,
     );
   }, [
     createCurrentSharedState,
@@ -141,7 +145,9 @@ export function useAppLocalPersistence({
     if (!adminDataLoaded) return undefined;
 
     if (!appStateLocalBaselineInitializedRef.current) {
-      appStateSerializedByKeyRef.current = collectSharedAppStorageFromBrowserStorage();
+      appStateStorageCacheRef.current = createSharedAppStorageSerializationCache(
+        collectSharedAppStorageFromBrowserStorage(),
+      );
       appStateLocalBaselineInitializedRef.current = true;
     }
 
