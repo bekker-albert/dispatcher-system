@@ -13,7 +13,9 @@ function expectedVehicleSnapshotFromPayload(value: unknown) {
 }
 
 function allowLargeSnapshotShrinkFromPayload(value: unknown) {
-  return typeof value === "boolean" ? requirePayloadBoolean(value, "allowLargeSnapshotShrink") : undefined;
+  return value === null || value === undefined
+    ? undefined
+    : requirePayloadBoolean(value, "allowLargeSnapshotShrink");
 }
 
 function vehiclePatchRowsFromPayload(value: unknown): VehicleRowsPatchItem[] {

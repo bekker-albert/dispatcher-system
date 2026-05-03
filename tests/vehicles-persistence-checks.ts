@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
-import { createVehicleRowsSavePlan, shouldBlockVehicleRowsAutoSave } from "../lib/domain/vehicles/persistence";
+import { createVehicleRowsSavePlan, shouldBlockVehicleRowsAutoSave, vehicleRowsSnapshotEquals } from "../lib/domain/vehicles/persistence";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.ts"), "utf8");
@@ -36,14 +36,15 @@ assert.match(
 assert.doesNotMatch(mysqlVehiclesSource, /WHERE vehicle_id NOT IN/);
 
 const mysqlReplaceSource = exportedFunctionSource(mysqlVehiclesSource, "replaceVehiclesInMysql");
-assert.match(mysqlReplaceSource, /assertMysqlVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot,\s*execute\)/);
 assert.match(mysqlReplaceSource, /dbTransaction/);
-assert.match(mysqlReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\(rows,\s*options\)/);
+assert.match(mysqlReplaceSource, /loadVehiclesFromMysqlWithExecutor\(execute,\s*true\)/);
+assert.match(mysqlReplaceSource, /assertMysqlVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot,\s*execute,\s*currentRows\)/);
+assert.match(mysqlReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\(rows,\s*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows,\s*options\)/);
 assert.match(mysqlReplaceSource, /upsertVehiclesToMysql\(rows,\s*execute\)/);
 assert.match(mysqlReplaceSource, /deleteVehiclesMissingFromMysqlSnapshot\(rows,\s*execute\)/);
 assert.match(mysqlVehiclesSource, /defaultVehicleSeedReplaceLimit/);
 assert.match(mysqlVehiclesSource, /function assertNoUnexpectedLargeVehicleSnapshotShrink/);
-assert.match(mysqlVehiclesSource, /if \(options\.expectedSnapshot\.length <= defaultVehicleSeedReplaceLimit\) return;/);
+assert.match(mysqlVehiclesSource, /baselineRows\.length <= defaultVehicleSeedReplaceLimit/);
 assert.match(mysqlVehiclesSource, /if \(rows\.length > defaultVehicleSeedReplaceLimit\) return;/);
 assert.match(mysqlVehiclesSource, /vehicleSnapshotKey\(currentRows\) !== vehicleSnapshotKey\(expectedSnapshot\)/);
 assert.match(mysqlVehiclesSource, /FOR UPDATE/);
@@ -78,6 +79,7 @@ assert.doesNotMatch(supabaseVehiclesSource, /databaseRequest/);
 assert.doesNotMatch(supabaseVehiclesSource, /serverDatabaseConfigured/);
 assert.match(databaseVehiclesSource, /function expectedVehicleSnapshotFromPayload/);
 assert.match(databaseVehiclesSource, /function allowLargeSnapshotShrinkFromPayload/);
+assert.match(databaseVehiclesSource, /return value === null \|\| value === undefined[\s\S]*requirePayloadBoolean\(value, "allowLargeSnapshotShrink"\)/);
 assert.equal((databaseVehiclesSource.match(/allowLargeSnapshotShrink: allowLargeSnapshotShrinkFromPayload\(record\.allowLargeSnapshotShrink\)/g) ?? []).length, 3);
 assert.equal((databaseVehiclesSource.match(/expectedSnapshot: expectedVehicleSnapshotFromPayload\(record\.expectedSnapshot\)/g) ?? []).length, 3);
 assert.doesNotMatch(vehicleRowsEditorSource, /deleteVehicleFromDatabase/);
@@ -108,6 +110,9 @@ assert.doesNotMatch(vehicleRowsPersistenceSource, /JSON\.stringify\(vehicleRowsR
 assert.match(vehicleRowsPersistenceSource, /shouldBlockVehicleRowsAutoSave\(snapshot, databaseAutoSaveBlockedSnapshotRef\.current\)/);
 assert.match(vehicleRowsPersistenceSource, /if \(localBackupChanged && !autoSaveBlocked\) \{\s*requestClientSnapshotSave\("vehicles-save"\);/);
 assert.match(initialVehicleRowsSource, /databaseRowsCount > savedVehicles\.length/);
+assert.match(initialVehicleRowsSource, /function shouldTrustLocalVehicleRows/);
+assert.match(initialVehicleRowsSource, /vehicleRowsSnapshotEquals\(savedVehicles, defaultVehicleSeed\)/);
+assert.match(initialVehicleRowsSource, /shouldTrustLocalVehicleRows\(savedVehicles, databaseVehicles\.rows, defaultVehicleSeed\.vehicles\)/);
 assert.match(initialVehicleRowsSource, /vehiclesDatabaseAutoSaveBlockedSnapshotRef\.current = JSON\.stringify\(defaultVehicleSeed\.vehicles\)/);
 assert.match(initialVehicleRowsSource, /vehiclesDatabaseAutoSaveBlockedSnapshotRef\.current = JSON\.stringify\(normalizedRows\)/);
 assert.match(vehicleRowsPersistenceSource, /readVehicleRowsLocalBackup\(\)/);
@@ -135,3 +140,6 @@ assert.equal(createVehicleRowsSavePlan([vehicleOne, vehicleTwo], [vehicleOne, ve
 assert.equal(shouldBlockVehicleRowsAutoSave("[1,2]", "[1,2]"), true);
 assert.equal(shouldBlockVehicleRowsAutoSave("[1,2]", "[1,3]"), false);
 assert.equal(shouldBlockVehicleRowsAutoSave("[1,2]", ""), false);
+assert.equal(vehicleRowsSnapshotEquals([vehicleOne, vehicleTwo], [vehicleOne, vehicleTwo]), true);
+assert.equal(vehicleRowsSnapshotEquals([vehicleOne], [vehicleOne, vehicleTwo]), false);
+assert.equal(vehicleRowsSnapshotEquals([vehicleOne, vehicleTwo], [vehicleTwo, vehicleOne]), false);

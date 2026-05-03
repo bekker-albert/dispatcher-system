@@ -1,6 +1,7 @@
 "use client";
 
 import { defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "../../../lib/domain/vehicles/defaults";
+import { vehicleRowsSnapshotEquals } from "../../../lib/domain/vehicles/persistence";
 import type { VehicleRow } from "../../../lib/domain/vehicles/types";
 import { adminStorageKeys } from "../../../lib/storage/keys";
 import { loadDefaultVehicleSeed } from "./lib/defaultVehicleSeed";
@@ -77,6 +78,18 @@ function saveDatabaseVehicleRowsBackup(rows: VehicleRow[], updatedAt: string | n
   return snapshot;
 }
 
+function shouldTrustLocalVehicleRows(
+  savedVehicles: unknown,
+  databaseVehicles: VehicleRow[],
+  defaultVehicleSeed: VehicleRow[] | null,
+) {
+  if (!Array.isArray(savedVehicles)) return false;
+  if (savedVehicles.length <= defaultVehicleSeedReplaceLimit && databaseVehicles.length > savedVehicles.length) return false;
+  if (defaultVehicleSeed && vehicleRowsSnapshotEquals(savedVehicles, defaultVehicleSeed)) return false;
+
+  return true;
+}
+
 export async function loadInitialVehicleRows({
   savedVehicles,
   isCancelled,
@@ -99,6 +112,9 @@ export async function loadInitialVehicleRows({
       if (isCancelled()) return { completed: false, rows: null, usedSeed: false };
 
       if (databaseVehicles?.rows.length) {
+        const defaultVehicleSeed = await loadDefaultVehicleSeed();
+        if (isCancelled()) return { completed: false, rows: null, usedSeed: false };
+
         vehiclesDatabaseSaveSnapshotRef.current = JSON.stringify(databaseVehicles.rows);
 
         const vehicleRowsSource = resolveInitialVehicleRowsSource({
@@ -109,7 +125,7 @@ export async function loadInitialVehicleRows({
           appLocalUpdatedAt: window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt),
         });
 
-        if (vehicleRowsSource === "local") {
+        if (vehicleRowsSource === "local" && shouldTrustLocalVehicleRows(savedVehicles, databaseVehicles.rows, defaultVehicleSeed.vehicles)) {
           shouldSkipVehicleSeed = true;
         } else {
           nextSavedVehicles = databaseVehicles.rows;

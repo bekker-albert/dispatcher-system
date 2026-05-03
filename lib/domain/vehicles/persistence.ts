@@ -29,6 +29,15 @@ export function shouldBlockVehicleRowsAutoSave(snapshot: string, blockedSnapshot
   return blockedSnapshot.length > 0 && snapshot === blockedSnapshot;
 }
 
+export function vehicleRowsSnapshotEquals(leftRows: unknown[], rightRows: VehicleRow[]) {
+  if (leftRows.length !== rightRows.length) return false;
+
+  const leftKey = JSON.stringify(leftRows.map((vehicle) => normalizeVehicleRow(vehicle)));
+  const rightKey = JSON.stringify(rightRows.map((vehicle) => normalizeVehicleRow(vehicle)));
+
+  return leftKey === rightKey;
+}
+
 function hasSameVehicleOrder(currentRows: VehicleRow[], expectedRows: VehicleRow[]) {
   return currentRows.length === expectedRows.length
     && currentRows.every((vehicle, index) => vehicle.id === expectedRows[index]?.id);
