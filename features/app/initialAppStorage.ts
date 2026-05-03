@@ -29,6 +29,8 @@ type ReadInitialStoredAppStateOptions = {
   includePto?: boolean;
 };
 
+export type InitialStoredAppState = ReturnType<typeof readInitialStoredAppState>;
+
 function readStoredValue(key: string) {
   const storedValue = window.localStorage.getItem(key);
   if (!storedValue) return null;
@@ -39,6 +41,20 @@ function readStoredValue(key: string) {
     window.localStorage.removeItem(key);
     return null;
   }
+}
+
+function parseStoredValue(value: string | null | undefined) {
+  if (!value) return null;
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function initialStorageKeysForOptions({ includePto = true }: ReadInitialStoredAppStateOptions = {}) {
+  return includePto ? [...initialAppStorageKeys, ...initialPtoStorageKeys] : initialAppStorageKeys;
 }
 
 export function hasInitialLocalAppState() {
@@ -66,6 +82,27 @@ function readInitialSharedStoredState() {
   };
 }
 
+function parseInitialSharedStoredState(storage: Record<string, string>) {
+  return {
+    savedReportCustomers: parseStoredValue(storage[adminStorageKeys.reportCustomers]),
+    savedReportAreaOrder: parseStoredValue(storage[adminStorageKeys.reportAreaOrder]),
+    savedReportWorkOrder: parseStoredValue(storage[adminStorageKeys.reportWorkOrder]),
+    savedReportHeaderLabels: parseStoredValue(storage[adminStorageKeys.reportHeaderLabels]),
+    savedReportColumnWidths: parseStoredValue(storage[adminStorageKeys.reportColumnWidths]),
+    savedReportReasons: parseStoredValue(storage[adminStorageKeys.reportReasons]),
+    savedAreaShiftCutoffs: parseStoredValue(storage[adminStorageKeys.areaShiftCutoffs]),
+    savedCustomTabs: parseStoredValue(storage[adminStorageKeys.customTabs]),
+    savedTopTabs: parseStoredValue(storage[adminStorageKeys.topTabs]),
+    savedSubTabs: parseStoredValue(storage[adminStorageKeys.subTabs]),
+    savedVehicles: parseStoredValue(storage[adminStorageKeys.vehicles]),
+    savedDispatchSummaryRows: parseStoredValue(storage[adminStorageKeys.dispatchSummaryRows]),
+    savedOrgMembers: parseStoredValue(storage[adminStorageKeys.orgMembers]),
+    savedDependencyNodes: parseStoredValue(storage[adminStorageKeys.dependencyNodes]),
+    savedDependencyLinks: parseStoredValue(storage[adminStorageKeys.dependencyLinks]),
+    savedAdminLogs: parseStoredValue(storage[adminStorageKeys.adminLogs]),
+  };
+}
+
 export function readInitialStoredPtoState() {
   return {
     savedPtoYears: readStoredValue(adminStorageKeys.ptoYears),
@@ -77,6 +114,53 @@ export function readInitialStoredPtoState() {
     savedPtoHeaderLabels: readStoredValue(adminStorageKeys.ptoHeaderLabels),
     savedPtoBucketValues: readStoredValue(adminStorageKeys.ptoBucketValues),
     savedPtoBucketRows: readStoredValue(adminStorageKeys.ptoBucketRows),
+  };
+}
+
+function parseInitialStoredPtoState(storage: Record<string, string>) {
+  return {
+    savedPtoYears: parseStoredValue(storage[adminStorageKeys.ptoYears]),
+    savedPtoPlanRows: parseStoredValue(storage[adminStorageKeys.ptoPlanRows]),
+    savedPtoSurveyRows: parseStoredValue(storage[adminStorageKeys.ptoSurveyRows]),
+    savedPtoOperRows: parseStoredValue(storage[adminStorageKeys.ptoOperRows]),
+    savedPtoColumnWidths: parseStoredValue(storage[adminStorageKeys.ptoColumnWidths]),
+    savedPtoRowHeights: parseStoredValue(storage[adminStorageKeys.ptoRowHeights]),
+    savedPtoHeaderLabels: parseStoredValue(storage[adminStorageKeys.ptoHeaderLabels]),
+    savedPtoBucketValues: parseStoredValue(storage[adminStorageKeys.ptoBucketValues]),
+    savedPtoBucketRows: parseStoredValue(storage[adminStorageKeys.ptoBucketRows]),
+  };
+}
+
+export function collectInitialStoredAppStorage(options: ReadInitialStoredAppStateOptions = {}) {
+  return Object.fromEntries(
+    initialStorageKeysForOptions(options).flatMap((key) => {
+      const value = window.localStorage.getItem(key);
+      return value === null ? [] : [[key, value] as const];
+    }),
+  );
+}
+
+export function parseInitialStoredAppStateFromStorage(
+  storage: Record<string, string>,
+  {
+    includePto = true,
+  }: ReadInitialStoredAppStateOptions = {},
+) {
+  return {
+    ...parseInitialSharedStoredState(storage),
+    ...(includePto
+      ? parseInitialStoredPtoState(storage)
+      : {
+          savedPtoYears: null,
+          savedPtoPlanRows: null,
+          savedPtoSurveyRows: null,
+          savedPtoOperRows: null,
+          savedPtoColumnWidths: null,
+          savedPtoRowHeights: null,
+          savedPtoHeaderLabels: null,
+          savedPtoBucketValues: null,
+          savedPtoBucketRows: null,
+        }),
   };
 }
 

@@ -183,8 +183,8 @@ export async function runInitialAppDataLoad(
       });
       if (!databaseBootstrap.completed) return;
 
-      if (databaseBootstrap.storageChanged) {
-        storedState = readInitialStoredAppState({ includePto: false });
+      if (databaseBootstrap.storageChanged && databaseBootstrap.storedState) {
+        storedState = databaseBootstrap.storedState;
         initialReportState = applySharedState(storedState);
       }
       if (!isCancelled()) setPtoDatabaseLoadStarted(true);

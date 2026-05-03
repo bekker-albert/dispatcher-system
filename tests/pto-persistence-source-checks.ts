@@ -45,6 +45,8 @@ assert.match(initialAppStorageSource, /const initialMeaningfulAppStorageKeys = i
 assert.match(initialAppStorageSource, /key !== adminStorageKeys\.vehiclesLocalUpdatedAt/);
 assert.match(initialAppStorageSource, /key !== adminStorageKeys\.vehiclesSeedVersion/);
 assert.match(initialAppStorageSource, /initialMeaningfulAppStorageKeys\.some\(\(key\) => window\.localStorage\.getItem\(key\) !== null\)/);
+assert.match(initialAppStorageSource, /export function collectInitialStoredAppStorage/);
+assert.match(initialAppStorageSource, /export function parseInitialStoredAppStateFromStorage/);
 assert.match(ptoDatabaseLoadSource, /runPtoDatabaseLoadOnce\(\{[\s\S]*isCancelled: \(\) => cancelled,[\s\S]*\}\)/);
 assert.doesNotMatch(ptoDatabaseLoadSource, /\n\s*options,\n\s*\]\);/);
 assert.match(ptoDatabaseLoadRunnerSource, /const includeBuckets = ptoTab === "buckets";/);

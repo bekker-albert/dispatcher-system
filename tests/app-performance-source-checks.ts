@@ -155,7 +155,13 @@ assert.match(appPrimaryContentSource, /useAppSectionPreloader\(true, \{ includeP
 assert.match(reportsPrimaryContentSource, /databaseSyncMessage=\{databaseConfigured && !appState\.ptoDatabaseReady \? appState\.ptoDatabaseMessage : ""\}/);
 assert.match(reportsSectionSource, /databaseSyncMessage\?: string;/);
 assert.match(initialAppDatabaseBootstrapSource, /storageChanged: boolean/);
-assert.match(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged\) \{\s*storedState = readInitialStoredAppState\(\{ includePto: false \}\);\s*initialReportState = applySharedState\(storedState\);\s*\}/);
+assert.match(initialAppDatabaseBootstrapSource, /storedState: InitialStoredAppState \| null/);
+assert.match(initialAppDatabaseBootstrapSource, /const resolvedStorage = collectInitialStoredAppStorage\(\{ includePto: false \}\);/);
+assert.match(initialAppDatabaseBootstrapSource, /resolvedStorage\[key\] = value;/);
+assert.match(initialAppDatabaseBootstrapSource, /resolvedStorage\[setting\.key\] = serialized;/);
+assert.match(initialAppDatabaseBootstrapSource, /parseInitialStoredAppStateFromStorage\(resolvedStorage, \{ includePto: false \}\)/);
+assert.match(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged && databaseBootstrap\.storedState\) \{\s*storedState = databaseBootstrap\.storedState;\s*initialReportState = applySharedState\(storedState\);\s*\}/);
+assert.doesNotMatch(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged\) \{\s*storedState = readInitialStoredAppState\(\{ includePto: false \}\)/);
 assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(\s*enabled: boolean,[\s\S]*includePto/);
 assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
 assert.match(useAppSectionPreloaderSource, /const primarySectionPreloaders: SectionPreloader\[\] = \[/);

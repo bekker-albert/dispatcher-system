@@ -3,7 +3,12 @@
 import { sharedAppSettingKeys } from "@/lib/domain/app/settings";
 import { createSharedAppSettingsDatabaseSnapshot } from "@/lib/domain/app/shared-settings-snapshot";
 import { adminStorageKeys } from "@/lib/storage/keys";
-import { initialAppStorageKeys } from "@/features/app/initialAppStorage";
+import {
+  collectInitialStoredAppStorage,
+  initialAppStorageKeys,
+  parseInitialStoredAppStateFromStorage,
+  type InitialStoredAppState,
+} from "@/features/app/initialAppStorage";
 
 type MutableRef<T> = {
   current: T;
@@ -20,6 +25,7 @@ type InitialAppDatabaseBootstrapOptions = {
 export type InitialAppDatabaseBootstrapResult = {
   completed: boolean;
   storageChanged: boolean;
+  storedState: InitialStoredAppState | null;
 };
 
 export async function loadInitialAppDatabaseBootstrap({
@@ -30,6 +36,7 @@ export async function loadInitialAppDatabaseBootstrap({
   appSettingsDatabaseSaveSnapshotRef,
 }: InitialAppDatabaseBootstrapOptions): Promise<InitialAppDatabaseBootstrapResult> {
   let storageChanged = false;
+  const resolvedStorage = collectInitialStoredAppStorage({ includePto: false });
   const [
     { createAppStateSaveCheckpoint },
     { loadInitialAppBootstrapFromDatabase },
@@ -54,7 +61,7 @@ export async function loadInitialAppDatabaseBootstrap({
   if (appStateResult.status === "fulfilled") {
     const { createAppStateSaveCheckpoint, databaseAppState } = appStateResult.value;
 
-    if (isCancelled()) return { completed: false, storageChanged };
+    if (isCancelled()) return { completed: false, storageChanged, storedState: null };
 
     const databaseStorage = databaseAppState?.storage ?? {};
     appDatabaseSaveSnapshotRef.current = createAppStateSaveCheckpoint(
@@ -75,6 +82,7 @@ export async function loadInitialAppDatabaseBootstrap({
         const value = databaseStorage[key];
         if (typeof value === "string") {
           window.localStorage.setItem(key, value);
+          resolvedStorage[key] = value;
         }
       });
       if (databaseAppState?.updatedAt) {
@@ -92,7 +100,7 @@ export async function loadInitialAppDatabaseBootstrap({
     const databaseSettings = settingsResult.value;
     appSettingsDatabaseLoadedRef.current = true;
 
-    if (isCancelled()) return { completed: false, storageChanged };
+    if (isCancelled()) return { completed: false, storageChanged, storedState: null };
 
     const databaseSettingsUpdatedTime = Math.max(
       0,
@@ -110,7 +118,9 @@ export async function loadInitialAppDatabaseBootstrap({
 
     if (shouldUseDatabaseSettings) {
       databaseSettings.forEach((setting) => {
-        window.localStorage.setItem(setting.key, JSON.stringify(setting.value));
+        const serialized = JSON.stringify(setting.value);
+        window.localStorage.setItem(setting.key, serialized);
+        resolvedStorage[setting.key] = serialized;
       });
       if (databaseSettingsUpdatedTime > 0) {
         window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date(databaseSettingsUpdatedTime).toISOString());
@@ -124,5 +134,11 @@ export async function loadInitialAppDatabaseBootstrap({
     console.warn("App settings table is not ready:", settingsResult.reason);
   }
 
-  return { completed: true, storageChanged };
+  return {
+    completed: true,
+    storageChanged,
+    storedState: storageChanged
+      ? parseInitialStoredAppStateFromStorage(resolvedStorage, { includePto: false })
+      : null,
+  };
 }
