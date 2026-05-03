@@ -6,6 +6,8 @@ import { ptoBucketsHintStyle, ptoBucketsLayoutStyle } from "@/features/pto/ptoBu
 import { PtoPerformanceTable } from "@/features/pto/PtoPerformanceTable";
 import { usePtoBucketsGridEditing } from "@/features/pto/usePtoBucketsGridEditing";
 import { usePtoGridViewport } from "@/features/pto/usePtoGridViewport";
+import { performanceFrozenWidth } from "@/features/pto/ptoPerformanceConfig";
+import { usePtoPerformanceVirtualGrid } from "@/features/pto/usePtoPerformanceVirtualGrid";
 import type { PtoMatrixHeaderEditor } from "@/features/pto/ptoMatrixHeaderEditing";
 import type { PtoPerformanceColumn, PtoPerformanceRow } from "@/lib/domain/pto/performance";
 
@@ -33,7 +35,7 @@ export default function PtoPerformanceSection({
   onClearCells,
 }: PtoPerformanceSectionProps) {
   const defaultDraftArea = ptoAreaFilter === allAreasLabel ? "" : ptoAreaFilter;
-  const { scrollRef, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
+  const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
   const {
     activeCell,
     draft,
@@ -51,11 +53,18 @@ export default function PtoPerformanceSection({
     rows,
     columns,
     defaultDraftArea,
+    frozenWidth: performanceFrozenWidth,
     scrollRef,
     updateViewport,
     onCommitValue,
     onClearCells,
     onAddManualRow: () => false,
+  });
+  const virtualGrid = usePtoPerformanceVirtualGrid({
+    rows,
+    columns,
+    viewport,
+    suspendVirtualization: Boolean(editKey),
   });
 
   return (
@@ -76,15 +85,18 @@ export default function PtoPerformanceSection({
 
       <PtoPerformanceTable
         activeCell={activeCell}
-        columns={columns}
         draft={draft}
         editKey={editKey}
         editingMode={editingMode}
         headerEditor={headerEditor}
+        renderedColumnSpan={virtualGrid.renderedColumnSpan}
         rows={rows}
         scrollRef={scrollRef}
         selectedBucketKeys={selectedBucketKeys}
+        tableMinWidth={virtualGrid.tableMinWidth}
         values={values}
+        virtualColumns={virtualGrid.virtualColumns}
+        virtualRows={virtualGrid.virtualRows}
         onCellBlur={handleCellBlur}
         onCellDraftChange={handleCellDraftChange}
         onCellKeyDown={handleCellKeyDown}

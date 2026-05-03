@@ -21,8 +21,8 @@ export type PtoBucketsCellHandlers = {
   onStartEdit: (cell: PtoBucketCell, value: number | undefined) => void;
 };
 
-export type PtoBucketsVirtualRowsView = {
-  rows: PtoBucketRow[];
+export type PtoBucketsVirtualRowsView<TRow extends PtoBucketRow = PtoBucketRow> = {
+  rows: TRow[];
   topSpacerHeight: number;
   bottomSpacerHeight: number;
 };

@@ -39,6 +39,11 @@ Use this checklist before every commit.
 - Imports/exports do not silently drop required columns.
 - Database migrations or schema assumptions are documented when required.
 
+## Text Encoding
+
+- Run `npm run check:project` before handing off any package that changes UI text or documentation with Russian text.
+- Treat Cyrillic mojibake as a P1 blocker; do not accept or hand off the package until the intended UTF-8 text is restored.
+
 ## Checks
 
 Run these when code changes affect TypeScript, React, domain logic, persistence, or build output:

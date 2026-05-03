@@ -28,6 +28,9 @@ const ptoBucketsTableRowSource = readFileSync(resolve(testDir, "../features/pto/
 const ptoBucketValueCellSource = readFileSync(resolve(testDir, "../features/pto/PtoBucketValueCell.tsx"), "utf8");
 const ptoBodiesSectionSource = readFileSync(resolve(testDir, "../features/pto/PtoBodiesSection.tsx"), "utf8");
 const ptoBodiesTableSource = readFileSync(resolve(testDir, "../features/pto/PtoBodiesTable.tsx"), "utf8");
+const ptoPerformanceSectionSource = readFileSync(resolve(testDir, "../features/pto/PtoPerformanceSection.tsx"), "utf8");
+const ptoPerformanceTableSource = readFileSync(resolve(testDir, "../features/pto/PtoPerformanceTable.tsx"), "utf8");
+const ptoPerformanceTableRowSource = readFileSync(resolve(testDir, "../features/pto/PtoPerformanceTableRow.tsx"), "utf8");
 const ptoBucketsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/PtoBucketsPrimaryContent.tsx"), "utf8");
 const useAppPtoSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoSupplementalTables.ts"), "utf8");
 const useAppPtoBucketSupplementalTablesSource = readFileSync(resolve(testDir, "../features/app/useAppPtoBucketSupplementalTables.ts"), "utf8");
@@ -143,6 +146,10 @@ assert.match(useAdminReportSettingsViewModelSource, /needsAdminReportAutoRows: b
 assert.match(useAdminReportSettingsViewModelSource, /needsAdminReportAutoRows\s*\?\s*new Map\(derivedReportRows\.map/);
 assert.match(useAdminReportSettingsViewModelSource, /activeAdminReportCustomer\.autoShowRows && !needsAdminReportAutoRows/);
 assert.match(useAdminReportSettingsViewModelSource, /activeAdminReportBaseRows[\s\S]*\.map\(reportRowKey\)[\s\S]*\.filter\(\(rowKey\) => !activeAdminReportCustomer\.hiddenRowKeys\.includes\(rowKey\)\)/);
+assert.match(useAdminReportSettingsViewModelSource, /function createReportRowsByNormalizedArea\(rows: ReportRow\[\]\)/);
+assert.match(useAdminReportSettingsViewModelSource, /const activeAdminReportOrderRowsByArea = createReportRowsByNormalizedArea\(activeAdminReportOrderRows\);/);
+assert.match(useAdminReportSettingsViewModelSource, /activeAdminReportOrderRowsByArea\.get\(normalizeLookupValue\(area\)\) \?\? \[\]/);
+assert.doesNotMatch(useAdminReportSettingsViewModelSource, /activeAdminReportOrderRows\.filter\(\(row\) => normalizeLookupValue\(row\.area\) === normalizeLookupValue\(area\)\)/);
 assert.match(useDispatchSummaryViewModelSource, /const normalizedDispatchSearch = useMemo\(\(\) => search\.trim\(\)\.toLowerCase\(\), \[search\]\);/);
 assert.match(useDispatchSummaryViewModelSource, /const vehicleSearchRecords = useMemo/);
 assert.match(useDispatchSummaryViewModelSource, /const dispatchVehicleSelectOptions = useMemo/);
@@ -360,6 +367,16 @@ assert.match(ptoBodiesSectionSource, /usePtoBodiesVirtualGrid\(\{[\s\S]*rows,[\s
 assert.match(ptoBodiesTableSource, /virtualRows\.rows\.map/);
 assert.doesNotMatch(ptoBodiesTableSource, /\{rows\.map\(/);
 assert.match(ptoBodiesTableSource, /virtualColumns\.columns\.map/);
+assert.match(ptoPerformanceSectionSource, /frozenWidth: performanceFrozenWidth/);
+assert.match(ptoPerformanceSectionSource, /usePtoPerformanceVirtualGrid\(\{[\s\S]*rows,[\s\S]*columns,[\s\S]*viewport,[\s\S]*suspendVirtualization: Boolean\(editKey\),[\s\S]*\}\)/);
+assert.match(ptoPerformanceTableSource, /virtualRows\.rows\.map/);
+assert.doesNotMatch(ptoPerformanceTableSource, /\{rows\.map\(/);
+assert.match(ptoPerformanceTableSource, /virtualColumns\.columns\.map/);
+assert.match(ptoPerformanceTableSource, /virtualColumns\.rightSpacerWidth[\s\S]*ptoPerformanceCalculatedColumn/);
+assert.match(ptoPerformanceTableRowSource, /export const PtoPerformanceTableRow = memo\(function PtoPerformanceTableRow/);
+assert.match(ptoPerformanceTableRowSource, /function rowEditKeyStateEqual/);
+assert.doesNotMatch(ptoPerformanceTableRowSource, /previous\.editKey === next\.editKey/);
+assert.match(ptoPerformanceTableRowSource, /const workingTimeKey = ptoBucketCellKey\(next\.row\.key, "performance:working-time"\);/);
 assert.match(ptoDateEditingResetSource, /setPtoSelectedCellKeys\(\(current\) => \(current\.length === 0 \? current : \[\]\)\)/);
 assert.doesNotMatch(ptoDateEditingResetSource, /setPtoSelectedCellKeys\(\[\]\)/);
 assert.match(ptoBucketsPrimaryContentSource, /useAppPtoBucketSupplementalTables/);

@@ -1,60 +1,81 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useMemo, type RefObject } from "react";
 
-import { PtoBucketValueCell } from "@/features/pto/PtoBucketValueCell";
-import { bucketRowHeight, bucketValueColumnWidth } from "@/features/pto/ptoBucketsConfig";
+import { bucketValueColumnWidth } from "@/features/pto/ptoBucketsConfig";
 import {
-  ptoBucketReadonlyValueStyle,
+  createPtoBucketSelectedKeysByRow,
+  emptyPtoBucketSelectedKeys,
+} from "@/features/pto/ptoBucketsGridModel";
+import {
+  ptoBucketHorizontalSpacerStyle,
+  ptoBucketSpacerCellStyle,
   ptoBucketsScrollStyle,
   ptoBucketsTableStyle,
   ptoBucketsTdStyle,
   ptoBucketsThStyle,
 } from "@/features/pto/ptoBucketsStyles";
-import type { PtoBucketsCellHandlers } from "@/features/pto/PtoBucketsTableTypes";
-import { renderPtoMatrixHeaderText, type PtoMatrixHeaderEditor } from "@/features/pto/ptoMatrixHeaderEditing";
-import { formatBucketNumber } from "@/lib/domain/pto/formatting";
+import type {
+  PtoBucketsCellHandlers,
+  PtoBucketsVirtualColumnsView,
+} from "@/features/pto/PtoBucketsTableTypes";
+import { PtoPerformanceTableRow } from "@/features/pto/PtoPerformanceTableRow";
 import {
-  calculatePtoObrKio,
+  performanceAreaColumnWidth,
+  performanceComputedColumnWidth,
+  performanceStructureColumnWidth,
+  performanceUnitColumnWidth,
+} from "@/features/pto/ptoPerformanceConfig";
+import { renderPtoMatrixHeaderText, type PtoMatrixHeaderEditor } from "@/features/pto/ptoMatrixHeaderEditing";
+import type { PtoBucketCell } from "@/lib/domain/pto/buckets";
+import {
   ptoPerformanceCalculatedColumn,
   type PtoPerformanceColumn,
   type PtoPerformanceRow,
 } from "@/lib/domain/pto/performance";
-import {
-  ptoBucketCellKey,
-  type PtoBucketCell,
-} from "@/lib/domain/pto/buckets";
+
+type PtoPerformanceVirtualRowsView = {
+  rows: PtoPerformanceRow[];
+  topSpacerHeight: number;
+  bottomSpacerHeight: number;
+};
 
 type PtoPerformanceTableProps = PtoBucketsCellHandlers & {
   activeCell: PtoBucketCell | null;
-  columns: PtoPerformanceColumn[];
   draft: string;
   editKey: string | null;
   editingMode: boolean;
   headerEditor: PtoMatrixHeaderEditor;
+  renderedColumnSpan: number;
   rows: PtoPerformanceRow[];
   scrollRef: RefObject<HTMLDivElement | null>;
   selectedBucketKeys: ReadonlySet<string>;
+  tableMinWidth: number;
   values: Record<string, number>;
+  virtualColumns: PtoBucketsVirtualColumnsView<PtoPerformanceColumn>;
+  virtualRows: PtoPerformanceVirtualRowsView;
   onScheduleViewportUpdate: () => void;
 };
 
-const performanceAreaColumnWidth = 150;
-const performanceStructureColumnWidth = 260;
-const performanceUnitColumnWidth = 64;
-const performanceComputedColumnWidth = 90;
+const areaHeaderLabel = "\u0423\u0447\u0430\u0441\u0442\u043e\u043a";
+const structureHeaderLabel = "\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 (\u0412\u0438\u0434 \u0440\u0430\u0431\u043e\u0442)";
+const unitHeaderLabel = "\u0415\u0434.";
+const emptyPerformanceLabel = "\u041d\u0435\u0442 \u0441\u0442\u0440\u043e\u043a \u0434\u043b\u044f \u0440\u0430\u0441\u0447\u0435\u0442\u0430 \u043f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438.";
 
 export function PtoPerformanceTable({
   activeCell,
-  columns,
   draft,
   editKey,
   editingMode,
   headerEditor,
+  renderedColumnSpan,
   rows,
   scrollRef,
   selectedBucketKeys,
+  tableMinWidth,
   values,
+  virtualColumns,
+  virtualRows,
   onCellBlur,
   onCellDraftChange,
   onCellKeyDown,
@@ -63,11 +84,10 @@ export function PtoPerformanceTable({
   onSelectCell,
   onStartEdit,
 }: PtoPerformanceTableProps) {
-  const tableMinWidth = performanceAreaColumnWidth
-    + performanceStructureColumnWidth
-    + performanceUnitColumnWidth
-    + columns.length * bucketValueColumnWidth
-    + performanceComputedColumnWidth;
+  const selectedBucketKeysByRow = useMemo(
+    () => createPtoBucketSelectedKeysByRow(selectedBucketKeys),
+    [selectedBucketKeys],
+  );
 
   return (
     <div ref={scrollRef} onScroll={onScheduleViewportUpdate} style={ptoBucketsScrollStyle}>
@@ -76,27 +96,31 @@ export function PtoPerformanceTable({
           <col style={{ width: performanceAreaColumnWidth }} />
           <col style={{ width: performanceStructureColumnWidth }} />
           <col style={{ width: performanceUnitColumnWidth }} />
-          {columns.map((column) => (
+          {virtualColumns.leftSpacerWidth > 0 ? <col style={{ width: virtualColumns.leftSpacerWidth }} /> : null}
+          {virtualColumns.columns.map((column) => (
             <col key={column.key} style={{ width: bucketValueColumnWidth }} />
           ))}
+          {virtualColumns.rightSpacerWidth > 0 ? <col style={{ width: virtualColumns.rightSpacerWidth }} /> : null}
           <col style={{ width: performanceComputedColumnWidth }} />
         </colgroup>
         <thead>
           <tr>
             <th style={ptoBucketsThStyle}>
-              {renderPtoMatrixHeaderText(headerEditor, editingMode, "area", "Участок")}
+              {renderPtoMatrixHeaderText(headerEditor, editingMode, "area", areaHeaderLabel)}
             </th>
             <th style={ptoBucketsThStyle}>
-              {renderPtoMatrixHeaderText(headerEditor, editingMode, "structure", "Структура (Вид работ)")}
+              {renderPtoMatrixHeaderText(headerEditor, editingMode, "structure", structureHeaderLabel)}
             </th>
             <th style={{ ...ptoBucketsThStyle, textAlign: "center" }}>
-              {renderPtoMatrixHeaderText(headerEditor, editingMode, "unit", "Ед.", "center")}
+              {renderPtoMatrixHeaderText(headerEditor, editingMode, "unit", unitHeaderLabel, "center")}
             </th>
-            {columns.map((column) => (
+            {virtualColumns.leftSpacerWidth > 0 ? <th aria-hidden style={ptoBucketHorizontalSpacerStyle} /> : null}
+            {virtualColumns.columns.map((column) => (
               <th key={column.key} style={ptoBucketsThStyle}>
                 {renderPtoMatrixHeaderText(headerEditor, editingMode, column.key, column.label, "center")}
               </th>
             ))}
+            {virtualColumns.rightSpacerWidth > 0 ? <th aria-hidden style={ptoBucketHorizontalSpacerStyle} /> : null}
             <th style={{ ...ptoBucketsThStyle, textAlign: "center" }}>
               {renderPtoMatrixHeaderText(
                 headerEditor,
@@ -109,52 +133,43 @@ export function PtoPerformanceTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
+          {virtualRows.topSpacerHeight > 0 ? (
+            <tr aria-hidden>
+              <td colSpan={renderedColumnSpan} style={{ ...ptoBucketSpacerCellStyle, height: virtualRows.topSpacerHeight }} />
+            </tr>
+          ) : null}
+          {virtualRows.rows.map((row) => {
             const rowActiveCell = activeCell?.rowKey === row.key ? activeCell : null;
-            const workingTime = values[ptoBucketCellKey(row.key, "performance:working-time")];
-            const obrKio = calculatePtoObrKio(workingTime);
 
             return (
-              <tr key={row.key} style={{ height: bucketRowHeight }}>
-                <td style={ptoBucketsTdStyle}>{row.area}</td>
-                <td style={{ ...ptoBucketsTdStyle, fontWeight: 700 }}>{row.structure}</td>
-                <td style={{ ...ptoBucketsTdStyle, textAlign: "center" }}>{row.unit}</td>
-                {columns.map((column) => {
-                  const cellKey = ptoBucketCellKey(row.key, column.key);
-                  const isActiveCell = rowActiveCell?.equipmentKey === column.key;
-                  const isEditingCell = editKey === cellKey;
-
-                  return (
-                    <PtoBucketValueCell
-                      key={column.key}
-                      row={row}
-                      column={column}
-                      cellKey={cellKey}
-                      value={values[cellKey]}
-                      draft={isActiveCell ? draft : ""}
-                      editingMode={editingMode}
-                      active={isActiveCell}
-                      selected={selectedBucketKeys.has(cellKey)}
-                      isEditing={isEditingCell}
-                      onBlur={onCellBlur}
-                      onDraftChange={onCellDraftChange}
-                      onKeyDown={onCellKeyDown}
-                      onMouseDown={onCellMouseDown}
-                      onSelectCell={onSelectCell}
-                      onStartEdit={onStartEdit}
-                    />
-                  );
-                })}
-                <td style={ptoBucketsTdStyle}>
-                  <div style={ptoBucketReadonlyValueStyle}>{formatBucketNumber(obrKio)}</div>
-                </td>
-              </tr>
+              <PtoPerformanceTableRow
+                key={row.key}
+                activeCell={rowActiveCell}
+                draft={rowActiveCell ? draft : ""}
+                editKey={editKey}
+                editingMode={editingMode}
+                row={row}
+                selectedBucketKeys={selectedBucketKeysByRow.get(row.key) ?? emptyPtoBucketSelectedKeys}
+                values={values}
+                virtualColumns={virtualColumns}
+                onCellBlur={onCellBlur}
+                onCellDraftChange={onCellDraftChange}
+                onCellKeyDown={onCellKeyDown}
+                onCellMouseDown={onCellMouseDown}
+                onSelectCell={onSelectCell}
+                onStartEdit={onStartEdit}
+              />
             );
           })}
+          {virtualRows.bottomSpacerHeight > 0 ? (
+            <tr aria-hidden>
+              <td colSpan={renderedColumnSpan} style={{ ...ptoBucketSpacerCellStyle, height: virtualRows.bottomSpacerHeight }} />
+            </tr>
+          ) : null}
           {rows.length === 0 ? (
             <tr>
-              <td style={ptoBucketsTdStyle} colSpan={4 + columns.length}>
-                Нет строк для расчета производительности.
+              <td style={ptoBucketsTdStyle} colSpan={renderedColumnSpan}>
+                {emptyPerformanceLabel}
               </td>
             </tr>
           ) : null}

@@ -29,6 +29,23 @@ type UseAdminReportSettingsViewModelOptions = {
   editingReportFactSourceRowKey: string | null;
 };
 
+function createReportRowsByNormalizedArea(rows: ReportRow[]) {
+  const rowsByArea = new Map<string, ReportRow[]>();
+
+  rows.forEach((row) => {
+    const areaKey = normalizeLookupValue(row.area);
+    const areaRows = rowsByArea.get(areaKey);
+
+    if (areaRows) {
+      areaRows.push(row);
+    } else {
+      rowsByArea.set(areaKey, [row]);
+    }
+  });
+
+  return rowsByArea;
+}
+
 export function useAdminReportSettingsViewModel({
   needsAdminReportRows,
   needsAdminReportAutoRows,
@@ -178,18 +195,20 @@ export function useAdminReportSettingsViewModel({
     return activeAdminReportBaseRows.filter((row) => normalizeLookupValue(row.area) === areaKey);
   }, [activeAdminReportBaseRows, editingReportFactSourceRow]);
 
-  const adminReportWorkOrderGroups = useMemo(() => (
-    needsAdminReportRows
-      ? activeAdminReportAreaOptions.map((area) => ({
-          area,
-          rows: sortReportRowsByAreaOrder(
-            activeAdminReportOrderRows.filter((row) => normalizeLookupValue(row.area) === normalizeLookupValue(area)),
-            [area],
-            activeAdminReportCustomer.workOrder,
-          ),
-        }))
-      : []
-  ), [activeAdminReportAreaOptions, activeAdminReportCustomer.workOrder, activeAdminReportOrderRows, needsAdminReportRows]);
+  const adminReportWorkOrderGroups = useMemo(() => {
+    if (!needsAdminReportRows) return [];
+
+    const activeAdminReportOrderRowsByArea = createReportRowsByNormalizedArea(activeAdminReportOrderRows);
+
+    return activeAdminReportAreaOptions.map((area) => ({
+      area,
+      rows: sortReportRowsByAreaOrder(
+        activeAdminReportOrderRowsByArea.get(normalizeLookupValue(area)) ?? [],
+        [area],
+        activeAdminReportCustomer.workOrder,
+      ),
+    }));
+  }, [activeAdminReportAreaOptions, activeAdminReportCustomer.workOrder, activeAdminReportOrderRows, needsAdminReportRows]);
 
   const activeAdminReportSelectedCount = useMemo(() => (
     needsAdminReportRows ? activeAdminReportVisibleRows.length : 0
