@@ -95,6 +95,13 @@ assert.match(ptoDatabaseSaveSource, /return await savePtoDatabaseChanges\("manua
 assert.match(ptoDatabaseSaveSource, /return false;/);
 assert.match(ptoDatabaseSaveSource, /return true;/);
 assert.match(ptoDatabaseSaveSource, /const ptoDatabaseDirtyRef = useRef\(false\);/);
+assert.match(ptoDatabaseSaveSource, /const ptoDatabaseRetryTimerRef = useRef<number \| null>\(null\);/);
+assert.match(ptoDatabaseSaveSource, /const ptoDatabaseRetryDelayRef = useRef\(ptoDatabaseRetryInitialDelayMs\);/);
+assert.match(ptoDatabaseSaveSource, /const clearPtoDatabaseRetryTimer = useCallback/);
+assert.match(ptoDatabaseSaveSource, /const schedulePtoDatabaseRetry = useCallback/);
+assert.match(ptoDatabaseSaveSource, /ptoDatabaseRetryMaxDelayMs/);
+assert.match(ptoDatabaseSaveSource, /ptoDatabaseMessages\.retrying\(retryDelay\)/);
+assert.match(ptoDatabaseSaveSource, /ptoDatabaseRetryTimerRef\.current = window\.setTimeout/);
 assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseDirtyRef\.current\) \{[\s\S]*return true;[\s\S]*\}/);
 assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSaveShouldSkip\(mode, snapshotToSave, ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*ptoDatabaseDirtyRef\.current = false;[\s\S]*return true;[\s\S]*\}/);
 assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSaveShouldSkip\(mode, snapshotAtWrite, ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*return ptoDatabaseSaveSnapshotRef\.current;[\s\S]*\}/);
@@ -108,6 +115,7 @@ assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSavingRef\.current\) \{[\s\
 assert.doesNotMatch(ptoDatabaseSaveSource, /refreshPtoDatabaseSaveBaseline/);
 assert.match(ptoDatabaseSaveSource, /let suppressQueuedRetry = false;/);
 assert.match(ptoDatabaseSaveSource, /if \(isDatabaseConflictError\(error\)\) \{[\s\S]*suppressQueuedRetry = true;[\s\S]*ptoDatabaseSaveQueuedRef\.current = false;[\s\S]*setPtoDatabaseMessage\(ptoDatabaseMessages\.conflict\);/);
+assert.match(ptoDatabaseSaveSource, /schedulePtoDatabaseRetry\(\);/);
 assert.match(ptoDatabaseSaveSource, /if \(!suppressQueuedRetry && ptoDatabaseSaveQueuedRef\.current\) \{/);
 assert.match(ptoDatabaseSaveSource, /const saveAllYears = ptoDatabaseFullSaveNextRef\.current;/);
 assert.match(ptoDatabaseSaveSource, /const stateToSave = ptoDatabaseStateRef\.current;/);

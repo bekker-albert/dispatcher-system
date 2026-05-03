@@ -22,6 +22,9 @@ import {
 
 type ShowSaveStatus = (kind: SaveStatusState["kind"], message: string) => void;
 
+const ptoDatabaseRetryInitialDelayMs = 2000;
+const ptoDatabaseRetryMaxDelayMs = 30000;
+
 type PtoDatabaseSaveOptions = {
   adminDataLoaded: boolean;
   ptoSaveRevision: number;
@@ -50,7 +53,36 @@ export function usePtoDatabaseSave({
   const ptoDatabaseDirtyRef = useRef(false);
   const ptoDatabaseSaveSnapshotRef = useRef("");
   const ptoDatabaseSaveRequestTimerRef = useRef<number | null>(null);
+  const ptoDatabaseRetryTimerRef = useRef<number | null>(null);
+  const ptoDatabaseRetryDelayRef = useRef(ptoDatabaseRetryInitialDelayMs);
   const ptoDatabaseActiveSaveRef = useRef<Promise<void> | null>(null);
+
+  const clearPtoDatabaseRetryTimer = useCallback(() => {
+    if (ptoDatabaseRetryTimerRef.current !== null) {
+      window.clearTimeout(ptoDatabaseRetryTimerRef.current);
+      ptoDatabaseRetryTimerRef.current = null;
+    }
+  }, []);
+
+  const schedulePtoDatabaseRetry = useCallback(() => {
+    if (ptoDatabaseRetryTimerRef.current !== null) return;
+    if (!ptoDatabaseStateChanged(ptoDatabaseStateRef.current, ptoDatabaseSaveSnapshotRef.current)) return;
+
+    const retryDelay = ptoDatabaseRetryDelayRef.current;
+    ptoDatabaseRetryDelayRef.current = Math.min(
+      retryDelay * 2,
+      ptoDatabaseRetryMaxDelayMs,
+    );
+    setPtoDatabaseMessage(ptoDatabaseMessages.retrying(retryDelay));
+    showSaveStatus("saving", ptoDatabaseMessages.retrying(retryDelay));
+
+    ptoDatabaseRetryTimerRef.current = window.setTimeout(() => {
+      ptoDatabaseRetryTimerRef.current = null;
+      if (ptoDatabaseStateChanged(ptoDatabaseStateRef.current, ptoDatabaseSaveSnapshotRef.current)) {
+        setPtoSaveRevision((current) => current + 1);
+      }
+    }, retryDelay);
+  }, [ptoDatabaseStateRef, setPtoDatabaseMessage, setPtoSaveRevision, showSaveStatus]);
 
   const markPtoDatabaseInlineWriteSaved = useCallback((updatedAt?: string | null, patch?: PtoDatabaseInlineSavePatch) => {
     if (!updatedAt) return;
@@ -76,6 +108,7 @@ export function usePtoDatabaseSave({
       window.clearTimeout(ptoDatabaseSaveRequestTimerRef.current);
       ptoDatabaseSaveRequestTimerRef.current = null;
     }
+    clearPtoDatabaseRetryTimer();
 
     if (!databaseConfigured) {
       setPtoDatabaseMessage(ptoDatabaseMessages.notConfigured);
@@ -144,6 +177,7 @@ export function usePtoDatabaseSave({
       ptoDatabaseSaveSnapshotRef.current = savedSnapshot;
       ptoDatabaseDirtyRef.current = false;
       ptoDatabaseFullSaveNextRef.current = false;
+      ptoDatabaseRetryDelayRef.current = ptoDatabaseRetryInitialDelayMs;
       setPtoDatabaseMessage(ptoDatabaseMessages.savedState(mode));
       showSaveStatus("saved", ptoDatabaseMessages.savedStatus);
       return true;
@@ -157,6 +191,7 @@ export function usePtoDatabaseSave({
       } else {
         setPtoDatabaseMessage(ptoDatabaseMessages.saveError(message));
         showSaveStatus("error", ptoDatabaseMessages.saveErrorStatus(message));
+        schedulePtoDatabaseRetry();
       }
       return false;
     } finally {
@@ -174,6 +209,8 @@ export function usePtoDatabaseSave({
     ptoDatabaseLoadedYearRef,
     ptoDatabaseFullSaveNextRef,
     ptoDatabaseStateRef,
+    clearPtoDatabaseRetryTimer,
+    schedulePtoDatabaseRetry,
     setPtoDatabaseMessage,
     setPtoSaveRevision,
     showSaveStatus,
@@ -210,12 +247,13 @@ export function usePtoDatabaseSave({
     if (ptoDatabaseSaveRequestTimerRef.current !== null) {
       window.clearTimeout(ptoDatabaseSaveRequestTimerRef.current);
     }
+    clearPtoDatabaseRetryTimer();
 
     ptoDatabaseSaveRequestTimerRef.current = window.setTimeout(() => {
       ptoDatabaseSaveRequestTimerRef.current = null;
       setPtoSaveRevision((current) => current + 1);
     }, 500);
-  }, [ptoDatabaseLoadedRef, ptoDatabaseLoadedYearRef, ptoDatabaseStateRef, setPtoDatabaseMessage, setPtoSaveRevision]);
+  }, [clearPtoDatabaseRetryTimer, ptoDatabaseLoadedRef, ptoDatabaseLoadedYearRef, ptoDatabaseStateRef, setPtoDatabaseMessage, setPtoSaveRevision]);
 
   useEffect(() => {
     const currentYear = ptoDatabaseStateRef.current.uiState.ptoPlanYear;
@@ -234,7 +272,8 @@ export function usePtoDatabaseSave({
       window.clearTimeout(ptoDatabaseSaveRequestTimerRef.current);
       ptoDatabaseSaveRequestTimerRef.current = null;
     }
-  }, []);
+    clearPtoDatabaseRetryTimer();
+  }, [clearPtoDatabaseRetryTimer]);
 
   return {
     ptoDatabaseSaveSnapshotRef,

@@ -28,4 +28,5 @@ export const ptoDatabaseMessages = {
     "Данные ПТО на сервере изменились другим пользователем. Локальная правка сохранена в браузере; обнови страницу перед повторным сохранением.",
   saveError: (message: string) => `Не удалось сохранить в базе данных: ${message}`,
   saveErrorStatus: (message: string) => `ПТО не сохранено: ${message}`,
+  retrying: (delayMs: number) => `ПТО не сохранено. Повторю через ${Math.round(delayMs / 1000)} сек.`,
 };
