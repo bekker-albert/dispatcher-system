@@ -41,6 +41,10 @@ assert.match(appPtoPersistenceSource, /usePtoUiStateDatabaseSync\(\{[\s\S]*admin
 assert.match(appPtoPersistenceSource, /usePtoLocalPersistence\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*skipUntilDatabaseLoaded: databaseConfigured,[\s\S]*\}\);/);
 assert.match(initialAppStorageSource, /export const initialPtoStorageKeys = \[/);
 assert.match(initialAppStorageSource, /initialAppStorageKeys = Object\.values\(adminStorageKeys\)\.filter\(\(key\) => !initialPtoStorageKeySet\.has\(key\)\)/);
+assert.match(initialAppStorageSource, /const initialMeaningfulAppStorageKeys = initialAppStorageKeys\.filter/);
+assert.match(initialAppStorageSource, /key !== adminStorageKeys\.vehiclesLocalUpdatedAt/);
+assert.match(initialAppStorageSource, /key !== adminStorageKeys\.vehiclesSeedVersion/);
+assert.match(initialAppStorageSource, /initialMeaningfulAppStorageKeys\.some\(\(key\) => window\.localStorage\.getItem\(key\) !== null\)/);
 assert.match(ptoDatabaseLoadSource, /runPtoDatabaseLoadOnce\(\{[\s\S]*isCancelled: \(\) => cancelled,[\s\S]*\}\)/);
 assert.doesNotMatch(ptoDatabaseLoadSource, /\n\s*options,\n\s*\]\);/);
 assert.match(ptoDatabaseLoadRunnerSource, /const includeBuckets = ptoTab === "buckets";/);

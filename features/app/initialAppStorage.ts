@@ -19,6 +19,12 @@ const initialPtoStorageKeySet = new Set(initialPtoStorageKeys);
 
 export const initialAppStorageKeys = Object.values(adminStorageKeys).filter((key) => !initialPtoStorageKeySet.has(key));
 
+const initialMeaningfulAppStorageKeys = initialAppStorageKeys.filter((key) => (
+  key !== adminStorageKeys.appLocalUpdatedAt
+  && key !== adminStorageKeys.vehiclesLocalUpdatedAt
+  && key !== adminStorageKeys.vehiclesSeedVersion
+));
+
 type ReadInitialStoredAppStateOptions = {
   includePto?: boolean;
 };
@@ -36,10 +42,7 @@ function readStoredValue(key: string) {
 }
 
 export function hasInitialLocalAppState() {
-  return initialAppStorageKeys.some((key) => (
-    key !== adminStorageKeys.appLocalUpdatedAt
-    && window.localStorage.getItem(key) !== null
-  ));
+  return initialMeaningfulAppStorageKeys.some((key) => window.localStorage.getItem(key) !== null);
 }
 
 function readInitialSharedStoredState() {
