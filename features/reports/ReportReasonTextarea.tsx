@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useReportReasonTextareaAutosize } from "./useReportReasonTextareaAutosize";
 
 type ReportReasonTextareaProps = {
   value: string;
@@ -8,13 +9,6 @@ type ReportReasonTextareaProps = {
   onCommit: (value: string) => void;
   onCancel?: (value: string) => void;
 };
-
-function syncReportReasonTextareaHeight(element: HTMLTextAreaElement | null) {
-  if (!element) return;
-
-  element.style.height = "auto";
-  element.style.height = `${Math.max(20, element.scrollHeight)}px`;
-}
 
 export function ReportReasonTextarea({
   value,
@@ -28,21 +22,17 @@ export function ReportReasonTextarea({
   const skipNextBlurCommitRef = useRef(false);
   const editInitialValueRef = useRef(value);
   const [draft, setDraft] = useState(value);
+  const { scheduleFrame, scheduleHeightSync, syncHeight } = useReportReasonTextareaAutosize(textareaRef);
 
   useEffect(() => {
     if (focusedRef.current) return;
 
-    const frame = window.requestAnimationFrame(() => {
-      setDraft(value);
-      window.requestAnimationFrame(() => syncReportReasonTextareaHeight(textareaRef.current));
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [value]);
+    scheduleFrame(() => setDraft(value));
+  }, [scheduleFrame, value]);
 
   useEffect(() => {
-    syncReportReasonTextareaHeight(textareaRef.current);
-  }, [draft]);
+    syncHeight();
+  }, [draft, syncHeight]);
 
   function commitTextarea(nextValue: string) {
     focusedRef.current = false;
@@ -50,7 +40,7 @@ export function ReportReasonTextarea({
     if (nextValue !== value) {
       onCommit(nextValue);
     }
-    window.requestAnimationFrame(() => syncReportReasonTextareaHeight(textareaRef.current));
+    scheduleHeightSync();
   }
 
   function cancelTextarea() {
@@ -59,7 +49,7 @@ export function ReportReasonTextarea({
     focusedRef.current = false;
     setDraft(previousValue);
     onCancel?.(previousValue);
-    window.requestAnimationFrame(() => syncReportReasonTextareaHeight(textareaRef.current));
+    scheduleHeightSync();
   }
 
   return (
@@ -76,21 +66,21 @@ export function ReportReasonTextarea({
         onBlur={(event) => {
           if (skipNextBlurCommitRef.current) {
             skipNextBlurCommitRef.current = false;
-            syncReportReasonTextareaHeight(event.currentTarget);
+            syncHeight(event.currentTarget);
             return;
           }
 
           if (cancelNextBlurRef.current) {
             cancelNextBlurRef.current = false;
             event.currentTarget.value = editInitialValueRef.current;
-            syncReportReasonTextareaHeight(event.currentTarget);
+            syncHeight(event.currentTarget);
             return;
           }
 
           commitTextarea(event.currentTarget.value);
         }}
         onInput={(event) => {
-          syncReportReasonTextareaHeight(event.currentTarget);
+          syncHeight(event.currentTarget);
         }}
         onChange={(event) => {
           setDraft(event.target.value);
@@ -109,14 +99,14 @@ export function ReportReasonTextarea({
             event.preventDefault();
             event.currentTarget.value = editInitialValueRef.current;
             cancelTextarea();
-            syncReportReasonTextareaHeight(event.currentTarget);
+            syncHeight(event.currentTarget);
             event.currentTarget.blur();
           }
 
           if (event.key === "Delete" && event.ctrlKey) {
             event.preventDefault();
             event.currentTarget.value = "";
-            syncReportReasonTextareaHeight(event.currentTarget);
+            syncHeight(event.currentTarget);
             commitTextarea("");
             skipNextBlurCommitRef.current = true;
             event.currentTarget.blur();

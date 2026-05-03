@@ -21,6 +21,7 @@ const nbsp = "\u00a0";
 
 const reportReasonDraftsSource = readFileSync(resolve(testDir, "../features/reports/useReportReasonDrafts.ts"), "utf8");
 const reportReasonTextareaSource = readFileSync(resolve(testDir, "../features/reports/ReportReasonTextarea.tsx"), "utf8");
+const reportReasonTextareaAutosizeSource = readFileSync(resolve(testDir, "../features/reports/useReportReasonTextareaAutosize.ts"), "utf8");
 const reportPrintMediaTextSectionsSource = readFileSync(resolve(testDir, "../features/reports/reportPrintMediaTextSections.ts"), "utf8");
 assert.match(reportReasonDraftsSource, /export function useReportReasonDrafts/);
 assert.doesNotMatch(reportReasonDraftsSource, /updateReport(?:Day|Year)ReasonDraft/);
@@ -31,6 +32,14 @@ assert.match(reportReasonDraftsSource, /function commitReportDayReason[\s\S]*ups
 assert.match(reportReasonDraftsSource, /function commitReportYearReason[\s\S]*upsertReason\(reportYearReasonOverrideKey\(reportDate,\s*rowKey\),\s*value,\s*true,\s*reportReasonEmptyOverride\);[\s\S]*window\.setTimeout\(requestSave,\s*0\);/);
 assert.match(reportReasonDraftsSource, /Esc is a local cancel only/);
 assert.match(reportReasonTextareaSource, /className="report-reason-print-value"/);
+assert.match(reportReasonTextareaSource, /useReportReasonTextareaAutosize\(textareaRef\)/);
+assert.match(reportReasonTextareaSource, /scheduleHeightSync\(\)/);
+assert.match(reportReasonTextareaSource, /scheduleFrame\(\(\) => setDraft\(value\)\)/);
+assert.doesNotMatch(reportReasonTextareaSource, /requestAnimationFrame/);
+assert.match(reportReasonTextareaAutosizeSource, /const resizeFrameRef = useRef<number \| null>\(null\);/);
+assert.match(reportReasonTextareaAutosizeSource, /const scheduleFrame = useCallback\(\(callback: \(\) => void\) => \{/);
+assert.match(reportReasonTextareaAutosizeSource, /window\.requestAnimationFrame/);
+assert.match(reportReasonTextareaAutosizeSource, /window\.cancelAnimationFrame\(resizeFrameRef\.current\)/);
 assert.match(reportPrintMediaTextSectionsSource, /\.report-reason-input \{[\s\S]*display: none !important;/);
 assert.match(reportPrintMediaTextSectionsSource, /\.report-reason-print-value \{[\s\S]*display: block !important;/);
 
