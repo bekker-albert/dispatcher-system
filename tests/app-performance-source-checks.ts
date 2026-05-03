@@ -69,6 +69,7 @@ const useAppReportsModelSource = readFileSync(resolve(testDir, "../features/app/
 const useAppAdminReportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/useAppAdminReportsPrimaryContent.tsx"), "utf8");
 const useAdminReportSettingsViewModelSource = readFileSync(resolve(testDir, "../features/reports/useAdminReportSettingsViewModel.ts"), "utf8");
 const reportFactSourcePickerStylesSource = readFileSync(resolve(testDir, "../features/reports/admin/ReportFactSourcePickerStyles.ts"), "utf8");
+const reportFactSourcePickerCellSource = readFileSync(resolve(testDir, "../features/reports/admin/ReportFactSourcePickerCell.tsx"), "utf8");
 const useDispatchSummaryViewModelSource = readFileSync(resolve(testDir, "../features/dispatch/useDispatchSummaryViewModel.ts"), "utf8");
 const dispatchSectionSource = readFileSync(resolve(testDir, "../features/dispatch/DispatchSection.tsx"), "utf8");
 
@@ -228,6 +229,10 @@ assert.doesNotMatch(sharedNavigationSource, /style=\{\{[\s\S]*headerSubtabButton
 assert.match(reportFactSourcePickerStylesSource, /export const modeButtonStyle: CSSProperties = \{[\s\S]*borderWidth: 1,[\s\S]*borderStyle: "solid",[\s\S]*borderColor: "#cbd5e1",/);
 assert.match(reportFactSourcePickerStylesSource, /export const modeActiveStyle: CSSProperties = \{[\s\S]*\.\.\.modeButtonStyle,[\s\S]*borderColor: "#0f172a",/);
 assert.doesNotMatch(reportFactSourcePickerStylesSource, /export const modeActiveStyle: CSSProperties = \{[\s\S]*border: "1px solid #0f172a"/);
+assert.match(reportFactSourcePickerCellSource, /const FACT_SOURCE_VISIBLE_LABEL_LIMIT = 2;/);
+assert.match(reportFactSourcePickerCellSource, /compactLabels\.join\(" \+ "\)/);
+assert.match(reportFactSourcePickerCellSource, /title=\{selectedTitle\}/);
+assert.doesNotMatch(reportFactSourcePickerCellSource, /\{isSumMode \? `Сумма: \$\{sourceRowKeys\.length\}` : "Свой"\}/);
 assert.match(ptoPrimaryContentSource, /createEmptyPtoDateModel\(appState\.ptoPlanYear\)/);
 assert.match(ptoPrimaryContentSource, /import\("@\/features\/app\/PtoDataPrimaryContent"\)/);
 assert.doesNotMatch(ptoPrimaryContentSource, /useAppPtoDateModel/);
@@ -344,11 +349,13 @@ assert.doesNotMatch(ptoDateRowsColumnsModelSource, /useMemo\(\(\) => createPtoDa
 assert.match(usePtoDateViewModelSource, /ptoDateEditing: boolean;/);
 assert.match(usePtoDateViewModelSource, /const activePtoDateLookupRows = useMemo/);
 assert.match(usePtoDateViewModelSource, /if \(ptoTab === "plan"\) return deferredPtoPlanRows;/);
-assert.match(usePtoDateViewModelSource, /const activePtoDateLookupRowsSignature = useMemo/);
-assert.match(usePtoDateViewModelSource, /ptoDateRowsLookupSignature\(activePtoDateLookupRows\)/);
+assert.match(usePtoDateViewModelSource, /const activePtoDateLookupBundle = useMemo/);
 assert.match(usePtoDateViewModelSource, /createPtoDateLookupSourceBundle\(activePtoDateLookupRows\)/);
+assert.match(usePtoDateViewModelSource, /useStablePtoDateLookupSources\(activePtoDateLookupBundle\)/);
 assert.match(usePtoDateViewModelSource, /createPtoAreaLookupSourceBundle\(activePtoDateLookupRows\)/);
-assert.match(usePtoDateViewModelSource, /\[activePtoDateLookupRowsSignature\]/);
+assert.match(usePtoDateViewModelSource, /\[activePtoDateLookupRows, isPtoDateTab\]/);
+assert.match(usePtoDateViewModelSource, /\[activePtoDateLookupBundle\.signature, isPtoDateTab\]/);
+assert.doesNotMatch(usePtoDateViewModelSource, /ptoDateRowsLookupSignature/);
 assert.doesNotMatch(usePtoDateViewModelSource, /createPtoDateLookupSourceBundle\(activePtoDateRows\)/);
 assert.match(usePtoDateViewModelSource, /isPtoDateTab \? yearMonths\(ptoPlanYear\) : \[\]/);
 assert.match(usePtoDateViewModelSource, /if \(!isPtoDateTab \|\| !ptoDateEditing\) \{/);

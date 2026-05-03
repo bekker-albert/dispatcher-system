@@ -11,6 +11,12 @@ import {
 } from "./ReportFactSourcePickerStyles";
 import type { ReportFactSourceCellProps } from "./ReportFactSourcePickerTypes";
 
+const FACT_SOURCE_VISIBLE_LABEL_LIMIT = 2;
+
+function sourceRowLabel(row: ReportRow, rowLabels: Record<string, string>) {
+  return (rowLabels[reportRowKey(row)]?.trim() || row.name).replace(/\s+/g, " ");
+}
+
 export function ReportFactSourceCell({
   sourceRowKeys,
   rowsByKey,
@@ -21,14 +27,30 @@ export function ReportFactSourceCell({
     .map((sourceRowKey) => rowsByKey.get(sourceRowKey))
     .filter((row): row is ReportRow => Boolean(row));
   const isSumMode = sourceRowKeys.length > 0;
-  const selectedText = selectedRows.length > 0
-    ? selectedRows.map((row) => rowLabels[reportRowKey(row)]?.trim() || row.name).join(" + ")
+  const selectedLabels = selectedRows.map((row) => sourceRowLabel(row, rowLabels));
+  const compactLabels = selectedLabels.slice(0, FACT_SOURCE_VISIBLE_LABEL_LIMIT);
+  const hiddenSourceCount = Math.max(selectedLabels.length - compactLabels.length, 0);
+  const selectedTitle = isSumMode
+    ? selectedLabels.length > 0
+      ? `Сумма строк (${sourceRowKeys.length}): ${selectedLabels.join(" + ")}`
+      : `Сумма строк: ${sourceRowKeys.length}`
     : "Свой факт";
+  const selectedBadgeText = isSumMode
+    ? [
+        `Сумма: ${sourceRowKeys.length}`,
+        compactLabels.join(" + "),
+        hiddenSourceCount > 0 ? `еще ${hiddenSourceCount}` : "",
+      ].filter(Boolean).join(" · ")
+    : "Свой";
 
   return (
     <div style={factSourceCellStyle}>
-      <span style={isSumMode ? factSourceSumBadgeStyle : factSourceOwnBadgeStyle} title={selectedText}>
-        {isSumMode ? `Сумма: ${sourceRowKeys.length}` : "Свой"}
+      <span
+        style={isSumMode ? factSourceSumBadgeStyle : factSourceOwnBadgeStyle}
+        title={selectedTitle}
+        aria-label={selectedTitle}
+      >
+        {selectedBadgeText}
       </span>
       <MiniIconButton label="Настроить источник факта" onClick={onEdit}>
         <Pencil size={13} aria-hidden />

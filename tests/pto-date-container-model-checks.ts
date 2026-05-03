@@ -10,9 +10,8 @@ import type { createPtoDateEditableRowModel } from "../features/pto/PtoDateEdita
 import {
   createPtoAreaAndBucketRowLookupSourceBundle,
   createPtoBucketRowLookupSources,
-  createPtoDateLookupSources,
+  createPtoDateLookupSourceBundle,
   ptoBucketRowLookupSourcesSignature,
-  ptoDateLookupSourcesSignature,
 } from "../features/pto/ptoDateLookupModel";
 import { createPtoDateVisibleRowHeightsModel } from "../features/pto/ptoDateVirtualRowsViewModel";
 import type { usePtoDateRowsColumnsModel } from "../features/pto/ptoDateRowsColumnsModel";
@@ -83,18 +82,14 @@ const lookupChangedStructureRows = [{
   structure: "Погрузка",
 }];
 
-assert.equal(
-  ptoDateLookupSourcesSignature(createPtoDateLookupSources(lookupBaseRows)),
-  ptoDateLookupSourcesSignature(createPtoDateLookupSources(lookupChangedValueRows)),
-);
-assert.notEqual(
-  ptoDateLookupSourcesSignature(createPtoDateLookupSources(lookupBaseRows)),
-  ptoDateLookupSourcesSignature(createPtoDateLookupSources(lookupChangedDateRows)),
-);
-assert.notEqual(
-  ptoDateLookupSourcesSignature(createPtoDateLookupSources(lookupBaseRows)),
-  ptoDateLookupSourcesSignature(createPtoDateLookupSources(lookupChangedStructureRows)),
-);
+const lookupBaseBundle = createPtoDateLookupSourceBundle(lookupBaseRows);
+const lookupChangedValueBundle = createPtoDateLookupSourceBundle(lookupChangedValueRows);
+const lookupChangedDateBundle = createPtoDateLookupSourceBundle(lookupChangedDateRows);
+const lookupChangedStructureBundle = createPtoDateLookupSourceBundle(lookupChangedStructureRows);
+
+assert.equal(lookupBaseBundle.signature, lookupChangedValueBundle.signature);
+assert.notEqual(lookupBaseBundle.signature, lookupChangedDateBundle.signature);
+assert.notEqual(lookupBaseBundle.signature, lookupChangedStructureBundle.signature);
 assert.equal(
   ptoBucketRowLookupSourcesSignature(createPtoBucketRowLookupSources(lookupBaseRows)),
   ptoBucketRowLookupSourcesSignature(createPtoBucketRowLookupSources(lookupChangedValueRows)),

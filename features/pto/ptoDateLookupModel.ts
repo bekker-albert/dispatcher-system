@@ -86,10 +86,6 @@ export function createPtoDateLookupSourceBundle(rows: readonly PtoPlanRow[]): Lo
   };
 }
 
-export function ptoDateRowsLookupSignature(rows: readonly PtoPlanRow[]) {
-  return rows.map((row) => createPtoDateLookupSource(row).signature).join("\u001e");
-}
-
 export function createPtoAreaLookupSources(rows: readonly PtoPlanRow[]): PtoAreaLookupSource[] {
   return createPtoAreaLookupSourceBundle(rows).sources;
 }

@@ -31,19 +31,40 @@ type DatabaseResponse<T> = {
   code?: string;
 };
 
+type DatabaseStatusPayload = {
+  configured?: boolean;
+  provider?: string;
+};
+
 const databaseRequestTimeoutMs = 30000;
+const databaseReadinessTimeoutMs = 3000;
+const databaseReadinessCacheMs = 10000;
+
+let databaseReadinessCheckedUntil = 0;
+let activeDatabaseReadinessCheck: Promise<void> | null = null;
 
 function databaseApiUrl() {
   return "/api/database";
 }
 
-export async function databaseRequest<T>(
+function databaseTimeoutMessage(timeoutMs: number) {
+  return timeoutMs === databaseRequestTimeoutMs
+    ? "Сервер базы данных не ответил за 30 секунд."
+    : `Сервер базы данных не ответил на короткую проверку готовности за ${Math.round(timeoutMs / 1000)} сек.`;
+}
+
+function isDatabaseStatusRequest(resource: DatabaseResource, action: DatabaseAction) {
+  return resource === "status" || action === "status";
+}
+
+async function sendDatabaseRequest<T>(
   resource: DatabaseResource,
   action: DatabaseAction,
   payload?: unknown,
+  timeoutMs = databaseRequestTimeoutMs,
 ): Promise<T> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), databaseRequestTimeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
 
@@ -59,7 +80,7 @@ export async function databaseRequest<T>(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Сервер базы данных не ответил за 30 секунд.");
+      throw new Error(databaseTimeoutMessage(timeoutMs));
     }
     throw error;
   } finally {
@@ -77,4 +98,46 @@ export async function databaseRequest<T>(
   }
 
   return body.data as T;
+}
+
+function assertDatabaseReadyStatus(status: DatabaseStatusPayload) {
+  if (status.configured === false) {
+    throw new Error("Серверная база данных не настроена.");
+  }
+}
+
+async function runDatabaseReadinessCheck() {
+  try {
+    const status = await sendDatabaseRequest<DatabaseStatusPayload>(
+      "status",
+      "status",
+      undefined,
+      databaseReadinessTimeoutMs,
+    );
+    assertDatabaseReadyStatus(status);
+    databaseReadinessCheckedUntil = Date.now() + databaseReadinessCacheMs;
+  } catch (error) {
+    const message = errorToMessage(error);
+    throw new Error(`Сервер базы данных не готов: ${message}`);
+  }
+}
+
+async function ensureDatabaseReady(resource: DatabaseResource, action: DatabaseAction) {
+  if (isDatabaseStatusRequest(resource, action)) return;
+  if (Date.now() < databaseReadinessCheckedUntil) return;
+
+  activeDatabaseReadinessCheck = activeDatabaseReadinessCheck ?? runDatabaseReadinessCheck().finally(() => {
+    activeDatabaseReadinessCheck = null;
+  });
+
+  await activeDatabaseReadinessCheck;
+}
+
+export async function databaseRequest<T>(
+  resource: DatabaseResource,
+  action: DatabaseAction,
+  payload?: unknown,
+): Promise<T> {
+  await ensureDatabaseReady(resource, action);
+  return sendDatabaseRequest<T>(resource, action, payload);
 }
