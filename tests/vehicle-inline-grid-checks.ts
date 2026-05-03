@@ -124,7 +124,11 @@ assert.doesNotMatch(adminVehicleTableRowSource, /previous\.vehicleCellInputProps
 assert.match(useVehicleInlineCellInputPropsSource, /const editingVehicleCellRef = useRef/);
 assert.match(useVehicleInlineCellInputPropsSource, /const handlersRef = useRef/);
 assert.match(useVehicleInlineCellInputPropsSource, /useLayoutEffect\(\(\) => \{/);
+assert.match(useVehicleInlineCellInputPropsSource, /const vehicleRowCellStateSignatures = useMemo\(\(\) => \{/);
+assert.match(useVehicleInlineCellInputPropsSource, /const affectedVehicleRowIds = new Set<number>\(\);/);
+assert.match(useVehicleInlineCellInputPropsSource, /selectedVehicleCellKeysById\.forEach\(\(_keys, vehicleId\) => affectedVehicleRowIds\.add\(vehicleId\)\)/);
 assert.match(useVehicleInlineCellInputPropsSource, /vehicleRowCellStateSignature = useCallback/);
+assert.match(useVehicleInlineCellInputPropsSource, /return vehicleRowCellStateSignatures\.get\(id\) \?\? "";/);
 assert.match(useVehicleInlineCellInputPropsSource, /handlersRef\.current\.startVehicleInlineSelection/);
 
 const virtualSourceRows = Array.from({ length: 120 }, (_, index) => index);

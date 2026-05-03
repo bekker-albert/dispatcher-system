@@ -68,6 +68,28 @@ export function useVehicleInlineCellInputProps({
 
     return keysById;
   }, [selectedVehicleCellKeys]);
+  const vehicleRowCellStateSignatures = useMemo(() => {
+    const affectedVehicleRowIds = new Set<number>();
+    const activeVehicleInlineCell = activeVehicleCell ? parseVehicleInlineFieldDomKey(activeVehicleCell) : null;
+    const editingVehicleInlineCell = editingVehicleCell ? parseVehicleInlineFieldDomKey(editingVehicleCell) : null;
+
+    if (activeVehicleInlineCell) affectedVehicleRowIds.add(activeVehicleInlineCell.vehicleId);
+    if (editingVehicleInlineCell) affectedVehicleRowIds.add(editingVehicleInlineCell.vehicleId);
+    selectedVehicleCellKeysById.forEach((_keys, vehicleId) => affectedVehicleRowIds.add(vehicleId));
+
+    const signatures = new Map<number, string>();
+    affectedVehicleRowIds.forEach((id) => {
+      const rowPrefix = `${id}:`;
+      const activeKey = activeVehicleCell?.startsWith(rowPrefix) ? activeVehicleCell : "";
+      const editingKey = editingVehicleCell?.startsWith(rowPrefix) ? editingVehicleCell : "";
+      const selectedKeys = selectedVehicleCellKeysById.get(id)?.join(",") ?? "";
+      const draftKey = editingKey ? vehicleCellDraft : "";
+
+      signatures.set(id, `${activeKey}|${editingKey}|${draftKey}|${selectedKeys}`);
+    });
+
+    return signatures;
+  }, [activeVehicleCell, editingVehicleCell, selectedVehicleCellKeysById, vehicleCellDraft]);
   const editingVehicleCellRef = useRef(editingVehicleCell);
   const handlersRef = useRef({
     commitVehicleInlineCellEdit,
@@ -99,14 +121,8 @@ export function useVehicleInlineCellInputProps({
   ]);
 
   const vehicleRowCellStateSignature = useCallback((id: number) => {
-    const rowPrefix = `${id}:`;
-    const activeKey = activeVehicleCell?.startsWith(rowPrefix) ? activeVehicleCell : "";
-    const editingKey = editingVehicleCell?.startsWith(rowPrefix) ? editingVehicleCell : "";
-    const selectedKeys = selectedVehicleCellKeysById.get(id)?.join(",") ?? "";
-    const draftKey = editingKey ? vehicleCellDraft : "";
-
-    return `${activeKey}|${editingKey}|${draftKey}|${selectedKeys}`;
-  }, [activeVehicleCell, editingVehicleCell, selectedVehicleCellKeysById, vehicleCellDraft]);
+    return vehicleRowCellStateSignatures.get(id) ?? "";
+  }, [vehicleRowCellStateSignatures]);
 
   const vehicleCellInputProps = useCallback((id: number, field: VehicleInlineField) => {
     const fieldKey = vehicleInlineFieldDomKey(id, field);
