@@ -10,6 +10,7 @@ import { createReportBaseRows } from "../lib/domain/reports/rows-model";
 import { reportReasonEntryKey, reportYearReasonOverrideKey } from "../lib/domain/reports/reasons";
 import { createReportBodyLayout, createReportPrintLayout } from "../features/reports/reportPrintLayout";
 import { reportPrintProfile } from "../features/reports/reportPrintProfile";
+import { createReportTableBodyGroups } from "../features/reports/reportTableBodyModel";
 import { createCustomerReportRows, createReportAreaGroups, createReportAreaTabs, filterReportAreaGroups, flattenReportAreaGroups } from "../features/reports/customerReportRowsModel";
 import { createReportColumnTextModel } from "../features/reports/reportColumnTextModel";
 import { createReportRowDisplayViewModel } from "../features/reports/reportRowDisplayViewModel";
@@ -168,6 +169,21 @@ const rowViewWithComputedYearReason = createReportRowDisplayViewModel({
   yearReasonText: "Computed accumulated reason",
 });
 assert.equal(rowViewWithComputedYearReason.yearReason.text, "Computed accumulated reason");
+
+const tableBodyGroups = createReportTableBodyGroups({
+  filteredReportAreaGroups: [{ area: "Aksu", rows: [{ ...reportRow, displayKey: "summary:sum-1", yearReason: "Computed year reason" }] }],
+  reportDate: "2026-04-12",
+  reportGroupStartIndexes: [4],
+  reportReasons: {
+    [reportReasonEntryKey("2026-04-12", "summary:sum-1")]: "Day reason override",
+    [reportYearReasonOverrideKey("2026-04-12", "summary:sum-1")]: "Manual year reason",
+  },
+});
+assert.equal(tableBodyGroups[0].area, "Aksu");
+assert.equal(tableBodyGroups[0].rows[0].rowKey, "summary:sum-1");
+assert.equal(tableBodyGroups[0].rows[0].rowPrintIndex, 4);
+assert.equal(tableBodyGroups[0].rows[0].dayReasonText, "Day reason override");
+assert.equal(tableBodyGroups[0].rows[0].yearReasonText, "Manual year reason");
 
 const createPrintRow = (index: number): ReportRow => ({
   area: "Aksu",

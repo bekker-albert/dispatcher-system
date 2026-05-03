@@ -1,16 +1,10 @@
 import { memo, useMemo } from "react";
-import { reportRowDisplayKey } from "@/lib/domain/reports/display";
-import { reportReasonEntryKey, reportYearReasonTextWithManualOverride } from "@/lib/domain/reports/reasons";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import { ReportReasonTextarea } from "./ReportReasonTextarea";
 import { ReportMetric, ReportTd } from "./ReportTableParts";
+import { createReportTableBodyGroups, type ReportAreaGroup } from "./reportTableBodyModel";
 import { createReportRowDisplayViewModel } from "./reportRowDisplayViewModel";
 import { reportAreaGroupStartRowStyle } from "./reportSectionStyles";
-
-type ReportAreaGroup = {
-  area: string;
-  rows: ReportRow[];
-};
 
 type ReportTableBodyProps = {
   filteredReportAreaGroups: ReportAreaGroup[];
@@ -51,27 +45,6 @@ type ReportTableBodyRowProps = {
 };
 
 const emptyReportReasons: Record<string, string> = {};
-
-function reportTableYearReasonText(row: ReportRow, rowKey: string, reportDate: string, reportReasons: Record<string, string>) {
-  if (!rowKey.startsWith("summary:")) return row.yearReason;
-
-  return reportYearReasonTextWithManualOverride(reportReasons, rowKey, reportDate, row.yearReason);
-}
-
-type ReportTableBodyRowDescriptor = {
-  dayReasonText?: string;
-  groupRowCount: number;
-  row: ReportRow;
-  rowIndexInGroup: number;
-  rowKey: string;
-  rowPrintIndex: number;
-  yearReasonText?: string;
-};
-
-type ReportTableBodyGroupDescriptor = {
-  area: string;
-  rows: ReportTableBodyRowDescriptor[];
-};
 
 const ReportTableBodyRow = memo(function ReportTableBodyRow({
   dayReasonText,
@@ -188,30 +161,12 @@ export function ReportTableBody({
   onCommitReportYearReason,
   onCancelReportYearReasonDraft,
 }: ReportTableBodyProps) {
-  const bodyGroups = useMemo(() => (
-    filteredReportAreaGroups.map((group, groupIndex): ReportTableBodyGroupDescriptor => {
-      const groupStartIndex = reportGroupStartIndexes[groupIndex] ?? 0;
-      const groupRowCount = group.rows.length;
-
-      return {
-        area: group.area,
-        rows: group.rows.map((row, index) => {
-          const rowPrintIndex = groupStartIndex + index;
-          const rowKey = reportRowDisplayKey(row);
-
-          return {
-            dayReasonText: reportReasons[reportReasonEntryKey(reportDate, rowKey)],
-            groupRowCount,
-            row,
-            rowIndexInGroup: index,
-            rowKey,
-            rowPrintIndex,
-            yearReasonText: reportTableYearReasonText(row, rowKey, reportDate, reportReasons),
-          };
-        }),
-      };
-    })
-  ), [filteredReportAreaGroups, reportDate, reportGroupStartIndexes, reportReasons]);
+  const bodyGroups = useMemo(() => createReportTableBodyGroups({
+    filteredReportAreaGroups,
+    reportDate,
+    reportGroupStartIndexes,
+    reportReasons,
+  }), [filteredReportAreaGroups, reportDate, reportGroupStartIndexes, reportReasons]);
 
   return (
     <>

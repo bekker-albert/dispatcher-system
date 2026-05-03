@@ -48,6 +48,7 @@ const useTableResizeHandlersSource = readFileSync(resolve(testDir, "../component
 const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/reports/useReportColumnLayout.ts"), "utf8");
 const reportColumnTextModelSource = readFileSync(resolve(testDir, "../features/reports/reportColumnTextModel.ts"), "utf8");
 const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
+const reportTableBodyModelSource = readFileSync(resolve(testDir, "../features/reports/reportTableBodyModel.ts"), "utf8");
 const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
 const useReportPrintLayoutControllerSource = readFileSync(resolve(testDir, "../features/reports/useReportPrintLayoutController.ts"), "utf8");
 const reportPrintLayoutSource = readFileSync(resolve(testDir, "../features/reports/reportPrintLayout.ts"), "utf8");
@@ -126,9 +127,14 @@ assert.match(useCustomerReportViewModelSource, /flattenReportAreaGroups\(filtere
 assert.doesNotMatch(useCustomerReportViewModelSource, /flatMap/);
 assert.match(customerReportRowsModelSource, /function addSummarySourceRowKeys/);
 assert.match(customerReportRowsModelSource, /summaryRows\.forEach\(\(summary\) => addSummarySourceRowKeys/);
-assert.match(reportTableBodySource, /const bodyGroups = useMemo/);
+assert.match(reportTableBodySource, /createReportTableBodyGroups\(\{/);
 assert.match(reportTableBodySource, /rowKey=\{rowDescriptor\.rowKey\}/);
+assert.match(reportTableBodyModelSource, /function reportTableYearReasonText/);
+assert.match(reportTableBodyModelSource, /reportReasons\[reportReasonEntryKey\(reportDate, rowKey\)\]/);
+assert.match(reportTableBodyModelSource, /reportYearReasonTextWithManualOverride\(reportReasons, rowKey, reportDate, row\.yearReason\)/);
 assert.doesNotMatch(reportTableBodySource, /const rowKey = reportRowDisplayKey\(row\);\s*const dayReasonText/);
+assert.doesNotMatch(reportTableBodySource, /reportReasonEntryKey/);
+assert.doesNotMatch(reportTableBodySource, /reportYearReasonTextWithManualOverride/);
 assert.match(reportsSectionSource, /useReportPrintLayoutController\(\{/);
 assert.doesNotMatch(reportsSectionSource, /createReportBodyLayout/);
 assert.doesNotMatch(reportsSectionSource, /createReportPrintLayout/);
