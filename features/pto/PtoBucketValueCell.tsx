@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { ptoBucketCellKey, type PtoBucketCell, type PtoBucketColumn, type PtoBucketRow } from "../../lib/domain/pto/buckets";
+import { type PtoBucketCell, type PtoBucketColumn, type PtoBucketRow } from "../../lib/domain/pto/buckets";
 import { formatBucketNumber } from "../../lib/domain/pto/formatting";
 import {
   ptoActiveFormulaCellStyle,
@@ -15,6 +15,7 @@ import {
 type PtoBucketValueCellProps = {
   row: PtoBucketRow;
   column: PtoBucketColumn;
+  cellKey: string;
   value: number | undefined;
   draft: string;
   editingMode: boolean;
@@ -38,6 +39,7 @@ type PtoBucketValueCellProps = {
 export const PtoBucketValueCell = memo(function PtoBucketValueCell({
   row,
   column,
+  cellKey,
   value,
   draft,
   editingMode,
@@ -51,8 +53,6 @@ export const PtoBucketValueCell = memo(function PtoBucketValueCell({
   onSelectCell,
   onStartEdit,
 }: PtoBucketValueCellProps) {
-  const cellKey = ptoBucketCellKey(row.key, column.key);
-  const cell = { rowKey: row.key, equipmentKey: column.key };
   const formattedValue = formatBucketNumber(value);
 
   if (!editingMode) {
@@ -69,6 +69,7 @@ export const PtoBucketValueCell = memo(function PtoBucketValueCell({
     ...(active ? ptoActiveFormulaCellStyle : null),
     ...(isEditing ? ptoEditingFormulaCellStyle : null),
   };
+  const cell = { rowKey: row.key, equipmentKey: column.key };
 
   return (
     <td style={ptoBucketsTdStyle}>

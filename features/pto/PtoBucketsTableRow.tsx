@@ -76,6 +76,7 @@ export const PtoBucketsTableRow = memo(function PtoBucketsTableRow({
             key={column.key}
             row={row}
             column={column}
+            cellKey={cellKey}
             value={values[cellKey]}
             draft={isActiveCell ? draft : ""}
             editingMode={editingMode}
