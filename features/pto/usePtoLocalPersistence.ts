@@ -34,8 +34,6 @@ type PtoLocalPersistenceOptions = {
   ptoBucketManualRows: PtoBucketRow[];
   ptoTab: string;
   ptoPlanYear: string;
-  ptoAreaFilter: string;
-  expandedPtoMonths: Record<string, boolean>;
 };
 
 export function usePtoLocalPersistence({
@@ -60,11 +58,16 @@ export function usePtoLocalPersistence({
   ptoBucketManualRows,
   ptoTab,
   ptoPlanYear,
-  ptoAreaFilter,
-  expandedPtoMonths,
 }: PtoLocalPersistenceOptions) {
   const ptoLocalSaveTimerRef = useRef<number | null>(null);
   const ptoLocalSaveSnapshotRef = useRef<PtoBrowserStorageSnapshotCache | null>(null);
+  const currentPtoTabRef = useRef(ptoTab);
+  const currentPtoPlanYearRef = useRef(ptoPlanYear);
+
+  useEffect(() => {
+    currentPtoTabRef.current = ptoTab;
+    currentPtoPlanYearRef.current = ptoPlanYear;
+  }, [ptoPlanYear, ptoTab]);
 
   const savePtoLocalState = useCallback(() => {
     if (skipUntilDatabaseLoaded && !ptoDatabaseLoadedRef.current) return;
@@ -74,9 +77,11 @@ export function usePtoLocalPersistence({
     const localUpdatedAt = markLocalUpdatedAt && !isPtoDatabaseDirty()
       ? getPtoDatabaseExpectedUpdatedAt()
       : undefined;
+    const currentPtoTab = currentPtoTabRef.current;
+    const currentPtoPlanYear = currentPtoPlanYearRef.current;
     const includeBuckets = !skipUntilDatabaseLoaded
-      || ptoTab === "buckets"
-      || ptoDatabaseLoadedBucketsYearRef.current === ptoPlanYear;
+      || currentPtoTab === "buckets"
+      || ptoDatabaseLoadedBucketsYearRef.current === currentPtoPlanYear;
     const result = savePtoStateToBrowserStorage(
       state,
       {
@@ -103,8 +108,6 @@ export function usePtoLocalPersistence({
     ptoDatabaseLoadedRef,
     ptoDatabaseLoadedBucketsYearRef,
     ptoDatabaseStateRef,
-    ptoPlanYear,
-    ptoTab,
     requestClientSnapshotSave,
     showSaveStatus,
     skipUntilDatabaseLoaded,
@@ -133,16 +136,12 @@ export function usePtoLocalPersistence({
     ptoBucketManualRows,
     ptoBucketValues,
     ptoColumnWidths,
-    ptoAreaFilter,
     ptoHeaderLabels,
     ptoManualYears,
     ptoOperRows,
     ptoPlanRows,
-    ptoPlanYear,
     ptoRowHeights,
     ptoSurveyRows,
-    ptoTab,
-    expandedPtoMonths,
     savePtoLocalState,
   ]);
 

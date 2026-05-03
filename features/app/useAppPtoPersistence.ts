@@ -214,8 +214,6 @@ export function useAppPtoPersistence({
     ptoBucketManualRows,
     ptoTab,
     ptoPlanYear,
-    ptoAreaFilter,
-    expandedPtoMonths,
   });
 
   return {
