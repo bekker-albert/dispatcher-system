@@ -112,30 +112,35 @@ export function useVehicleRowsPersistence({
       return;
     }
 
-    const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
-    const savePlan = createVehicleRowsSavePlan(rowsSnapshot, expectedSnapshot);
-    if (savePlan.kind === "none") {
-      databaseSaveSnapshotRef.current = snapshot;
-      vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
-      return;
-    }
-
-    showSaveStatus("saving", "\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u044e \u0442\u0435\u0445\u043d\u0438\u043a\u0443...");
     databaseSaveQueueRef.current?.enqueue(async (isLatest) => {
       try {
+        if (snapshot === databaseSaveSnapshotRef.current) {
+          vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
+          return;
+        }
+
+        const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
+        const savePlan = createVehicleRowsSavePlan(rowsSnapshot, expectedSnapshot);
+        if (savePlan.kind === "none") {
+          databaseSaveSnapshotRef.current = snapshot;
+          vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
+          return;
+        }
+
         const { replaceVehiclesInDatabase, saveVehicleRowsPatchToDatabase } = await import("@/lib/data/vehicles");
         if (!isLatest()) return;
 
+        showSaveStatus("saving", "\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u044e \u0442\u0435\u0445\u043d\u0438\u043a\u0443...");
         if (savePlan.kind === "patch") {
           await saveVehicleRowsPatchToDatabase(savePlan.patchRows, { expectedSnapshot: savePlan.expectedSnapshot });
         } else if (savePlan.kind === "replace") {
           await replaceVehiclesInDatabase(savePlan.rows, { expectedSnapshot: savePlan.expectedSnapshot });
         }
 
-        if (!isLatest() || snapshotVersion !== vehicleRowsVersionRef.current) return;
-
         databaseSaveSnapshotRef.current = snapshot;
         vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
+        if (!isLatest() || snapshotVersion !== vehicleRowsVersionRef.current) return;
+
         showSaveStatus("saved", "\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430.");
       } catch (error) {
         console.warn("Database vehicles save failed:", error);

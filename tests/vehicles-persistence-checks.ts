@@ -81,8 +81,15 @@ assert.match(vehicleRowsPersistenceSource, /const vehicleDatabaseRetryMaxDelayMs
 assert.match(vehicleRowsPersistenceSource, /const vehicleDatabaseRetryTimerRef = useRef<number \| null>\(null\);/);
 assert.match(vehicleRowsPersistenceSource, /const vehicleDatabaseRetryDelayRef = useRef\(vehicleDatabaseRetryInitialDelayMs\);/);
 assert.match(vehicleRowsPersistenceSource, /function saveVehicleRowsLocalBackupIfChanged/);
-assert.match(vehicleRowsPersistenceSource, /createVehicleRowsSavePlan\(rowsSnapshot, expectedSnapshot\)/);
 assert.match(vehicleRowsPersistenceSource, /const queueDatabaseVehicleSave = useCallback/);
+assert.match(
+  vehicleRowsPersistenceSource,
+  /databaseSaveQueueRef\.current\?\.enqueue\(async \(isLatest\) => \{[\s\S]*const expectedSnapshot = parseExpectedVehicleSnapshot\(databaseSaveSnapshotRef\.current\);[\s\S]*const savePlan = createVehicleRowsSavePlan\(rowsSnapshot, expectedSnapshot\)/,
+);
+assert.match(
+  vehicleRowsPersistenceSource,
+  /databaseSaveSnapshotRef\.current = snapshot;[\s\S]*vehicleDatabaseRetryDelayRef\.current = vehicleDatabaseRetryInitialDelayMs;[\s\S]*if \(!isLatest\(\) \|\| snapshotVersion !== vehicleRowsVersionRef\.current\) return;/,
+);
 assert.match(vehicleRowsPersistenceSource, /saveVehicleRowsPatchToDatabase\(savePlan\.patchRows/);
 assert.match(vehicleRowsPersistenceSource, /if \(isDatabaseConflictError\(error\)\) \{/);
 assert.match(vehicleRowsPersistenceSource, /vehicleDatabaseRetryTimerRef\.current = window\.setTimeout/);
