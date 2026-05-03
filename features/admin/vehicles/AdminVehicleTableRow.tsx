@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { memo, type ComponentProps, type ReactNode } from "react";
 import type { VehicleInlineField } from "@/lib/domain/vehicles/grid";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
@@ -38,6 +38,15 @@ type EditableVehicleCellProps = {
   vehicleCellInputProps: (id: number, field: VehicleInlineField) => VehicleCellShellProps;
 };
 
+type AdminVehicleTableRowProps = {
+  adminVehiclesEditing: boolean;
+  vehicle: VehicleRow;
+  vehicleCellInputProps: (id: number, field: VehicleInlineField) => VehicleCellShellProps;
+  onVehicleCellChange: (id: number, field: VehicleInlineField, value: string) => void;
+  onToggleVehicleVisibility: (id: number) => void;
+  onDeleteVehicle: (id: number) => void;
+};
+
 function EditableVehicleCell({
   vehicle,
   field,
@@ -73,21 +82,14 @@ function VehicleCell({
   return <AdminVehicleReadOnlyCell numeric={numeric} value={value} />;
 }
 
-export function AdminVehicleTableRow({
+function AdminVehicleTableRowComponent({
   adminVehiclesEditing,
   vehicle,
   vehicleCellInputProps,
   onVehicleCellChange,
   onToggleVehicleVisibility,
   onDeleteVehicle,
-}: {
-  adminVehiclesEditing: boolean;
-  vehicle: VehicleRow;
-  vehicleCellInputProps: (id: number, field: VehicleInlineField) => VehicleCellShellProps;
-  onVehicleCellChange: (id: number, field: VehicleInlineField, value: string) => void;
-  onToggleVehicleVisibility: (id: number) => void;
-  onDeleteVehicle: (id: number) => void;
-}) {
+}: AdminVehicleTableRowProps) {
   const vehicleDisplayName = buildVehicleDisplayName(vehicle);
 
   return (
@@ -210,3 +212,15 @@ export function AdminVehicleTableRow({
     </tr>
   );
 }
+
+export const AdminVehicleTableRow = memo(
+  AdminVehicleTableRowComponent,
+  (previous, next) => (
+    previous.adminVehiclesEditing === next.adminVehiclesEditing
+    && previous.vehicle === next.vehicle
+    && previous.vehicleCellInputProps === next.vehicleCellInputProps
+    && previous.onVehicleCellChange === next.onVehicleCellChange
+    && previous.onToggleVehicleVisibility === next.onToggleVehicleVisibility
+    && previous.onDeleteVehicle === next.onDeleteVehicle
+  ),
+);

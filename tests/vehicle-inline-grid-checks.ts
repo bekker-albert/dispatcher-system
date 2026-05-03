@@ -112,6 +112,8 @@ assert.equal(vehicleKeyStartsInlineEdit("brand", ""), false);
 assert.match(adminVehiclesTableSource, /createAdminVehicleVirtualRows\(visibleVehicleRows, vehicleRowsViewport, !adminVehiclesEditing\)/);
 assert.match(adminVehiclesTableSource, /onScroll=\{scheduleVehicleRowsViewportUpdate\}/);
 assert.match(adminVehiclesTableSource, /virtualVehicleRows\.topSpacerHeight/);
+assert.match(readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleTableRow.tsx"), "utf8"), /export const AdminVehicleTableRow = memo/);
+assert.match(readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleTableRow.tsx"), "utf8"), /previous\.vehicle === next\.vehicle/);
 
 const virtualSourceRows = Array.from({ length: 120 }, (_, index) => index);
 assert.deepEqual(
