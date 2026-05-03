@@ -28,12 +28,16 @@ export function PtoBucketsPrimaryContent({
   navigation,
 }: PtoBucketsPrimaryContentProps) {
   const ptoPerformanceRowSources = useMemo(
-    () => [
-      ...models.deferredPtoPlanRows,
-      ...models.deferredPtoOperRows,
-      ...models.deferredPtoSurveyRows,
-    ],
-    [models.deferredPtoOperRows, models.deferredPtoPlanRows, models.deferredPtoSurveyRows],
+    () => (
+      appState.ptoTab === "performance"
+        ? [
+            ...models.deferredPtoPlanRows,
+            ...models.deferredPtoOperRows,
+            ...models.deferredPtoSurveyRows,
+          ]
+        : []
+    ),
+    [appState.ptoTab, models.deferredPtoOperRows, models.deferredPtoPlanRows, models.deferredPtoSurveyRows],
   );
   const ptoSupplementalTables = useAppPtoBucketSupplementalTables({
     active: true,
