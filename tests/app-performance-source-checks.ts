@@ -49,6 +49,7 @@ const useReportColumnLayoutSource = readFileSync(resolve(testDir, "../features/r
 const reportColumnTextModelSource = readFileSync(resolve(testDir, "../features/reports/reportColumnTextModel.ts"), "utf8");
 const reportTableBodySource = readFileSync(resolve(testDir, "../features/reports/ReportTableBody.tsx"), "utf8");
 const reportsSectionSource = readFileSync(resolve(testDir, "../features/reports/ReportsSection.tsx"), "utf8");
+const useReportPrintLayoutControllerSource = readFileSync(resolve(testDir, "../features/reports/useReportPrintLayoutController.ts"), "utf8");
 const reportPrintLayoutSource = readFileSync(resolve(testDir, "../features/reports/reportPrintLayout.ts"), "utf8");
 const reportPrintPageCssSource = readFileSync(resolve(testDir, "../features/reports/reportPrintPageCss.ts"), "utf8");
 const reportPrintMediaTableSectionsSource = readFileSync(resolve(testDir, "../features/reports/reportPrintMediaTableSections.ts"), "utf8");
@@ -128,11 +129,15 @@ assert.match(customerReportRowsModelSource, /summaryRows\.forEach\(\(summary\) =
 assert.match(reportTableBodySource, /const bodyGroups = useMemo/);
 assert.match(reportTableBodySource, /rowKey=\{rowDescriptor\.rowKey\}/);
 assert.doesNotMatch(reportTableBodySource, /const rowKey = reportRowDisplayKey\(row\);\s*const dayReasonText/);
-assert.match(reportsSectionSource, /createReportBodyLayout\(filteredReportAreaGroups\)/);
-assert.match(reportsSectionSource, /const reportPrintLayoutToken = useMemo\(\(\) => \(\{[\s\S]*filteredReportAreaGroups,[\s\S]*reportColumnKeys,[\s\S]*reportDate,[\s\S]*reportHeaderLabel,[\s\S]*reportReasons,[\s\S]*\}\)/);
-assert.match(reportsSectionSource, /const \[preparedReportPrintState, setPreparedReportPrintState\] = useState/);
-assert.match(reportsSectionSource, /flushSync\(\(\) => setPreparedReportPrintState\(\{/);
-assert.doesNotMatch(reportsSectionSource, /setPreparedReportPrintState\(null\)/);
+assert.match(reportsSectionSource, /useReportPrintLayoutController\(\{/);
+assert.doesNotMatch(reportsSectionSource, /createReportBodyLayout/);
+assert.doesNotMatch(reportsSectionSource, /createReportPrintLayout/);
+assert.doesNotMatch(reportsSectionSource, /flushSync/);
+assert.match(useReportPrintLayoutControllerSource, /createReportBodyLayout\(filteredReportAreaGroups\)/);
+assert.match(useReportPrintLayoutControllerSource, /const reportPrintLayoutToken = useMemo\(\(\) => \(\{[\s\S]*filteredReportAreaGroups,[\s\S]*reportColumnKeys,[\s\S]*reportDate,[\s\S]*reportHeaderLabel,[\s\S]*reportReasons,[\s\S]*\}\)/);
+assert.match(useReportPrintLayoutControllerSource, /const \[preparedReportPrintState, setPreparedReportPrintState\] = useState/);
+assert.match(useReportPrintLayoutControllerSource, /flushSync\(\(\) => setPreparedReportPrintState\(\{/);
+assert.doesNotMatch(useReportPrintLayoutControllerSource, /setPreparedReportPrintState\(null\)/);
 assert.doesNotMatch(reportsSectionSource, /const reportPrintLayout = useMemo\(\(\) => createReportPrintLayout/);
 assert.match(reportPrintLayoutSource, /import \{ reportPrintProfile, type ReportPrintTextColumnKey \} from "\.\/reportPrintProfile";/);
 assert.match(reportPrintProfileSource, /size: "A3 landscape"/);

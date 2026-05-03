@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
-import { flushSync } from "react-dom";
+import { useMemo, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import type { ReportColumnKey } from "@/lib/domain/reports/columns";
 import type { ReportCompletionCard } from "@/lib/domain/reports/completion";
 import { formatReportTitleDate } from "@/lib/domain/reports/display";
@@ -11,7 +10,6 @@ import { ReportAreaToolbar } from "./ReportAreaToolbar";
 import { ReportCompletionCards } from "./ReportCompletionCards";
 import { ReportTableBody } from "./ReportTableBody";
 import { ReportTableHeader } from "./ReportTableHeader";
-import { createReportBodyLayout, createReportPrintLayout } from "./reportPrintLayout";
 import {
   reportPanelStyle,
   reportPrintFirstTitleStyle,
@@ -21,6 +19,7 @@ import {
   reportTitleStyle,
   reportWorkspaceStyle,
 } from "./reportSectionStyles";
+import { useReportPrintLayoutController } from "./useReportPrintLayoutController";
 
 export type ReportsSectionProps = {
   reportAreaTabs: string[];
@@ -69,57 +68,24 @@ export default function ReportsSection({
   onCancelReportYearReasonDraft,
   databaseSyncMessage = "",
 }: ReportsSectionProps) {
-  const reportPrintLayoutToken = useMemo(() => ({
-    filteredReportAreaGroups,
-    reportColumnKeys,
-    reportDate,
-    reportHeaderLabel,
-    reportReasons,
-  }), [filteredReportAreaGroups, reportColumnKeys, reportDate, reportReasons, reportHeaderLabel]);
-  const [preparedReportPrintState, setPreparedReportPrintState] = useState<{
-    layout: ReturnType<typeof createReportPrintLayout>;
-    token: object;
-  } | null>(null);
-  const reportBodyLayout = useMemo(() => createReportBodyLayout(filteredReportAreaGroups), [filteredReportAreaGroups]);
-  const buildReportPrintLayout = useCallback(() => createReportPrintLayout({
-    columnKeys: reportColumnKeys,
-    groups: filteredReportAreaGroups,
-    reportDate,
-    reportReasons,
-    reportHeaderLabel,
-  }), [filteredReportAreaGroups, reportColumnKeys, reportDate, reportReasons, reportHeaderLabel]);
-  const handlePrintReport = useCallback(() => {
-    flushSync(() => setPreparedReportPrintState({
-      layout: buildReportPrintLayout(),
-      token: reportPrintLayoutToken,
-    }));
-    window.requestAnimationFrame(onPrintReport);
-  }, [buildReportPrintLayout, onPrintReport, reportPrintLayoutToken]);
-  const preparedReportPrintLayout = preparedReportPrintState?.token === reportPrintLayoutToken
-    ? preparedReportPrintState.layout
-    : null;
-
   const {
     reportBodyRowCount,
     reportGroupStartIndexes,
-  } = reportBodyLayout;
-  const {
     reportLastPrintPageRows,
     reportPrintColumnWidths,
     reportPrintFillPaddingMm,
     reportPrintTextColumnWidths,
+    handlePrintReport,
     reportShouldFillPrintRows,
-  } = preparedReportPrintLayout ?? {
-    reportLastPrintPageRows: 0,
-    reportPrintColumnWidths: null,
-    reportPrintFillPaddingMm: 0,
-    reportPrintTextColumnWidths: {
-      "work-name": reportColumnWidthByKey.get("work-name") ?? 180,
-      "day-reason": reportColumnWidthByKey.get("day-reason") ?? 175,
-      "year-reason": reportColumnWidthByKey.get("year-reason") ?? 190,
-    },
-    reportShouldFillPrintRows: false,
-  };
+  } = useReportPrintLayoutController({
+    filteredReportAreaGroups,
+    onPrintReport,
+    reportColumnKeys,
+    reportColumnWidthByKey,
+    reportDate,
+    reportHeaderLabel,
+    reportReasons,
+  });
   const reportTableInlineStyle = useMemo(() => ({
     ...reportTableStyle,
     minWidth: 0,
