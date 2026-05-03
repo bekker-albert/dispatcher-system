@@ -128,6 +128,10 @@ export function usePtoDatabaseSave({
         const snapshotAtWrite = stateAtWrite === stateToSave
           ? snapshotToSave
           : serializePtoDatabaseState(stateAtWrite);
+        if (ptoDatabaseSaveShouldSkip(mode, snapshotAtWrite, ptoDatabaseSaveSnapshotRef.current)) {
+          return ptoDatabaseSaveSnapshotRef.current;
+        }
+
         const baseline = readPtoDatabaseSaveBaseline(ptoDatabaseSaveSnapshotRef.current);
         const saveAllYears = ptoDatabaseFullSaveNextRef.current;
         const saved = await savePtoDatabaseSnapshot(stateAtWrite, baseline.expectedUpdatedAt, {
