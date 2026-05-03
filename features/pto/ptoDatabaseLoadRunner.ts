@@ -4,17 +4,15 @@ import { databaseConfigured } from "@/lib/data/config";
 import { clientSnapshotRestoreFlagKey, savePtoLocalRecoveryBackup } from "@/lib/storage/client-snapshots";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
-import { hasInitialStoredPtoState, readInitialStoredPtoState } from "@/features/app/initialAppStorage";
-import { applyInitialPtoState } from "@/features/pto/applyInitialPtoState";
-import { buildInitialPtoState } from "@/features/pto/initialPtoState";
+import { hasInitialStoredPtoState } from "@/features/app/initialAppStorage";
 import {
   applyLoadedPtoDatabaseState,
   createPtoDatabaseLoadBaselineWithBuckets,
 } from "@/features/pto/ptoDatabaseLoadApply";
+import { createPtoDatabaseLocalHydration } from "@/features/pto/ptoDatabaseLocalHydration";
 import { createPtoDatabaseLoadMetrics } from "@/features/pto/ptoDatabaseLoadMetrics";
 import type { PtoDatabaseLoadOptions } from "@/features/pto/ptoDatabaseLoadTypes";
 import {
-  createPtoDatabaseState,
   createPtoDatabaseSaveBaseline,
   localPtoCanSkipFullDatabaseLoad,
   localPtoNeedsDatabaseFreshnessCheck,
@@ -64,57 +62,19 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
 
   const includeBuckets = ptoTab === "buckets";
   const loadMetrics = createPtoDatabaseLoadMetrics({ includeBuckets, year: ptoPlanYear });
-  let localPtoStateForResolution = ptoDatabaseStateRef.current;
-  let localPtoHydrated = false;
-
-  const hydrateInitialLocalPtoState = () => {
-    if (localPtoHydrated) return localPtoStateForResolution;
-    localPtoHydrated = true;
-
-    if (!hasInitialStoredPtoState()) {
-      hasStoredPtoStateRef.current = false;
-      return localPtoStateForResolution;
-    }
-
-    const localInitialPtoState = buildInitialPtoState(readInitialStoredPtoState());
-    if (!localInitialPtoState.hasSavedPtoState) {
-      hasStoredPtoStateRef.current = false;
-      return localPtoStateForResolution;
-    }
-
-    const currentState = ptoDatabaseStateRef.current;
-    const nextLocalPtoState = createPtoDatabaseState({
-      manualYears: localInitialPtoState.manualYears ?? currentState.manualYears,
-      planRows: localInitialPtoState.planRows ?? currentState.planRows,
-      operRows: localInitialPtoState.operRows ?? currentState.operRows,
-      surveyRows: localInitialPtoState.surveyRows ?? currentState.surveyRows,
-      bucketValues: localInitialPtoState.bucketValues,
-      bucketRows: localInitialPtoState.bucketRows,
-      uiState: {
-        ...currentState.uiState,
-        ptoColumnWidths: localInitialPtoState.columnWidths,
-        ptoRowHeights: localInitialPtoState.rowHeights,
-        ptoHeaderLabels: localInitialPtoState.headerLabels,
-      },
-    });
-
-    localPtoStateForResolution = nextLocalPtoState;
-    ptoDatabaseStateRef.current = nextLocalPtoState;
-    applyInitialPtoState(localInitialPtoState, {
-      hasStoredPtoStateRef,
-      setPtoManualYears,
-      setPtoPlanRows,
-      setPtoSurveyRows,
-      setPtoOperRows,
-      setPtoColumnWidths,
-      setPtoRowHeights,
-      setPtoHeaderLabels,
-      setPtoBucketValues,
-      setPtoBucketManualRows,
-    });
-
-    return nextLocalPtoState;
-  };
+  const localHydration = createPtoDatabaseLocalHydration({
+    hasStoredPtoStateRef,
+    ptoDatabaseStateRef,
+    setPtoBucketManualRows,
+    setPtoBucketValues,
+    setPtoColumnWidths,
+    setPtoHeaderLabels,
+    setPtoManualYears,
+    setPtoOperRows,
+    setPtoPlanRows,
+    setPtoRowHeights,
+    setPtoSurveyRows,
+  });
 
   const currentYearLoaded = ptoDatabaseLoadedRef.current && ptoDatabaseLoadedYearRef.current === ptoPlanYear;
   const currentYearBucketsLoaded = ptoDatabaseLoadedBucketsYearRef.current === ptoPlanYear;
@@ -200,11 +160,11 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
       const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
       const databaseUpdatedTime = databaseUpdatedAt ? Date.parse(databaseUpdatedAt) : 0;
       if (databaseUpdatedAt !== undefined && localUpdatedTime > 0 && localUpdatedTime > databaseUpdatedTime) {
-        hydrateInitialLocalPtoState();
+        localHydration.hydrateInitialLocalPtoState();
       }
 
       if (localPtoCanSkipFullDatabaseLoad({
-        currentState: localPtoStateForResolution,
+        currentState: localHydration.getLocalPtoStateForResolution(),
         hasStoredPtoState: hasStoredPtoStateRef.current,
         localUpdatedAt,
         databaseUpdatedAt,
@@ -244,14 +204,14 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
       || (localUpdatedTime > 0 && localUpdatedTime > databaseUpdatedTime)
     );
     if (shouldHydrateLocalPtoForResolution) {
-      hydrateInitialLocalPtoState();
+      localHydration.hydrateInitialLocalPtoState();
     } else if (hasLocalPtoSnapshot && databaseState) {
       savePtoLocalRecoveryBackup("before-database-pto-load", databaseState.updatedAt);
     }
 
     const resolution = resolvePtoDatabaseLoadResolution({
       databaseState,
-      currentState: localPtoStateForResolution,
+      currentState: localHydration.getLocalPtoStateForResolution(),
       hasStoredPtoState: hasStoredPtoStateRef.current,
       localUpdatedAt,
       shouldRestoreClientSnapshot,
@@ -296,7 +256,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
       savePtoLocalRecoveryBackup(resolution.backupReason, databaseState.updatedAt);
     }
 
-    const loadedState = normalizeLoadedPtoDatabaseState(databaseState, localPtoStateForResolution, {
+    const loadedState = normalizeLoadedPtoDatabaseState(databaseState, localHydration.getLocalPtoStateForResolution(), {
       preserveFallbackBuckets: !includeBuckets,
     });
     loadMetrics.mark("state-normalized");
