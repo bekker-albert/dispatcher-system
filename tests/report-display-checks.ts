@@ -19,6 +19,7 @@ import { normalizePtoPlanRow } from "../lib/domain/pto/date-table";
 import type { ReportRow } from "../lib/domain/reports/types";
 
 const expectedDisplayExports = [
+  "applyReportCustomerRowLabel",
   "applyReportFactSourceRows",
   "createReportFactSourceRow",
   "createReportSummaryRow",
@@ -99,6 +100,13 @@ assert.deepEqual(createReportAreaTabs(reportAreaGroups, ["Бозшаколь", "
 assert.equal(filterReportAreaGroups(reportAreaGroups, "Аксу", true).length, 1);
 assert.equal(flattenReportAreaGroups(reportAreaGroups).length, 3);
 assert.equal(createCustomerReportRows([reportRow], { ...defaultReportCustomers[0], rowLabels: { [reportDisplay.reportRowKey(reportRow)]: "Название заказчика" } }, true)[0].name, "Название заказчика");
+const customerLabeledRow = reportDisplay.applyReportCustomerRowLabel(reportRow, {
+  ...defaultReportCustomers[0],
+  rowLabels: { [reportDisplay.reportRowKey(reportRow)]: "Customer work name" },
+});
+assert.equal(customerLabeledRow.name, "Customer work name");
+assert.equal(customerLabeledRow.displayKey, reportDisplay.reportRowKey(reportRow));
+assert.equal(reportDisplay.reportRowDisplayKey(customerLabeledRow), reportDisplay.reportRowKey(reportRow));
 
 const orderedReportRows = reportDisplay.sortReportRowsByAreaOrder([
   normalizeReportRow({ area: "Аксу", name: "Вторая работа", unit: "м3" }),

@@ -21,6 +21,8 @@ export {
 
 export { reportAutoColumnWidth } from "./column-sizing";
 
+export { applyReportCustomerRowLabel } from "./labels";
+
 export {
   applyReportFactSourceRows,
   createReportFactSourceRow,

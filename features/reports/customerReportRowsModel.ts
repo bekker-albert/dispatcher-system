@@ -1,5 +1,6 @@
 import {
   applyReportFactSourceRows,
+  applyReportCustomerRowLabel,
   createReportSummaryRow,
   reportCustomerEffectiveRowKeys,
   reportCustomerUsesSummaryRows,
@@ -64,8 +65,7 @@ export function createCustomerReportRows(
     rowsByKey.set(rowKey, row);
     if (!visibleRowKeys.has(rowKey) || summarySourceRowKeys.has(rowKey)) return;
 
-    const customerLabel = customer.rowLabels[rowKey]?.trim();
-    selectedRows.push(customerLabel ? { ...row, name: customerLabel, displayKey: rowKey } : row);
+    selectedRows.push(applyReportCustomerRowLabel(row, customer));
   });
 
   return sortReportRowsByAreaOrder(

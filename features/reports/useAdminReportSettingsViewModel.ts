@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 
 import { defaultReportCustomers } from "@/lib/domain/reports/defaults";
 import {
+  applyReportCustomerRowLabel,
   createReportSummaryRow,
   reportCustomerEffectiveRowKeys,
   reportCustomerUsesSummaryRows,
@@ -121,7 +122,7 @@ export function useAdminReportSettingsViewModel({
       : [];
 
     return sortReportRowsByAreaOrder(
-      [...activeAdminReportVisibleRows, ...summaryRows],
+      [...activeAdminReportVisibleRows, ...summaryRows].map((row) => applyReportCustomerRowLabel(row, activeAdminReportCustomer)),
       activeAdminReportCustomer.areaOrder,
       activeAdminReportCustomer.workOrder,
     );
