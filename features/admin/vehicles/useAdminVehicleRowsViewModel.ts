@@ -120,15 +120,17 @@ export function useAdminVehicleRowsViewModel({
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", updateVehiclePreviewLimit);
     };
-  }, [active, adminVehiclesEditing, filteredVehicleRows.length, setVehiclePreviewRowLimit, showAllVehicleRows, tableScrollRef]);
+  }, [active, filteredVehicleRows.length, setVehiclePreviewRowLimit, showAllVehicleRows, tableScrollRef]);
 
-  const visibleVehicleRows = active
-    ? (
-        showAllVehicleRows
-          ? filteredVehicleRows
-          : filteredVehicleRows.slice(0, vehiclePreviewRowLimit)
-      )
-    : emptyVehicleRows;
+  const visibleVehicleRows = useMemo(() => (
+    active
+      ? (
+          showAllVehicleRows
+            ? filteredVehicleRows
+            : filteredVehicleRows.slice(0, vehiclePreviewRowLimit)
+        )
+      : emptyVehicleRows
+  ), [active, filteredVehicleRows, showAllVehicleRows, vehiclePreviewRowLimit]);
   const hiddenVehicleRowsCount = Math.max(filteredVehicleRows.length - visibleVehicleRows.length, 0);
 
   const activeVehicleFilterCount = useMemo(() => (
@@ -136,6 +138,7 @@ export function useAdminVehicleRowsViewModel({
   ), [vehicleFilters]);
 
   return {
+    vehicleFilterSets,
     vehicleAutocompleteOptions,
     activeVehicleFilterOptions,
     filteredVehicleRows,

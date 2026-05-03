@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
-import { createVehicleFilterOptionsForKey, createVehicleFilterSets } from "@/lib/domain/vehicles/filtering";
+import { createVehicleFilterOptionsForKey, type VehicleFilterSets } from "@/lib/domain/vehicles/filtering";
 import type { VehicleFilterKey, VehicleFilters } from "@/lib/domain/vehicles/grid";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
@@ -10,6 +10,7 @@ type UseVehicleFilterMenuOptions = {
   openVehicleFilter: VehicleFilterKey | null;
   vehicleFilters: VehicleFilters;
   vehicleFilterDrafts: VehicleFilters;
+  vehicleFilterSets: VehicleFilterSets;
   vehicleRows: VehicleRow[];
   activeVehicleFilterOptions: string[];
   setOpenVehicleFilter: Dispatch<SetStateAction<VehicleFilterKey | null>>;
@@ -22,16 +23,13 @@ export function useVehicleFilterMenu({
   openVehicleFilter,
   vehicleFilters,
   vehicleFilterDrafts,
+  vehicleFilterSets,
   vehicleRows,
   activeVehicleFilterOptions,
   setOpenVehicleFilter,
   setVehicleFilters,
   setVehicleFilterDrafts,
 }: UseVehicleFilterMenuOptions) {
-  const vehicleFilterSets = useMemo(() => (
-    active ? createVehicleFilterSets(vehicleFilters) : {}
-  ), [active, vehicleFilters]);
-
   useEffect(() => {
     if (!active || !openVehicleFilter) return undefined;
 

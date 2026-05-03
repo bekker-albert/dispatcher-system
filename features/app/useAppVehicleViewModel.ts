@@ -64,6 +64,7 @@ export function useAppVehicleViewModel({
     openVehicleFilter,
     vehicleFilters,
     vehicleFilterDrafts,
+    vehicleFilterSets: vehicleRowsViewModel.vehicleFilterSets,
     vehicleRows,
     activeVehicleFilterOptions: vehicleRowsViewModel.activeVehicleFilterOptions,
     setOpenVehicleFilter,

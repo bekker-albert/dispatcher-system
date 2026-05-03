@@ -8,6 +8,8 @@ type VehicleFilterColumnLike = {
 type VehicleFiltersLike = Partial<Record<string, string[]>>;
 type VehicleFilterSetsLike = Partial<Record<string, Set<string>>>;
 
+export type VehicleFilterSets = VehicleFilterSetsLike;
+
 export function vehicleFilterOptionLabel(value: string) {
   return value.trim() || "Пусто";
 }

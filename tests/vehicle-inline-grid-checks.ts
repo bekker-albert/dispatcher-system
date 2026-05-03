@@ -31,6 +31,7 @@ const adminVehiclesTableSource = readFileSync(resolve(testDir, "../features/admi
 const adminVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleFilterMenu.tsx"), "utf8");
 const useAdminVehicleRowsViewModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useAdminVehicleRowsViewModel.ts"), "utf8");
 const useVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleFilterMenu.ts"), "utf8");
+const useAppVehicleViewModelSource = readFileSync(resolve(testDir, "../features/app/useAppVehicleViewModel.ts"), "utf8");
 const vehicleInlineGridModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/vehicleInlineGridModel.ts"), "utf8");
 
 const rows = [
@@ -170,7 +171,15 @@ assert.deepEqual(vehicleFilterOptionsByKey.brand, ["Howo", "Shacman"]);
 assert.deepEqual(vehicleFilterOptionsByKey.owner, ["Another", "Owner"]);
 assert.match(useAdminVehicleRowsViewModelSource, /createVehicleFilterOptionsByKey\(deferredVehicleRows, vehicleFilterColumns, vehicleAutocompleteFilterKeys\)/);
 assert.match(useAdminVehicleRowsViewModelSource, /createVehicleFilterOptionsForKey\(/);
+assert.match(useAdminVehicleRowsViewModelSource, /const visibleVehicleRows = useMemo\(\(\) => \(/);
+assert.match(useAdminVehicleRowsViewModelSource, /\[active, filteredVehicleRows, showAllVehicleRows, vehiclePreviewRowLimit\]/);
+assert.match(useAdminVehicleRowsViewModelSource, /\[active, filteredVehicleRows\.length, setVehiclePreviewRowLimit, showAllVehicleRows, tableScrollRef\]/);
+assert.doesNotMatch(useAdminVehicleRowsViewModelSource, /\[active, adminVehiclesEditing, filteredVehicleRows\.length/);
+assert.match(useAdminVehicleRowsViewModelSource, /vehicleFilterSets,/);
 assert.match(useVehicleFilterMenuSource, /createVehicleFilterOptionsForKey\(/);
+assert.doesNotMatch(useVehicleFilterMenuSource, /createVehicleFilterSets/);
+assert.match(useVehicleFilterMenuSource, /vehicleFilterSets: VehicleFilterSets;/);
+assert.match(useAppVehicleViewModelSource, /vehicleFilterSets: vehicleRowsViewModel\.vehicleFilterSets/);
 assert.doesNotMatch(useVehicleFilterMenuSource, /vehicleMatchesFilters/);
 assert.match(adminVehicleFilterMenuSource, /const visibleOptions = useMemo\(\(\) => \{/);
 assert.match(adminVehicleFilterMenuSource, /const selectedSet = useMemo\(\(\) => new Set\(draftSelectedValues \?\? \[\]\), \[draftSelectedValues\]\);/);
