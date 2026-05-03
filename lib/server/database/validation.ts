@@ -25,6 +25,11 @@ export function requirePayloadNumber(value: unknown, fieldName: string) {
   throw new DatabasePayloadError(`Некорректный запрос: поле "${fieldName}" должно быть числом.`);
 }
 
+export function requirePayloadBoolean(value: unknown, fieldName: string) {
+  if (typeof value === "boolean") return value;
+  throw new DatabasePayloadError(`Некорректный запрос: поле "${fieldName}" должно быть да/нет.`);
+}
+
 export function optionalPayloadNumberOrNull(value: unknown, fieldName: string) {
   if (value === null || value === undefined || value === "") return null;
   return requirePayloadNumber(value, fieldName);

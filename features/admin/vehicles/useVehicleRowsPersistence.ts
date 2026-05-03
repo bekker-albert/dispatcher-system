@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { isDatabaseConflictError } from "@/lib/data/errors";
-import { createVehicleRowsSavePlan } from "@/lib/domain/vehicles/persistence";
+import { createVehicleRowsSavePlan, shouldBlockVehicleRowsAutoSave } from "@/lib/domain/vehicles/persistence";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
@@ -65,6 +65,7 @@ type VehicleRowsPersistenceOptions = {
   databaseConfigured: boolean;
   databaseLoadedRef: RefObject<boolean>;
   databaseSaveSnapshotRef: RefObject<string>;
+  databaseAutoSaveBlockedSnapshotRef: RefObject<string>;
   requestClientSnapshotSave: (reason?: string) => void;
   showSaveStatus: ShowSaveStatus;
 };
@@ -76,6 +77,7 @@ export function useVehicleRowsPersistence({
   databaseConfigured,
   databaseLoadedRef,
   databaseSaveSnapshotRef,
+  databaseAutoSaveBlockedSnapshotRef,
   requestClientSnapshotSave,
   showSaveStatus,
 }: VehicleRowsPersistenceOptions) {
@@ -107,6 +109,7 @@ export function useVehicleRowsPersistence({
     snapshotVersion: number,
   ) => {
     if (!databaseConfigured || !databaseLoadedRef.current) return;
+    if (shouldBlockVehicleRowsAutoSave(snapshot, databaseAutoSaveBlockedSnapshotRef.current)) return;
     if (snapshot === databaseSaveSnapshotRef.current) {
       vehicleDatabaseRetryDelayRef.current = vehicleDatabaseRetryInitialDelayMs;
       return;
@@ -170,6 +173,7 @@ export function useVehicleRowsPersistence({
     });
   }, [
     databaseConfigured,
+    databaseAutoSaveBlockedSnapshotRef,
     databaseLoadedRef,
     databaseSaveSnapshotRef,
     showSaveStatus,
@@ -193,16 +197,23 @@ export function useVehicleRowsPersistence({
       const snapshotVersion = vehicleRowsVersionRef.current;
       const localUpdatedAt = new Date().toISOString();
       const previousLocalSnapshot = vehicleLocalSaveSnapshotRef.current ?? readVehicleRowsLocalBackup();
-      const localBackupChanged = saveVehicleRowsLocalBackupIfChanged(
-        snapshot,
-        localUpdatedAt,
-        previousLocalSnapshot,
-      );
+      const autoSaveBlocked = shouldBlockVehicleRowsAutoSave(snapshot, databaseAutoSaveBlockedSnapshotRef.current);
+      const localBackupChanged = autoSaveBlocked
+        ? false
+        : saveVehicleRowsLocalBackupIfChanged(
+          snapshot,
+          localUpdatedAt,
+          previousLocalSnapshot,
+        );
 
-      vehicleLocalSaveSnapshotRef.current = snapshot;
+      if (!autoSaveBlocked) {
+        vehicleLocalSaveSnapshotRef.current = snapshot;
+      }
 
-      queueDatabaseVehicleSave(rowsSnapshot, snapshot, snapshotVersion);
-      if (localBackupChanged) {
+      if (!autoSaveBlocked) {
+        queueDatabaseVehicleSave(rowsSnapshot, snapshot, snapshotVersion);
+      }
+      if (localBackupChanged && !autoSaveBlocked) {
         requestClientSnapshotSave("vehicles-save");
       }
       vehicleSaveTimerRef.current = null;
@@ -217,6 +228,7 @@ export function useVehicleRowsPersistence({
   }, [
     adminDataLoaded,
     databaseConfigured,
+    databaseAutoSaveBlockedSnapshotRef,
     databaseLoadedRef,
     databaseSaveSnapshotRef,
     queueDatabaseVehicleSave,
@@ -235,11 +247,14 @@ export function useVehicleRowsPersistence({
       }
       const rowsSnapshot = copyVehicleRows(vehicleRowsRef.current);
       const snapshot = JSON.stringify(rowsSnapshot);
+      const autoSaveBlocked = shouldBlockVehicleRowsAutoSave(snapshot, databaseAutoSaveBlockedSnapshotRef.current);
       const previousLocalSnapshot = vehicleLocalSaveSnapshotRef.current ?? readVehicleRowsLocalBackup();
 
-      if (saveVehicleRowsLocalBackupIfChanged(snapshot, new Date().toISOString(), previousLocalSnapshot)) {
+      if (!autoSaveBlocked && saveVehicleRowsLocalBackupIfChanged(snapshot, new Date().toISOString(), previousLocalSnapshot)) {
         vehicleLocalSaveSnapshotRef.current = snapshot;
       }
+
+      if (autoSaveBlocked) return;
 
       queueDatabaseVehicleSave(rowsSnapshot, snapshot, vehicleRowsVersionRef.current);
       queueMicrotask(() => {
@@ -251,5 +266,5 @@ export function useVehicleRowsPersistence({
 
     window.addEventListener("pagehide", flushVehicleRows);
     return () => window.removeEventListener("pagehide", flushVehicleRows);
-  }, [adminDataLoaded, databaseConfigured, databaseLoadedRef, queueDatabaseVehicleSave, vehicleRowsRef]);
+  }, [adminDataLoaded, databaseConfigured, databaseAutoSaveBlockedSnapshotRef, databaseLoadedRef, queueDatabaseVehicleSave, vehicleRowsRef]);
 }

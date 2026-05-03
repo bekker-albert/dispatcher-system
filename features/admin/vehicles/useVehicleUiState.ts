@@ -30,6 +30,7 @@ export function useVehicleUiState(defaultRows: VehicleRow[]) {
   const vehicleRowsRef = useRef(vehicleRows);
   const vehiclesDatabaseLoadedRef = useRef(false);
   const vehiclesDatabaseSaveSnapshotRef = useRef("");
+  const vehiclesDatabaseAutoSaveBlockedSnapshotRef = useRef("");
 
   return {
     adminVehiclesEditing,
@@ -70,5 +71,6 @@ export function useVehicleUiState(defaultRows: VehicleRow[]) {
     vehicleRowsRef,
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
+    vehiclesDatabaseAutoSaveBlockedSnapshotRef,
   };
 }

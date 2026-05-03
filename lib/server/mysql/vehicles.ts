@@ -1,5 +1,5 @@
 import type { RowDataPacket } from "mysql2/promise";
-import { normalizeVehicleRow } from "../../domain/vehicles/defaults";
+import { defaultVehicleSeedReplaceLimit, normalizeVehicleRow } from "../../domain/vehicles/defaults";
 import type { VehicleRowsPatchItem } from "../../domain/vehicles/persistence";
 import type { VehicleRow } from "../../domain/vehicles/types";
 import { DatabaseConflictError } from "../database/conflicts";
@@ -13,6 +13,7 @@ export type MysqlVehiclesState = {
 
 export type VehicleSnapshotWriteOptions = {
   expectedSnapshot?: VehicleRow[] | null;
+  allowLargeSnapshotShrink?: boolean;
 };
 
 export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
@@ -140,6 +141,19 @@ function createVehiclesConflictError() {
   return new DatabaseConflictError("Список техники уже изменился в базе. Обновите страницу перед повторным сохранением.");
 }
 
+function createVehiclesShrinkGuardError() {
+  return new DatabaseConflictError("Список техники не сохранен: защита остановила замену большого списка маленькой стартовой заглушкой. Обновите страницу и повторите ручное действие.");
+}
+
+function assertNoUnexpectedLargeVehicleSnapshotShrink(rows: VehicleRow[], options: VehicleSnapshotReplaceOptions) {
+  if (options.allowLargeSnapshotShrink) return;
+  if (!Array.isArray(options.expectedSnapshot)) return;
+  if (options.expectedSnapshot.length <= defaultVehicleSeedReplaceLimit) return;
+  if (rows.length > defaultVehicleSeedReplaceLimit) return;
+
+  throw createVehiclesShrinkGuardError();
+}
+
 async function loadVehicleRecordsFromMysql(execute?: DbExecutor, lockForUpdate = false) {
   const sql = `SELECT * FROM vehicles ORDER BY sort_index ASC, vehicle_id ASC${lockForUpdate ? " FOR UPDATE" : ""}`;
   return execute?.rows
@@ -197,6 +211,7 @@ export async function saveVehicleRowsPatchToMysql(patchRows: VehicleRowsPatchIte
 export async function replaceVehiclesInMysql(rows: VehicleRow[], options: VehicleSnapshotReplaceOptions = {}) {
   await dbTransaction(async (execute) => {
     await assertMysqlVehiclesMatchExpectedSnapshot(options.expectedSnapshot, execute);
+    assertNoUnexpectedLargeVehicleSnapshotShrink(rows, options);
     await upsertVehiclesToMysql(rows, execute);
     await deleteVehiclesMissingFromMysqlSnapshot(rows, execute);
   });

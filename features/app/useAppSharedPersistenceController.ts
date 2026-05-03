@@ -20,6 +20,7 @@ export function useAppSharedPersistenceController({
     appSettingsDatabaseSaveSnapshotRef: appState.appSettingsDatabaseSaveSnapshotRef,
     vehiclesDatabaseLoadedRef: appState.vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef: appState.vehiclesDatabaseSaveSnapshotRef,
+    vehiclesDatabaseAutoSaveBlockedSnapshotRef: appState.vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     requestClientSnapshotSave: appState.requestClientSnapshotSave,
     showSaveStatus: appState.showSaveStatus,
     databaseConfigured,

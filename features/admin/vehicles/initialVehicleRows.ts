@@ -14,6 +14,7 @@ type InitialVehicleRowsOptions = {
   isCancelled: () => boolean;
   vehiclesDatabaseLoadedRef: MutableRef<boolean>;
   vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
+  vehiclesDatabaseAutoSaveBlockedSnapshotRef: MutableRef<string>;
 };
 
 type InitialVehicleRowsResult = {
@@ -25,6 +26,7 @@ type InitialVehicleRowsResult = {
 type InitialVehicleRowsSourceOptions = {
   savedVehicles: unknown;
   databaseUpdatedAt: string | null | undefined;
+  databaseRowsCount?: number;
   vehicleLocalUpdatedAt: string | null | undefined;
   appLocalUpdatedAt: string | null | undefined;
 };
@@ -39,6 +41,7 @@ function timestampToMs(value: string | null | undefined) {
 export function resolveInitialVehicleRowsSource({
   savedVehicles,
   databaseUpdatedAt,
+  databaseRowsCount,
   vehicleLocalUpdatedAt,
   appLocalUpdatedAt,
 }: InitialVehicleRowsSourceOptions) {
@@ -47,6 +50,15 @@ export function resolveInitialVehicleRowsSource({
     ? vehicleLocalUpdatedTime
     : timestampToMs(appLocalUpdatedAt);
   const databaseUpdatedTime = timestampToMs(databaseUpdatedAt);
+
+  if (
+    Array.isArray(savedVehicles)
+    && savedVehicles.length <= defaultVehicleSeedReplaceLimit
+    && typeof databaseRowsCount === "number"
+    && databaseRowsCount > savedVehicles.length
+  ) {
+    return "database";
+  }
 
   if (Array.isArray(savedVehicles) && localUpdatedTime > 0 && localUpdatedTime > databaseUpdatedTime) {
     return "local";
@@ -70,6 +82,7 @@ export async function loadInitialVehicleRows({
   isCancelled,
   vehiclesDatabaseLoadedRef,
   vehiclesDatabaseSaveSnapshotRef,
+  vehiclesDatabaseAutoSaveBlockedSnapshotRef,
 }: InitialVehicleRowsOptions): Promise<InitialVehicleRowsResult> {
   let nextSavedVehicles = savedVehicles;
   let loadedVehiclesFromDatabase = false;
@@ -91,6 +104,7 @@ export async function loadInitialVehicleRows({
         const vehicleRowsSource = resolveInitialVehicleRowsSource({
           savedVehicles,
           databaseUpdatedAt: databaseVehicles.updatedAt,
+          databaseRowsCount: databaseVehicles.rows.length,
           vehicleLocalUpdatedAt: window.localStorage.getItem(adminStorageKeys.vehiclesLocalUpdatedAt),
           appLocalUpdatedAt: window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt),
         });
@@ -125,15 +139,24 @@ export async function loadInitialVehicleRows({
     );
 
   if (shouldUseVehicleSeed && defaultVehicleSeed) {
-    window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(defaultVehicleSeed.vehicles));
-    window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, defaultVehicleSeed.version);
+    if (databaseConfigured) {
+      vehiclesDatabaseAutoSaveBlockedSnapshotRef.current = JSON.stringify(defaultVehicleSeed.vehicles);
+    } else {
+      window.localStorage.setItem(adminStorageKeys.vehicles, JSON.stringify(defaultVehicleSeed.vehicles));
+      window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, defaultVehicleSeed.version);
+    }
     return { completed: true, rows: defaultVehicleSeed.vehicles, usedSeed: true };
   }
 
   if (Array.isArray(nextSavedVehicles)) {
+    const normalizedRows = nextSavedVehicles.map((vehicle) => normalizeVehicleRow(vehicle));
+    if (databaseConfigured && needsVehicleSeed && normalizedRows.length <= defaultVehicleSeedReplaceLimit) {
+      vehiclesDatabaseAutoSaveBlockedSnapshotRef.current = JSON.stringify(normalizedRows);
+    }
+
     return {
       completed: true,
-      rows: nextSavedVehicles.map((vehicle) => normalizeVehicleRow(vehicle)),
+      rows: normalizedRows,
       usedSeed: false,
     };
   }

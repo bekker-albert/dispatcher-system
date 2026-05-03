@@ -23,6 +23,7 @@ export function useAppInitialDataLoadController({
       appSettingsDatabaseSaveSnapshotRef: appState.appSettingsDatabaseSaveSnapshotRef,
       vehiclesDatabaseLoadedRef: appState.vehiclesDatabaseLoadedRef,
       vehiclesDatabaseSaveSnapshotRef: appState.vehiclesDatabaseSaveSnapshotRef,
+      vehiclesDatabaseAutoSaveBlockedSnapshotRef: appState.vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     },
     loadFlags: {
       setPtoDatabaseLoadStarted: appState.setPtoDatabaseLoadStarted,
@@ -102,6 +103,7 @@ export function useAppInitialDataLoadController({
     appState.setTopTabs,
     appState.setVehicleRows,
     appState.vehiclesDatabaseLoadedRef,
+    appState.vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     appState.vehiclesDatabaseSaveSnapshotRef,
   ]);
 

@@ -26,6 +26,7 @@ type InitialAppDatabaseRefs = {
   appSettingsDatabaseSaveSnapshotRef: MutableRef<string>;
   vehiclesDatabaseLoadedRef: MutableRef<boolean>;
   vehiclesDatabaseSaveSnapshotRef: MutableRef<string>;
+  vehiclesDatabaseAutoSaveBlockedSnapshotRef: MutableRef<string>;
 };
 
 type InitialAppLoadFlags = {
@@ -71,6 +72,7 @@ export async function runInitialAppDataLoad(
     appSettingsDatabaseSaveSnapshotRef,
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
+    vehiclesDatabaseAutoSaveBlockedSnapshotRef,
   } = databaseRefs;
   const {
     setPtoBootstrapLoaded,
@@ -194,6 +196,7 @@ export async function runInitialAppDataLoad(
       isCancelled,
       vehiclesDatabaseLoadedRef,
       vehiclesDatabaseSaveSnapshotRef,
+      vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     });
     if (!initialVehicleRows.completed) return;
 

@@ -16,6 +16,7 @@ type UseAppSharedPersistenceOptions = {
   appSettingsDatabaseSaveSnapshotRef: RefObject<string>;
   vehiclesDatabaseLoadedRef: RefObject<boolean>;
   vehiclesDatabaseSaveSnapshotRef: RefObject<string>;
+  vehiclesDatabaseAutoSaveBlockedSnapshotRef: RefObject<string>;
   requestClientSnapshotSave: (reason?: string) => void;
   showSaveStatus: ShowSaveStatus;
   databaseConfigured: boolean;
@@ -45,6 +46,7 @@ export function useAppSharedPersistence({
   appSettingsDatabaseSaveSnapshotRef,
   vehiclesDatabaseLoadedRef,
   vehiclesDatabaseSaveSnapshotRef,
+  vehiclesDatabaseAutoSaveBlockedSnapshotRef,
   requestClientSnapshotSave,
   showSaveStatus,
   databaseConfigured,
@@ -97,6 +99,7 @@ export function useAppSharedPersistence({
     databaseConfigured,
     databaseLoadedRef: vehiclesDatabaseLoadedRef,
     databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
+    databaseAutoSaveBlockedSnapshotRef: vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     requestClientSnapshotSave,
     showSaveStatus,
   });

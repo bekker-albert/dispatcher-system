@@ -25,6 +25,10 @@ function normalizedVehicleKey(vehicle: VehicleRow) {
   return JSON.stringify(normalizeVehicleRow(vehicle));
 }
 
+export function shouldBlockVehicleRowsAutoSave(snapshot: string, blockedSnapshot: string) {
+  return blockedSnapshot.length > 0 && snapshot === blockedSnapshot;
+}
+
 function hasSameVehicleOrder(currentRows: VehicleRow[], expectedRows: VehicleRow[]) {
   return currentRows.length === expectedRows.length
     && currentRows.every((vehicle, index) => vehicle.id === expectedRows[index]?.id);

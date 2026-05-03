@@ -10,6 +10,7 @@ export type DataVehiclesState = {
 
 export type VehicleSnapshotWriteOptions = {
   expectedSnapshot?: VehicleRow[] | null;
+  allowLargeSnapshotShrink?: boolean;
 };
 
 export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
@@ -28,7 +29,11 @@ export function loadVehiclesFromDatabase() {
 
 export function saveVehiclesToDatabase(rows: VehicleRow[], options?: VehicleSnapshotWriteOptions) {
   if (serverDatabaseConfigured) {
-    return databaseRequest("vehicles", "save", { rows, expectedSnapshot: options?.expectedSnapshot });
+    return databaseRequest("vehicles", "save", {
+      rows,
+      expectedSnapshot: options?.expectedSnapshot,
+      allowLargeSnapshotShrink: options?.allowLargeSnapshotShrink,
+    });
   }
 
   return loadSupabaseVehiclesAdapter().then(({ saveVehiclesToSupabase }) => saveVehiclesToSupabase(rows, options));
@@ -36,7 +41,11 @@ export function saveVehiclesToDatabase(rows: VehicleRow[], options?: VehicleSnap
 
 export function saveVehicleRowsPatchToDatabase(patchRows: VehicleRowsPatchItem[], options?: VehicleSnapshotWriteOptions) {
   if (serverDatabaseConfigured) {
-    return databaseRequest("vehicles", "savePatch", { patchRows, expectedSnapshot: options?.expectedSnapshot });
+    return databaseRequest("vehicles", "savePatch", {
+      patchRows,
+      expectedSnapshot: options?.expectedSnapshot,
+      allowLargeSnapshotShrink: options?.allowLargeSnapshotShrink,
+    });
   }
 
   return loadSupabaseVehiclesAdapter()
@@ -45,7 +54,11 @@ export function saveVehicleRowsPatchToDatabase(patchRows: VehicleRowsPatchItem[]
 
 export function replaceVehiclesInDatabase(rows: VehicleRow[], options?: VehicleSnapshotReplaceOptions) {
   if (serverDatabaseConfigured) {
-    return databaseRequest("vehicles", "replace", { rows, expectedSnapshot: options?.expectedSnapshot });
+    return databaseRequest("vehicles", "replace", {
+      rows,
+      expectedSnapshot: options?.expectedSnapshot,
+      allowLargeSnapshotShrink: options?.allowLargeSnapshotShrink,
+    });
   }
 
   return loadSupabaseVehiclesAdapter()
