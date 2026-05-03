@@ -16,12 +16,25 @@ import {
 } from "../lib/supabase/pto-storage";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
+const ptoSnapshotLoadSource = readFileSync(resolve(testDir, "../lib/supabase/pto-snapshot-load.ts"), "utf8");
 const ptoSnapshotSaveSource = readFileSync(resolve(testDir, "../lib/supabase/pto-snapshot-save.ts"), "utf8");
 const secondFreshnessCheckIndex = ptoSnapshotSaveSource.lastIndexOf("assertSupabasePtoMatchesExpectedUpdatedAt");
 const cleanupIndex = ptoSnapshotSaveSource.indexOf("await deletePtoDayValuesMissingFromState");
+const supabaseYearLoadSource = ptoSnapshotLoadSource.slice(
+  ptoSnapshotLoadSource.indexOf("export async function loadPtoStateFromSupabaseForYear"),
+  ptoSnapshotLoadSource.indexOf("export async function loadPtoUpdatedAtFromSupabase"),
+);
 
 assert.equal((ptoSnapshotSaveSource.match(/assertSupabasePtoMatchesExpectedUpdatedAt/g) ?? []).length, 3);
 assert.equal(secondFreshnessCheckIndex > 0 && secondFreshnessCheckIndex < cleanupIndex, true);
+assert.match(ptoSnapshotLoadSource, /async function loadSupabasePtoRowsForYear/);
+assert.match(ptoSnapshotLoadSource, /loadSupabasePtoRowsByDayValueRows\(client, dayValueRecords\)/);
+assert.match(ptoSnapshotLoadSource, /loadSupabasePtoRowsByYearMetadata\(client, year\)/);
+assert.match(ptoSnapshotLoadSource, /\.or\(`years\.cs\.\$\{yearJsonArrayFilter\},carryover_manual_years\.cs\.\$\{yearJsonArrayFilter\},carryovers->>\$\{safeYear\}\.not\.is\.null`\)/);
+assert.match(ptoSnapshotLoadSource, /uniquePtoRowsForYear\(\[\.\.\.rowsByDayValues, \.\.\.rowsByMetadata\], year, dayValueRecords\)/);
+assert.match(supabaseYearLoadSource, /loadSupabasePtoDayValues\(client, year\)/);
+assert.match(supabaseYearLoadSource, /loadSupabasePtoRowsForYear\(client, year, ptoDayValues\)/);
+assert.doesNotMatch(supabaseYearLoadSource, /loadSupabasePtoRows\(client\)/);
 
 type Operation = {
   kind: "upsert" | "select" | "delete";
