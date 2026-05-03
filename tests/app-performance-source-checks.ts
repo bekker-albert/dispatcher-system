@@ -196,6 +196,9 @@ assert.match(ptoDataPrimaryContentSource, /export function PtoDataPrimaryContent
 assert.match(ptoDataPrimaryContentSource, /useAppPtoDateModel/);
 assert.match(ptoDataPrimaryContentSource, /useAppPtoBucketsModel/);
 assert.match(ptoDataPrimaryContentSource, /usePtoDateEditingReset/);
+assert.match(useAppPtoDateModelSource, /deferredPtoPlanRows: PtoPlanRow\[\];/);
+assert.match(useAppPtoDateModelSource, /deferredPtoOperRows: PtoPlanRow\[\];/);
+assert.match(useAppPtoDateModelSource, /deferredPtoSurveyRows: PtoPlanRow\[\];/);
 assert.match(ptoDataPrimaryContentSource, /function PtoDateDataPrimaryContent/);
 assert.match(ptoDataPrimaryContentSource, /function PtoBucketsDataPrimaryContent/);
 assert.doesNotMatch(ptoDataPrimaryContentSource, /usePtoDateEditingGlobalReset/);
@@ -285,6 +288,11 @@ assert.match(ptoDateRowsColumnsModelSource, /const rowById = useMemo\(\(\) => \(
 assert.match(ptoDateRowsColumnsModelSource, /const tableLayoutModel = useMemo\(\(\) => createPtoDateTableModel/);
 assert.doesNotMatch(ptoDateRowsColumnsModelSource, /useMemo\(\(\) => createPtoDateTableViewModel/);
 assert.match(usePtoDateViewModelSource, /ptoDateEditing: boolean;/);
+assert.match(usePtoDateViewModelSource, /const activePtoDateLookupRows = useMemo/);
+assert.match(usePtoDateViewModelSource, /if \(ptoTab === "plan"\) return deferredPtoPlanRows;/);
+assert.match(usePtoDateViewModelSource, /createPtoDateLookupSourceBundle\(activePtoDateLookupRows\)/);
+assert.match(usePtoDateViewModelSource, /createPtoAreaLookupSourceBundle\(activePtoDateLookupRows\)/);
+assert.doesNotMatch(usePtoDateViewModelSource, /createPtoDateLookupSourceBundle\(activePtoDateRows\)/);
 assert.match(usePtoDateViewModelSource, /isPtoDateTab \? yearMonths\(ptoPlanYear\) : \[\]/);
 assert.match(usePtoDateViewModelSource, /if \(!isPtoDateTab \|\| !ptoDateEditing\) \{/);
 assert.match(usePtoDateViewModelSource, /createPtoAreaLookupSourceBundle/);

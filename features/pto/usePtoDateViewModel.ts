@@ -42,6 +42,9 @@ type UsePtoDateViewModelOptions = {
   ptoPlanRows: PtoPlanRow[];
   ptoOperRows: PtoPlanRow[];
   ptoSurveyRows: PtoPlanRow[];
+  deferredPtoPlanRows: PtoPlanRow[];
+  deferredPtoOperRows: PtoPlanRow[];
+  deferredPtoSurveyRows: PtoPlanRow[];
 };
 
 export function usePtoDateViewModel({
@@ -54,6 +57,9 @@ export function usePtoDateViewModel({
   ptoPlanRows,
   ptoOperRows,
   ptoSurveyRows,
+  deferredPtoPlanRows,
+  deferredPtoOperRows,
+  deferredPtoSurveyRows,
 }: UsePtoDateViewModelOptions) {
   const isPtoSection = renderedTopTab === "pto";
   const isPtoDateTab = isPtoSection && isPtoDateTableKey(ptoTab);
@@ -66,12 +72,20 @@ export function usePtoDateViewModel({
     return [];
   }, [isPtoSection, ptoOperRows, ptoPlanRows, ptoSurveyRows, ptoTab]);
 
+  const activePtoDateLookupRows = useMemo(() => {
+    if (!isPtoSection) return [];
+    if (ptoTab === "plan") return deferredPtoPlanRows;
+    if (ptoTab === "oper") return deferredPtoOperRows;
+    if (ptoTab === "survey") return deferredPtoSurveyRows;
+    return [];
+  }, [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoSection, ptoTab]);
+
   const activePtoDateLookupSources = useStablePtoDateLookupSources(
-    useMemo(() => createPtoDateLookupSourceBundle(activePtoDateRows), [activePtoDateRows]),
+    useMemo(() => createPtoDateLookupSourceBundle(activePtoDateLookupRows), [activePtoDateLookupRows]),
   );
   const activePtoAreaLookupBundle = useMemo(() => (
-    isPtoDateTab ? createPtoAreaLookupSourceBundle(activePtoDateRows) : emptyAreaLookupBundle
-  ), [activePtoDateRows, isPtoDateTab]);
+    isPtoDateTab ? createPtoAreaLookupSourceBundle(activePtoDateLookupRows) : emptyAreaLookupBundle
+  ), [activePtoDateLookupRows, isPtoDateTab]);
   const allPtoAreaLookupSources = useStablePtoAreaLookupSources(activePtoAreaLookupBundle);
 
   const ptoYearTabs = useMemo(() => (
