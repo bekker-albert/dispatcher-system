@@ -1,20 +1,12 @@
 "use client";
 
 import type { ReportsSectionProps } from "@/features/reports/ReportsSection";
-import type { useAppReportsModel } from "@/features/app/useAppReportsModel";
-import type { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
-import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { useAppReportsSectionProps } from "@/features/app/useAppReportsSectionProps";
-
-type AppReportsModel = ReturnType<typeof useAppReportsModel>;
-type AppRuntimeControllers = ReturnType<typeof useAppRuntimeControllers>;
-type AppReportsScreenState = Pick<
-  AppStateBundle,
-  | "reportArea"
-  | "setReportArea"
-  | "reportReasons"
-  | "reportDate"
->;
+import type {
+  AppReportsModel,
+  AppReportsScreenState,
+  AppRuntimeControllers,
+} from "@/features/app/appScreenPropsTypes";
 
 type UseAppReportsScreenPropsArgs = {
   appState: AppReportsScreenState;

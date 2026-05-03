@@ -5,22 +5,8 @@ import { useCallback } from "react";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
-import type { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
-import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
 import { useAppHeaderProps } from "@/features/app/useAppHeaderProps";
-import type { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
-import type { AppStateBundle } from "@/features/app/AppStateBundle";
-
-type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
-type AppRuntimeControllers = ReturnType<typeof useAppRuntimeControllers>;
-type AppNavigation = ReturnType<typeof useAppActiveNavigation>;
-
-type UseAppScreenPropsArgs = {
-  appState: AppStateBundle;
-  models: AppDerivedModels;
-  runtime: AppRuntimeControllers;
-  navigation: AppNavigation;
-};
+import type { AppScreenPropsArgs } from "@/features/app/appScreenPropsTypes";
 
 type UseAppScreenPropsResult = {
   appHeaderProps: ComponentProps<typeof AppHeader>;
@@ -32,7 +18,7 @@ export function useAppScreenProps({
   models,
   runtime,
   navigation,
-}: UseAppScreenPropsArgs): UseAppScreenPropsResult {
+}: AppScreenPropsArgs): UseAppScreenPropsResult {
   const {
     topTab,
     topTabs,

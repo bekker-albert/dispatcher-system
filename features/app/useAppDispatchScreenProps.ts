@@ -1,25 +1,12 @@
 "use client";
 
 import type { DispatchSectionProps } from "@/features/dispatch/DispatchSection";
-import type { useAppActiveNavigation } from "@/features/app/useAppActiveNavigation";
-import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
-import type { useAppDispatchSummaryModel } from "@/features/app/useAppDispatchSummaryModel";
 import { useAppDispatchSectionProps } from "@/features/app/useAppDispatchSectionProps";
-import type { AppStateBundle } from "@/features/app/AppStateBundle";
-
-type AppDispatchModels = ReturnType<typeof useAppDerivedModels> & ReturnType<typeof useAppDispatchSummaryModel>;
-type AppNavigation = ReturnType<typeof useAppActiveNavigation>;
-type AppDispatchScreenState = Pick<
-  AppStateBundle,
-  | "dispatchTab"
-  | "reportDate"
-  | "search"
-  | "setSearch"
-  | "areaFilter"
-  | "setAreaFilter"
-  | "dispatchVehicleToAddId"
-  | "setDispatchVehicleToAddId"
->;
+import type {
+  AppDispatchModels,
+  AppDispatchScreenState,
+  AppNavigation,
+} from "@/features/app/appScreenPropsTypes";
 
 type UseAppDispatchScreenPropsArgs = {
   appState: AppDispatchScreenState;
