@@ -38,15 +38,16 @@ const ptoSectionPreloaders: SectionPreloader[] = [
 
 export function useAppSectionPreloader(
   enabled: boolean,
-  { includePto = false }: { includePto?: boolean } = {},
+  { activeTab = "", includePto = false }: { activeTab?: string; includePto?: boolean } = {},
 ) {
   useEffect(() => {
     if (!enabled) return undefined;
     if (typeof window === "undefined") return undefined;
 
-    const sectionPreloaders = includePto
+    const sectionPreloaders = (includePto
       ? [...primarySectionPreloaders, ...ptoSectionPreloaders]
-      : primarySectionPreloaders;
+      : primarySectionPreloaders
+    ).filter((preloader) => preloader.key !== activeTab);
     let cancelled = false;
     let cancelIdlePreload: (() => void) | undefined;
     let preloadIndex = 0;
@@ -77,5 +78,5 @@ export function useAppSectionPreloader(
       cancelled = true;
       cancelIdlePreload?.();
     };
-  }, [enabled, includePto]);
+  }, [activeTab, enabled, includePto]);
 }

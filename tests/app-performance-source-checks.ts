@@ -205,7 +205,7 @@ assert.match(appPrimaryContentSource, /const shouldShowPtoDatabaseGateOnly = sho
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /const ptoTabNeedsDatabase = isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets";/);
 assert.match(appPrimaryContentSource, /const shouldPreloadSections = appState\.adminDataLoaded && \(!databaseConfigured \|\| ptoDatabaseReady\);/);
-assert.match(appPrimaryContentSource, /useAppSectionPreloader\(shouldPreloadSections, \{ includePto: !databaseConfigured \|\| ptoDatabaseReady \}\);/);
+assert.match(appPrimaryContentSource, /useAppSectionPreloader\(shouldPreloadSections, \{[\s\S]*activeTab: renderedTopTab,[\s\S]*includePto: !databaseConfigured \|\| ptoDatabaseReady,[\s\S]*\}\);/);
 assert.match(reportsPrimaryContentSource, /databaseSyncMessage=\{databaseConfigured && !appState\.ptoDatabaseReady \? appState\.ptoDatabaseMessage : ""\}/);
 assert.match(reportsSectionSource, /databaseSyncMessage\?: string;/);
 assert.match(initialAppDatabaseBootstrapSource, /storageChanged: boolean/);
@@ -229,6 +229,7 @@ assert.match(useAppSectionPreloaderSource, /if \(!enabled\) return undefined;/);
 assert.match(useAppSectionPreloaderSource, /const primarySectionPreloaders: SectionPreloader\[\] = \[/);
 assert.match(useAppSectionPreloaderSource, /const ptoSectionPreloaders: SectionPreloader\[\] = \[/);
 assert.match(useAppSectionPreloaderSource, /includePto[\s\S]*\? \[\.\.\.primarySectionPreloaders, \.\.\.ptoSectionPreloaders\][\s\S]*: primarySectionPreloaders/);
+assert.match(useAppSectionPreloaderSource, /\.filter\(\(preloader\) => preloader\.key !== activeTab\)/);
 assert.match(useAppSectionPreloaderSource, /const completedPreloaders = new Set<string>\(\);/);
 assert.match(useAppSectionPreloaderSource, /completedPreloaders\.has\(sectionPreloaders\[preloadIndex\]\?\.key \?\? ""\)/);
 assert.match(useAppSectionPreloaderSource, /completedPreloaders\.add\(preloadSection\.key\)/);

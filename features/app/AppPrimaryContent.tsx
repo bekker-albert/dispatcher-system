@@ -44,7 +44,10 @@ export function AppPrimaryContent({
   } = models;
 
   const shouldPreloadSections = appState.adminDataLoaded && (!databaseConfigured || ptoDatabaseReady);
-  useAppSectionPreloader(shouldPreloadSections, { includePto: !databaseConfigured || ptoDatabaseReady });
+  useAppSectionPreloader(shouldPreloadSections, {
+    activeTab: renderedTopTab,
+    includePto: !databaseConfigured || ptoDatabaseReady,
+  });
 
   const ptoTabNeedsDatabase = isPtoDateTableKey(appState.ptoTab) || appState.ptoTab === "buckets";
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;
