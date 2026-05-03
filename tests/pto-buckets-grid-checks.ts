@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   createPtoBucketGridKeys,
   createPtoBucketSelectedKeysByRow,
+  emptyPtoBucketSelectedKeysByRow,
   ptoBucketCellRangeKeys,
   ptoBucketKeyStartsInlineEdit,
   resolvePtoBucketCellByOffset,
@@ -65,6 +66,7 @@ const selectedKeysByRow = createPtoBucketSelectedKeysByRow(new Set([
 assert.deepEqual(Array.from(selectedKeysByRow.get("row-a") ?? []), ["row-a::eq-1", "row-a::eq-3"]);
 assert.deepEqual(Array.from(selectedKeysByRow.get("row-c") ?? []), ["row-c::eq-2"]);
 assert.equal(selectedKeysByRow.has("bad-key"), false);
+assert.equal(createPtoBucketSelectedKeysByRow(new Set()), emptyPtoBucketSelectedKeysByRow);
 
 const lookupBundle = createPtoAreaAndBucketRowLookupSourceBundle([
   [

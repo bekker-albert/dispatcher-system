@@ -12,11 +12,16 @@ export type PtoBucketNavigationTarget = {
   columnIndex: number;
 };
 
+export const emptyPtoBucketSelectedKeys: ReadonlySet<string> = new Set<string>();
+export const emptyPtoBucketSelectedKeysByRow: ReadonlyMap<string, ReadonlySet<string>> = new Map<string, ReadonlySet<string>>();
+
 export function createPtoBucketGridKeys(rowKeys: string[], columnKeys: string[]) {
   return rowKeys.map((rowKey) => columnKeys.map((columnKey) => ptoBucketCellKey(rowKey, columnKey)));
 }
 
 export function createPtoBucketSelectedKeysByRow(selectedKeys: ReadonlySet<string>) {
+  if (selectedKeys.size === 0) return emptyPtoBucketSelectedKeysByRow;
+
   const keysByRow = new Map<string, Set<string>>();
 
   selectedKeys.forEach((key) => {

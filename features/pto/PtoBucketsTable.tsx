@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, type RefObject } from "react";
-import { createPtoBucketSelectedKeysByRow } from "@/features/pto/ptoBucketsGridModel";
+import {
+  createPtoBucketSelectedKeysByRow,
+  emptyPtoBucketSelectedKeys,
+} from "@/features/pto/ptoBucketsGridModel";
 import {
   bucketAreaColumnWidth,
   bucketStructureColumnWidth,
@@ -35,7 +38,7 @@ type PtoBucketsTableProps = PtoBucketsCellHandlers & {
   renderedColumnSpan: number;
   rows: PtoBucketRow[];
   scrollRef: RefObject<HTMLDivElement | null>;
-  selectedBucketKeys: Set<string>;
+  selectedBucketKeys: ReadonlySet<string>;
   tableMinWidth: number;
   values: Record<string, number>;
   virtualColumns: PtoBucketsVirtualColumnsView;
@@ -46,8 +49,6 @@ type PtoBucketsTableProps = PtoBucketsCellHandlers & {
   onSetDraftRowArea: (area: string) => void;
   onSetDraftRowStructure: (structure: string) => void;
 };
-
-const emptySelectedBucketKeys = new Set<string>();
 
 export function PtoBucketsTable({
   activeCell,
@@ -103,7 +104,7 @@ export function PtoBucketsTable({
                 editKey={editKey}
                 editingMode={editingMode}
                 row={row}
-                selectedBucketKeys={selectedBucketKeysByRow.get(row.key) ?? emptySelectedBucketKeys}
+                selectedBucketKeys={selectedBucketKeysByRow.get(row.key) ?? emptyPtoBucketSelectedKeys}
                 values={values}
                 virtualColumns={virtualColumns}
                 onCellBlur={onCellBlur}

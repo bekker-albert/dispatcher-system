@@ -227,7 +227,10 @@ assert.match(ptoBucketsTableRowSource, /export const PtoBucketsTableRow = memo\(
 assert.match(ptoBucketsTableSource, /const rowActiveCell = activeCell\?\.rowKey === row\.key \? activeCell : null;/);
 assert.match(ptoBucketsTableSource, /draft=\{rowActiveCell \? draft : ""\}/);
 assert.match(ptoBucketsTableSource, /createPtoBucketSelectedKeysByRow\(selectedBucketKeys\)/);
-assert.match(ptoBucketsTableSource, /selectedBucketKeys=\{selectedBucketKeysByRow\.get\(row\.key\) \?\? emptySelectedBucketKeys\}/);
+assert.match(ptoBucketsTableSource, /emptyPtoBucketSelectedKeys/);
+assert.match(ptoBucketsTableSource, /selectedBucketKeys=\{selectedBucketKeysByRow\.get\(row\.key\) \?\? emptyPtoBucketSelectedKeys\}/);
+assert.match(usePtoBucketsGridEditingSource, /usePtoBucketsCellSelection/);
+assert.match(usePtoBucketsGridEditingSource, /selectedBucketKeys/);
 assert.doesNotMatch(ptoBucketsTableRowSource, /selectedBucketKeys: Set<string>/);
 assert.match(ptoBucketsTableRowSource, /selectedBucketKeys: ReadonlySet<string>/);
 assert.match(ptoBucketsTableRowSource, /function ptoBucketsTableRowPropsEqual/);

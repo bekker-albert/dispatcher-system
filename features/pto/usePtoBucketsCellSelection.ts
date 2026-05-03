@@ -2,7 +2,10 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { ptoBucketCellRangeKeys } from "@/features/pto/ptoBucketsGridModel";
+import {
+  emptyPtoBucketSelectedKeys,
+  ptoBucketCellRangeKeys,
+} from "@/features/pto/ptoBucketsGridModel";
 import { ptoBucketSelectionKey, type PtoBucketCell } from "@/lib/domain/pto/buckets";
 import { toggleEditableGridSelectionKey } from "@/shared/editable-grid/selection";
 
@@ -21,12 +24,15 @@ export function usePtoBucketsCellSelection({
   const [selectionAnchorCell, setSelectionAnchorCell] = useState<PtoBucketCell | null>(null);
   const [selectedCellKeys, setSelectedCellKeys] = useState<string[]>([]);
 
-  const selectedBucketKeys = useMemo(() => new Set(selectedCellKeys), [selectedCellKeys]);
+  const selectedBucketKeys = useMemo(
+    () => (selectedCellKeys.length === 0 ? emptyPtoBucketSelectedKeys : new Set(selectedCellKeys)),
+    [selectedCellKeys],
+  );
 
   const clearSelection = useCallback(() => {
     setActiveCell(null);
     setSelectionAnchorCell(null);
-    setSelectedCellKeys([]);
+    setSelectedCellKeys((current) => (current.length === 0 ? current : []));
   }, []);
 
   const selectCell = useCallback((cell: PtoBucketCell) => {
