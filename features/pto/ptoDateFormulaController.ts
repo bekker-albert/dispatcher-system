@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import {
   createPtoDateFormulaModel,
   ptoFormulaCellMatches,
@@ -44,7 +46,32 @@ export function usePtoDateFormulaController({
   getRowDateTotals,
   scrollFormulaCellIntoView,
 }: PtoDateFormulaControllerOptions) {
-  if (!ptoDateEditing) {
+  const formulaModel = useMemo(() => {
+    if (!ptoDateEditing) return null;
+
+    return createPtoDateFormulaModel({
+      table: ptoTab,
+      year: ptoPlanYear,
+      renderedRows,
+      filteredRows,
+      displayMonthGroups: displayPtoMonthGroups,
+      editableMonthTotal,
+      carryoverHeader,
+      selectedCellKeys: ptoSelectedCellKeys,
+    });
+  }, [
+    carryoverHeader,
+    displayPtoMonthGroups,
+    editableMonthTotal,
+    filteredRows,
+    ptoDateEditing,
+    ptoPlanYear,
+    ptoSelectedCellKeys,
+    ptoTab,
+    renderedRows,
+  ]);
+
+  if (!ptoDateEditing || !formulaModel) {
     return inactiveFormulaController.createInactivePtoDateFormulaController();
   }
 
@@ -79,16 +106,7 @@ export function usePtoDateFormulaController({
     formulaCellFromSelectionKey,
     formulaRangeKeys,
     formulaCellSelected,
-  } = createPtoDateFormulaModel({
-    table: ptoTab,
-    year: ptoPlanYear,
-    renderedRows,
-    filteredRows,
-    displayMonthGroups: displayPtoMonthGroups,
-    editableMonthTotal,
-    carryoverHeader,
-    selectedCellKeys: ptoSelectedCellKeys,
-  });
+  } = formulaModel;
 
   const {
     cancelInlineFormulaEdit,
