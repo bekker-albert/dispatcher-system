@@ -130,6 +130,8 @@ try {
   const firstWrite = writeSharedAppStateToBrowserStorage(sharedStateFixture, cache);
   assert.ok(firstWrite.changedKeys.includes(adminStorageKeys.reportCustomers));
   assert.equal(storageWrites[adminStorageKeys.reportCustomers], JSON.stringify(sharedStateFixture.reportCustomers));
+  assert.match(storageWrites[adminStorageKeys.appSettingsLocalUpdatedAt], /^\d{4}-\d{2}-\d{2}T/);
+  assert.match(storageWrites[adminStorageKeys.appStateLocalUpdatedAt], /^\d{4}-\d{2}-\d{2}T/);
 
   for (const key of Object.keys(storageWrites)) delete storageWrites[key];
 

@@ -60,7 +60,6 @@ function saveDatabaseVehicleRowsBackup(rows: VehicleRow[], updatedAt: string | n
   window.localStorage.setItem(adminStorageKeys.vehicles, snapshot);
   if (updatedAt) {
     window.localStorage.setItem(adminStorageKeys.vehiclesLocalUpdatedAt, updatedAt);
-    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt);
   }
 
   return snapshot;

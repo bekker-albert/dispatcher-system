@@ -42,6 +42,8 @@ assert.match(appPtoPersistenceSource, /usePtoLocalPersistence\(\{[\s\S]*adminDat
 assert.match(initialAppStorageSource, /export const initialPtoStorageKeys = \[/);
 assert.match(initialAppStorageSource, /initialAppStorageKeys = Object\.values\(adminStorageKeys\)\.filter\(\(key\) => !initialPtoStorageKeySet\.has\(key\)\)/);
 assert.match(initialAppStorageSource, /const initialMeaningfulAppStorageKeys = initialAppStorageKeys\.filter/);
+assert.match(initialAppStorageSource, /key !== adminStorageKeys\.appStateLocalUpdatedAt/);
+assert.match(initialAppStorageSource, /key !== adminStorageKeys\.appSettingsLocalUpdatedAt/);
 assert.match(initialAppStorageSource, /key !== adminStorageKeys\.vehiclesLocalUpdatedAt/);
 assert.match(initialAppStorageSource, /key !== adminStorageKeys\.vehiclesSeedVersion/);
 assert.match(initialAppStorageSource, /initialMeaningfulAppStorageKeys\.some\(\(key\) => window\.localStorage\.getItem\(key\) !== null\)/);
@@ -150,7 +152,7 @@ assert.match(ptoPersistenceStorageSource, /const previousValue = previousCache\?
 assert.match(ptoPersistenceStorageSource, /if \(previousValue === value\) return;/);
 assert.match(ptoPersistenceStorageSource, /const updatedAt = options\.localUpdatedAt === undefined \? new Date\(\)\.toISOString\(\) : options\.localUpdatedAt;/);
 assert.match(ptoPersistenceStorageSource, /if \(options\.markLocalUpdatedAt && updatedAt\) \{[\s\S]*writeBrowserStorageValue\(adminStorageKeys\.ptoLocalUpdatedAt, updatedAt, failedLocalKeys\);/);
-assert.match(ptoPersistenceStorageSource, /writeBrowserStorageValue\(adminStorageKeys\.appLocalUpdatedAt, updatedAt \?\? new Date\(\)\.toISOString\(\), failedLocalKeys\);/);
+assert.doesNotMatch(ptoPersistenceStorageSource, /adminStorageKeys\.appLocalUpdatedAt/);
 assert.match(ptoLocalPersistenceSource, /useRef<PtoBrowserStorageSnapshotCache \| null>\(null\)/);
 assert.match(ptoLocalPersistenceSource, /ptoDatabaseLoadedBucketsYearRef: RefObject<string \| null>;/);
 assert.match(ptoLocalPersistenceSource, /const currentPtoTabRef = useRef\(ptoTab\);/);

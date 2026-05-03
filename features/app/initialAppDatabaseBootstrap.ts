@@ -68,7 +68,8 @@ export async function loadInitialAppDatabaseBootstrap({
       databaseStorage,
       databaseAppState?.updatedAt ?? null,
     );
-    const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
+    const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.appStateLocalUpdatedAt)
+      ?? window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
     const localUpdatedTime = localUpdatedAt ? Date.parse(localUpdatedAt) : 0;
     const databaseUpdatedTime = databaseAppState?.updatedAt ? Date.parse(databaseAppState.updatedAt) : 0;
     const shouldUseDatabaseAppState = Object.keys(databaseStorage).length > 0
@@ -86,11 +87,14 @@ export async function loadInitialAppDatabaseBootstrap({
         }
       });
       if (databaseAppState?.updatedAt) {
+        window.localStorage.setItem(adminStorageKeys.appStateLocalUpdatedAt, databaseAppState.updatedAt);
         window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, databaseAppState.updatedAt);
       }
       storageChanged = true;
     } else if (hasLocalAppState && !localUpdatedAt) {
-      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+      const updatedAt = new Date().toISOString();
+      window.localStorage.setItem(adminStorageKeys.appStateLocalUpdatedAt, updatedAt);
+      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt);
     }
   } else {
     console.warn("Legacy app_state is not ready:", appStateResult.reason);
@@ -108,7 +112,8 @@ export async function loadInitialAppDatabaseBootstrap({
         setting.updated_at ? Date.parse(setting.updated_at) || 0 : 0
       )),
     );
-    const currentLocalUpdatedAt = window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
+    const currentLocalUpdatedAt = window.localStorage.getItem(adminStorageKeys.appSettingsLocalUpdatedAt)
+      ?? window.localStorage.getItem(adminStorageKeys.appLocalUpdatedAt);
     const currentLocalUpdatedTime = currentLocalUpdatedAt ? Date.parse(currentLocalUpdatedAt) : 0;
     const shouldUseDatabaseSettings = databaseSettings.length > 0
       && (
@@ -123,7 +128,10 @@ export async function loadInitialAppDatabaseBootstrap({
         resolvedStorage[setting.key] = serialized;
       });
       if (databaseSettingsUpdatedTime > 0) {
-        window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date(databaseSettingsUpdatedTime).toISOString());
+        const updatedAt = new Date(databaseSettingsUpdatedTime).toISOString();
+        window.localStorage.setItem(adminStorageKeys.appSettingsLocalUpdatedAt, updatedAt);
+        window.localStorage.setItem(adminStorageKeys.appStateLocalUpdatedAt, updatedAt);
+        window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt);
       }
       storageChanged = true;
     }

@@ -165,6 +165,10 @@ assert.match(initialAppDatabaseBootstrapSource, /const resolvedStorage = collect
 assert.match(initialAppDatabaseBootstrapSource, /resolvedStorage\[key\] = value;/);
 assert.match(initialAppDatabaseBootstrapSource, /resolvedStorage\[setting\.key\] = serialized;/);
 assert.match(initialAppDatabaseBootstrapSource, /parseInitialStoredAppStateFromStorage\(resolvedStorage, \{ includePto: false \}\)/);
+assert.match(initialAppDatabaseBootstrapSource, /adminStorageKeys\.appStateLocalUpdatedAt/);
+assert.match(initialAppDatabaseBootstrapSource, /adminStorageKeys\.appSettingsLocalUpdatedAt/);
+assert.match(initialAppDatabaseBootstrapSource, /window\.localStorage\.getItem\(adminStorageKeys\.appSettingsLocalUpdatedAt\)[\s\S]*window\.localStorage\.getItem\(adminStorageKeys\.appLocalUpdatedAt\)/);
+assert.doesNotMatch(initialAppDatabaseBootstrapSource, /const currentLocalUpdatedAt = window\.localStorage\.getItem\(adminStorageKeys\.appLocalUpdatedAt\);/);
 assert.match(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged && databaseBootstrap\.storedState\) \{\s*storedState = databaseBootstrap\.storedState;\s*initialReportState = applySharedState\(storedState\);\s*\}/);
 assert.doesNotMatch(initialAppDataLoadStepsSource, /if \(databaseBootstrap\.storageChanged\) \{\s*storedState = readInitialStoredAppState\(\{ includePto: false \}\)/);
 assert.match(useAppSectionPreloaderSource, /export function useAppSectionPreloader\(\s*enabled: boolean,[\s\S]*includePto/);

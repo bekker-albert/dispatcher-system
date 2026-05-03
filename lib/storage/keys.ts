@@ -24,6 +24,8 @@ export const adminStorageKeys = {
   ptoBucketValues: "dispatcher:pto-bucket-values",
   ptoBucketRows: "dispatcher:pto-bucket-rows",
   ptoLocalUpdatedAt: "dispatcher:pto-local-updated-at",
+  appStateLocalUpdatedAt: "dispatcher:app-state-local-updated-at",
+  appSettingsLocalUpdatedAt: "dispatcher:app-settings-local-updated-at",
   appLocalUpdatedAt: "dispatcher:app-local-updated-at",
   orgMembers: "dispatcher:org-members",
   dependencyNodes: "dispatcher:dependency-nodes",

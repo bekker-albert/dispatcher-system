@@ -135,10 +135,15 @@ export function writeSharedAppStateToBrowserStorage(
   }
 
   if (changedKeys.length > 0) {
+    const updatedAt = new Date().toISOString();
     try {
-      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, new Date().toISOString());
+      window.localStorage.setItem(adminStorageKeys.appSettingsLocalUpdatedAt, updatedAt);
+      window.localStorage.setItem(adminStorageKeys.appStateLocalUpdatedAt, updatedAt);
+      window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt);
     } catch (error) {
       console.warn("Shared app local timestamp write failed:", error);
+      failedLocalKeys.push(adminStorageKeys.appSettingsLocalUpdatedAt);
+      failedLocalKeys.push(adminStorageKeys.appStateLocalUpdatedAt);
       failedLocalKeys.push(adminStorageKeys.appLocalUpdatedAt);
     }
   }

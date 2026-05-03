@@ -117,7 +117,6 @@ export function savePtoStateToBrowserStorage(
   if (options.markLocalUpdatedAt && updatedAt) {
     writeBrowserStorageValue(adminStorageKeys.ptoLocalUpdatedAt, updatedAt, failedLocalKeys);
   }
-  writeBrowserStorageValue(adminStorageKeys.appLocalUpdatedAt, updatedAt ?? new Date().toISOString(), failedLocalKeys);
 
   return { changed, snapshot, cache, failedLocalKeys };
 }

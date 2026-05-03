@@ -22,7 +22,6 @@ function saveVehicleRowsLocalBackup(snapshot: string, updatedAt: string) {
   try {
     window.localStorage.setItem(adminStorageKeys.vehicles, snapshot);
     window.localStorage.setItem(adminStorageKeys.vehiclesLocalUpdatedAt, updatedAt);
-    window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt);
   } catch (error) {
     console.warn("Vehicle local backup failed:", error);
   }

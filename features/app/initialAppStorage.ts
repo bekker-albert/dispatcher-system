@@ -22,6 +22,8 @@ export const initialAppStorageKeys = Object.values(adminStorageKeys).filter((key
 
 const initialMeaningfulAppStorageKeys = initialAppStorageKeys.filter((key) => (
   key !== adminStorageKeys.appLocalUpdatedAt
+  && key !== adminStorageKeys.appStateLocalUpdatedAt
+  && key !== adminStorageKeys.appSettingsLocalUpdatedAt
   && key !== adminStorageKeys.vehiclesLocalUpdatedAt
   && key !== adminStorageKeys.vehiclesSeedVersion
 ));
