@@ -13,22 +13,22 @@ export type PtoMatrixTableMeta = {
 
 export const ptoMatrixTableMeta: Record<PtoMatrixTableKey, PtoMatrixTableMeta> = {
   buckets: {
-    sectionLabel: "\u041f\u0422\u041e: \u041a\u043e\u0432\u0448\u0438",
+    sectionLabel: "\u041a\u043e\u0432\u0448\u0438",
     valueLabel: "\u043a\u043e\u0432\u0448",
     excelFileName: "pto-kovshi.xlsx",
   },
   cycle: {
-    sectionLabel: "\u041f\u0422\u041e: \u0426\u0438\u043a\u043b",
+    sectionLabel: "\u0426\u0438\u043a\u043b",
     valueLabel: "\u0446\u0438\u043a\u043b",
     excelFileName: "pto-cycle.xlsx",
   },
   bodies: {
-    sectionLabel: "\u041f\u0422\u041e: \u041a\u0443\u0437\u043e\u0432\u0430",
+    sectionLabel: "\u041a\u0443\u0437\u043e\u0432\u0430",
     valueLabel: "\u043a\u0443\u0437\u043e\u0432",
     excelFileName: "pto-kuzova.xlsx",
   },
   performance: {
-    sectionLabel: "\u041f\u0422\u041e: \u041f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c",
+    sectionLabel: "\u041f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c",
     valueLabel: "\u043f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c",
     excelFileName: "pto-proizvoditelnost.xlsx",
   },

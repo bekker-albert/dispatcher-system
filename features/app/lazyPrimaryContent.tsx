@@ -23,7 +23,7 @@ export const ReportsPrimaryContent = dynamic(
 );
 
 export const FleetPrimaryContent = dynamic(
-  () => import("../fleet/FleetSection").then((module) => module.FleetSection),
+  () => import("./VehicleTablePrimaryContent").then((module) => module.VehicleTablePrimaryContent),
   { ssr: false },
 );
 

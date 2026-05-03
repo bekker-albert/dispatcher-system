@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   createPtoBucketGridKeys,
   createPtoBucketSelectedKeysByRow,
@@ -17,6 +20,10 @@ import {
   ptoBucketColumnsSourceSignature,
 } from "../lib/domain/pto/buckets";
 import { createPtoBodyColumns } from "../lib/domain/pto/bodies";
+import { ptoMatrixTableMeta } from "../lib/domain/pto/tabs";
+
+const testDir = dirname(fileURLToPath(import.meta.url));
+const ptoSectionSource = readFileSync(resolve(testDir, "../features/pto/PtoSection.tsx"), "utf8");
 
 const rowKeys = ["row-a", "row-b", "row-c"];
 const columnKeys = ["eq-1", "eq-2", "eq-3"];
@@ -63,6 +70,56 @@ const duplicateBucketColumnsModel = createPtoBucketColumnsModel([
 ] as never);
 assert.equal(duplicateBucketColumnsModel.columns.length, 1);
 assert.equal(duplicateBucketColumnsModel.columns[0].duplicate, true);
+const joinedLabelButDifferentBrandModelColumnsModel = createPtoBucketColumnsModel([
+  {
+    id: 101,
+    visible: true,
+    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+    brand: "CAT",
+    model: "336",
+    name: "CAT 336",
+  },
+  {
+    id: 102,
+    visible: true,
+    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+    brand: "CAT3",
+    model: "36",
+    name: "CAT3 36",
+  },
+] as never);
+assert.equal(joinedLabelButDifferentBrandModelColumnsModel.columns.length, 2);
+assert.deepEqual(
+  joinedLabelButDifferentBrandModelColumnsModel.columns.map((column) => column.duplicate ?? false),
+  [false, false],
+);
+const incompleteBrandModelColumnsModel = createPtoBucketColumnsModel([
+  {
+    id: 201,
+    visible: true,
+    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+    brand: "",
+    model: "336",
+    name: "CAT 336 A",
+  },
+  {
+    id: 202,
+    visible: true,
+    vehicleType: "\u042d\u043a\u0441\u043a\u0430\u0432\u0430\u0442\u043e\u0440",
+    brand: "",
+    model: "3 36",
+    name: "CAT 336 B",
+  },
+] as never);
+assert.equal(incompleteBrandModelColumnsModel.columns.length, 2);
+assert.deepEqual(
+  incompleteBrandModelColumnsModel.columns.map((column) => column.duplicate ?? false),
+  [false, false],
+);
+Object.values(ptoMatrixTableMeta).forEach((meta) => {
+  assert.doesNotMatch(meta.sectionLabel, /^\u041f\u0422\u041e:/);
+});
+assert.doesNotMatch(ptoSectionSource, /\u041f\u0422\u041e:\s*\$\{activePtoSubtabLabel/);
 assert.equal(
   ptoBucketColumnsSourceSignature([
     {

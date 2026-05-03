@@ -49,7 +49,7 @@ assert.match(mysqlSchemaDefinitionsSource, /ALTER TABLE pto_bucket_rows ADD INDE
 assert.doesNotMatch(mysqlPtoCommandsSource, /loadPtoUpdatedAtFromMysql/);
 assert.match(mysqlPtoCommandsSource, /return await touchPtoVersion\(execute\)/);
 assert.match(mysqlPtoVersionSource, /SELECT updated_at FROM pto_meta WHERE meta_key = \? LIMIT 1/);
-assert.match(mysqlPtoLoadSource, /JOIN pto_rows AS rows_for_year/);
+assert.match(mysqlPtoLoadSource, /FROM pto_rows AS rows_for_year/);
 assert.match(mysqlPtoLoadSource, /const ptoRowSelectColumns = \[/);
 assert.match(mysqlPtoLoadSource, /const ptoDayValueSelectColumns = \[/);
 assert.match(mysqlPtoLoadSource, /SELECT \$\{ptoRowSelectColumns\} FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
@@ -58,12 +58,12 @@ assert.match(mysqlPtoLoadSource, /rows_for_year\.\$\{column\}/);
 assert.doesNotMatch(mysqlPtoLoadSource, /SELECT rows_for_year\.\*/);
 assert.doesNotMatch(mysqlPtoLoadSource, /SELECT \* FROM pto_rows/);
 assert.match(mysqlPtoLoadSource, /FROM pto_row_years AS row_years/);
-assert.match(mysqlPtoLoadSource, /JOIN pto_rows AS rows_for_year/);
-assert.match(mysqlPtoLoadSource, /WHERE row_years\.year_value = \?/);
+assert.match(mysqlPtoLoadSource, /FROM pto_day_values AS values_for_year/);
+assert.match(mysqlPtoLoadSource, /AND row_years\.year_value = \?/);
 assert.doesNotMatch(mysqlPtoLoadSource, /WITH values_for_year AS \(/);
-assert.doesNotMatch(mysqlPtoLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
+assert.match(mysqlPtoLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
 assert.doesNotMatch(mysqlPtoLoadSource, /LEFT JOIN values_for_year/);
-assert.doesNotMatch(mysqlPtoLoadSource, /EXISTS \(\s*SELECT 1\s*FROM pto_day_values AS values_for_year/);
+assert.match(mysqlPtoLoadSource, /EXISTS \(\s*SELECT 1\s*FROM pto_day_values AS values_for_year/);
 assert.doesNotMatch(mysqlPtoLoadSource, /loadPtoStateFromMysqlForYear[\s\S]*SELECT \* FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
 
 async function responseJson(response: Response) {

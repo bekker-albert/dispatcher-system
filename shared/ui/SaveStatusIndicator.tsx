@@ -12,6 +12,8 @@ type SaveStatusIndicatorProps = {
   onClose: () => void;
 };
 
+const closeSaveStatusLabel = "\u0417\u0430\u043a\u0440\u044b\u0442\u044c \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u0435";
+
 export function SaveStatusIndicator({ status, onClose }: SaveStatusIndicatorProps) {
   if (status.kind === "idle") return null;
 
@@ -33,17 +35,17 @@ export function SaveStatusIndicator({ status, onClose }: SaveStatusIndicatorProp
         <span style={saveStatusLabelStyle}>{statusLabel}</span>
         <span>{status.message}</span>
       </div>
-      <button type="button" aria-label="Закрыть уведомление" onClick={onClose} style={saveStatusCloseButtonStyle}>
-        ×
+      <button type="button" aria-label={closeSaveStatusLabel} onClick={onClose} style={saveStatusCloseButtonStyle}>
+        x
       </button>
     </div>
   );
 }
 
 const saveStatusLabels: Record<Exclude<SaveStatusState["kind"], "idle">, string> = {
-  saving: "Идет сохранение",
-  saved: "Готово",
-  error: "Ошибка",
+  saving: "\u0418\u0434\u0435\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435",
+  saved: "\u0413\u043e\u0442\u043e\u0432\u043e",
+  error: "\u041e\u0448\u0438\u0431\u043a\u0430",
 };
 
 const saveStatusIndicatorStyle: CSSProperties = {

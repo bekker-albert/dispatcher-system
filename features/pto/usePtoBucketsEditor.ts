@@ -48,7 +48,7 @@ export function usePtoBucketsEditor({
   showSaveStatus,
   requestSave,
   addAdminLog,
-  sectionLabel = "ПТО: Ковши",
+  sectionLabel = "\u041a\u043e\u0432\u0448\u0438",
   valueLabel = "значение",
 }: UsePtoBucketsEditorOptions) {
   const databaseReady = useCallback(() => databaseConfigured && ptoDatabaseLoadedRef.current, [databaseConfigured, ptoDatabaseLoadedRef]);

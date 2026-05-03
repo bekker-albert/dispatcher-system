@@ -4,7 +4,6 @@ import { useAppDeferredData } from "@/features/app/useAppDeferredData";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { useAppVehicleViewModel } from "@/features/app/useAppVehicleViewModel";
 import { vehicleFilterColumns } from "@/features/admin/vehicles/vehicleFilterColumns";
-import { useFleetRows } from "@/features/fleet/useFleetRows";
 
 
 type UseAppDerivedModelsArgs = {
@@ -32,7 +31,6 @@ export function useAppDerivedModels({ appState }: UseAppDerivedModelsArgs) {
     ptoPlanRows,
     ptoOperRows,
     ptoSurveyRows,
-    fleetTab,
   } = appState;
 
   const deferredData = useAppDeferredData({
@@ -49,8 +47,11 @@ export function useAppDerivedModels({ appState }: UseAppDerivedModelsArgs) {
     renderedTopTab,
   } = deferredData;
 
+  const vehicleTableActive = renderedTopTab === "fleet"
+    || (renderedTopTab === "admin" && adminSection === "vehicles");
+
   const vehicleViewModel = useAppVehicleViewModel({
-    active: renderedTopTab === "admin" && adminSection === "vehicles",
+    active: vehicleTableActive,
     adminVehiclesEditing,
     showAllVehicleRows,
     vehiclePreviewRowLimit,
@@ -68,16 +69,9 @@ export function useAppDerivedModels({ appState }: UseAppDerivedModelsArgs) {
     setVehicleFilterDrafts,
   });
 
-  const filteredFleet = useFleetRows({
-    active: renderedTopTab === "fleet",
-    fleetTab,
-    vehicleRows,
-  });
-
   return {
     ...deferredData,
     ...vehicleViewModel,
-    filteredFleet,
     vehicleFilterColumns,
   };
 }

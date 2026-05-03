@@ -25,8 +25,6 @@ export function AppPrimaryContent({
   navigation,
 }: AppPrimaryContentProps) {
   const {
-    fleetTab,
-    setFleetTab,
     contractorTab,
     setContractorTab,
     fuelTab,
@@ -40,7 +38,6 @@ export function AppPrimaryContent({
 
   const {
     renderedTopTab,
-    filteredFleet,
   } = models;
 
   const shouldPreloadSections = appState.adminDataLoaded && (!databaseConfigured || ptoDatabaseReady);
@@ -71,10 +68,9 @@ export function AppPrimaryContent({
 
       {renderedTopTab === "fleet" && (
         <FleetPrimaryContent
-          fleetTab={fleetTab}
-          subTabs={subTabs.fleet}
-          rows={filteredFleet}
-          onSelectTab={setFleetTab}
+          appState={appState}
+          models={models}
+          runtime={runtime}
         />
       )}
 

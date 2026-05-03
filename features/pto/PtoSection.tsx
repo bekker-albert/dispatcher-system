@@ -88,10 +88,11 @@ export default function PtoSection({
   const bodiesHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "bodies");
   const performanceHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "performance");
   const showStaticContent = !isPtoDataTableKey(ptoTab);
+  const sectionTitle = showStaticContent ? activePtoSubtabLabel || ptoTab : "";
 
   return (
     <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
-      <SectionCard title={isPtoDateTab ? "" : `ПТО: ${activePtoSubtabLabel || ptoTab}`} fill={isPtoDateTab}>
+      <SectionCard title={sectionTitle} fill={isPtoDateTab}>
         {showStaticContent ? <PtoStaticTabContent content={content} ptoTab={ptoTab} /> : null}
         {ptoTab === "buckets" && (
           <div style={ptoBucketsPanelStyle}>
