@@ -66,9 +66,14 @@ export function useAdminVehicleRowsViewModel({
     setShowAllVehicleRows(false);
   }, [setShowAllVehicleRows, vehicleFilters]);
 
+  const activeVehicleFilterCount = useMemo(() => (
+    Object.values(vehicleFilters).filter((values) => values !== undefined).length
+  ), [vehicleFilters]);
+  const hasActiveVehicleFilters = activeVehicleFilterCount > 0;
+
   const vehicleFilterSets = useMemo(() => (
-    active ? createVehicleFilterSets(vehicleFilters) : emptyVehicleFilterSets
-  ), [active, vehicleFilters]);
+    active && hasActiveVehicleFilters ? createVehicleFilterSets(vehicleFilters) : emptyVehicleFilterSets
+  ), [active, hasActiveVehicleFilters, vehicleFilters]);
 
   const vehicleAutocompleteOptions = useMemo(() => (
     active && adminVehiclesEditing
@@ -88,11 +93,12 @@ export function useAdminVehicleRowsViewModel({
     );
   }, [active, deferredVehicleRows, openVehicleFilter, vehicleFilterSets, vehicleFilters]);
 
-  const filteredVehicleRows = useMemo(() => (
-    active
-      ? vehicleRows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, vehicleFilterSets, vehicleFilterColumns))
-      : emptyVehicleRows
-  ), [active, vehicleFilterSets, vehicleRows]);
+  const filteredVehicleRows = useMemo(() => {
+    if (!active) return emptyVehicleRows;
+    if (!hasActiveVehicleFilters) return vehicleRows;
+
+    return vehicleRows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, vehicleFilterSets, vehicleFilterColumns));
+  }, [active, hasActiveVehicleFilters, vehicleFilterSets, vehicleRows]);
 
   useEffect(() => {
     if (!active || showAllVehicleRows) return undefined;
@@ -134,10 +140,6 @@ export function useAdminVehicleRowsViewModel({
       : emptyVehicleRows
   ), [active, filteredVehicleRows, showAllVehicleRows, vehiclePreviewRowLimit]);
   const hiddenVehicleRowsCount = Math.max(filteredVehicleRows.length - visibleVehicleRows.length, 0);
-
-  const activeVehicleFilterCount = useMemo(() => (
-    Object.values(vehicleFilters).filter((values) => values !== undefined).length
-  ), [vehicleFilters]);
 
   return {
     vehicleFilterSets,

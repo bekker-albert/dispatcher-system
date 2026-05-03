@@ -20,6 +20,7 @@ import {
 import { resolveInitialVehicleRowsSource } from "../features/admin/vehicles/initialVehicleRows";
 import {
   createVehicleFilterOptionsByKey,
+  createVehicleFilterOptionsForKey,
   createVehicleFilterSets,
   vehicleMatchesFilterSets,
 } from "../lib/domain/vehicles/filtering";
@@ -31,6 +32,7 @@ const adminVehiclesTableSource = readFileSync(resolve(testDir, "../features/admi
 const adminVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehicleFilterMenu.tsx"), "utf8");
 const useAdminVehicleRowsViewModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useAdminVehicleRowsViewModel.ts"), "utf8");
 const useVehicleFilterMenuSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleFilterMenu.ts"), "utf8");
+const vehicleFilteringSource = readFileSync(resolve(testDir, "../lib/domain/vehicles/filtering.ts"), "utf8");
 const useAppVehicleViewModelSource = readFileSync(resolve(testDir, "../features/app/useAppVehicleViewModel.ts"), "utf8");
 const vehicleInlineGridModelSource = readFileSync(resolve(testDir, "../features/admin/vehicles/vehicleInlineGridModel.ts"), "utf8");
 const useVehicleInlineCellInputPropsSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleInlineCellInputProps.ts"), "utf8");
@@ -181,16 +183,33 @@ assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, v
 assert.equal(vehicleMatchesFilterSets({ ...vehicleRows[0], brand: "Shacman" }, vehicleFilterSets, vehicleFilterColumns, "brand"), true);
 assert.deepEqual(vehicleFilterOptionsByKey.brand, ["Howo", "Shacman"]);
 assert.deepEqual(vehicleFilterOptionsByKey.owner, ["Another", "Owner"]);
+assert.deepEqual(createVehicleFilterOptionsForKey(
+  [
+    ...vehicleRows,
+    { ...vehicleRows[0], id: 11, brand: "Shacman", owner: "Another" },
+    { ...vehicleRows[0], id: 12, brand: "Howo", owner: "Contractor" },
+  ],
+  vehicleFilterColumns,
+  vehicleFilterSets,
+  "owner",
+  ["Saved"],
+), ["Contractor", "Owner", "Saved"]);
 assert.match(useAdminVehicleRowsViewModelSource, /createVehicleFilterOptionsByKey\(deferredVehicleRows, vehicleFilterColumns, vehicleAutocompleteFilterKeys\)/);
 assert.match(useAdminVehicleRowsViewModelSource, /createVehicleFilterOptionsForKey\(/);
 assert.match(useAdminVehicleRowsViewModelSource, /const emptyVehicleFilterSets: VehicleFilterSets = \{\};/);
-assert.match(useAdminVehicleRowsViewModelSource, /active \? createVehicleFilterSets\(vehicleFilters\) : emptyVehicleFilterSets/);
+assert.match(useAdminVehicleRowsViewModelSource, /const hasActiveVehicleFilters = activeVehicleFilterCount > 0;/);
+assert.match(useAdminVehicleRowsViewModelSource, /active && hasActiveVehicleFilters \? createVehicleFilterSets\(vehicleFilters\) : emptyVehicleFilterSets/);
+assert.match(useAdminVehicleRowsViewModelSource, /if \(!hasActiveVehicleFilters\) return vehicleRows;/);
+assert.match(useAdminVehicleRowsViewModelSource, /\[active, hasActiveVehicleFilters, vehicleFilterSets, vehicleRows\]/);
 assert.match(useAdminVehicleRowsViewModelSource, /const visibleVehicleRows = useMemo\(\(\) => \(/);
 assert.match(useAdminVehicleRowsViewModelSource, /\[active, filteredVehicleRows, showAllVehicleRows, vehiclePreviewRowLimit\]/);
 assert.match(useAdminVehicleRowsViewModelSource, /\[active, filteredVehicleRows\.length, setVehiclePreviewRowLimit, showAllVehicleRows, tableScrollRef\]/);
 assert.doesNotMatch(useAdminVehicleRowsViewModelSource, /\[active, adminVehiclesEditing, filteredVehicleRows\.length/);
 assert.match(useAdminVehicleRowsViewModelSource, /vehicleFilterSets,/);
 assert.match(useVehicleFilterMenuSource, /createVehicleFilterOptionsForKey\(/);
+assert.match(vehicleFilteringSource, /vehicleMatchesFilterSets\(vehicle, filterSets, columns, key\)/);
+assert.match(vehicleFilteringSource, /options\.add\(vehicleFilterOptionValue\(column\.getValue\(vehicle\)\)\)/);
+assert.doesNotMatch(vehicleFilteringSource, /rowsForColumn/);
 assert.doesNotMatch(useVehicleFilterMenuSource, /createVehicleFilterSets/);
 assert.match(useVehicleFilterMenuSource, /vehicleFilterSets: VehicleFilterSets;/);
 assert.match(useVehicleFilterMenuSource, /vehicleFilterSets,\s+key,\s+vehicleFilters\[key\]/);

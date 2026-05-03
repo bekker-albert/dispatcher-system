@@ -107,8 +107,13 @@ export function createVehicleFilterOptionsForKey(
   const column = columns.find((item) => item.key === key);
   if (!column) return [];
 
-  const rowsForColumn = rows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, filterSets, columns, key));
-  return mergeVehicleFilterOptions(createVehicleFilterOptions(rowsForColumn, column), selectedValues);
+  const options = new Set<string>();
+  rows.forEach((vehicle) => {
+    if (!vehicleMatchesFilterSets(vehicle, filterSets, columns, key)) return;
+    options.add(vehicleFilterOptionValue(column.getValue(vehicle)));
+  });
+
+  return mergeVehicleFilterOptions(Array.from(options), selectedValues);
 }
 
 export function cloneVehicleRows(rows: VehicleRow[]) {
