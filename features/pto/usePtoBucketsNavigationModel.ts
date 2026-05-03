@@ -5,7 +5,6 @@ import { cleanAreaName, uniqueSorted } from "@/lib/utils/text";
 import {
   createPtoAreaAndBucketRowLookupSourceBundle,
   createPtoBucketAreaLookupSourceBundle,
-  ptoAreaAndBucketRowGroupsSignature,
   type PtoAreaLookupSource,
   type PtoBucketRowLookupSource,
 } from "./ptoDateLookupModel";
@@ -19,6 +18,7 @@ const emptyAreaAndBucketRowLookupBundle = {
   areaSignature: "",
   bucketRowSources: [] as PtoBucketRowLookupSource[],
   bucketRowSignature: "",
+  rowGroupsSignature: "",
 };
 
 function useStablePtoAreaLookupSources(bundle: { sources: PtoAreaLookupSource[]; signature: string }) {
@@ -29,6 +29,11 @@ function useStablePtoAreaLookupSources(bundle: { sources: PtoAreaLookupSource[];
 function useStablePtoBucketRowLookupSources(bundle: { sources: PtoBucketRowLookupSource[]; signature: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => bundle.sources, [bundle.signature]);
+}
+
+function useStablePtoAreaAndBucketRowLookupBundle<T extends { rowGroupsSignature: string }>(bundle: T) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => bundle, [bundle.rowGroupsSignature]);
 }
 
 type UsePtoBucketsNavigationModelOptions = {
@@ -49,21 +54,15 @@ export function usePtoBucketsNavigationModel({
   ptoBucketManualRows,
 }: UsePtoBucketsNavigationModelOptions) {
   const isPtoBucketsSection = renderedTopTab === "pto" && ptoTab === "buckets";
-  const referenceRowGroupsSignature = useMemo(() => (
-    isPtoBucketsSection
-      ? ptoAreaAndBucketRowGroupsSignature([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
-      : ""
-  ), [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection]);
-
-  const referenceLookupBundle = useMemo(
+  const referenceLookupBundleSnapshot = useMemo(
     () => (
       isPtoBucketsSection
         ? createPtoAreaAndBucketRowLookupSourceBundle([deferredPtoPlanRows, deferredPtoSurveyRows, deferredPtoOperRows])
         : emptyAreaAndBucketRowLookupBundle
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isPtoBucketsSection, referenceRowGroupsSignature],
+    [deferredPtoOperRows, deferredPtoPlanRows, deferredPtoSurveyRows, isPtoBucketsSection],
   );
+  const referenceLookupBundle = useStablePtoAreaAndBucketRowLookupBundle(referenceLookupBundleSnapshot);
 
   const bucketAreaLookupSources = useStablePtoAreaLookupSources(
     useMemo(() => ({

@@ -28,10 +28,13 @@ const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysq
 const mysqlPtoVersionSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-version.ts"), "utf8");
 const mysqlPtoLoadSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-load.ts"), "utf8");
 
-assert.match(mysqlSchemaSource, /const schemaVersionMetaKey = "schema:v/);
-assert.doesNotMatch(mysqlSchemaSource, /if \(await mysqlSchemaVersionExists\(\)\) return;/);
+assert.match(mysqlSchemaSource, /const schemaVersionMetaKey = createSchemaVersionMetaKey\(\);/);
+assert.match(mysqlSchemaSource, /createHash\("sha256"\)/);
+assert.match(mysqlSchemaSource, /SELECT 1 AS schema_ready FROM pto_meta WHERE meta_key = \? LIMIT 1/);
+assert.match(mysqlSchemaSource, /if \(await mysqlSchemaVersionExists\(\)\) return;[\s\S]*await getMysqlPool\(\)\.execute\(ptoMetaTableStatement\);/);
 assert.doesNotMatch(mysqlSchemaSource, /SELECT meta_key FROM pto_meta WHERE meta_key = \? LIMIT 1/);
 assert.match(mysqlSchemaSource, /for \(const statement of statements\) \{[\s\S]*await getMysqlPool\(\)\.execute\(statement\);[\s\S]*\}/);
+assert.match(mysqlSchemaSource, /for \(const migration of schemaMigrations\) \{[\s\S]*await applyMysqlSchemaMigration\(migration\);[\s\S]*\}/);
 assert.match(mysqlSchemaSource, /INSERT IGNORE INTO pto_meta \(meta_key\) VALUES \(\?\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE vehicles ADD INDEX vehicles_sort_index_idx \(sort_index\)/);
 assert.match(mysqlSchemaSource, /ALTER TABLE pto_rows ADD INDEX pto_rows_sort_idx \(table_type, sort_index\)/);

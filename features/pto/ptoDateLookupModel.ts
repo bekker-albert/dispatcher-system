@@ -27,6 +27,7 @@ type PtoAreaAndBucketRowLookupSourceBundle = {
   areaSignature: string;
   bucketRowSources: PtoBucketRowLookupSource[];
   bucketRowSignature: string;
+  rowGroupsSignature: string;
 };
 
 function validYearFromDateKey(date: string) {
@@ -105,10 +106,13 @@ export function createPtoAreaAndBucketRowLookupSourceBundle(
   const areaSignatureParts: string[] = [];
   const bucketRowSources: PtoBucketRowLookupSource[] = [];
   const bucketRowSignatureParts: string[] = [];
+  const rowGroupSignatureParts: string[] = [];
   const areaKeys = new Set<string>();
   const bucketRowKeys = new Set<string>();
 
   rowGroups.forEach((rows) => {
+    const rowSignatureParts: string[] = [];
+
     rows.forEach((row) => {
       if (!areaKeys.has(row.area)) {
         areaKeys.add(row.area);
@@ -117,12 +121,16 @@ export function createPtoAreaAndBucketRowLookupSourceBundle(
       }
 
       const bucketRowKey = [row.area, row.structure].join("\u001f");
+      rowSignatureParts.push(bucketRowKey);
+
       if (!bucketRowKeys.has(bucketRowKey)) {
         bucketRowKeys.add(bucketRowKey);
         bucketRowSources.push({ area: row.area, structure: row.structure });
         bucketRowSignatureParts.push(bucketRowKey);
       }
     });
+
+    rowGroupSignatureParts.push(rowSignatureParts.join("\u001e"));
   });
 
   return {
@@ -130,15 +138,8 @@ export function createPtoAreaAndBucketRowLookupSourceBundle(
     areaSignature: areaSignatureParts.join("\u001e"),
     bucketRowSources,
     bucketRowSignature: bucketRowSignatureParts.join("\u001e"),
+    rowGroupsSignature: rowGroupSignatureParts.join("\u001d"),
   };
-}
-
-export function ptoAreaAndBucketRowGroupsSignature(
-  rowGroups: readonly (readonly Pick<PtoPlanRow, "area" | "structure">[])[],
-) {
-  return rowGroups
-    .map((rows) => rows.map((row) => [row.area, row.structure].join("\u001f")).join("\u001e"))
-    .join("\u001d");
 }
 
 export function createPtoBucketRowLookupSources(rows: readonly PtoPlanRow[]): PtoBucketRowLookupSource[] {

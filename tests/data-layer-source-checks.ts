@@ -8,6 +8,7 @@ const dataAppStateSource = readFileSync(resolve(testDir, "../lib/data/app-state.
 const dataPtoSource = readFileSync(resolve(testDir, "../lib/data/pto.ts"), "utf8");
 const dataSettingsSource = readFileSync(resolve(testDir, "../lib/data/settings.ts"), "utf8");
 const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.ts"), "utf8");
+const supabaseSettingsSource = readFileSync(resolve(testDir, "../lib/supabase/settings.ts"), "utf8");
 
 assert.doesNotMatch(dataAppStateSource, /from ["']\.\.\/supabase\/app-state["']/);
 assert.match(dataAppStateSource, /serverDatabaseConfigured/);
@@ -37,6 +38,10 @@ assert.match(dataSettingsSource, /databaseRequest<DataSettingRecord\[]>\("settin
 assert.match(dataSettingsSource, /databaseRequest<DataSettingRecord\[]>\("settings", "save", \{/);
 assert.match(dataSettingsSource, /expectedUpdatedAt: options\.expectedUpdatedAt/);
 assert.match(dataSettingsSource, /import\("@\/lib\/supabase\/settings"\)/);
+assert.match(supabaseSettingsSource, /async function assertAppSettingsMatchExpectedUpdatedAt/);
+assert.match(supabaseSettingsSource, /await assertAppSettingsMatchExpectedUpdatedAt\(entries, options\.expectedUpdatedAt, client\);[\s\S]*\.upsert\(records, \{ onConflict: "key" \}\)/);
+assert.doesNotMatch(supabaseSettingsSource, /\.insert\(\{ key, value, updated_at: updatedAt \}\)/);
+assert.doesNotMatch(supabaseSettingsSource, /\.update\(\{ value, updated_at: updatedAt \}\)[\s\S]*\.eq\("updated_at"/);
 
 assert.doesNotMatch(dataVehiclesSource, /from ["']@\/lib\/supabase\/vehicles["']/);
 assert.match(dataVehiclesSource, /databaseRequest<DataVehiclesState \| null>\("vehicles", "load"\)/);

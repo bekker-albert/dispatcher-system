@@ -10,7 +10,6 @@ import {
 } from "../features/pto/ptoBucketsGridModel";
 import {
   createPtoAreaAndBucketRowLookupSourceBundle,
-  ptoAreaAndBucketRowGroupsSignature,
 } from "../features/pto/ptoDateLookupModel";
 import {
   createPtoBucketColumnsModel,
@@ -105,13 +104,13 @@ const lookupBundle = createPtoAreaAndBucketRowLookupSourceBundle([
   ],
 ]);
 assert.equal(
-  ptoAreaAndBucketRowGroupsSignature([
+  createPtoAreaAndBucketRowLookupSourceBundle([
     [
       { area: "A", structure: "S1" },
       { area: "A", structure: "S2" },
     ],
     [{ area: "B", structure: "S3" }],
-  ]),
+  ]).rowGroupsSignature,
   "A\u001fS1\u001eA\u001fS2\u001dB\u001fS3",
 );
 

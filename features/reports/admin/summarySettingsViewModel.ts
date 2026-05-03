@@ -16,7 +16,7 @@ export function buildAdminReportSummaryRowModel({
   rowsForArea: (area: string) => ReportRow[];
 }) {
   const hasStoredArea = areaOptions.some((area) => normalizeLookupValue(area) === normalizeLookupValue(summary.area));
-  const visibleSummaryArea = hasStoredArea ? summary.area : areaOptions[0] ?? summary.area;
+  const visibleSummaryArea = summary.area || areaOptions[0] || "";
   const summaryAreaRows = rowsForArea(visibleSummaryArea);
   const selectedSummaryRows = summaryAreaRows.filter((row) => summary.rowKeys.includes(reportRowKey(row)));
   const summaryExpanded = expandedIds.includes(summary.id);
