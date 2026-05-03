@@ -111,6 +111,15 @@ assert.match(fleetVehiclesSectionSource, /Закрепление водител�
 assert.match(fleetVehiclesSectionSource, /Дата выхода в ремонт/);
 assert.match(fleetVehiclesSectionSource, /Примечание/);
 assert.match(fleetVehiclesSectionSource, /driversExpanded/);
+assert.match(fleetVehiclesSectionSource, /window\.requestAnimationFrame\(\(\) => window\.print\(\)\)/);
+assert.match(fleetVehiclesSectionSource, /IconButton label="Печать списка техники: A3, альбомная ориентация"/);
+assert.match(fleetVehiclesSectionSource, /<Printer size=\{16\} aria-hidden \/>/);
+assert.match(fleetVehiclesSectionSource, /className="fleet-print-toolbar"/);
+assert.match(fleetVehiclesSectionSource, /@media print/);
+assert.match(fleetVehiclesSectionSource, /size: A3 landscape/);
+assert.match(fleetVehiclesSectionSource, /\.fleet-print-toolbar[\s\S]*display: none !important/);
+assert.match(fleetVehiclesSectionSource, /display: table-header-group !important/);
+assert.match(fleetVehiclesSectionSource, /break-inside: avoid !important/);
 assert.doesNotMatch(fleetVehiclesSectionSource, /Год выпуска|VIN|Собственник|manufactureYear|owner|vin/);
 assert.match(fleetVehicleModelSource, /deriveFleetVehicleStatus/);
 assert.match(fleetVehicleModelSource, /vehicle\.repair > 0[\s\S]*"В ремонте"/);

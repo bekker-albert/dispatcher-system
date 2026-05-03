@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Printer } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import { IconButton } from "@/shared/ui/buttons";
 import {
   createFleetVehicleListRows,
   type FleetVehicleListRow,
@@ -18,22 +20,32 @@ export function FleetVehiclesSection({ vehicleRows }: FleetVehiclesSectionProps)
   const [driversExpanded, setDriversExpanded] = useState(false);
   const rows = useMemo(() => createFleetVehicleListRows(vehicleRows), [vehicleRows]);
 
+  const printFleetVehicles = useCallback(() => {
+    window.requestAnimationFrame(() => window.print());
+  }, []);
+
   return (
-    <div style={sectionStyle}>
-      <div style={toolbarStyle}>
+    <div className="fleet-print-area" style={sectionStyle}>
+      <style>{fleetPrintCss}</style>
+      <div className="fleet-print-toolbar" style={toolbarStyle}>
         <div style={summaryStyle}>Техника: {rows.length}</div>
-        <button
-          type="button"
-          onClick={() => setDriversExpanded((current) => !current)}
-          style={driverToggleStyle}
-          aria-expanded={driversExpanded}
-        >
-          {driversExpanded ? "Скрыть водителей" : "Показать водителей"}
-        </button>
+        <div style={toolbarActionsStyle}>
+          <button
+            type="button"
+            onClick={() => setDriversExpanded((current) => !current)}
+            style={driverToggleStyle}
+            aria-expanded={driversExpanded}
+          >
+            {driversExpanded ? "Скрыть водителей" : "Показать водителей"}
+          </button>
+          <IconButton label="Печать списка техники: A3, альбомная ориентация" onClick={printFleetVehicles}>
+            <Printer size={16} aria-hidden />
+          </IconButton>
+        </div>
       </div>
 
-      <div style={tableScrollStyle}>
-        <table style={tableStyle}>
+      <div className="fleet-print-table-scroll" style={tableScrollStyle}>
+        <table className="fleet-print-table" style={tableStyle}>
           <colgroup>
             <col style={{ width: 46 }} />
             <col style={{ minWidth: 118 }} />
@@ -165,6 +177,13 @@ const toolbarStyle: CSSProperties = {
   flexWrap: "wrap",
 };
 
+const toolbarActionsStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  flexWrap: "wrap",
+};
+
 const summaryStyle: CSSProperties = {
   color: "#475569",
   fontSize: 13,
@@ -245,3 +264,58 @@ const badgeStyle: CSSProperties = {
   fontSize: 11,
   fontWeight: 700,
 };
+
+const fleetPrintCss = `@media print {
+  @page {
+    size: A3 landscape;
+    margin: 5mm;
+  }
+
+  .fleet-print-area,
+  .fleet-print-area * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .fleet-print-toolbar {
+    display: none !important;
+  }
+
+  .fleet-print-area {
+    display: block !important;
+    gap: 0 !important;
+    width: 100% !important;
+  }
+
+  .fleet-print-table-scroll {
+    border-color: #0f172a !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .fleet-print-table {
+    font-size: 8pt !important;
+    width: 100% !important;
+  }
+
+  .fleet-print-table th {
+    background: #f1f5f9 !important;
+    position: static !important;
+  }
+
+  .fleet-print-table thead {
+    display: table-header-group !important;
+  }
+
+  .fleet-print-table tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .fleet-print-table th,
+  .fleet-print-table td {
+    border-color: #64748b !important;
+    padding: 3px 4px !important;
+    line-height: 1.1 !important;
+  }
+}`;
