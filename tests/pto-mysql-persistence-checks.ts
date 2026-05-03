@@ -73,10 +73,12 @@ assert.match(mysqlYearLoadSource, /WHERE values_for_year\.row_id IS NOT NULL/);
 assert.match(mysqlYearLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years, JSON_ARRAY\(\)\), JSON_QUOTE\(\?\)\)/);
 assert.match(mysqlYearLoadSource, /JSON_EXTRACT\(COALESCE\(rows_for_year\.carryovers, JSON_OBJECT\(\)\), \?\) IS NOT NULL/);
 assert.doesNotMatch(mysqlYearLoadSource, /EXISTS \([\s\S]*FROM pto_day_values AS values_for_year/);
-assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_day_values[\s\S]*WHERE work_date >= \? AND work_date <= \?/);
+assert.match(mysqlYearLoadSource, /SELECT \$\{ptoDayValueSelectColumns\} FROM pto_day_values[\s\S]*WHERE work_date >= \? AND work_date <= \?/);
 assert.match(mysqlYearLoadSource, /\[start,\s*end,\s*year,\s*year,\s*carryoverJsonPath\]/);
 assert.doesNotMatch(mysqlYearLoadSource, /ptoDayValueRecordsForYear/);
-assert.match(mysqlYearLoadSource, /SELECT \* FROM pto_bucket_rows ORDER BY sort_index ASC/);
+assert.match(mysqlYearLoadSource, /SELECT \$\{ptoBucketRowSelectColumns\} FROM pto_bucket_rows ORDER BY sort_index ASC/);
+assert.doesNotMatch(mysqlYearLoadSource, /SELECT rows_for_year\.\*/);
+assert.doesNotMatch(mysqlYearLoadSource, /SELECT \* FROM pto_day_values/);
 
 assert.equal(
   createPrunedPtoRowYearMetadata(

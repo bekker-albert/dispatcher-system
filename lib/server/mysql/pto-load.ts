@@ -25,10 +25,57 @@ type PtoMysqlLoadOptions = {
   includeBuckets?: boolean;
 };
 
+const ptoRowSelectColumns = [
+  "table_type",
+  "row_id",
+  "area",
+  "location",
+  "structure",
+  "customer_code",
+  "unit",
+  "status",
+  "carryover",
+  "carryovers",
+  "carryover_manual_years",
+  "years",
+  "sort_index",
+  "updated_at",
+].join(", ");
+
+const ptoDayValueSelectColumns = [
+  "table_type",
+  "row_id",
+  "work_date",
+  "value",
+  "updated_at",
+].join(", ");
+
+const ptoBucketRowSelectColumns = [
+  "row_key",
+  "area",
+  "structure",
+  "source",
+  "sort_index",
+  "updated_at",
+].join(", ");
+
+const ptoBucketValueSelectColumns = [
+  "row_key",
+  "equipment_key",
+  "value",
+  "updated_at",
+].join(", ");
+
+const ptoSettingSelectColumns = [
+  "setting_key",
+  "value",
+  "updated_at",
+].join(", ");
+
 export async function loadPtoBucketsFromMysql() {
   const [ptoBucketRows, ptoBucketValues, ptoVersionUpdatedAt] = await Promise.all([
-    dbRows<PtoBucketRowRecord>("SELECT * FROM pto_bucket_rows ORDER BY sort_index ASC"),
-    dbRows<PtoBucketValueRecord>("SELECT * FROM pto_bucket_values"),
+    dbRows<PtoBucketRowRecord>(`SELECT ${ptoBucketRowSelectColumns} FROM pto_bucket_rows ORDER BY sort_index ASC`),
+    dbRows<PtoBucketValueRecord>(`SELECT ${ptoBucketValueSelectColumns} FROM pto_bucket_values`),
     loadPtoVersionUpdatedAt(),
   ]);
 
@@ -41,11 +88,11 @@ export async function loadPtoBucketsFromMysql() {
 
 export async function loadPtoStateFromMysql(): Promise<PtoPersistenceState | null> {
   const [ptoRows, ptoDayValues, ptoSettings, ptoBucketRows, ptoBucketValues, ptoVersionUpdatedAt] = await Promise.all([
-    dbRows<PtoRowRecord>("SELECT * FROM pto_rows ORDER BY table_type ASC, sort_index ASC"),
-    dbRows<PtoDayValueRecord>("SELECT * FROM pto_day_values ORDER BY work_date ASC"),
-    dbRows<PtoSettingRecord>("SELECT * FROM pto_settings WHERE setting_key IN (?, ?)", [ptoManualYearsKey, ptoUiStateKey]),
-    dbRows<PtoBucketRowRecord>("SELECT * FROM pto_bucket_rows ORDER BY sort_index ASC"),
-    dbRows<PtoBucketValueRecord>("SELECT * FROM pto_bucket_values"),
+    dbRows<PtoRowRecord>(`SELECT ${ptoRowSelectColumns} FROM pto_rows ORDER BY table_type ASC, sort_index ASC`),
+    dbRows<PtoDayValueRecord>(`SELECT ${ptoDayValueSelectColumns} FROM pto_day_values ORDER BY work_date ASC`),
+    dbRows<PtoSettingRecord>(`SELECT ${ptoSettingSelectColumns} FROM pto_settings WHERE setting_key IN (?, ?)`, [ptoManualYearsKey, ptoUiStateKey]),
+    dbRows<PtoBucketRowRecord>(`SELECT ${ptoBucketRowSelectColumns} FROM pto_bucket_rows ORDER BY sort_index ASC`),
+    dbRows<PtoBucketValueRecord>(`SELECT ${ptoBucketValueSelectColumns} FROM pto_bucket_values`),
     loadPtoVersionUpdatedAt(),
   ]);
   const ptoUpdatedAt = ptoVersionUpdatedAt ?? await loadPtoUpdatedAtFromMysql();
@@ -74,7 +121,7 @@ export async function loadPtoStateFromMysqlForYear(
         FROM pto_day_values
         WHERE work_date >= ? AND work_date <= ?
       )
-      SELECT rows_for_year.*
+      SELECT ${ptoRowSelectColumns.split(", ").map((column) => `rows_for_year.${column}`).join(", ")}
       FROM pto_rows AS rows_for_year
       LEFT JOIN values_for_year
         ON values_for_year.table_type = rows_for_year.table_type
@@ -87,14 +134,14 @@ export async function loadPtoStateFromMysqlForYear(
       [start, end, year, year, carryoverJsonPath],
     ),
     dbRows<PtoDayValueRecord>(
-      `SELECT * FROM pto_day_values
+      `SELECT ${ptoDayValueSelectColumns} FROM pto_day_values
       WHERE work_date >= ? AND work_date <= ?
       ORDER BY work_date ASC`,
       [start, end],
     ),
-    dbRows<PtoSettingRecord>("SELECT * FROM pto_settings WHERE setting_key IN (?, ?)", [ptoManualYearsKey, ptoUiStateKey]),
-    includeBuckets ? dbRows<PtoBucketRowRecord>("SELECT * FROM pto_bucket_rows ORDER BY sort_index ASC") : Promise.resolve([]),
-    includeBuckets ? dbRows<PtoBucketValueRecord>("SELECT * FROM pto_bucket_values") : Promise.resolve([]),
+    dbRows<PtoSettingRecord>(`SELECT ${ptoSettingSelectColumns} FROM pto_settings WHERE setting_key IN (?, ?)`, [ptoManualYearsKey, ptoUiStateKey]),
+    includeBuckets ? dbRows<PtoBucketRowRecord>(`SELECT ${ptoBucketRowSelectColumns} FROM pto_bucket_rows ORDER BY sort_index ASC`) : Promise.resolve([]),
+    includeBuckets ? dbRows<PtoBucketValueRecord>(`SELECT ${ptoBucketValueSelectColumns} FROM pto_bucket_values`) : Promise.resolve([]),
     loadPtoVersionUpdatedAt(),
   ]);
   const ptoUpdatedAt = ptoVersionUpdatedAt ?? await loadPtoUpdatedAtFromMysql();
