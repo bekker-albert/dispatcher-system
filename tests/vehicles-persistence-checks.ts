@@ -12,6 +12,7 @@ const mysqlVehiclesSource = readFileSync(resolve(testDir, "../lib/server/mysql/v
 const supabaseVehiclesSource = readFileSync(resolve(testDir, "../lib/supabase/vehicles.ts"), "utf8");
 const vehicleRowsEditorSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleRowsEditor.ts"), "utf8");
 const vehicleRowsPersistenceSource = readFileSync(resolve(testDir, "../features/admin/vehicles/useVehicleRowsPersistence.ts"), "utf8");
+const vehicleRowsSaveQueueSource = readFileSync(resolve(testDir, "../features/admin/vehicles/vehicleRowsSaveQueue.ts"), "utf8");
 
 function exportedFunctionSource(source: string, name: string) {
   const start = source.indexOf(`export async function ${name}`);
@@ -81,7 +82,7 @@ assert.match(vehicleRowsPersistenceSource, /const vehicleDatabaseRetryTimerRef =
 assert.match(vehicleRowsPersistenceSource, /const vehicleDatabaseRetryDelayRef = useRef\(vehicleDatabaseRetryInitialDelayMs\);/);
 assert.match(vehicleRowsPersistenceSource, /function saveVehicleRowsLocalBackupIfChanged/);
 assert.match(vehicleRowsPersistenceSource, /createVehicleRowsSavePlan\(rowsSnapshot, expectedSnapshot\)/);
-assert.match(vehicleRowsPersistenceSource, /const queueDatabaseVehicleSave = \(/);
+assert.match(vehicleRowsPersistenceSource, /const queueDatabaseVehicleSave = useCallback/);
 assert.match(vehicleRowsPersistenceSource, /saveVehicleRowsPatchToDatabase\(savePlan\.patchRows/);
 assert.match(vehicleRowsPersistenceSource, /if \(isDatabaseConflictError\(error\)\) \{/);
 assert.match(vehicleRowsPersistenceSource, /vehicleDatabaseRetryTimerRef\.current = window\.setTimeout/);
@@ -92,6 +93,11 @@ assert.match(vehicleRowsPersistenceSource, /if \(localBackupChanged\) \{\s*reque
 assert.match(vehicleRowsPersistenceSource, /readVehicleRowsLocalBackup\(\)/);
 assert.match(vehicleRowsEditorSource, /Удаление техники будет сохранено общим списком/);
 assert.match(mysqlVehiclesSource, /Список техники уже изменился в базе/);
+
+assert.match(vehicleRowsPersistenceSource, /window\.addEventListener\("pagehide", flushVehicleRows\)/);
+assert.match(vehicleRowsPersistenceSource, /queueDatabaseVehicleSave\(rowsSnapshot, snapshot, vehicleRowsVersionRef\.current\);/);
+assert.match(vehicleRowsPersistenceSource, /databaseSaveQueueRef\.current\?\.flush\(\)/);
+assert.match(vehicleRowsSaveQueueSource, /flush\(\) \{[\s\S]*return chain\.catch\(\(\) => undefined\);[\s\S]*\}/);
 
 const vehicleOne = normalizeVehicleRow({ id: 1, brand: "Howo", garageNumber: "1" });
 const vehicleTwo = normalizeVehicleRow({ id: 2, brand: "Shacman", garageNumber: "2" });

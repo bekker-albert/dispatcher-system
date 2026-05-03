@@ -20,5 +20,8 @@ export function createVehicleRowsSaveQueue() {
         })
         .catch(() => undefined);
     },
+    flush() {
+      return chain.catch(() => undefined);
+    },
   };
 }
