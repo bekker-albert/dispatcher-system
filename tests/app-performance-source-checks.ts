@@ -12,6 +12,8 @@ const navigationSelectionHandlersSource = readFileSync(resolve(testDir, "../feat
 const appUndoSchedulerSource = readFileSync(resolve(testDir, "../features/app/useAppUndoScheduler.ts"), "utf8");
 const ptoBucketsGridModelSource = readFileSync(resolve(testDir, "../features/pto/ptoBucketsGridModel.ts"), "utf8");
 const ptoDateFormulaControllerSource = readFileSync(resolve(testDir, "../features/pto/ptoDateFormulaController.ts"), "utf8");
+const ptoDateFormulaModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateFormulaModel.ts"), "utf8");
+const ptoDateFormulaSelectionModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateFormulaSelectionModel.ts"), "utf8");
 const ptoDateTableViewModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateTableViewModel.ts"), "utf8");
 const ptoDateRowsColumnsModelSource = readFileSync(resolve(testDir, "../features/pto/ptoDateRowsColumnsModel.ts"), "utf8");
 const ptoSectionSource = readFileSync(resolve(testDir, "../features/pto/PtoSection.tsx"), "utf8");
@@ -64,6 +66,7 @@ const customerReportRowsModelSource = readFileSync(resolve(testDir, "../features
 const useAppReportsModelSource = readFileSync(resolve(testDir, "../features/app/useAppReportsModel.ts"), "utf8");
 const useAppAdminReportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/useAppAdminReportsPrimaryContent.tsx"), "utf8");
 const useAdminReportSettingsViewModelSource = readFileSync(resolve(testDir, "../features/reports/useAdminReportSettingsViewModel.ts"), "utf8");
+const reportFactSourcePickerStylesSource = readFileSync(resolve(testDir, "../features/reports/admin/ReportFactSourcePickerStyles.ts"), "utf8");
 const useDispatchSummaryViewModelSource = readFileSync(resolve(testDir, "../features/dispatch/useDispatchSummaryViewModel.ts"), "utf8");
 const dispatchSectionSource = readFileSync(resolve(testDir, "../features/dispatch/DispatchSection.tsx"), "utf8");
 
@@ -216,6 +219,9 @@ assert.match(sharedButtonsSource, /const topButtonGroupInactiveStyle: CSSPropert
 assert.doesNotMatch(sharedButtonsSource, /const buttonStyle: CSSProperties = \{/);
 assert.match(sharedNavigationSource, /style=\{active \? headerSubtabButtonActiveStyle : headerSubtabButtonStyle\}/);
 assert.doesNotMatch(sharedNavigationSource, /style=\{\{[\s\S]*headerSubtabButtonStyle/);
+assert.match(reportFactSourcePickerStylesSource, /export const modeButtonStyle: CSSProperties = \{[\s\S]*borderWidth: 1,[\s\S]*borderStyle: "solid",[\s\S]*borderColor: "#cbd5e1",/);
+assert.match(reportFactSourcePickerStylesSource, /export const modeActiveStyle: CSSProperties = \{[\s\S]*\.\.\.modeButtonStyle,[\s\S]*borderColor: "#0f172a",/);
+assert.doesNotMatch(reportFactSourcePickerStylesSource, /export const modeActiveStyle: CSSProperties = \{[\s\S]*border: "1px solid #0f172a"/);
 assert.match(ptoPrimaryContentSource, /createEmptyPtoDateModel\(appState\.ptoPlanYear\)/);
 assert.match(ptoPrimaryContentSource, /import\("@\/features\/app\/PtoDataPrimaryContent"\)/);
 assert.doesNotMatch(ptoPrimaryContentSource, /useAppPtoDateModel/);
@@ -266,6 +272,10 @@ assert.match(ptoDateFormulaControllerSource, /if \(!ptoDateEditing \|\| !formula
 assert.match(ptoDateFormulaControllerSource, /\} = formulaModel;/);
 assert.match(ptoDateFormulaControllerSource, /createPtoDateFormulaSelectionModel\(\{/);
 assert.match(ptoDateFormulaControllerSource, /\[formulaModel, ptoSelectedCellKeys\]/);
+assert.match(ptoDateFormulaModelSource, /editableGridAxisRangeKeys/);
+assert.doesNotMatch(ptoDateFormulaModelSource, /const rowStart = Math\.min/);
+assert.match(ptoDateFormulaSelectionModelSource, /editableGridAxisCellByOffset/);
+assert.doesNotMatch(ptoDateFormulaSelectionModelSource, /const nextRowIndex = Math\.min/);
 assert.match(usePtoBucketsGridEditingSource, /editingMode \? rows\.map\(\(row\) => row\.key\) : \[\]/);
 assert.match(usePtoBucketsGridEditingSource, /editingMode \? columns\.map\(\(column\) => column\.key\) : \[\]/);
 assert.doesNotMatch(ptoDateEditableTableBodySource, /formulaCellsByRowId\.get\(row\.id\)/);

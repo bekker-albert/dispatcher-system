@@ -122,7 +122,6 @@ assert.deepEqual(
 const moveTarget = resolvePtoFormulaMoveTarget({
   activeCell: { ...firstCell, table: "plan", year: "2026" },
   key: "ArrowDown",
-  rowIndexById: new Map([["row-1", 0], ["row-2", 1]]),
   templateIndexByKey: new Map([["day:2026-01-01", 0]]),
   templates: [firstCell],
   filteredRows: [{ id: "row-1" }, { id: "row-2" }] as never,
@@ -130,19 +129,38 @@ const moveTarget = resolvePtoFormulaMoveTarget({
 });
 assert.deepEqual(moveTarget, { ...firstCell, rowId: "row-2" });
 
+const clampedMoveTarget = resolvePtoFormulaMoveTarget({
+  activeCell: { ...firstCell, table: "plan", year: "2026" },
+  key: "ArrowUp",
+  templateIndexByKey: new Map([["day:2026-01-01", 0]]),
+  templates: [firstCell],
+  filteredRows: [{ id: "row-1" }, { id: "row-2" }] as never,
+  formulaCellFromTemplate: (rowId, template) => ({ ...template, rowId }),
+});
+assert.deepEqual(clampedMoveTarget, firstCell);
+
+assert.equal(resolvePtoFormulaMoveTarget({
+  activeCell: { ...firstCell, table: "plan", year: "2026" },
+  key: "ArrowDown",
+  templateIndexByKey: new Map(),
+  templates: [],
+  filteredRows: [],
+  formulaCellFromTemplate: (rowId, template) => ({ ...template, rowId }),
+}), null);
+
 const formulaModel = createPtoDateFormulaModel({
   table: "plan",
   year: "2026",
-  renderedRows: [{ id: "row-1" }] as never,
-  filteredRows: [{ id: "row-1" }] as never,
+  renderedRows: [{ id: "row-1" }, { id: "row-2" }] as never,
+  filteredRows: [{ id: "row-1" }, { id: "row-2" }] as never,
   displayMonthGroups: [{
     month: "2026-01",
-    label: "Январь",
+    label: "January",
     days: ["2026-01-01"],
     expanded: true,
   }] as never,
   editableMonthTotal: true,
-  carryoverHeader: "Остатки",
+  carryoverHeader: "Carryover",
 });
 const formulaSelectionModel = createPtoDateFormulaSelectionModel({
   formulaSelectionKey: formulaModel.formulaSelectionKey,
@@ -154,6 +172,25 @@ assert.equal(
   "plan:2026:row-1:day:2026-01-01",
 );
 assert.equal(formulaSelectionModel.formulaCellSelected("row-1", "day", "2026-01-01"), true);
+assert.deepEqual(
+  formulaModel.formulaRangeKeys(
+    { rowId: "row-2", kind: "day", day: "2026-01-01", label: "01", table: "plan", year: "2026" },
+    { rowId: "row-1", kind: "month", month: "2026-01", label: "January", table: "plan", year: "2026" },
+  ),
+  [
+    "plan:2026:row-1:month:2026-01",
+    "plan:2026:row-1:day:2026-01-01",
+    "plan:2026:row-2:month:2026-01",
+    "plan:2026:row-2:day:2026-01-01",
+  ],
+);
+assert.deepEqual(
+  formulaModel.formulaRangeKeys(
+    { rowId: "missing", kind: "day", day: "2026-01-01", label: "01", table: "plan", year: "2026" },
+    { rowId: "row-1", kind: "day", day: "2026-01-01", label: "01", table: "plan", year: "2026" },
+  ),
+  ["plan:2026:row-1:day:2026-01-01"],
+);
 assert.equal(
   ptoFormulaCellMatches({ ...firstCell, table: "plan", year: "2026" }, "plan", "2026", "row-1", "day", "2026-01-01"),
   true,

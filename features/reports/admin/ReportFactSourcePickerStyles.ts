@@ -77,7 +77,9 @@ export const modeRowStyle: CSSProperties = {
 };
 
 export const modeButtonStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#cbd5e1",
   borderRadius: 6,
   background: "#ffffff",
   color: "#0f172a",
@@ -89,7 +91,7 @@ export const modeButtonStyle: CSSProperties = {
 
 export const modeActiveStyle: CSSProperties = {
   ...modeButtonStyle,
-  border: "1px solid #0f172a",
+  borderColor: "#0f172a",
   background: "#0f172a",
   color: "#ffffff",
 };

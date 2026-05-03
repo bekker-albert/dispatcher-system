@@ -1,6 +1,7 @@
 import type { PtoPlanRow } from "../../lib/domain/pto/date-table";
 import {
   editableGridArrowOffset,
+  editableGridAxisCellByOffset,
   toggleEditableGridSelectionKey,
   type EditableGridArrowKey,
 } from "../../shared/editable-grid/selection";
@@ -16,7 +17,6 @@ type PtoFormulaCellFromSelectionKey = (key: string) => PtoFormulaCellWithoutScop
 type ResolvePtoFormulaMoveTargetOptions = {
   activeCell: PtoFormulaCell | null;
   key: EditableGridArrowKey;
-  rowIndexById: Map<string, number>;
   templateIndexByKey: Map<string, number>;
   templates: PtoFormulaCellTemplate[];
   filteredRows: PtoPlanRow[];
@@ -57,7 +57,6 @@ export function selectedPtoFormulaCells(
 export function resolvePtoFormulaMoveTarget({
   activeCell,
   key,
-  rowIndexById,
   templateIndexByKey,
   templates,
   filteredRows,
@@ -66,16 +65,21 @@ export function resolvePtoFormulaMoveTarget({
   if (!activeCell || templates.length === 0) return null;
 
   const offset = editableGridArrowOffset(key);
-  const currentRowIndex = rowIndexById.get(activeCell.rowId);
-  const currentColumnIndex = templateIndexByKey.get(ptoFormulaTemplateKey(activeCell));
-  if (currentRowIndex === undefined || currentColumnIndex === undefined) return null;
+  const target = editableGridAxisCellByOffset(
+    filteredRows.map((row) => row.id),
+    templates.map(ptoFormulaTemplateKey),
+    activeCell.rowId,
+    ptoFormulaTemplateKey(activeCell),
+    offset.rowOffset,
+    offset.columnOffset,
+    (rowId, templateKey) => {
+      const templateIndex = templateIndexByKey.get(templateKey);
+      const template = templateIndex === undefined ? undefined : templates[templateIndex];
+      return template ? formulaCellFromTemplate(rowId, template) : null;
+    },
+  );
 
-  const nextRowIndex = Math.min(filteredRows.length - 1, Math.max(0, currentRowIndex + offset.rowOffset));
-  const nextColumnIndex = Math.min(templates.length - 1, Math.max(0, currentColumnIndex + offset.columnOffset));
-  const nextRow = filteredRows[nextRowIndex];
-  const nextTemplate = templates[nextColumnIndex];
-
-  return nextRow && nextTemplate ? formulaCellFromTemplate(nextRow.id, nextTemplate) : null;
+  return target?.cell ?? null;
 }
 
 export function resolvePtoFormulaActiveAfterClear(

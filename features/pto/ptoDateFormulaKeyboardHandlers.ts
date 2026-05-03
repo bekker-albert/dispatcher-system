@@ -23,7 +23,6 @@ type PtoDateFormulaKeyboardHandlersOptions = {
   formulaCellDomKey: (cell: Pick<PtoFormulaCell, "rowId" | "kind" | "day" | "month">) => string;
   formulaCellFromTemplate: (rowId: string, template: PtoFormulaCellTemplate) => PtoFormulaCellWithoutScope;
   formulaCellTemplates: PtoFormulaCellTemplate[];
-  formulaRowIndexById: Map<string, number>;
   formulaTemplateIndexByKey: Map<string, number>;
   formulaValueContext: PtoFormulaValueContext;
   ptoDateEditing: boolean;
@@ -48,7 +47,6 @@ export function createPtoDateFormulaKeyboardHandlers({
   formulaCellDomKey,
   formulaCellFromTemplate,
   formulaCellTemplates,
-  formulaRowIndexById,
   formulaTemplateIndexByKey,
   formulaValueContext,
   ptoDateEditing,
@@ -79,7 +77,6 @@ export function createPtoDateFormulaKeyboardHandlers({
     const nextCell = resolvePtoFormulaMoveTarget({
       activeCell: activeFormulaCell,
       key,
-      rowIndexById: formulaRowIndexById,
       templateIndexByKey: formulaTemplateIndexByKey,
       templates: formulaCellTemplates,
       filteredRows,

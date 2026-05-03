@@ -1,4 +1,5 @@
 import type { PtoPlanRow } from "../../lib/domain/pto/date-table";
+import { editableGridAxisRangeKeys } from "../../shared/editable-grid/selection";
 import type { PtoMonthGroupView } from "./ptoDateTableModel";
 import { ptoFormulaCellKey, ptoFormulaTemplateKey } from "./ptoDateFormulaKeys";
 import type {
@@ -86,6 +87,8 @@ export function createPtoDateFormulaModel({
   const formulaTemplateIndexByKey = new Map(formulaCellTemplates.map((cell, index) => [ptoFormulaTemplateKey(cell), index] as const));
   const formulaTemplateByKey = new Map(formulaCellTemplates.map((cell) => [ptoFormulaTemplateKey(cell), cell] as const));
   const formulaRowIndexById = new Map(filteredRows.map((row, index) => [row.id, index] as const));
+  const formulaRowKeys = filteredRows.map((row) => row.id);
+  const formulaTemplateKeys = formulaCellTemplates.map(ptoFormulaTemplateKey);
   const formulaCellFromSelectionKey = (key: string): PtoFormulaCellWithoutScope | null => {
     if (!key.startsWith(formulaSelectionScope)) return null;
 
@@ -97,37 +100,21 @@ export function createPtoDateFormulaModel({
     return template ? formulaCellFromTemplate(rowId, template) : null;
   };
   const formulaRangeKeys = (anchor: PtoFormulaCell, target: PtoFormulaCell) => {
-    const anchorRowIndex = formulaRowIndexById.get(anchor.rowId);
-    const targetRowIndex = formulaRowIndexById.get(target.rowId);
-    const anchorColumnIndex = formulaTemplateIndexByKey.get(ptoFormulaTemplateKey(anchor));
-    const targetColumnIndex = formulaTemplateIndexByKey.get(ptoFormulaTemplateKey(target));
+    const targetKey = formulaSelectionKey(target);
 
-    if (
-      anchorRowIndex === undefined
-      || targetRowIndex === undefined
-      || anchorColumnIndex === undefined
-      || targetColumnIndex === undefined
-    ) {
-      return [formulaSelectionKey(target)];
-    }
-
-    const rowStart = Math.min(anchorRowIndex, targetRowIndex);
-    const rowEnd = Math.max(anchorRowIndex, targetRowIndex);
-    const columnStart = Math.min(anchorColumnIndex, targetColumnIndex);
-    const columnEnd = Math.max(anchorColumnIndex, targetColumnIndex);
-    const keys: string[] = [];
-
-    for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
-      const row = filteredRows[rowIndex];
-      if (!row) continue;
-
-      for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex += 1) {
-        const template = formulaCellTemplates[columnIndex];
-        if (template) keys.push(formulaSelectionKey(formulaCellFromTemplate(row.id, template)));
-      }
-    }
-
-    return keys.length ? keys : [formulaSelectionKey(target)];
+    return editableGridAxisRangeKeys(
+      formulaRowKeys,
+      formulaTemplateKeys,
+      anchor.rowId,
+      ptoFormulaTemplateKey(anchor),
+      target.rowId,
+      ptoFormulaTemplateKey(target),
+      (rowId, templateKey) => {
+        const template = formulaTemplateByKey.get(templateKey);
+        return template ? formulaSelectionKey(formulaCellFromTemplate(rowId, template)) : targetKey;
+      },
+      targetKey,
+    );
   };
 
   return {
@@ -141,7 +128,6 @@ export function createPtoDateFormulaModel({
     formulaTemplateKey: ptoFormulaTemplateKey,
     formulaTemplateIndexByKey,
     formulaTemplateByKey,
-    formulaRowIndexById,
     formulaCellFromTemplate,
     formulaCellFromSelectionKey,
     formulaRangeKeys,
