@@ -125,7 +125,8 @@ assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSaveShouldSkip\(mode, snaps
 assert.match(ptoDatabaseSaveSource, /if \(ptoDatabaseSaveShouldSkip\(mode, snapshotAtWrite, ptoDatabaseSaveSnapshotRef\.current\)\) \{[\s\S]*return ptoDatabaseSaveSnapshotRef\.current;[\s\S]*\}/);
 assert.match(ptoDatabaseSaveSource, /const baseline = readPtoDatabaseSaveBaseline\(ptoDatabaseSaveSnapshotRef\.current\);/);
 assert.match(ptoDatabaseSaveSource, /if \(!ptoDatabaseDirtyRef\.current\) \{[\s\S]*setPtoDatabaseMessage\(ptoDatabaseMessages\.alreadySaved\);[\s\S]*return true;[\s\S]*\}\s*const stateToSave = ptoDatabaseStateRef\.current;\s*const snapshotToSave = serializePtoDatabaseState\(stateToSave\);/);
-assert.match(ptoDatabaseSaveSource, /ptoDatabaseSaveSnapshotRef\.current = savedSnapshot;\s*ptoDatabaseDirtyRef\.current = false;/);
+assert.match(ptoDatabaseSaveSource, /ptoDatabaseSaveSnapshotRef\.current = savedSnapshot;\s*ptoDatabaseFullSaveNextRef\.current = false;\s*ptoDatabaseRetryDelayRef\.current = ptoDatabaseRetryInitialDelayMs;\s*const hasPendingChanges = ptoDatabaseStateChanged\(ptoDatabaseStateRef\.current, savedSnapshot\);\s*ptoDatabaseDirtyRef\.current = hasPendingChanges;/);
+assert.match(ptoDatabaseSaveSource, /if \(hasPendingChanges\) \{\s*setPtoSaveRevision\(\(current\) => current \+ 1\);\s*\}/);
 assert.match(ptoDatabaseSaveSource, /if \(!databaseConfigured \|\| !ptoDatabaseLoadedRef\.current \|\| ptoDatabaseLoadedYearRef\.current !== currentYear\) return;\s*ptoDatabaseDirtyRef\.current = true;/);
 assert.match(ptoDatabaseSaveSource, /getPtoDatabaseExpectedUpdatedAt = useCallback/);
 assert.match(ptoDatabaseSaveSource, /const isPtoDatabaseDirty = useCallback\(\(\) => ptoDatabaseDirtyRef\.current, \[\]\);/);

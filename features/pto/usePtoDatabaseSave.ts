@@ -175,11 +175,15 @@ export function usePtoDatabaseSave({
       ptoDatabaseActiveSaveRef.current = savePromise.then(() => undefined);
       const savedSnapshot = await savePromise;
       ptoDatabaseSaveSnapshotRef.current = savedSnapshot;
-      ptoDatabaseDirtyRef.current = false;
       ptoDatabaseFullSaveNextRef.current = false;
       ptoDatabaseRetryDelayRef.current = ptoDatabaseRetryInitialDelayMs;
+      const hasPendingChanges = ptoDatabaseStateChanged(ptoDatabaseStateRef.current, savedSnapshot);
+      ptoDatabaseDirtyRef.current = hasPendingChanges;
       setPtoDatabaseMessage(ptoDatabaseMessages.savedState(mode));
       showSaveStatus("saved", ptoDatabaseMessages.savedStatus);
+      if (hasPendingChanges) {
+        setPtoSaveRevision((current) => current + 1);
+      }
       return true;
     } catch (error) {
       const message = errorToMessage(error);
