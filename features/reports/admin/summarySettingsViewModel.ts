@@ -1,6 +1,7 @@
 import { reportRowKey } from "@/lib/domain/reports/display";
 import type { ReportCustomerConfig, ReportRow, ReportSummaryRowConfig } from "@/lib/domain/reports/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
+import { repairAdminReportText } from "./adminReportText";
 
 export function buildAdminReportSummaryRowModel({
   customer,
@@ -22,14 +23,14 @@ export function buildAdminReportSummaryRowModel({
   const summaryExpanded = expandedIds.includes(summary.id);
   const selectedSummaryLabels = selectedSummaryRows.map((row) => {
     const rowKey = reportRowKey(row);
-    return customer.rowLabels[rowKey]?.trim() || row.name;
+    return repairAdminReportText(customer.rowLabels[rowKey]?.trim() || row.name);
   });
   const selectedSummaryText = selectedSummaryLabels.length > 0 ? selectedSummaryLabels.join(" + ") : "Строки не выбраны.";
   const selectedPlanRow = summary.planRowKey
     ? summaryAreaRows.find((row) => reportRowKey(row) === summary.planRowKey)
     : undefined;
   const selectedPlanText = selectedPlanRow
-    ? customer.rowLabels[reportRowKey(selectedPlanRow)]?.trim() || selectedPlanRow.name
+    ? repairAdminReportText(customer.rowLabels[reportRowKey(selectedPlanRow)]?.trim() || selectedPlanRow.name)
     : "Авто: сумма выбранных строк";
 
   return {

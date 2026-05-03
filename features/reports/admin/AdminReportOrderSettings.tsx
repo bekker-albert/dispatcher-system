@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { reportRowDisplayKey } from "@/lib/domain/reports/display";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import { MiniIconButton } from "@/shared/ui/buttons";
+import { repairAdminReportText } from "./adminReportText";
 
 type AdminReportWorkOrderGroup = {
   area: string;
@@ -32,19 +33,23 @@ export default function AdminReportOrderSettings({
           {areaOptions.length === 0 ? (
             <div style={emptyTextStyle}>Участков пока нет.</div>
           ) : (
-            areaOptions.map((area, index) => (
-              <div key={area} style={areaOrderRowStyle}>
-                <span style={areaOrderNameStyle}>{index + 1}. {area}</span>
-                <div style={areaOrderActionsStyle}>
-                  <MiniIconButton label="Поднять участок" onClick={() => onMoveArea(area, -1)} disabled={index === 0}>
-                    <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
-                  </MiniIconButton>
-                  <MiniIconButton label="Опустить участок" onClick={() => onMoveArea(area, 1)} disabled={index === areaOptions.length - 1}>
-                    <ChevronDown size={13} aria-hidden />
-                  </MiniIconButton>
+            areaOptions.map((area, index) => {
+              const areaLabel = repairAdminReportText(area);
+
+              return (
+                <div key={area} style={areaOrderRowStyle}>
+                  <span style={areaOrderNameStyle}>{index + 1}. {areaLabel}</span>
+                  <div style={areaOrderActionsStyle}>
+                    <MiniIconButton label="Поднять участок" onClick={() => onMoveArea(area, -1)} disabled={index === 0}>
+                      <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
+                    </MiniIconButton>
+                    <MiniIconButton label="Опустить участок" onClick={() => onMoveArea(area, 1)} disabled={index === areaOptions.length - 1}>
+                      <ChevronDown size={13} aria-hidden />
+                    </MiniIconButton>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -55,34 +60,40 @@ export default function AdminReportOrderSettings({
           <div style={emptyTextStyle}>Видов работ пока нет.</div>
         ) : (
           <div style={workGroupGridStyle}>
-            {workOrderGroups.map((group) => (
-              <div key={group.area} style={workGroupStyle}>
-                <div style={workGroupTitleStyle}>{group.area}</div>
-                <div style={areaOrderListStyle}>
-                  {group.rows.map((row, index) => {
-                    const rowKey = reportRowDisplayKey(row);
-                    const isSummaryRow = rowKey.startsWith("summary:");
+            {workOrderGroups.map((group) => {
+              const groupAreaLabel = repairAdminReportText(group.area);
 
-                    return (
-                      <div key={rowKey} style={workOrderRowStyle}>
-                        <span style={workOrderNameStyle}>
-                          {index + 1}. {isSummaryRow ? "Итог: " : ""}{row.name}
-                        </span>
-                        <span style={workOrderUnitStyle}>{row.unit}</span>
-                        <div style={areaOrderActionsStyle}>
-                          <MiniIconButton label="Поднять вид работ" onClick={() => onMoveWork(group.area, rowKey, -1)} disabled={index === 0}>
-                            <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
-                          </MiniIconButton>
-                          <MiniIconButton label="Опустить вид работ" onClick={() => onMoveWork(group.area, rowKey, 1)} disabled={index === group.rows.length - 1}>
-                            <ChevronDown size={13} aria-hidden />
-                          </MiniIconButton>
+              return (
+                <div key={group.area} style={workGroupStyle}>
+                  <div style={workGroupTitleStyle}>{groupAreaLabel}</div>
+                  <div style={areaOrderListStyle}>
+                    {group.rows.map((row, index) => {
+                      const rowKey = reportRowDisplayKey(row);
+                      const isSummaryRow = rowKey.startsWith("summary:");
+                      const rowNameLabel = repairAdminReportText(row.name);
+                      const rowUnitLabel = repairAdminReportText(row.unit);
+
+                      return (
+                        <div key={rowKey} style={workOrderRowStyle}>
+                          <span style={workOrderNameStyle}>
+                            {index + 1}. {isSummaryRow ? "Итог: " : ""}{rowNameLabel}
+                          </span>
+                          <span style={workOrderUnitStyle}>{rowUnitLabel}</span>
+                          <div style={areaOrderActionsStyle}>
+                            <MiniIconButton label="Поднять вид работ" onClick={() => onMoveWork(group.area, rowKey, -1)} disabled={index === 0}>
+                              <ChevronDown size={13} style={{ transform: "rotate(180deg)" }} aria-hidden />
+                            </MiniIconButton>
+                            <MiniIconButton label="Опустить вид работ" onClick={() => onMoveWork(group.area, rowKey, 1)} disabled={index === group.rows.length - 1}>
+                              <ChevronDown size={13} aria-hidden />
+                            </MiniIconButton>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

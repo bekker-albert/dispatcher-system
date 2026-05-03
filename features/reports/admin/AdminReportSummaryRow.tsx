@@ -22,6 +22,7 @@ import {
 } from "./adminReportSummarySettingsStyles";
 import type { SummaryUpdateField } from "./adminReportSummarySettingsTypes";
 import { buildAdminReportSummaryRowModel } from "./summarySettingsViewModel";
+import { repairAdminReportText } from "./adminReportText";
 
 type AdminReportSummaryRowProps = {
   customer: ReportCustomerConfig;
@@ -64,6 +65,8 @@ export function AdminReportSummaryRow({
     expandedIds,
     rowsForArea,
   });
+  const selectedPlanLabel = repairAdminReportText(selectedPlanText);
+  const selectedSummaryLabel = repairAdminReportText(selectedSummaryText);
 
   return (
     <div style={summaryCardStyle}>
@@ -84,8 +87,8 @@ export function AdminReportSummaryRow({
           <Trash2 size={16} aria-hidden />
         </MiniIconButton>
       </div>
-      <div style={summaryNoteStyle} title={selectedPlanText}>План из ПТО: {selectedPlanText}</div>
-      <div style={summaryNoteStyle} title={selectedSummaryText}>Строки в сумме: {selectedSummaryText}</div>
+      <div style={summaryNoteStyle} title={selectedPlanLabel}>План из ПТО: {selectedPlanLabel}</div>
+      <div style={summaryNoteStyle} title={selectedSummaryLabel}>Строки в сумме: {selectedSummaryLabel}</div>
 
       {summaryExpanded ? (
         <SummarySelectionPanel
@@ -122,24 +125,29 @@ function SummaryFields({
   onUpdate,
 }: SummaryFieldsProps) {
   if (!summaryExpanded) {
+    const summaryAreaLabel = repairAdminReportText(visibleSummaryArea);
+    const summaryNameLabel = repairAdminReportText(summary.label);
+    const summaryUnitLabel = repairAdminReportText(summary.unit);
+
     return (
       <>
-        <span style={summaryValueStyle}>{visibleSummaryArea || "-"}</span>
-        <span style={summaryValueStyle}>{summary.label || "Без названия"}</span>
-        <span style={summaryUnitValueStyle}>{summary.unit || "Авто"}</span>
+        <span style={summaryValueStyle}>{summaryAreaLabel || "-"}</span>
+        <span style={summaryValueStyle}>{summaryNameLabel || "Без названия"}</span>
+        <span style={summaryUnitValueStyle}>{summaryUnitLabel || "Авто"}</span>
       </>
     );
   }
+  const summaryNameValue = repairAdminReportText(summary.label);
 
   return (
     <>
       <select value={visibleSummaryArea} onChange={(event) => onUpdate(customer.id, summary.id, "area", event.target.value)} style={summaryCompactInputStyle} aria-label="Участок итоговой строки">
         {areaOptions.map((area) => (
-          <option key={area} value={area}>{area}</option>
+          <option key={area} value={area}>{repairAdminReportText(area)}</option>
         ))}
-        {!hasStoredArea && summary.area ? <option value={summary.area}>{summary.area}</option> : null}
+        {!hasStoredArea && summary.area ? <option value={summary.area}>{repairAdminReportText(summary.area)}</option> : null}
       </select>
-      <input value={summary.label} onChange={(event) => onUpdate(customer.id, summary.id, "label", event.target.value)} style={summaryCompactInputStyle} aria-label="Название итоговой строки" />
+      <input value={summaryNameValue} onChange={(event) => onUpdate(customer.id, summary.id, "label", event.target.value)} style={summaryCompactInputStyle} aria-label="Название итоговой строки" />
       <select value={summary.unit} onChange={(event) => onUpdate(customer.id, summary.id, "unit", event.target.value)} style={summaryCompactInputStyle} aria-label="Единица измерения итоговой строки">
         <option value="">Авто</option>
         <option value="м2">м2</option>
@@ -182,7 +190,7 @@ function SummarySelectionPanel({
           <option value="">Авто: сумма выбранных строк</option>
           {summaryAreaRows.map((row) => {
             const rowKey = reportRowKey(row);
-            const customerRowLabel = customer.rowLabels[rowKey]?.trim() || row.name;
+            const customerRowLabel = repairAdminReportText(customer.rowLabels[rowKey]?.trim() || row.name);
             return <option key={`${summary.id}-plan-${rowKey}`} value={rowKey}>{customerRowLabel}</option>;
           })}
         </select>
@@ -194,12 +202,13 @@ function SummarySelectionPanel({
         ) : (
           summaryAreaRows.map((row) => {
             const rowKey = reportRowKey(row);
-            const customerRowLabel = customer.rowLabels[rowKey]?.trim() || row.name;
+            const customerRowLabel = repairAdminReportText(customer.rowLabels[rowKey]?.trim() || row.name);
+            const rowUnitLabel = repairAdminReportText(row.unit);
             return (
               <label key={`${summary.id}-${rowKey}`} style={summaryRowOptionStyle}>
                 <input type="checkbox" checked={summary.rowKeys.includes(rowKey)} onChange={() => onToggleRow(customer.id, summary.id, rowKey)} />
                 <span style={summaryRowNameStyle}>{customerRowLabel}</span>
-                <span style={summaryRowUnitStyle}>{row.unit}</span>
+                <span style={summaryRowUnitStyle}>{rowUnitLabel}</span>
               </label>
             );
           })

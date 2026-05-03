@@ -7,6 +7,7 @@ import {
   sourceUnitStyle,
 } from "./ReportFactSourcePickerStyles";
 import type { ReportFactSourceOptionProps } from "./ReportFactSourcePickerTypes";
+import { repairAdminReportText } from "./adminReportText";
 
 export function ReportFactSourcePickerSourceOption({
   customer,
@@ -16,7 +17,8 @@ export function ReportFactSourcePickerSourceOption({
   onToggleSource,
 }: ReportFactSourceOptionProps) {
   const sourceRowKey = reportRowKey(sourceRow);
-  const sourceRowLabel = customer.rowLabels[sourceRowKey]?.trim() || sourceRow.name;
+  const sourceRowLabel = repairAdminReportText(customer.rowLabels[sourceRowKey]?.trim() || sourceRow.name);
+  const sourceUnitLabel = repairAdminReportText(sourceRow.unit);
 
   return (
     <label style={sourceOptionStyle}>
@@ -26,7 +28,7 @@ export function ReportFactSourcePickerSourceOption({
         onChange={() => onToggleSource(customer.id, targetRowKey, sourceRowKey)}
       />
       <span style={sourceNameStyle}>{sourceRowLabel}</span>
-      <span style={sourceUnitStyle}>{sourceRow.unit}</span>
+      <span style={sourceUnitStyle}>{sourceUnitLabel}</span>
     </label>
   );
 }

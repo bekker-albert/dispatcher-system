@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
+import { repairAdminReportText } from "./adminReportText";
 
 export function AdminReportCustomerSummary({
   activeCustomer,
@@ -12,23 +13,26 @@ export function AdminReportCustomerSummary({
   usesSummaryRows: boolean;
   onUpdateCustomer: (customerId: string, patch: Partial<Pick<ReportCustomerConfig, "label" | "ptoCode" | "visible" | "autoShowRows">>) => void;
 }) {
+  const customerLabel = repairAdminReportText(activeCustomer.label);
+  const ptoCodeLabel = repairAdminReportText(activeCustomer.ptoCode);
+
   return (
     <div style={customerSummaryStyle}>
       <input
         aria-label="Заказчик"
-        value={activeCustomer.label}
+        value={customerLabel}
         onChange={(event) => onUpdateCustomer(activeCustomer.id, { label: event.target.value })}
         style={customerNameInputStyle}
       />
       <input
         aria-label="Сокращение заказчика для ПТО"
-        value={activeCustomer.ptoCode}
+        value={ptoCodeLabel}
         onChange={(event) => onUpdateCustomer(activeCustomer.id, { ptoCode: event.target.value })}
         style={{ ...customerNameInputStyle, textAlign: "center" }}
         title="Этот код используется в столбце Заказчик во вкладке ПТО - План"
       />
       <div style={customerMetaStyle}>
-        Код ПТО: {activeCustomer.ptoCode || "не задан"} · {selectedCount} строк{usesSummaryRows ? ` · ${activeCustomer.summaryRows.length} итоговых` : ""}
+        Код ПТО: {ptoCodeLabel || "не задан"} · {selectedCount} строк{usesSummaryRows ? ` · ${activeCustomer.summaryRows.length} итоговых` : ""}
       </div>
       <label style={visibleToggleStyle}>
         <input type="checkbox" checked={activeCustomer.visible} onChange={(event) => onUpdateCustomer(activeCustomer.id, { visible: event.target.checked })} />

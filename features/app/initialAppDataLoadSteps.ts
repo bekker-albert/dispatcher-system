@@ -73,7 +73,6 @@ export async function runInitialAppDataLoad(
     vehiclesDatabaseSaveSnapshotRef,
   } = databaseRefs;
   const {
-    setPtoDatabaseLoadStarted,
     setPtoBootstrapLoaded,
     setAdminDataLoaded,
   } = loadFlags;
@@ -186,7 +185,6 @@ export async function runInitialAppDataLoad(
         storedState = databaseBootstrap.storedState;
         initialReportState = applySharedState(storedState);
       }
-      if (!isCancelled()) setPtoDatabaseLoadStarted(true);
     } else if (!isCancelled()) {
       setPtoBootstrapLoaded(true);
     }

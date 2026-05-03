@@ -5,6 +5,7 @@ import { reportRowAutoStatus, reportRowKey } from "@/lib/domain/reports/display"
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
 import { statusControlStyle } from "@/shared/ui/statusBadge";
 import { ReportFactSourceCell, ReportFactSourceModal } from "./ReportFactSourcePicker";
+import { repairAdminReportText } from "./adminReportText";
 
 type AdminReportDisplaySettingsProps = {
   customer: ReportCustomerConfig;
@@ -59,6 +60,10 @@ export default function AdminReportDisplaySettings({
             {rows.map((row) => {
               const rowKey = reportRowKey(row);
               const rowStatus = reportRowAutoStatus(derivedRowsByKey.get(rowKey) ?? row);
+              const rowAreaLabel = repairAdminReportText(row.area);
+              const rowNameLabel = repairAdminReportText(row.name);
+              const rowUnitLabel = repairAdminReportText(row.unit);
+              const rowStatusLabel = repairAdminReportText(rowStatus);
               const factSourceRowKeys = customer.factSourceRowKeys[rowKey] ?? [];
 
               return (
@@ -73,11 +78,11 @@ export default function AdminReportDisplaySettings({
                       title={customer.autoShowRows ? "Автоматический показ включен" : "Показать строку в отчете"}
                     />
                   </td>
-                  <td style={tdStyle}>{row.area}</td>
-                  <td style={nameTdStyle}>{row.name}</td>
-                  <td style={{ ...tdStyle, textAlign: "center" }}>{row.unit}</td>
+                  <td style={tdStyle}>{rowAreaLabel}</td>
+                  <td style={nameTdStyle}>{rowNameLabel}</td>
+                  <td style={{ ...tdStyle, textAlign: "center" }}>{rowUnitLabel}</td>
                   <td style={{ ...tdStyle, textAlign: "center" }}>
-                    <span style={{ ...ptoStatusBadgeStyle, ...statusControlStyle(rowStatus) }}>{rowStatus}</span>
+                    <span style={{ ...ptoStatusBadgeStyle, ...statusControlStyle(rowStatus) }}>{rowStatusLabel}</span>
                   </td>
                   <td style={tdStyle}>
                     <ReportFactSourceCell

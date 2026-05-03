@@ -7,6 +7,7 @@ const testDir = dirname(fileURLToPath(import.meta.url));
 const appLocalPersistenceSource = readFileSync(resolve(testDir, "../features/app/useAppLocalPersistence.ts"), "utf8");
 const sharedDatabaseSaveQueueSource = readFileSync(resolve(testDir, "../features/app/useSharedDatabaseSaveQueue.ts"), "utf8");
 const appPtoPersistenceSource = readFileSync(resolve(testDir, "../features/app/useAppPtoPersistence.ts"), "utf8");
+const appPtoPersistenceControllerSource = readFileSync(resolve(testDir, "../features/app/useAppPtoPersistenceController.ts"), "utf8");
 const initialAppStorageSource = readFileSync(resolve(testDir, "../features/app/initialAppStorage.ts"), "utf8");
 const ptoUiStateDatabaseSyncSource = readFileSync(resolve(testDir, "../features/pto/usePtoUiStateDatabaseSync.ts"), "utf8");
 const ptoDatabaseLoadSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseLoad.ts"), "utf8");
@@ -40,6 +41,9 @@ assert.match(appPtoPersistenceSource, /usePtoDatabaseLoad\(\{[\s\S]*adminDataLoa
 assert.match(appPtoPersistenceSource, /usePtoDatabaseSave\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceSource, /usePtoUiStateDatabaseSync\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*ptoDatabaseLoadedRef,[\s\S]*requestPtoDatabaseSave,[\s\S]*\}\);/);
 assert.match(appPtoPersistenceSource, /usePtoLocalPersistence\(\{[\s\S]*adminDataLoaded: ptoPersistenceEnabled,[\s\S]*skipUntilDatabaseLoaded: databaseConfigured,[\s\S]*\}\);/);
+assert.match(appPtoPersistenceControllerSource, /const reportsNeedPtoDatabase = appState\.topTab === "reports"\s*\|\|\s*\(appState\.topTab === "admin" && appState\.adminSection === "reports"\);/);
+assert.match(appPtoPersistenceControllerSource, /const activePtoTabNeedsDatabase = appState\.topTab === "pto"\s*&& \(isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets"\);/);
+assert.match(appPtoPersistenceControllerSource, /const ptoDatabaseLoadEnabled = appState\.ptoDatabaseLoadStarted\s*\|\|\s*\([\s\S]*appState\.ptoBootstrapLoaded[\s\S]*&& \(!databaseConfigured \|\| reportsNeedPtoDatabase \|\| activePtoTabNeedsDatabase\)[\s\S]*\);/);
 assert.match(initialAppStorageSource, /export const initialPtoStorageKeys = \[/);
 assert.match(initialAppStorageSource, /initialAppStorageKeys = Object\.values\(adminStorageKeys\)\.filter\(\(key\) => !initialPtoStorageKeySet\.has\(key\)\)/);
 assert.match(initialAppStorageSource, /const initialMeaningfulAppStorageKeys = initialAppStorageKeys\.filter/);
@@ -97,6 +101,7 @@ assert.match(initialAppStorageSource, /export function readInitialStoredPtoState
 assert.match(initialAppDataLoadStepsSource, /readInitialStoredAppState\(\{ includePto: !databaseConfigured \}\)/);
 assert.match(initialAppDataLoadStepsSource, /if \(!databaseConfigured\) \{[\s\S]*const localInitialPtoState = buildInitialPtoState\(storedState\);[\s\S]*applyInitialPtoState\(localInitialPtoState/);
 assert.match(initialAppDataLoadStepsSource, /hasStoredPtoStateRef\.current = hasInitialStoredPtoState\(\);/);
+assert.doesNotMatch(initialAppDataLoadStepsSource, /setPtoDatabaseLoadStarted\(true\)/);
 assert.doesNotMatch(initialAppDataLoadStepsSource, /databaseConfigured \? readInitialStoredPtoState\(\) : storedState/);
 assert.match(ptoDatabaseLoadRunnerSource, /import \{ hasInitialStoredPtoState \} from "@\/features\/app\/initialAppStorage";/);
 assert.match(ptoDatabaseLoadRunnerSource, /createPtoDatabaseLocalHydration\(\{/);

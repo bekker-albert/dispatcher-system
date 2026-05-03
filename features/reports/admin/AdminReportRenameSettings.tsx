@@ -6,6 +6,7 @@ import { reportRowKey } from "@/lib/domain/reports/display";
 import type { ReportCustomerConfig, ReportRow } from "@/lib/domain/reports/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
 import { IconButton, MiniIconButton } from "@/shared/ui/buttons";
+import { repairAdminReportText } from "./adminReportText";
 
 type AdminReportRowLabelEntry = {
   rowKey: string;
@@ -66,6 +67,9 @@ export default function AdminReportRenameSettings({
               const areaRows = rowsForArea(visibleArea);
               const hasStoredRow = areaRows.some((areaRow) => reportRowKey(areaRow) === rowKey);
               const isEditing = editingRowKeys.includes(rowKey);
+              const visibleAreaLabel = repairAdminReportText(visibleArea);
+              const rowNameLabel = repairAdminReportText(row.name);
+              const labelText = repairAdminReportText(label);
 
               return (
                 <div key={`${customer.id}-rename-${rowKey}`} style={renameRowStyle}>
@@ -81,9 +85,9 @@ export default function AdminReportRenameSettings({
                         aria-label="Участок строки для заказчика"
                       >
                         {areaOptions.map((area) => (
-                          <option key={area} value={area}>{area}</option>
+                          <option key={area} value={area}>{repairAdminReportText(area)}</option>
                         ))}
-                        {!hasStoredArea && row.area ? <option value={row.area}>{row.area}</option> : null}
+                        {!hasStoredArea && row.area ? <option value={row.area}>{repairAdminReportText(row.area)}</option> : null}
                       </select>
                       <select
                         value={hasStoredRow ? rowKey : ""}
@@ -91,25 +95,25 @@ export default function AdminReportRenameSettings({
                         style={renameInputStyle}
                         aria-label="Вид работ для заказчика"
                       >
-                        {!hasStoredRow ? <option value="">{row.name}</option> : null}
+                        {!hasStoredRow ? <option value="">{rowNameLabel}</option> : null}
                         {areaRows.map((areaRow) => {
                           const areaRowKey = reportRowKey(areaRow);
-                          return <option key={areaRowKey} value={areaRowKey}>{areaRow.name}</option>;
+                          return <option key={areaRowKey} value={areaRowKey}>{repairAdminReportText(areaRow.name)}</option>;
                         })}
                       </select>
                       <input
-                        value={label}
-                        onChange={(event) => onUpdateLabel(customer.id, rowKey, event.target.value, row.name)}
-                        placeholder={row.name}
+                        value={labelText}
+                        onChange={(event) => onUpdateLabel(customer.id, rowKey, event.target.value, rowNameLabel)}
+                        placeholder={rowNameLabel}
                         style={renameInputStyle}
-                        title={`Связка с ПТО: ${row.name}`}
+                        title={`Связка с ПТО: ${rowNameLabel}`}
                       />
                     </>
                   ) : (
                     <>
-                      <span style={summaryValueStyle}>{visibleArea || "-"}</span>
-                      <span style={summaryValueStyle} title={row.name}>{row.name}</span>
-                      <span style={summaryValueStyle} title={label || row.name}>{label || row.name}</span>
+                      <span style={summaryValueStyle}>{visibleAreaLabel || "-"}</span>
+                      <span style={summaryValueStyle} title={rowNameLabel}>{rowNameLabel}</span>
+                      <span style={summaryValueStyle} title={labelText || rowNameLabel}>{labelText || rowNameLabel}</span>
                     </>
                   )}
                   <MiniIconButton label={isEditing ? "Сохранить переименование строки" : "Редактировать переименование строки"} onClick={() => (isEditing ? onFinishEdit(rowKey) : onStartEdit(rowKey))}>

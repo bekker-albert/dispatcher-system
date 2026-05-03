@@ -17,6 +17,7 @@ import {
   targetStyle,
 } from "./ReportFactSourcePickerStyles";
 import type { ReportFactSourceModalProps } from "./ReportFactSourcePickerTypes";
+import { repairAdminReportText } from "./adminReportText";
 
 export function ReportFactSourceModal({
   customer,
@@ -29,7 +30,8 @@ export function ReportFactSourceModal({
   if (!targetRow) return null;
 
   const targetRowKey = reportRowKey(targetRow);
-  const targetRowLabel = customer.rowLabels[targetRowKey]?.trim() || targetRow.name;
+  const targetRowLabel = repairAdminReportText(customer.rowLabels[targetRowKey]?.trim() || targetRow.name);
+  const targetAreaLabel = repairAdminReportText(targetRow.area);
   const sourceRowKeys = customer.factSourceRowKeys[targetRowKey] ?? [];
   const isSumMode = sourceRowKeys.length > 0;
 
@@ -43,7 +45,7 @@ export function ReportFactSourceModal({
           </MiniIconButton>
         </div>
         <div style={targetStyle} title={targetRowLabel}>
-          {targetRow.area} · {targetRowLabel}
+          {targetAreaLabel} · {targetRowLabel}
         </div>
         <div style={modeRowStyle}>
           <button

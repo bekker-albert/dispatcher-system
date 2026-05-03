@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createEmptyPtoDateModel } from "../features/app/emptyPtoDateModel";
+import { repairAdminReportText } from "../features/reports/admin/adminReportText";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const appPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/AppPrimaryContent.tsx"), "utf8");
@@ -71,12 +72,23 @@ const useAdminReportSettingsViewModelSource = readFileSync(resolve(testDir, "../
 const reportFactSourcePickerStylesSource = readFileSync(resolve(testDir, "../features/reports/admin/ReportFactSourcePickerStyles.ts"), "utf8");
 const reportFactSourcePickerCellSource = readFileSync(resolve(testDir, "../features/reports/admin/ReportFactSourcePickerCell.tsx"), "utf8");
 const summarySettingsViewModelSource = readFileSync(resolve(testDir, "../features/reports/admin/summarySettingsViewModel.ts"), "utf8");
+const adminReportTextSource = readFileSync(resolve(testDir, "../features/reports/admin/adminReportText.ts"), "utf8");
 const useDispatchSummaryViewModelSource = readFileSync(resolve(testDir, "../features/dispatch/useDispatchSummaryViewModel.ts"), "utf8");
 const dispatchSectionSource = readFileSync(resolve(testDir, "../features/dispatch/DispatchSection.tsx"), "utf8");
 
 const guardedSelectTopTabSource = useAppScreenPropsSource.match(/const guardedSelectTopTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
 const guardedSelectPtoTabSource = useAppScreenPropsSource.match(/const guardedSelectPtoTab = useCallback\([\s\S]*?\n  \}, \[[\s\S]*?\]\);/)?.[0] ?? "";
 const emptyPtoDateModel = createEmptyPtoDateModel("2026");
+const textFromCodePoints = (...codePoints: number[]) => String.fromCodePoint(...codePoints);
+const planText = textFromCodePoints(0x041f, 0x043b, 0x0430, 0x043d);
+const win1251PlanMojibake = textFromCodePoints(0x0420, 0x045f, 0x0420, 0x00bb, 0x0420, 0x00b0, 0x0420, 0x0405);
+const win1252PlanMojibake = textFromCodePoints(0x00d0, 0x0178, 0x00d0, 0x00bb, 0x00d0, 0x00b0, 0x00d0, 0x00bd);
+const sumRowsText = textFromCodePoints(0x0421, 0x0443, 0x043c, 0x043c, 0x0430, 0x20, 0x0441, 0x0442, 0x0440, 0x043e, 0x043a);
+const win1251SumRowsMojibake = textFromCodePoints(
+  0x0420, 0x040e, 0x0421, 0x0453, 0x0420, 0x0458, 0x0420, 0x0458, 0x0420, 0x00b0,
+  0x20,
+  0x0421, 0x0403, 0x0421, 0x201a, 0x0421, 0x0402, 0x0420, 0x0455, 0x0420, 0x0454,
+);
 
 assert.equal(emptyPtoDateModel.isPtoSection, true);
 assert.equal(emptyPtoDateModel.isPtoDateTab, false);
@@ -84,6 +96,10 @@ assert.equal(emptyPtoDateModel.isPtoBucketsSection, false);
 assert.deepEqual(emptyPtoDateModel.ptoYearTabs, ["2026"]);
 assert.deepEqual(emptyPtoDateModel.activePtoDateRows, []);
 assert.deepEqual(emptyPtoDateModel.ptoBucketRowLookupSources, []);
+assert.equal(repairAdminReportText(win1251PlanMojibake), planText);
+assert.equal(repairAdminReportText(win1252PlanMojibake), planText);
+assert.equal(repairAdminReportText(win1251SumRowsMojibake), sumRowsText);
+assert.equal(repairAdminReportText("Plan 2026"), "Plan 2026");
 
 assert.match(guardedSelectTopTabSource, /selectTopTab\(tab\)/);
 assert.doesNotMatch(guardedSelectTopTabSource, /flushPtoDatabasePendingSave\(\)/);
@@ -230,11 +246,16 @@ assert.doesNotMatch(sharedNavigationSource, /style=\{\{[\s\S]*headerSubtabButton
 assert.match(reportFactSourcePickerStylesSource, /export const modeButtonStyle: CSSProperties = \{[\s\S]*borderWidth: 1,[\s\S]*borderStyle: "solid",[\s\S]*borderColor: "#cbd5e1",/);
 assert.match(reportFactSourcePickerStylesSource, /export const modeActiveStyle: CSSProperties = \{[\s\S]*\.\.\.modeButtonStyle,[\s\S]*borderColor: "#0f172a",/);
 assert.doesNotMatch(reportFactSourcePickerStylesSource, /export const modeActiveStyle: CSSProperties = \{[\s\S]*border: "1px solid #0f172a"/);
+assert.match(adminReportTextSource, /export function repairAdminReportText/);
+assert.match(adminReportTextSource, /windows1251TrailBytes/);
+assert.match(adminReportTextSource, /windows1252TrailBytes/);
 assert.match(reportFactSourcePickerCellSource, /const FACT_SOURCE_VISIBLE_LABEL_LIMIT = 2;/);
+assert.match(reportFactSourcePickerCellSource, /repairAdminReportText\(rowLabels\[reportRowKey\(row\)\]\?\.trim\(\) \|\| row\.name\)/);
 assert.match(reportFactSourcePickerCellSource, /compactLabels\.join\(" \+ "\)/);
 assert.match(reportFactSourcePickerCellSource, /title=\{selectedTitle\}/);
 assert.doesNotMatch(reportFactSourcePickerCellSource, /\{isSumMode \? `Сумма: \$\{sourceRowKeys\.length\}` : "Свой"\}/);
 assert.match(summarySettingsViewModelSource, /const visibleSummaryArea = summary\.area \|\| areaOptions\[0\] \|\| "";/);
+assert.match(summarySettingsViewModelSource, /repairAdminReportText\(customer\.rowLabels\[rowKey\]\?\.trim\(\) \|\| row\.name\)/);
 assert.doesNotMatch(summarySettingsViewModelSource, /const visibleSummaryArea = hasStoredArea \? summary\.area : areaOptions\[0\]/);
 assert.match(ptoPrimaryContentSource, /createEmptyPtoDateModel\(appState\.ptoPlanYear\)/);
 assert.match(ptoPrimaryContentSource, /import\("@\/features\/app\/PtoDataPrimaryContent"\)/);

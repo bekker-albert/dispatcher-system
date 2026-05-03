@@ -10,11 +10,12 @@ import {
   factSourceSumBadgeStyle,
 } from "./ReportFactSourcePickerStyles";
 import type { ReportFactSourceCellProps } from "./ReportFactSourcePickerTypes";
+import { repairAdminReportText } from "./adminReportText";
 
 const FACT_SOURCE_VISIBLE_LABEL_LIMIT = 2;
 
 function sourceRowLabel(row: ReportRow, rowLabels: Record<string, string>) {
-  return (rowLabels[reportRowKey(row)]?.trim() || row.name).replace(/\s+/g, " ");
+  return repairAdminReportText(rowLabels[reportRowKey(row)]?.trim() || row.name).replace(/\s+/g, " ");
 }
 
 export function ReportFactSourceCell({

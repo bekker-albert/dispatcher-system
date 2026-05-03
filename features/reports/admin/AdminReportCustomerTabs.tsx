@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import { IconButton, TopButton } from "@/shared/ui/buttons";
+import { repairAdminReportText } from "./adminReportText";
 
 export function AdminReportCustomerTabs({
   customers,
@@ -18,17 +19,21 @@ export function AdminReportCustomerTabs({
 }) {
   return (
     <div style={customerTabsStyle}>
-      {customers.map((customer) => (
-        <TopButton
-          key={customer.id}
-          active={activeCustomerId === customer.id}
-          onClick={() => onSelectCustomer(customer.id)}
-          label={customer.label}
-          showDelete={activeCustomerId === customer.id && customers.length > 1}
-          deleteLabel={`Удалить заказчика ${customer.label}`}
-          onDelete={() => onDeleteCustomer(customer.id)}
-        />
-      ))}
+      {customers.map((customer) => {
+        const customerLabel = repairAdminReportText(customer.label);
+
+        return (
+          <TopButton
+            key={customer.id}
+            active={activeCustomerId === customer.id}
+            onClick={() => onSelectCustomer(customer.id)}
+            label={customerLabel}
+            showDelete={activeCustomerId === customer.id && customers.length > 1}
+            deleteLabel={`Удалить заказчика ${customerLabel}`}
+            onDelete={() => onDeleteCustomer(customer.id)}
+          />
+        );
+      })}
       <IconButton label="Добавить заказчика" onClick={onAddCustomer}>
         <Plus size={16} aria-hidden />
       </IconButton>

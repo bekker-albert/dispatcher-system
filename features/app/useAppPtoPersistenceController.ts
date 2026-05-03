@@ -3,7 +3,7 @@
 import { useAppPtoPersistence } from "@/features/app/useAppPtoPersistence";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { databaseConfigured } from "@/lib/data/config";
-
+import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
 
 type UseAppPtoPersistenceControllerOptions = {
   appState: AppStateBundle;
@@ -14,11 +14,20 @@ export function useAppPtoPersistenceController({
   appState,
   resetUndoHistoryForExternalRestore,
 }: UseAppPtoPersistenceControllerOptions) {
+  const reportsNeedPtoDatabase = appState.topTab === "reports"
+    || (appState.topTab === "admin" && appState.adminSection === "reports");
+  const activePtoTabNeedsDatabase = appState.topTab === "pto"
+    && (isPtoDateTableKey(appState.ptoTab) || appState.ptoTab === "buckets");
+  const ptoDatabaseLoadEnabled = appState.ptoDatabaseLoadStarted
+    || (
+      appState.ptoBootstrapLoaded
+      && (!databaseConfigured || reportsNeedPtoDatabase || activePtoTabNeedsDatabase)
+    );
   const ptoPersistenceEnabled = appState.adminDataLoaded
     && (!databaseConfigured || appState.ptoDatabaseReady);
 
   return useAppPtoPersistence({
-    ptoDatabaseLoadEnabled: appState.ptoDatabaseLoadStarted || appState.ptoBootstrapLoaded,
+    ptoDatabaseLoadEnabled,
     ptoPersistenceEnabled,
     ptoSaveRevision: appState.ptoSaveRevision,
     ptoManualYears: appState.ptoManualYears,
