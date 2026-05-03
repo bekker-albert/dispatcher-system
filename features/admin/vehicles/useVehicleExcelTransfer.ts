@@ -6,7 +6,7 @@ import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { adminStorageKeys } from "@/lib/storage/keys";
 import { errorToMessage } from "@/lib/utils/normalizers";
 import type { SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
-import { downloadVehicleRowsToExcel } from "./downloadVehicleRowsToExcel";
+import { exportVehicleRowsToExcel } from "./downloadVehicleRowsToExcel";
 
 function parseExpectedVehicleSnapshot(snapshot: string) {
   if (!snapshot) return null;
@@ -117,14 +117,7 @@ export function useVehicleExcelTransfer({
   ]);
 
   const exportVehiclesToExcel = useCallback(async () => {
-    await downloadVehicleRowsToExcel(vehicleRows);
-    addAdminLog({
-      action: "Выгрузка",
-      section: "Техника",
-      details: `Выгружен список техники: ${vehicleRows.length} строк.`,
-      fileName: "spisok-tehniki.xlsx",
-      rowsCount: vehicleRows.length,
-    });
+    await exportVehicleRowsToExcel(vehicleRows, addAdminLog);
   }, [addAdminLog, vehicleRows]);
 
   return {

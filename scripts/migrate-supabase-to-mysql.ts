@@ -108,10 +108,21 @@ async function closeConnections() {
   await closeMysqlPool();
 }
 
+function sanitizedErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    const name = error.name?.trim();
+    const message = error.message?.trim() || "Unknown error";
+    return name ? `${name}: ${message}` : message;
+  }
+
+  if (typeof error === "string") return error;
+  return "Unknown error";
+}
+
 run()
   .then(closeConnections)
   .catch(async (error) => {
-    console.error(error);
+    console.error(sanitizedErrorMessage(error));
     await closeConnections().catch(() => undefined);
     process.exit(1);
   });

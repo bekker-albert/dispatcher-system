@@ -25,13 +25,14 @@ await checkUrl("site", baseUrl, async (response) => {
 
 await checkUrl("database status", `${baseUrl}/api/database`, async (response) => {
   const payload = await response.json();
-  if (!payload || typeof payload !== "object") {
+  const status = payload?.data ?? payload;
+  if (!status || typeof status !== "object") {
     throw new Error("database status response has unexpected shape");
   }
-  if (payload.provider !== "mysql") {
-    throw new Error(`database status returned unexpected provider: ${String(payload.provider)}`);
+  if (status.provider !== "mysql") {
+    throw new Error(`database status returned unexpected provider: ${String(status.provider)}`);
   }
-  if (payload.configured !== true) {
+  if (status.configured !== true) {
     throw new Error("database status reports MySQL is not configured");
   }
 });

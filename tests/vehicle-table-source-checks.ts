@@ -55,6 +55,10 @@ assert.match(vehicleTablePrimaryContentSource, /mode === "readonly"[\s\S]*onOpen
 assert.match(vehicleTablePrimaryContentSource, /mode === "readonly"[\s\S]*onToggleVehicleVisibility:\s*\(\)\s*=>\s*undefined/);
 assert.match(vehicleTablePrimaryContentSource, /mode === "readonly"[\s\S]*onVehicleCellChange:\s*\(\)\s*=>\s*undefined/);
 assert.match(vehicleTablePrimaryContentSource, /mode === "readonly"[\s\S]*onDeleteVehicle:\s*\(\)\s*=>\s*undefined/);
+assert.match(vehicleTablePrimaryContentSource, /if \(canManageVehicles\) return;[\s\S]*setAdminVehiclesEditing/);
+assert.match(vehicleTablePrimaryContentSource, /if \(canManageVehicles\) return;[\s\S]*setSelectedVehicleCellKeys/);
+assert.match(vehicleTablePrimaryContentSource, /if \(canManageVehicles\) return;[\s\S]*setEditingVehicleCell/);
+assert.match(vehicleTablePrimaryContentSource, /exportVehicleRowsToExcel\(appState\.vehicleRows, appState\.addAdminLog\)/);
 assert.match(appPrimaryContentSource, /<FleetPrimaryContent[\s\S]*mode="readonly"/);
 assert.match(adminVehiclesPrimaryContentSource, /<VehicleTablePrimaryContent[\s\S]*mode="admin"/);
 assert.match(adminVehiclesSectionSource, /canManageVehicles\?: boolean/);
