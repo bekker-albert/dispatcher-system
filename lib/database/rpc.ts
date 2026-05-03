@@ -52,6 +52,7 @@ export async function databaseRequest<T>(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Dispatcher-Request": "same-origin",
       },
       body: JSON.stringify({ resource, action, payload }),
       signal: controller.signal,

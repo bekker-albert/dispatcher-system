@@ -43,7 +43,8 @@ export function AppPrimaryContent({
     filteredFleet,
   } = models;
 
-  useAppSectionPreloader(true, { includePto: !databaseConfigured || ptoDatabaseReady });
+  const shouldPreloadSections = appState.adminDataLoaded && (!databaseConfigured || ptoDatabaseReady);
+  useAppSectionPreloader(shouldPreloadSections, { includePto: !databaseConfigured || ptoDatabaseReady });
 
   const ptoTabNeedsDatabase = isPtoDateTableKey(appState.ptoTab) || appState.ptoTab === "buckets";
   const shouldGatePtoDatabase = databaseConfigured && !ptoDatabaseReady;

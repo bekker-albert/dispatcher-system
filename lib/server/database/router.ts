@@ -64,7 +64,16 @@ function isProductionRuntime() {
   return process.env.NODE_ENV === "production";
 }
 
+function hasSameOriginFetchMarker(request: Request) {
+  const fetchSite = request.headers.get("sec-fetch-site");
+
+  return request.headers.get("x-dispatcher-request") === "same-origin"
+    && (fetchSite === "same-origin" || fetchSite === "same-site");
+}
+
 function hasSameOriginWriteHeaders(request: Request) {
+  if (hasSameOriginFetchMarker(request)) return true;
+
   const requestOrigins = getRequestOriginCandidates(request);
   if (requestOrigins.size === 0) return false;
 

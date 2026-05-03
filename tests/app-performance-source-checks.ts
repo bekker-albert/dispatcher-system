@@ -155,7 +155,8 @@ assert.doesNotMatch(reportPrintLayoutSource, /Record<ReportPrintTextColumnKey, s
 assert.match(appPrimaryContentSource, /const shouldShowPtoDatabaseGateOnly = shouldGatePtoDatabase\s*&& renderedTopTab === "pto"\s*&& ptoTabNeedsDatabase;/);
 assert.match(appPrimaryContentSource, /if \(shouldShowPtoDatabaseGateOnly\) \{\s*return <PtoDatabaseGate message=\{ptoDatabaseMessage\} \/>;\s*\}/);
 assert.match(appPrimaryContentSource, /const ptoTabNeedsDatabase = isPtoDateTableKey\(appState\.ptoTab\) \|\| appState\.ptoTab === "buckets";/);
-assert.match(appPrimaryContentSource, /useAppSectionPreloader\(true, \{ includePto: !databaseConfigured \|\| ptoDatabaseReady \}\);/);
+assert.match(appPrimaryContentSource, /const shouldPreloadSections = appState\.adminDataLoaded && \(!databaseConfigured \|\| ptoDatabaseReady\);/);
+assert.match(appPrimaryContentSource, /useAppSectionPreloader\(shouldPreloadSections, \{ includePto: !databaseConfigured \|\| ptoDatabaseReady \}\);/);
 assert.match(reportsPrimaryContentSource, /databaseSyncMessage=\{databaseConfigured && !appState\.ptoDatabaseReady \? appState\.ptoDatabaseMessage : ""\}/);
 assert.match(reportsSectionSource, /databaseSyncMessage\?: string;/);
 assert.match(initialAppDatabaseBootstrapSource, /storageChanged: boolean/);

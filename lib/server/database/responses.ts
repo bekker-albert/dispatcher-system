@@ -35,7 +35,7 @@ export function corsHeaders(request?: Request) {
   if (isAllowedCorsOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
-    headers["Access-Control-Allow-Headers"] = "Content-Type";
+    headers["Access-Control-Allow-Headers"] = "Content-Type, X-Dispatcher-Request";
   }
 
   return headers;

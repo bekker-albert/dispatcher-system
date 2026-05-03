@@ -127,7 +127,7 @@ assert.equal(optionsResponse.status, 204);
 assert.equal(optionsResponse.headers.get("Access-Control-Allow-Origin"), origin);
 assert.equal(optionsResponse.headers.get("Vary"), "Origin");
 assert.equal(optionsResponse.headers.get("Access-Control-Allow-Methods"), "GET, POST, OPTIONS");
-assert.equal(optionsResponse.headers.get("Access-Control-Allow-Headers"), "Content-Type");
+assert.equal(optionsResponse.headers.get("Access-Control-Allow-Headers"), "Content-Type, X-Dispatcher-Request");
 
 const blockedOptionsResponse = await handleDatabaseOptions(new Request("https://aam-dispatch.kz/api/database", {
   method: "OPTIONS",
@@ -191,6 +191,22 @@ assert.deepEqual(await responseJson(routedResponse), {
   data: { routed: true, action: "save", payload: { id: 7 } },
 });
 
+const internalWriteResponse = await routedPost(new Request("https://aam-dispatch.kz/api/database", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-Dispatcher-Request": "same-origin", "Sec-Fetch-Site": "same-origin" },
+  body: JSON.stringify({ resource: "fake", action: "save", payload: { id: 10 } }),
+}));
+assert.equal(internalWriteResponse.status, 202);
+assert.deepEqual(routedCalls.at(-1), { action: "save", payload: { id: 10 } });
+
+const forgedInternalWriteResponse = await routedPost(new Request("https://aam-dispatch.kz/api/database", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-Dispatcher-Request": "same-origin", origin: "https://evil.example" },
+  body: JSON.stringify({ resource: "fake", action: "save", payload: { id: 11 } }),
+}));
+assert.equal(forgedInternalWriteResponse.status, 403);
+assert.deepEqual(routedCalls.at(-1), { action: "save", payload: { id: 10 } });
+
 const proxiedWriteResponse = await routedPost(new Request("http://127.0.0.1:10000/api/database", {
   method: "POST",
   headers: {
@@ -215,6 +231,7 @@ assert.equal(rejectedWriteResponse.headers.get("Vary"), "Origin");
 assert.equal(rejectedWriteResponse.headers.get("Access-Control-Allow-Origin"), null);
 assert.deepEqual(routedCalls, [
   { action: "save", payload: { id: 7 } },
+  { action: "save", payload: { id: 10 } },
   { action: "save", payload: { id: 9 } },
 ]);
 assert.deepEqual(await responseJson(rejectedWriteResponse), {
