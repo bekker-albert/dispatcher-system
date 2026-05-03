@@ -14,7 +14,7 @@ import { buildInitialReportState } from "@/features/reports/initialReportState";
 import { databaseConfigured } from "@/lib/data/config";
 import { createDefaultSubTabs } from "@/lib/domain/navigation/tabs";
 import { loadInitialAppDatabaseBootstrap } from "@/features/app/initialAppDatabaseBootstrap";
-import { hasInitialLocalAppState, readInitialStoredAppState, readInitialStoredPtoState } from "@/features/app/initialAppStorage";
+import { hasInitialLocalAppState, hasInitialStoredPtoState, readInitialStoredAppState } from "@/features/app/initialAppStorage";
 
 type MutableRef<T> = {
   current: T;
@@ -154,9 +154,8 @@ export async function runInitialAppDataLoad(
     };
 
     let initialReportState = applySharedState(storedState);
-    const localInitialPtoState = buildInitialPtoState(databaseConfigured ? readInitialStoredPtoState() : storedState);
-
-    if (!databaseConfigured || localInitialPtoState.hasSavedPtoState) {
+    if (!databaseConfigured) {
+      const localInitialPtoState = buildInitialPtoState(storedState);
       applyInitialPtoState(localInitialPtoState, {
         hasStoredPtoStateRef,
         setPtoManualYears,
@@ -170,7 +169,7 @@ export async function runInitialAppDataLoad(
         setPtoBucketManualRows,
       });
     } else {
-      hasStoredPtoStateRef.current = false;
+      hasStoredPtoStateRef.current = hasInitialStoredPtoState();
     }
 
     if (databaseConfigured) {
