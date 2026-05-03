@@ -12,6 +12,7 @@ export default function AdminReportSettingsSection({
   customers,
   activeCustomer,
   settingsTab,
+  canToggleAutoShowRows,
   selectedCount,
   usesSummaryRows,
   areaOptions,
@@ -68,6 +69,7 @@ export default function AdminReportSettingsSection({
       <div style={customerCardStyle}>
         <AdminReportCustomerSummary
           activeCustomer={activeCustomer}
+          canToggleAutoShowRows={canToggleAutoShowRows}
           selectedCount={selectedCount}
           usesSummaryRows={usesSummaryRows}
           onUpdateCustomer={onUpdateCustomer}

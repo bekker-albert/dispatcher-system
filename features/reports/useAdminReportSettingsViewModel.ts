@@ -80,11 +80,24 @@ export function useAdminReportSettingsViewModel({
     needsAdminReportAutoRows ? reportAutoRowKeysForCustomer(activeAdminReportCustomer) : new Set<string>()
   ), [activeAdminReportCustomer, needsAdminReportAutoRows, reportAutoRowKeysForCustomer]);
 
-  const activeAdminReportVisibleRowKeys = useMemo(() => (
-    needsAdminReportRows
-      ? reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys)
-      : new Set<string>()
-  ), [activeAdminAutoReportRowKeys, activeAdminReportCustomer, needsAdminReportRows]);
+  const activeAdminReportVisibleRowKeys = useMemo(() => {
+    if (!needsAdminReportRows) return new Set<string>();
+    if (activeAdminReportCustomer.autoShowRows && !needsAdminReportAutoRows) {
+      return new Set(
+        activeAdminReportBaseRows
+          .map(reportRowKey)
+          .filter((rowKey) => !activeAdminReportCustomer.hiddenRowKeys.includes(rowKey)),
+      );
+    }
+
+    return reportCustomerEffectiveRowKeys(activeAdminReportCustomer, activeAdminAutoReportRowKeys);
+  }, [
+    activeAdminAutoReportRowKeys,
+    activeAdminReportBaseRows,
+    activeAdminReportCustomer,
+    needsAdminReportAutoRows,
+    needsAdminReportRows,
+  ]);
 
   const activeAdminReportSummarySourceRowKeys = useMemo(() => (
     needsAdminReportRows

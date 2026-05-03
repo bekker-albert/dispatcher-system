@@ -55,7 +55,7 @@ export function AdminReportsPrimaryContent({
   const activeAdminReportSettingsTab = reportCustomerUsesSummaryRows(activeAdminReportCustomer) || adminReportCustomerSettingsTab !== "summary"
     ? adminReportCustomerSettingsTab
     : "display";
-  const adminReportTabNeedsAutoRows = activeAdminReportSettingsTab === "display" || activeAdminReportCustomer.autoShowRows;
+  const adminReportTabNeedsAutoRows = activeAdminReportSettingsTab === "display";
 
   const reportsModel = useAppReportsModel({
     needsReportRows: true,

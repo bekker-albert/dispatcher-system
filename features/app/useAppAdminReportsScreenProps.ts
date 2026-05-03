@@ -73,6 +73,7 @@ export function useAppAdminReportsScreenProps({
     reportCustomers,
     activeAdminReportCustomer,
     visibleAdminReportCustomerSettingsTab,
+    canToggleAutoShowRows: visibleAdminReportCustomerSettingsTab === "display",
     activeAdminReportSelectedCount,
     activeAdminReportUsesSummaryRows,
     activeAdminReportAreaOptions,

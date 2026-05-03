@@ -6,6 +6,7 @@ type UseAppAdminReportsPropsOptions = {
   reportCustomers: AdminReportSettingsSectionProps["customers"];
   activeAdminReportCustomer: AdminReportSettingsSectionProps["activeCustomer"];
   visibleAdminReportCustomerSettingsTab: AdminReportSettingsSectionProps["settingsTab"];
+  canToggleAutoShowRows: AdminReportSettingsSectionProps["canToggleAutoShowRows"];
   activeAdminReportSelectedCount: number;
   activeAdminReportUsesSummaryRows: boolean;
   activeAdminReportAreaOptions: string[];
@@ -50,6 +51,7 @@ export function useAppAdminReportsProps({
   reportCustomers,
   activeAdminReportCustomer,
   visibleAdminReportCustomerSettingsTab,
+  canToggleAutoShowRows,
   activeAdminReportSelectedCount,
   activeAdminReportUsesSummaryRows,
   activeAdminReportAreaOptions,
@@ -93,6 +95,7 @@ export function useAppAdminReportsProps({
     customers: reportCustomers,
     activeCustomer: activeAdminReportCustomer,
     settingsTab: visibleAdminReportCustomerSettingsTab,
+    canToggleAutoShowRows,
     selectedCount: activeAdminReportSelectedCount,
     usesSummaryRows: activeAdminReportUsesSummaryRows,
     areaOptions: activeAdminReportAreaOptions,

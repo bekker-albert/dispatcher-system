@@ -18,6 +18,7 @@ export type AdminReportSettingsSectionProps = {
   customers: ReportCustomerConfig[];
   activeCustomer: ReportCustomerConfig;
   settingsTab: AdminReportCustomerSettingsTab;
+  canToggleAutoShowRows: boolean;
   selectedCount: number;
   usesSummaryRows: boolean;
   areaOptions: string[];

@@ -4,11 +4,13 @@ import { repairAdminReportText } from "./adminReportText";
 
 export function AdminReportCustomerSummary({
   activeCustomer,
+  canToggleAutoShowRows,
   selectedCount,
   usesSummaryRows,
   onUpdateCustomer,
 }: {
   activeCustomer: ReportCustomerConfig;
+  canToggleAutoShowRows: boolean;
   selectedCount: number;
   usesSummaryRows: boolean;
   onUpdateCustomer: (customerId: string, patch: Partial<Pick<ReportCustomerConfig, "label" | "ptoCode" | "visible" | "autoShowRows">>) => void;
@@ -39,7 +41,13 @@ export function AdminReportCustomerSummary({
         Показывать вкладку
       </label>
       <label style={visibleToggleStyle}>
-        <input type="checkbox" checked={activeCustomer.autoShowRows} onChange={(event) => onUpdateCustomer(activeCustomer.id, { autoShowRows: event.target.checked })} />
+        <input
+          type="checkbox"
+          checked={activeCustomer.autoShowRows}
+          disabled={!canToggleAutoShowRows}
+          onChange={(event) => onUpdateCustomer(activeCustomer.id, { autoShowRows: event.target.checked })}
+          title={canToggleAutoShowRows ? undefined : "Режим меняется на вкладке Отображение"}
+        />
         Автоматический показ строк
       </label>
     </div>
