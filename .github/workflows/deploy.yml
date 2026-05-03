@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Pack production build
+        run: tar -czf next-build.tar.gz .next public package.json package-lock.json next.config.ts
+
       - name: Configure SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -51,6 +54,14 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload production build
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" next-build.tar.gz "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/aam-dispatch.kz/next-build.tar.gz"
 
       - name: Deploy to production
         env:
@@ -65,7 +76,9 @@ jobs:
             cd /var/www/dispatcher/data/www/aam-dispatch.kz
             git fetch --prune origin main
             git reset --hard origin/main
-            npm ci --no-audit --no-fund
-            npm run build
+            npm ci --omit=dev --no-audit --no-fund
+            rm -rf .next
+            tar -xzf next-build.tar.gz
+            rm -f next-build.tar.gz
             /usr/lib/ispnodejs/bin/pm2 reload aam-dispatch --update-env
           EOF
