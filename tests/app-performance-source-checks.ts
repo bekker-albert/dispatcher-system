@@ -206,6 +206,10 @@ assert.match(ptoDateEditableTableRowSource, /export const PtoDateEditableTableRo
 assert.match(ptoBucketsTableRowSource, /export const PtoBucketsTableRow = memo\(function PtoBucketsTableRow/);
 assert.match(ptoBucketsTableSource, /const rowActiveCell = activeCell\?\.rowKey === row\.key \? activeCell : null;/);
 assert.match(ptoBucketsTableSource, /draft=\{rowActiveCell \? draft : ""\}/);
+assert.match(ptoBucketsTableSource, /createPtoBucketSelectedKeysByRow\(selectedBucketKeys\)/);
+assert.match(ptoBucketsTableSource, /selectedBucketKeys=\{selectedBucketKeysByRow\.get\(row\.key\) \?\? emptySelectedBucketKeys\}/);
+assert.doesNotMatch(ptoBucketsTableRowSource, /selectedBucketKeys: Set<string>/);
+assert.match(ptoBucketsTableRowSource, /selectedBucketKeys: ReadonlySet<string>/);
 assert.match(ptoBucketsTableRowSource, /cellKey=\{cellKey\}/);
 assert.doesNotMatch(ptoBucketValueCellSource, /ptoBucketCellKey/);
 assert.match(ptoBucketValueCellSource, /if \(!editingMode\) \{/);

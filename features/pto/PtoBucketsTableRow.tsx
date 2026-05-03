@@ -21,7 +21,7 @@ type PtoBucketsTableRowProps = PtoBucketsCellHandlers & {
   editKey: string | null;
   editingMode: boolean;
   row: PtoBucketRow;
-  selectedBucketKeys: Set<string>;
+  selectedBucketKeys: ReadonlySet<string>;
   values: Record<string, number>;
   virtualColumns: PtoBucketsVirtualColumnsView;
   onDeleteManualRow: (row: PtoBucketRow) => void;

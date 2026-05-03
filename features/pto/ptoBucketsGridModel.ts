@@ -16,6 +16,22 @@ export function createPtoBucketGridKeys(rowKeys: string[], columnKeys: string[])
   return rowKeys.map((rowKey) => columnKeys.map((columnKey) => ptoBucketCellKey(rowKey, columnKey)));
 }
 
+export function createPtoBucketSelectedKeysByRow(selectedKeys: ReadonlySet<string>) {
+  const keysByRow = new Map<string, Set<string>>();
+
+  selectedKeys.forEach((key) => {
+    const separatorIndex = key.indexOf("::");
+    if (separatorIndex <= 0) return;
+
+    const rowKey = key.slice(0, separatorIndex);
+    const rowKeys = keysByRow.get(rowKey) ?? new Set<string>();
+    rowKeys.add(key);
+    keysByRow.set(rowKey, rowKeys);
+  });
+
+  return keysByRow;
+}
+
 export function ptoBucketCellRangeKeys(
   rowKeys: string[],
   columnKeys: string[],
