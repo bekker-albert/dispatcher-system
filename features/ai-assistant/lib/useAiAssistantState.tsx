@@ -12,6 +12,8 @@ import {
 import { defaultAiAssistantDataset, defaultAiAssistantRole } from "@/features/ai-assistant/data";
 import type {
   AiAssistantApprovalAction,
+  AiAssistantIntegration,
+  AiAssistantKnowledgeSource,
   AiAssistantTab,
   AiAssistantTask,
 } from "@/features/ai-assistant/types";
@@ -26,6 +28,8 @@ export function useAiAssistantState() {
   const [tasks, setTasks] = useState(defaultAiAssistantDataset.tasks);
   const [notifications, setNotifications] = useState(defaultAiAssistantDataset.notifications);
   const [plannerItems, setPlannerItems] = useState(defaultAiAssistantDataset.plannerItems);
+  const [integrations, setIntegrations] = useState(defaultAiAssistantDataset.integrations);
+  const [knowledgeSources, setKnowledgeSources] = useState(defaultAiAssistantDataset.knowledgeSources);
 
   const permissions = useMemo(
     () => resolveAiAssistantPermissions(defaultAiAssistantRole),
@@ -39,8 +43,10 @@ export function useAiAssistantState() {
       tasks,
       notifications,
       plannerItems,
+      integrations,
+      knowledgeSources,
     }),
-    [approvalActions, chatMessages, notifications, plannerItems, tasks],
+    [approvalActions, chatMessages, integrations, knowledgeSources, notifications, plannerItems, tasks],
   );
   const viewModel = useMemo(
     () => createAiAssistantViewModel(dataset),
@@ -144,6 +150,54 @@ export function useAiAssistantState() {
         }
         : notification
     )));
+
+    setPlannerItems((current) => current.map((item) => (
+      item.linkedTaskId === approval.taskId
+        ? {
+          ...item,
+          status: status === "approved" ? "done" : "cancelled",
+          updatedAt,
+        }
+        : item
+    )));
+  }, []);
+  const addKnowledgeSource = useCallback((source: Omit<AiAssistantKnowledgeSource, "id" | "updatedAt">) => {
+    const updatedAt = new Date().toISOString();
+    setKnowledgeSources((current) => [
+      ...current,
+      {
+        ...source,
+        id: `knowledge-${Date.now()}`,
+        updatedAt,
+      },
+    ]);
+  }, []);
+  const updateKnowledgeSource = useCallback((source: AiAssistantKnowledgeSource) => {
+    setKnowledgeSources((current) => current.map((item) => (
+      item.id === source.id
+        ? { ...source, updatedAt: new Date().toISOString() }
+        : item
+    )));
+  }, []);
+  const deleteKnowledgeSource = useCallback((sourceId: string) => {
+    setKnowledgeSources((current) => current.filter((item) => item.id !== sourceId));
+  }, []);
+  const addIntegration = useCallback((integration: Omit<AiAssistantIntegration, "key">) => {
+    setIntegrations((current) => [
+      ...current,
+      {
+        ...integration,
+        key: `custom-${Date.now()}`,
+      },
+    ]);
+  }, []);
+  const updateIntegration = useCallback((integration: AiAssistantIntegration) => {
+    setIntegrations((current) => current.map((item) => (
+      item.key === integration.key ? integration : item
+    )));
+  }, []);
+  const deleteIntegration = useCallback((integrationKey: string) => {
+    setIntegrations((current) => current.filter((item) => item.key !== integrationKey));
   }, []);
 
   return {
@@ -153,6 +207,12 @@ export function useAiAssistantState() {
     permissions,
     viewModel,
     setPlannerItems,
+    addIntegration,
+    updateIntegration,
+    deleteIntegration,
+    addKnowledgeSource,
+    updateKnowledgeSource,
+    deleteKnowledgeSource,
     appendChatMessage,
     updateApprovalDraftText,
     setApprovalDecision,

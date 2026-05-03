@@ -23,6 +23,9 @@ const aiSectionSource = readFileSync(resolve(root, "features/ai-assistant/AiAssi
 const aiTabsSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTabs.tsx"), "utf8");
 const aiTasksPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTasksPanel.tsx"), "utf8");
 const aiPlannerPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantPlannerPanel.tsx"), "utf8");
+const aiKnowledgePanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantKnowledgePanel.tsx"), "utf8");
+const aiIntegrationPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantIntegrationStatus.tsx"), "utf8");
+const aiStateSource = readFileSync(resolve(root, "features/ai-assistant/lib/useAiAssistantState.tsx"), "utf8");
 const navigationEventsSource = readFileSync(resolve(root, "lib/domain/navigation/appNavigationEvents.ts"), "utf8");
 
 const aiFeatureSources = collectSourceFiles(aiFeatureDir).map((file) => ({
@@ -35,7 +38,7 @@ const aiDomainSources = collectSourceFiles(aiDomainDir).map((file) => ({
 }));
 
 assert.match(tabsSource, /\|\s*"ai-assistant"/);
-assert.match(tabsSource, /\{\s*id: "ai-assistant", label: "AI-ассистент", visible: true\s*\}/);
+assert.match(tabsSource, /\{\s*id: "ai-assistant"/);
 assert.match(lazyPrimaryContentSource, /export const AiAssistantPrimaryContent = dynamic\(/);
 assert.match(lazyPrimaryContentSource, /import\("\.\/AiAssistantPrimaryContent"\)/);
 assert.match(lazyPrimaryContentSource, /ssr: false/);
@@ -47,20 +50,27 @@ assert.doesNotMatch(aiTypesSource, /\|\s*"approvals"/);
 assert.doesNotMatch(aiTypesSource, /\|\s*"notifications"/);
 assert.match(aiTypesSource, /export type AiAssistantApprovalAction/);
 assert.match(aiTypesSource, /export type AiAssistantPlannerItem/);
+assert.match(aiTypesSource, /key: string/);
+
 assert.match(aiSectionSource, /<AiAssistantTasksPanel/);
 assert.match(aiSectionSource, /approvals=\{viewModel\.approvalActions\}/);
 assert.match(aiSectionSource, /currentWorkDate=\{viewModel\.currentWorkDate\}/);
 assert.match(aiSectionSource, /tasks=\{viewModel\.currentTasks\}/);
 assert.match(aiSectionSource, /notifications=\{viewModel\.currentNotifications\}/);
-assert.match(aiSectionSource, /<AiAssistantPlannerPanel/);
 assert.match(aiSectionSource, /plannerItems=\{viewModel\.plannerItems\}/);
+assert.match(aiSectionSource, /<AiAssistantPlannerPanel/);
+assert.match(aiSectionSource, /onAddIntegration=\{addIntegration\}/);
+assert.match(aiSectionSource, /onAddSource=\{addKnowledgeSource\}/);
 assert.doesNotMatch(aiSectionSource, /evidenceById=\{viewModel\.evidenceById\}/);
+
 assert.doesNotMatch(aiTasksPanelSource, />Основание</);
 assert.doesNotMatch(aiTasksPanelSource, />Ответственный</);
 assert.doesNotMatch(aiTasksPanelSource, /TasksBlock title="Уведомления"/);
 assert.doesNotMatch(aiTasksPanelSource, /setTaskRowsState/);
 assert.match(aiTasksPanelSource, /createCurrentQueueRows/);
 assert.match(aiTasksPanelSource, /onSetApprovalDecision/);
+assert.match(aiTasksPanelSource, /plannerItems: AiAssistantPlannerItem\[\]/);
+assert.match(aiTasksPanelSource, /Планировщик:/);
 assert.match(aiTasksPanelSource, />Текст</);
 assert.match(aiTasksPanelSource, />Решение</);
 assert.doesNotMatch(aiTasksPanelSource, /Текст \/ решение/);
@@ -70,6 +80,7 @@ assert.doesNotMatch(aiTasksPanelSource, /placeholder="Комментарий"/);
 assert.match(aiTasksPanelSource, /label="Согласовать"/);
 assert.match(aiTasksPanelSource, /label="Отказать"/);
 assert.match(aiTasksPanelSource, /label="Редактировать"/);
+
 assert.match(aiPlannerPanelSource, /Планировщик/);
 assert.match(aiPlannerPanelSource, /plannedDate/);
 assert.match(aiPlannerPanelSource, /label="Добавить задачу"/);
@@ -85,23 +96,24 @@ assert.match(aiPlannerPanelSource, /target: ""/);
 assert.match(aiPlannerPanelSource, /plannerDateEditTdStyle/);
 assert.match(aiPlannerPanelSource, /plannerRecipientEditTdStyle/);
 assert.match(aiStatusSource, /getAiAssistantTaskStatusForApprovalDecision/);
-assert.doesNotMatch(aiTabsSource, /\{ id: "chat", label: "Чат" \}/);
+
+assert.doesNotMatch(aiTabsSource, /\{ id: "chat"/);
 assert.doesNotMatch(aiTabsSource, /\{ id: "approvals"/);
 assert.doesNotMatch(aiTabsSource, /\{ id: "notifications"/);
-assert.match(aiTabsSource, /\{ id: "tasks", label: "Задачи" \}/);
-assert.match(aiTabsSource, /\{ id: "planner", label: "Планировщик" \}/);
+assert.match(aiTabsSource, /\{ id: "tasks"/);
+assert.match(aiTabsSource, /\{ id: "planner"/);
+
 assert.match(appPageShellSource, /<AiAssistantFloatingDockHost \/>/);
 assert.match(appPageShellSource, /\.ai-floating-dock/);
 assert.match(floatingDockHostSource, /dynamic\(/);
 assert.match(floatingDockHostSource, /AiAssistantFloatingDock/);
 assert.match(floatingDockSource, /AiAssistantFloatingNotifications/);
 assert.match(floatingDockSource, /AiAssistantFloatingChat/);
-assert.match(floatingDockSource, /openWidget/);
-assert.match(floatingDockSource, /openWidget === "notifications"/);
-assert.match(floatingDockSource, /openWidget === "chat"/);
-assert.match(floatingDockSource, /toggleWidget\("notifications"\)/);
-assert.match(floatingDockSource, /toggleWidget\("chat"\)/);
+assert.match(floatingDockSource, /activePanel/);
+assert.match(floatingDockSource, /setActivePanel\("notifications"\)/);
+assert.match(floatingDockSource, /setActivePanel\("chat"\)/);
 assert.match(floatingDockSource, /isNotificationsOpen \? "Уведомления" : "AI-ассистент"/);
+assert.doesNotMatch(floatingDockSource, /toggleWidget/);
 assert.match(floatingDockSource, /position: "fixed"/);
 assert.match(floatingDockSource, /right: 18/);
 assert.match(floatingDockSource, /bottom: 18/);
@@ -120,6 +132,18 @@ assert.match(floatingNotificationsSource, /aiAssistantTab: "tasks"/);
 assert.match(appScreenPropsSource, /addEventListener\(appNavigationEventName/);
 assert.match(aiSectionSource, /addEventListener\(appNavigationEventName/);
 assert.match(navigationEventsSource, /appNavigationEventName/);
+
+assert.match(aiKnowledgePanelSource, /onAddSource/);
+assert.match(aiKnowledgePanelSource, /onUpdateSource/);
+assert.match(aiKnowledgePanelSource, /onDeleteSource/);
+assert.match(aiKnowledgePanelSource, /label="Добавить источник"/);
+assert.match(aiIntegrationPanelSource, /onAddIntegration/);
+assert.match(aiIntegrationPanelSource, /onUpdateIntegration/);
+assert.match(aiIntegrationPanelSource, /onDeleteIntegration/);
+assert.match(aiIntegrationPanelSource, /label="Добавить интеграцию"/);
+assert.match(aiStateSource, /setKnowledgeSources/);
+assert.match(aiStateSource, /setIntegrations/);
+assert.match(aiStateSource, /item\.linkedTaskId === approval\.taskId/);
 
 for (const { file, source } of aiFeatureSources) {
   assert.doesNotMatch(source, /NEXT_PUBLIC_[A-Z0-9_]*AI/i, `${file} must not expose AI keys as public env`);

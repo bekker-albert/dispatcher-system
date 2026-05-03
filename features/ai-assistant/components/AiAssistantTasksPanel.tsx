@@ -10,6 +10,7 @@ import type {
   AiAssistantApprovalAction,
   AiAssistantNotification,
   AiAssistantNotificationChannel,
+  AiAssistantPlannerItem,
   AiAssistantTask,
   AiAssistantTaskStatus,
 } from "@/features/ai-assistant/types";
@@ -38,6 +39,7 @@ export function AiAssistantTasksPanel({
   currentWorkDate,
   tasks,
   notifications,
+  plannerItems,
   onUpdateApprovalDraftText,
   onSetApprovalDecision,
 }: {
@@ -45,6 +47,7 @@ export function AiAssistantTasksPanel({
   currentWorkDate: string;
   tasks: AiAssistantTask[];
   notifications: AiAssistantNotification[];
+  plannerItems: AiAssistantPlannerItem[];
   onUpdateApprovalDraftText: (approval: AiAssistantApprovalAction, draftText: string) => void;
   onSetApprovalDecision: (
     approval: AiAssistantApprovalAction,
@@ -55,8 +58,8 @@ export function AiAssistantTasksPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const currentRows = useMemo(
-    () => createCurrentQueueRows(tasks, notifications, approvals),
-    [approvals, notifications, tasks],
+    () => createCurrentQueueRows(tasks, notifications, approvals, plannerItems),
+    [approvals, notifications, plannerItems, tasks],
   );
 
   const startEdit = (approval: AiAssistantApprovalAction) => {
@@ -87,6 +90,13 @@ export function AiAssistantTasksPanel({
         <div style={tasksBlockTitleStyle}>Задачи на {formatDateLabel(currentWorkDate)}</div>
         <div style={aiAssistantTableWrapStyle}>
           <table style={tasksTableStyle}>
+            <colgroup>
+              <col style={{ width: "30%" }} />
+              <col style={{ width: 98 }} />
+              <col style={{ width: 132 }} />
+              <col style={{ width: "38%" }} />
+              <col style={{ width: 112 }} />
+            </colgroup>
             <thead>
               <tr>
                 <th style={aiAssistantThStyle}>Задача</th>
@@ -243,8 +253,14 @@ function createCurrentQueueRows(
   tasks: AiAssistantTask[],
   notifications: AiAssistantNotification[],
   approvals: AiAssistantApprovalAction[],
+  plannerItems: AiAssistantPlannerItem[],
 ): CurrentQueueRow[] {
   const approvalsByTaskId = new Map(approvals.map((approval) => [approval.taskId, approval]));
+  const plannerByTaskId = new Map(
+    plannerItems
+      .filter((item) => item.linkedTaskId)
+      .map((item) => [item.linkedTaskId!, item]),
+  );
   const notificationsByTaskId = new Map(
     notifications
       .filter((notification) => notification.linkedTaskId)
@@ -253,11 +269,12 @@ function createCurrentQueueRows(
   const taskRows = tasks.map((task) => {
     const linkedNotification = notificationsByTaskId.get(task.id);
     const approval = task.approvalActionId ? approvalsByTaskId.get(task.id) : undefined;
+    const plannerItem = plannerByTaskId.get(task.id);
 
     return {
       id: task.id,
       title: task.title,
-      details: linkedNotification?.title ?? task.prompt,
+      details: formatTaskDetails(task, plannerItem, linkedNotification),
       channel: linkedNotification?.channel ?? task.channel,
       status: task.status,
       text: approval?.draftText ?? task.resultDraft ?? linkedNotification?.body ?? "",
@@ -280,6 +297,21 @@ function createCurrentQueueRows(
   return [...taskRows, ...notificationRows];
 }
 
+function formatTaskDetails(
+  task: AiAssistantTask,
+  plannerItem?: AiAssistantPlannerItem,
+  linkedNotification?: AiAssistantNotification,
+) {
+  if (!plannerItem) return linkedNotification?.title ?? task.prompt;
+
+  const plannedAt = [
+    formatDateLabel(plannerItem.plannedDate),
+    plannerItem.plannedTime,
+  ].filter(Boolean).join(" ");
+
+  return `Планировщик: ${plannedAt}. ${plannerItem.description || task.prompt}`;
+}
+
 function formatDateLabel(value: string) {
   const [year, month, day] = value.split("-");
   return `${day}.${month}.${year}`;
@@ -298,12 +330,12 @@ const tasksBlockTitleStyle: CSSProperties = {
 
 const tasksTableStyle: CSSProperties = {
   ...aiAssistantTableStyle,
-  tableLayout: "auto",
+  tableLayout: "fixed",
+  minWidth: 1080,
 };
 
 const compactThStyle: CSSProperties = {
   ...aiAssistantThStyle,
-  width: "1%",
   whiteSpace: "nowrap",
 };
 
@@ -314,7 +346,6 @@ const compactCenterThStyle: CSSProperties = {
 
 const compactTdStyle: CSSProperties = {
   ...aiAssistantTdStyle,
-  width: "1%",
   whiteSpace: "nowrap",
 };
 

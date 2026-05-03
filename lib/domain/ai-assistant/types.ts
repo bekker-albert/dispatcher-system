@@ -199,7 +199,7 @@ export type AiAssistantPlannerItem = {
 };
 
 export type AiAssistantIntegration = {
-  key: AiAssistantConnectorKey;
+  key: string;
   title: string;
   status: AiAssistantConnectorStatus;
   mode: "read" | "write" | "read-write";

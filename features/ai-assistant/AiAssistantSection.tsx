@@ -27,6 +27,12 @@ export function AiAssistantSection() {
     updateApprovalDraftText,
     viewModel,
     setPlannerItems,
+    addIntegration,
+    updateIntegration,
+    deleteIntegration,
+    addKnowledgeSource,
+    updateKnowledgeSource,
+    deleteKnowledgeSource,
   } = useAiAssistantContext();
 
   useEffect(() => {
@@ -56,6 +62,7 @@ export function AiAssistantSection() {
           currentWorkDate={viewModel.currentWorkDate}
           tasks={viewModel.currentTasks}
           notifications={viewModel.currentNotifications}
+          plannerItems={viewModel.plannerItems}
           onUpdateApprovalDraftText={updateApprovalDraftText}
           onSetApprovalDecision={setApprovalDecision}
         />
@@ -70,11 +77,21 @@ export function AiAssistantSection() {
       )}
 
       {activeTab === "integrations" && (
-        <AiAssistantIntegrationStatus integrations={viewModel.integrations} />
+        <AiAssistantIntegrationStatus
+          integrations={viewModel.integrations}
+          onAddIntegration={addIntegration}
+          onUpdateIntegration={updateIntegration}
+          onDeleteIntegration={deleteIntegration}
+        />
       )}
 
       {activeTab === "knowledge" && (
-        <AiAssistantKnowledgePanel sources={viewModel.knowledgeSources} />
+        <AiAssistantKnowledgePanel
+          sources={viewModel.knowledgeSources}
+          onAddSource={addKnowledgeSource}
+          onUpdateSource={updateKnowledgeSource}
+          onDeleteSource={deleteKnowledgeSource}
+        />
       )}
 
       {activeTab === "audit" && (

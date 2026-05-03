@@ -29,25 +29,29 @@ export function AiAssistantFloatingNotifications({
 
   return (
     <div className="ai-floating-notifications" style={notificationListStyle}>
-      {notifications.map((notification) => (
-        <button
-          key={notification.id}
-          type="button"
-          onClick={openAiTasks}
-          style={notificationItemStyle}
-        >
-          <div style={notificationItemTopStyle}>
-            <div>
-              <div style={notificationTitleStyle}>{notification.title}</div>
-              <div style={notificationMetaStyle}>
-                {formatAiAssistantChannel(notification.channel)} В· {notification.target}
+      {notifications.length === 0 ? (
+        <div style={emptyStateStyle}>Нет текущих уведомлений</div>
+      ) : (
+        notifications.map((notification) => (
+          <button
+            key={notification.id}
+            type="button"
+            onClick={openAiTasks}
+            style={notificationItemStyle}
+          >
+            <div style={notificationItemTopStyle}>
+              <div>
+                <div style={notificationTitleStyle}>{notification.title}</div>
+                <div style={notificationMetaStyle}>
+                  {formatAiAssistantChannel(notification.channel)} · {notification.target}
+                </div>
               </div>
+              <AiAssistantStatusPill status={notification.status} />
             </div>
-            <AiAssistantStatusPill status={notification.status} />
-          </div>
-          <div style={notificationBodyStyle}>{notification.body}</div>
-        </button>
-      ))}
+            <div style={notificationBodyStyle}>{notification.body}</div>
+          </button>
+        ))
+      )}
     </div>
   );
 }
@@ -55,6 +59,7 @@ export function AiAssistantFloatingNotifications({
 const notificationListStyle: CSSProperties = {
   display: "grid",
   gap: 6,
+  minHeight: 0,
   padding: 8,
   overflow: "auto",
 };
@@ -97,4 +102,14 @@ const notificationBodyStyle: CSSProperties = {
   fontSize: 12,
   lineHeight: 1.25,
   color: "#334155",
+};
+
+const emptyStateStyle: CSSProperties = {
+  border: "1px dashed #cbd5e1",
+  borderRadius: 8,
+  padding: 12,
+  color: "#64748b",
+  fontSize: 12,
+  textAlign: "center",
+  background: "#ffffff",
 };
