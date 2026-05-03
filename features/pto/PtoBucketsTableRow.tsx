@@ -27,6 +27,61 @@ type PtoBucketsTableRowProps = PtoBucketsCellHandlers & {
   onDeleteManualRow: (row: PtoBucketRow) => void;
 };
 
+function bucketCellSelectionSetsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>) {
+  if (left === right) return true;
+  if (left.size !== right.size) return false;
+
+  for (const key of left) {
+    if (!right.has(key)) return false;
+  }
+
+  return true;
+}
+
+function bucketRowVisibleValuesEqual(
+  previous: Pick<PtoBucketsTableRowProps, "row" | "values" | "virtualColumns">,
+  next: Pick<PtoBucketsTableRowProps, "row" | "values" | "virtualColumns">,
+) {
+  if (previous.row.key !== next.row.key) return false;
+  if (previous.virtualColumns.columns !== next.virtualColumns.columns) return false;
+
+  return next.virtualColumns.columns.every((column) => {
+    const cellKey = ptoBucketCellKey(next.row.key, column.key);
+    return previous.values[cellKey] === next.values[cellKey];
+  });
+}
+
+function bucketCellMatchesRow(cell: PtoBucketCell | null, rowKey: string) {
+  return cell?.rowKey === rowKey;
+}
+
+function ptoBucketsTableRowPropsEqual(
+  previous: PtoBucketsTableRowProps,
+  next: PtoBucketsTableRowProps,
+) {
+  const rowKey = next.row.key;
+
+  return previous.row === next.row
+    && previous.editingMode === next.editingMode
+    && previous.editKey === next.editKey
+    && previous.draft === next.draft
+    && previous.virtualColumns === next.virtualColumns
+    && previous.onDeleteManualRow === next.onDeleteManualRow
+    && previous.onCellBlur === next.onCellBlur
+    && previous.onCellDraftChange === next.onCellDraftChange
+    && previous.onCellKeyDown === next.onCellKeyDown
+    && previous.onCellMouseDown === next.onCellMouseDown
+    && previous.onSelectCell === next.onSelectCell
+    && previous.onStartEdit === next.onStartEdit
+    && bucketCellMatchesRow(previous.activeCell, rowKey) === bucketCellMatchesRow(next.activeCell, rowKey)
+    && (
+      !bucketCellMatchesRow(next.activeCell, rowKey)
+      || previous.activeCell?.equipmentKey === next.activeCell?.equipmentKey
+    )
+    && bucketCellSelectionSetsEqual(previous.selectedBucketKeys, next.selectedBucketKeys)
+    && bucketRowVisibleValuesEqual(previous, next);
+}
+
 export const PtoBucketsTableRow = memo(function PtoBucketsTableRow({
   activeCell,
   draft,
@@ -95,4 +150,4 @@ export const PtoBucketsTableRow = memo(function PtoBucketsTableRow({
       {virtualColumns.rightSpacerWidth > 0 ? <td aria-hidden style={ptoBucketHorizontalSpacerStyle} /> : null}
     </tr>
   );
-});
+}, ptoBucketsTableRowPropsEqual);

@@ -210,6 +210,10 @@ assert.match(ptoBucketsTableSource, /createPtoBucketSelectedKeysByRow\(selectedB
 assert.match(ptoBucketsTableSource, /selectedBucketKeys=\{selectedBucketKeysByRow\.get\(row\.key\) \?\? emptySelectedBucketKeys\}/);
 assert.doesNotMatch(ptoBucketsTableRowSource, /selectedBucketKeys: Set<string>/);
 assert.match(ptoBucketsTableRowSource, /selectedBucketKeys: ReadonlySet<string>/);
+assert.match(ptoBucketsTableRowSource, /function ptoBucketsTableRowPropsEqual/);
+assert.match(ptoBucketsTableRowSource, /bucketRowVisibleValuesEqual\(previous, next\)/);
+assert.match(ptoBucketsTableRowSource, /bucketCellSelectionSetsEqual\(previous\.selectedBucketKeys, next\.selectedBucketKeys\)/);
+assert.match(ptoBucketsTableRowSource, /\}, ptoBucketsTableRowPropsEqual\);/);
 assert.match(ptoBucketsTableRowSource, /cellKey=\{cellKey\}/);
 assert.doesNotMatch(ptoBucketValueCellSource, /ptoBucketCellKey/);
 assert.match(ptoBucketValueCellSource, /if \(!editingMode\) \{/);
