@@ -1,9 +1,7 @@
 import { normalizeVehicleRow } from "../domain/vehicles/defaults";
 import type { VehicleRowsPatchItem } from "../domain/vehicles/persistence";
 import type { VehicleRow } from "../domain/vehicles/types";
-import { databaseRequest } from "../database/rpc";
 import { supabase, supabaseConfigured } from "./client";
-import { serverDatabaseConfigured } from "./config";
 
 export type SupabaseVehiclesState = {
   updatedAt?: string;
@@ -125,10 +123,6 @@ async function assertSupabaseVehiclesMatchExpectedSnapshot(expectedSnapshot: Veh
 }
 
 export async function loadVehiclesFromSupabase(): Promise<SupabaseVehiclesState | null> {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<SupabaseVehiclesState | null>("vehicles", "load");
-  }
-
   const client = requireSupabase();
   const { data, error } = await client
     .from(vehiclesTable)
@@ -152,11 +146,6 @@ export async function loadVehiclesFromSupabase(): Promise<SupabaseVehiclesState 
 }
 
 export async function saveVehiclesToSupabase(rows: VehicleRow[], options: VehicleSnapshotWriteOptions = {}) {
-  if (serverDatabaseConfigured) {
-    await databaseRequest("vehicles", "save", { rows, expectedSnapshot: options.expectedSnapshot });
-    return;
-  }
-
   await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
 
   const records = rows.map(vehicleToRecord);
@@ -166,11 +155,6 @@ export async function saveVehiclesToSupabase(rows: VehicleRow[], options: Vehicl
 }
 
 export async function saveVehicleRowsPatchToSupabase(patchRows: VehicleRowsPatchItem[], options: VehicleSnapshotWriteOptions = {}) {
-  if (serverDatabaseConfigured) {
-    await databaseRequest("vehicles", "savePatch", { patchRows, expectedSnapshot: options.expectedSnapshot });
-    return;
-  }
-
   await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
 
   const records = patchRows.map(({ row, sortIndex }) => vehicleToRecord(row, sortIndex));
@@ -180,11 +164,6 @@ export async function saveVehicleRowsPatchToSupabase(patchRows: VehicleRowsPatch
 }
 
 export async function replaceVehiclesInSupabase(rows: VehicleRow[], options: VehicleSnapshotReplaceOptions = {}) {
-  if (serverDatabaseConfigured) {
-    await databaseRequest("vehicles", "replace", { rows, expectedSnapshot: options.expectedSnapshot });
-    return;
-  }
-
   await assertSupabaseVehiclesMatchExpectedSnapshot(options.expectedSnapshot);
 
   const records = rows.map(vehicleToRecord);
@@ -196,11 +175,6 @@ export async function replaceVehiclesInSupabase(rows: VehicleRow[], options: Veh
 }
 
 export async function deleteVehicleFromSupabase(id: number) {
-  if (serverDatabaseConfigured) {
-    await databaseRequest("vehicles", "delete", { id });
-    return;
-  }
-
   const client = requireSupabase();
   const { error } = await client
     .from(vehiclesTable)

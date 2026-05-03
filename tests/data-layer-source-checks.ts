@@ -8,7 +8,9 @@ const dataAppStateSource = readFileSync(resolve(testDir, "../lib/data/app-state.
 const dataPtoSource = readFileSync(resolve(testDir, "../lib/data/pto.ts"), "utf8");
 const dataSettingsSource = readFileSync(resolve(testDir, "../lib/data/settings.ts"), "utf8");
 const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.ts"), "utf8");
+const supabaseAppStateSource = readFileSync(resolve(testDir, "../lib/supabase/app-state.ts"), "utf8");
 const supabaseSettingsSource = readFileSync(resolve(testDir, "../lib/supabase/settings.ts"), "utf8");
+const supabaseVehiclesSource = readFileSync(resolve(testDir, "../lib/supabase/vehicles.ts"), "utf8");
 
 assert.doesNotMatch(dataAppStateSource, /from ["']\.\.\/supabase\/app-state["']/);
 assert.match(dataAppStateSource, /serverDatabaseConfigured/);
@@ -17,6 +19,8 @@ assert.match(dataAppStateSource, /databaseRequest<DataAppState>\("app-state", "s
 assert.match(dataAppStateSource, /databaseRequest\("app-state", "save-client-snapshot", \{ clientId, storage, meta \}\)/);
 assert.match(dataAppStateSource, /databaseRequest<DataClientSnapshot\[]>\("app-state", "load-client-snapshots"\)/);
 assert.match(dataAppStateSource, /import\("\.\.\/supabase\/app-state"\)/);
+assert.doesNotMatch(supabaseAppStateSource, /databaseRequest/);
+assert.doesNotMatch(supabaseAppStateSource, /serverDatabaseConfigured/);
 
 assert.doesNotMatch(dataPtoSource, /from ["']@\/lib\/supabase\/pto["']/);
 assert.match(dataPtoSource, /databaseRequest<DataPtoState \| null>\("pto", "load-year", \{/);
@@ -45,3 +49,5 @@ assert.doesNotMatch(supabaseSettingsSource, /\.update\(\{ value, updated_at: upd
 
 assert.doesNotMatch(dataVehiclesSource, /from ["']@\/lib\/supabase\/vehicles["']/);
 assert.match(dataVehiclesSource, /databaseRequest<DataVehiclesState \| null>\("vehicles", "load"\)/);
+assert.doesNotMatch(supabaseVehiclesSource, /databaseRequest/);
+assert.doesNotMatch(supabaseVehiclesSource, /serverDatabaseConfigured/);

@@ -1,6 +1,4 @@
-import { databaseRequest } from "../database/rpc";
 import { supabase, supabaseConfigured } from "./client";
-import { serverDatabaseConfigured } from "./config";
 
 export type SupabaseAppState = {
   updatedAt?: string;
@@ -73,10 +71,6 @@ function normalizeSnapshotMeta(value: unknown): SupabaseClientSnapshotMeta {
 }
 
 export async function loadAppStateFromSupabase(): Promise<SupabaseAppState | null> {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<SupabaseAppState | null>("app-state", "load");
-  }
-
   const client = requireSupabase();
   const { data, error } = await client
     .from(appStateTable)
@@ -99,13 +93,6 @@ export async function saveAppStateToSupabase(
   storage: Record<string, string>,
   options: SaveAppStateOptions = {},
 ): Promise<SupabaseAppState> {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<SupabaseAppState>("app-state", "save", {
-      storage,
-      expectedUpdatedAt: options.expectedUpdatedAt,
-    });
-  }
-
   const client = requireSupabase();
 
   if ("expectedUpdatedAt" in options) {
@@ -168,11 +155,6 @@ export async function saveClientAppSnapshotToSupabase(
   storage: Record<string, string>,
   meta: SupabaseClientSnapshotMeta,
 ) {
-  if (serverDatabaseConfigured) {
-    await databaseRequest("app-state", "save-client-snapshot", { clientId, storage, meta });
-    return;
-  }
-
   const client = requireSupabase();
   const savedAt = new Date().toISOString();
   const { error } = await client
@@ -192,10 +174,6 @@ export async function saveClientAppSnapshotToSupabase(
 }
 
 export async function loadClientAppSnapshotsFromSupabase(): Promise<SupabaseClientSnapshot[]> {
-  if (serverDatabaseConfigured) {
-    return databaseRequest<SupabaseClientSnapshot[]>("app-state", "load-client-snapshots");
-  }
-
   const client = requireSupabase();
   const { data, error } = await client
     .from(appStateTable)
