@@ -8,7 +8,10 @@ import {
   resolvePtoBucketCellByOffset,
   resolvePtoBucketKeyboardAction,
 } from "../features/pto/ptoBucketsGridModel";
-import { createPtoAreaAndBucketRowLookupSourceBundle } from "../features/pto/ptoDateLookupModel";
+import {
+  createPtoAreaAndBucketRowLookupSourceBundle,
+  ptoAreaAndBucketRowGroupsSignature,
+} from "../features/pto/ptoDateLookupModel";
 import {
   createPtoBucketColumnsModel,
   createPtoBucketRowsModel,
@@ -78,6 +81,16 @@ const lookupBundle = createPtoAreaAndBucketRowLookupSourceBundle([
     { area: "Аксу", structure: "Отсыпка" },
   ],
 ]);
+assert.equal(
+  ptoAreaAndBucketRowGroupsSignature([
+    [
+      { area: "A", structure: "S1" },
+      { area: "A", structure: "S2" },
+    ],
+    [{ area: "B", structure: "S3" }],
+  ]),
+  "A\u001fS1\u001eA\u001fS2\u001dB\u001fS3",
+);
 
 assert.deepEqual(lookupBundle.areaSources, [{ area: "Аксу" }]);
 assert.deepEqual(lookupBundle.bucketRowSources, [

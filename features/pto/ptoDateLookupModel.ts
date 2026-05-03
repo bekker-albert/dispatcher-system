@@ -127,6 +127,14 @@ export function createPtoAreaAndBucketRowLookupSourceBundle(
   };
 }
 
+export function ptoAreaAndBucketRowGroupsSignature(
+  rowGroups: readonly (readonly Pick<PtoPlanRow, "area" | "structure">[])[],
+) {
+  return rowGroups
+    .map((rows) => rows.map((row) => [row.area, row.structure].join("\u001f")).join("\u001e"))
+    .join("\u001d");
+}
+
 export function createPtoBucketRowLookupSources(rows: readonly PtoPlanRow[]): PtoBucketRowLookupSource[] {
   return createPtoBucketRowLookupSourceBundle(rows).sources;
 }
