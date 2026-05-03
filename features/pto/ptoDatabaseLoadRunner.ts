@@ -8,6 +8,7 @@ import {
   applyLoadedPtoDatabaseState,
   createPtoDatabaseLoadBaselineWithBuckets,
 } from "@/features/pto/ptoDatabaseLoadApply";
+import { createPtoDatabaseLoadMetrics } from "@/features/pto/ptoDatabaseLoadMetrics";
 import type { PtoDatabaseLoadOptions } from "@/features/pto/ptoDatabaseLoadTypes";
 import {
   createPtoDatabaseSaveBaseline,
@@ -58,6 +59,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
   } = options;
 
   const includeBuckets = ptoTab === "buckets";
+  const loadMetrics = createPtoDatabaseLoadMetrics({ includeBuckets, year: ptoPlanYear });
   const currentYearLoaded = ptoDatabaseLoadedRef.current && ptoDatabaseLoadedYearRef.current === ptoPlanYear;
   const currentYearBucketsLoaded = ptoDatabaseLoadedBucketsYearRef.current === ptoPlanYear;
   if (currentYearLoaded && (!includeBuckets || currentYearBucketsLoaded)) {
@@ -79,8 +81,13 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
 
     try {
       const { loadPtoBucketsFromDatabase } = await import("@/lib/data/pto");
+      loadMetrics.mark("bucket-module-loaded");
       const bucketState = await loadPtoBucketsFromDatabase();
       if (isCancelled()) return;
+      loadMetrics.mark("bucket-state-loaded", {
+        bucketRows: bucketState.bucketRows.length,
+        bucketValues: Object.keys(bucketState.bucketValues).length,
+      });
 
       setPtoBucketManualRows(bucketState.bucketRows);
       setPtoBucketValues(bucketState.bucketValues);
@@ -95,6 +102,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
       );
       setPtoDatabaseReady(true);
       setPtoDatabaseMessage(ptoDatabaseMessages.loaded);
+      loadMetrics.finish({ mode: "buckets" });
     } catch (error) {
       if (!isCancelled()) {
         ptoDatabaseLoadedBucketsYearRef.current = null;
@@ -115,6 +123,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
 
   try {
     const { loadPtoStateFromDatabase, loadPtoUpdatedAtFromDatabase } = await import("@/lib/data/pto");
+    loadMetrics.mark("pto-module-loaded");
     const localUpdatedAt = window.localStorage.getItem(adminStorageKeys.ptoLocalUpdatedAt);
     if (localPtoNeedsDatabaseFreshnessCheck({
       currentState: ptoDatabaseStateRef.current,
@@ -123,6 +132,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
     })) {
       const databaseUpdatedAt = await loadPtoUpdatedAtFromDatabase();
       if (isCancelled()) return;
+      loadMetrics.mark("freshness-checked", { databaseUpdatedAt: databaseUpdatedAt ?? null });
 
       if (localPtoCanSkipFullDatabaseLoad({
         currentState: ptoDatabaseStateRef.current,
@@ -139,12 +149,20 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
         setPtoDatabaseReady(true);
         setPtoSaveRevision((revision) => revision + 1);
         setPtoDatabaseMessage(ptoDatabaseMessages.localNewer);
+        loadMetrics.finish({ mode: "local-newer" });
         return;
       }
     }
 
     const databaseState = await loadPtoStateFromDatabase({ year: ptoPlanYear, includeBuckets });
     if (isCancelled()) return;
+    loadMetrics.mark("year-state-loaded", {
+      planRows: databaseState?.planRows.length ?? 0,
+      operRows: databaseState?.operRows.length ?? 0,
+      surveyRows: databaseState?.surveyRows.length ?? 0,
+      bucketRows: databaseState?.bucketRows?.length ?? 0,
+      bucketValues: databaseState?.bucketValues ? Object.keys(databaseState.bucketValues).length : 0,
+    });
 
     validatePtoDatabaseLoadState(databaseState);
 
@@ -167,6 +185,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
         setPtoSaveRevision((revision) => revision + 1);
       }
       setPtoDatabaseMessage(resolution.message);
+      loadMetrics.finish({ mode: resolution.kind });
       return;
     }
 
@@ -183,6 +202,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
       setPtoDatabaseReady(true);
       setPtoSaveRevision((revision) => revision + 1);
       setPtoDatabaseMessage(resolution.message);
+      loadMetrics.finish({ mode: resolution.kind });
       return;
     }
 
@@ -196,6 +216,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
     const loadedState = normalizeLoadedPtoDatabaseState(databaseState, ptoDatabaseStateRef.current, {
       preserveFallbackBuckets: !includeBuckets,
     });
+    loadMetrics.mark("state-normalized");
 
     applyLoadedPtoDatabaseState({
       applySavedPtoTab: !currentYearLoaded,
@@ -226,6 +247,7 @@ export async function runPtoDatabaseLoadOnce(options: PtoDatabaseLoadRunOptions)
       setPtoDatabaseMessage,
     });
     ptoDatabaseLoadedBucketsYearRef.current = includeBuckets ? ptoPlanYear : null;
+    loadMetrics.finish({ mode: "database" });
   } catch (error) {
     if (!isCancelled()) {
       ptoDatabaseLoadedRef.current = false;

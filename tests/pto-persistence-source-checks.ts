@@ -11,6 +11,7 @@ const initialAppStorageSource = readFileSync(resolve(testDir, "../features/app/i
 const ptoUiStateDatabaseSyncSource = readFileSync(resolve(testDir, "../features/pto/usePtoUiStateDatabaseSync.ts"), "utf8");
 const ptoDatabaseLoadSource = readFileSync(resolve(testDir, "../features/pto/usePtoDatabaseLoad.ts"), "utf8");
 const ptoDatabaseLoadRunnerSource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadRunner.ts"), "utf8");
+const ptoDatabaseLoadMetricsSource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadMetrics.ts"), "utf8");
 const ptoDatabaseLoadApplySource = readFileSync(resolve(testDir, "../features/pto/ptoDatabaseLoadApply.ts"), "utf8");
 const ptoPersistenceComparisonSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceComparison.ts"), "utf8");
 const ptoPersistenceStorageSource = readFileSync(resolve(testDir, "../features/pto/ptoPersistenceStorage.ts"), "utf8");
@@ -43,6 +44,14 @@ assert.match(initialAppStorageSource, /initialAppStorageKeys = Object\.values\(a
 assert.match(ptoDatabaseLoadSource, /runPtoDatabaseLoadOnce\(\{[\s\S]*isCancelled: \(\) => cancelled,[\s\S]*\}\)/);
 assert.doesNotMatch(ptoDatabaseLoadSource, /\n\s*options,\n\s*\]\);/);
 assert.match(ptoDatabaseLoadRunnerSource, /const includeBuckets = ptoTab === "buckets";/);
+assert.match(ptoDatabaseLoadRunnerSource, /createPtoDatabaseLoadMetrics\(\{ includeBuckets, year: ptoPlanYear \}\)/);
+assert.match(ptoDatabaseLoadRunnerSource, /loadMetrics\.mark\("freshness-checked"/);
+assert.match(ptoDatabaseLoadRunnerSource, /loadMetrics\.mark\("year-state-loaded"/);
+assert.match(ptoDatabaseLoadRunnerSource, /loadMetrics\.mark\("state-normalized"\)/);
+assert.match(ptoDatabaseLoadRunnerSource, /loadMetrics\.finish\(\{ mode: "database" \}\)/);
+assert.match(ptoDatabaseLoadMetricsSource, /const slowPtoDatabaseLoadStepMs = 300/);
+assert.match(ptoDatabaseLoadMetricsSource, /console\.info\("\[PTO database load\]"/);
+assert.match(ptoDatabaseLoadMetricsSource, /stepMs < slowPtoDatabaseLoadStepMs/);
 assert.match(ptoDatabaseLoadRunnerSource, /localPtoNeedsDatabaseFreshnessCheck/);
 assert.match(ptoDatabaseLoadRunnerSource, /if \(currentYearLoaded && includeBuckets && !currentYearBucketsLoaded\) \{[\s\S]*loadPtoBucketsFromDatabase\(\)[\s\S]*return;[\s\S]*\}\s*\n\s*ptoDatabaseLoadedRef\.current = false;/);
 assert.match(ptoDatabaseLoadRunnerSource, /loadPtoStateFromDatabase\(\{ year: ptoPlanYear,\s*includeBuckets \}\)/);
