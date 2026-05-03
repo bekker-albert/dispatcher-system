@@ -70,3 +70,75 @@ export function toggleEditableGridSelectionKey(currentKeys: string[], targetKey:
 
   return nextKeys.length ? nextKeys : [targetKey];
 }
+
+export function editableGridAxisRangeKeys<TRowKey, TColumnKey>(
+  rowKeys: readonly TRowKey[],
+  columnKeys: readonly TColumnKey[],
+  anchorRowKey: TRowKey,
+  anchorColumnKey: TColumnKey,
+  targetRowKey: TRowKey,
+  targetColumnKey: TColumnKey,
+  createKey: (rowKey: TRowKey, columnKey: TColumnKey) => string,
+  fallbackKey: string,
+) {
+  const anchorRowIndex = rowKeys.indexOf(anchorRowKey);
+  const anchorColumnIndex = columnKeys.indexOf(anchorColumnKey);
+  const targetRowIndex = rowKeys.indexOf(targetRowKey);
+  const targetColumnIndex = columnKeys.indexOf(targetColumnKey);
+
+  if (
+    anchorRowIndex < 0
+    || anchorColumnIndex < 0
+    || targetRowIndex < 0
+    || targetColumnIndex < 0
+  ) {
+    return [fallbackKey];
+  }
+
+  const rowStart = Math.min(anchorRowIndex, targetRowIndex);
+  const rowEnd = Math.max(anchorRowIndex, targetRowIndex);
+  const columnStart = Math.min(anchorColumnIndex, targetColumnIndex);
+  const columnEnd = Math.max(anchorColumnIndex, targetColumnIndex);
+  const keys: string[] = [];
+
+  for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
+    const rowKey = rowKeys[rowIndex];
+    if (rowKey === undefined) continue;
+
+    for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex += 1) {
+      const columnKey = columnKeys[columnIndex];
+      if (columnKey !== undefined) keys.push(createKey(rowKey, columnKey));
+    }
+  }
+
+  return keys;
+}
+
+export function editableGridAxisCellByOffset<TRowKey, TColumnKey, TCell>(
+  rowKeys: readonly TRowKey[],
+  columnKeys: readonly TColumnKey[],
+  activeRowKey: TRowKey,
+  activeColumnKey: TColumnKey,
+  rowOffset: number,
+  columnOffset: number,
+  createCell: (rowKey: TRowKey, columnKey: TColumnKey) => TCell,
+): (EditableGridPosition & { cell: TCell }) | null {
+  if (rowKeys.length === 0 || columnKeys.length === 0) return null;
+
+  const activeRowIndex = rowKeys.indexOf(activeRowKey);
+  const activeColumnIndex = columnKeys.indexOf(activeColumnKey);
+  if (activeRowIndex < 0 || activeColumnIndex < 0) return null;
+
+  const rowIndex = Math.min(rowKeys.length - 1, Math.max(0, activeRowIndex + rowOffset));
+  const columnIndex = Math.min(columnKeys.length - 1, Math.max(0, activeColumnIndex + columnOffset));
+  const rowKey = rowKeys[rowIndex];
+  const columnKey = columnKeys[columnIndex];
+
+  return rowKey === undefined || columnKey === undefined
+    ? null
+    : {
+        cell: createCell(rowKey, columnKey),
+        rowIndex,
+        columnIndex,
+      };
+}

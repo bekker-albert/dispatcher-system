@@ -58,6 +58,7 @@ export function useAppRuntimeControllers({
     ptoOperRows,
     ptoSurveyRows,
     topTab,
+    ptoDateEditing,
     adminSection,
   } = appState;
 
@@ -109,7 +110,7 @@ export function useAppRuntimeControllers({
   });
 
   const tableInteractionEffects = useAppTableInteractionEffects({
-    ptoSelectionActive: topTab === "pto",
+    ptoSelectionActive: topTab === "pto" && ptoDateEditing,
     vehicleSelectionActive: topTab === "admin" && adminSection === "vehicles",
     ptoRowHeights,
     setPtoColumnWidths,

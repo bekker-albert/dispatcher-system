@@ -92,7 +92,9 @@ assert.equal(resolveVehicleCellByOffset(rows, { id: 404, field: "brand" }, 1, 0)
 assert.equal(resolveVehicleCellByOffset([], { id: 1, field: "brand" }, 1, 0), null);
 assert.doesNotMatch(vehicleInlineGridModelSource, /editableGridRangeKeys/);
 assert.doesNotMatch(vehicleInlineGridModelSource, /editableGridKeyAtOffset/);
-assert.match(vehicleInlineGridModelSource, /function vehicleCellPosition/);
+assert.match(vehicleInlineGridModelSource, /editableGridAxisRangeKeys/);
+assert.match(vehicleInlineGridModelSource, /editableGridAxisCellByOffset/);
+assert.doesNotMatch(vehicleInlineGridModelSource, /function vehicleCellPosition/);
 
 const fieldsById = collectSelectedVehicleFieldsById(["1:brand", "1:model", "2:vin", "bad", "2:vin", "NaN:brand"]);
 assert.deepEqual(Array.from(fieldsById.get(1) ?? []), ["brand", "model"]);

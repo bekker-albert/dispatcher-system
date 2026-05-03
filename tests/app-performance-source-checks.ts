@@ -31,6 +31,7 @@ const ptoDataPrimaryContentSource = readFileSync(resolve(testDir, "../features/a
 const reportsPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/ReportsPrimaryContent.tsx"), "utf8");
 const useAppScreenPropsSource = readFileSync(resolve(testDir, "../features/app/useAppScreenProps.tsx"), "utf8");
 const useAppSectionPreloaderSource = readFileSync(resolve(testDir, "../features/app/useAppSectionPreloader.ts"), "utf8");
+const useAppRuntimeControllersSource = readFileSync(resolve(testDir, "../features/app/useAppRuntimeControllers.ts"), "utf8");
 const useAppAdminDatabasePropsSource = readFileSync(resolve(testDir, "../features/app/useAppAdminDatabaseProps.ts"), "utf8");
 const sharedButtonsSource = readFileSync(resolve(testDir, "../shared/ui/buttons.tsx"), "utf8");
 const sharedNavigationSource = readFileSync(resolve(testDir, "../shared/ui/navigation.tsx"), "utf8");
@@ -152,6 +153,8 @@ assert.match(useAppSectionPreloaderSource, /completedPreloaders\.has\(sectionPre
 assert.match(useAppSectionPreloaderSource, /completedPreloaders\.add\(preloadSection\.key\)/);
 assert.match(useAppSectionPreloaderSource, /runNextPreload\(\);/);
 assert.doesNotMatch(useAppSectionPreloaderSource, /function preloadCoreSections/);
+assert.match(useAppRuntimeControllersSource, /ptoSelectionActive: topTab === "pto" && ptoDateEditing/);
+assert.doesNotMatch(useAppRuntimeControllersSource, /ptoSelectionActive: topTab === "pto",/);
 assert.match(useAppAdminDatabasePropsSource, /const ptoMemoryTotal = useMemo\(\(\) => \(/);
 assert.match(useAppAdminDatabasePropsSource, /const clientSnapshotStatsByKey = useMemo\(\(\) => new Map\(/);
 assert.match(useAppAdminDatabasePropsSource, /clientSnapshotStatsByKey\.get\(snapshot\.key\) \?\? clientSnapshotStats\(snapshot\)/);
@@ -182,7 +185,8 @@ assert.match(appUndoSchedulerSource, /undoCurrentSnapshotRef\.current = nextSnap
 assert.match(appUndoSchedulerSource, /cloneAppUndoSnapshot\(undoCurrentSnapshotRef\.current\)/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridRangeKeys/);
 assert.doesNotMatch(ptoBucketsGridModelSource, /editableGridKeyAtOffset/);
-assert.match(ptoBucketsGridModelSource, /rowKeys\.indexOf\(activeCell\.rowKey\)/);
+assert.match(ptoBucketsGridModelSource, /editableGridAxisRangeKeys/);
+assert.match(ptoBucketsGridModelSource, /editableGridAxisCellByOffset/);
 assert.match(usePtoBucketsGridEditingSource, /editingMode \? rows\.map\(\(row\) => row\.key\) : \[\]/);
 assert.match(usePtoBucketsGridEditingSource, /editingMode \? columns\.map\(\(column\) => column\.key\) : \[\]/);
 assert.doesNotMatch(ptoDateEditableTableBodySource, /formulaCellsByRowId\.get\(row\.id\)/);
