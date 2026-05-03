@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import type { FleetDailyState } from "@/lib/domain/fleet/daily-state";
 import { IconButton } from "@/shared/ui/buttons";
 import {
   createFleetVehicleListRows,
@@ -14,11 +15,20 @@ import {
 
 export type FleetVehiclesSectionProps = {
   vehicleRows: VehicleRow[];
+  workDate: string;
+  dailyStates?: readonly FleetDailyState[];
 };
 
-export function FleetVehiclesSection({ vehicleRows }: FleetVehiclesSectionProps) {
+export function FleetVehiclesSection({
+  vehicleRows,
+  workDate,
+  dailyStates = [],
+}: FleetVehiclesSectionProps) {
   const [driversExpanded, setDriversExpanded] = useState(false);
-  const rows = useMemo(() => createFleetVehicleListRows(vehicleRows), [vehicleRows]);
+  const rows = useMemo(
+    () => createFleetVehicleListRows(vehicleRows, { workDate, dailyStates }),
+    [dailyStates, vehicleRows, workDate],
+  );
 
   const printFleetVehicles = useCallback(() => {
     window.requestAnimationFrame(() => window.print());

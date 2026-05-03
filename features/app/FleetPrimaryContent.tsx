@@ -22,5 +22,5 @@ export function FleetPrimaryContent({ appState }: FleetPrimaryContentProps) {
     appState.setVehicleCellInitialDraft((current) => (current === "" ? current : ""));
   }, [appState]);
 
-  return <FleetVehiclesSection vehicleRows={appState.vehicleRows} />;
+  return <FleetVehiclesSection vehicleRows={appState.vehicleRows} workDate={appState.reportDate} />;
 }

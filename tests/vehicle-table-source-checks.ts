@@ -19,6 +19,7 @@ const adminVehiclesSectionSource = readFileSync(resolve(testDir, "../features/ad
 const adminVehiclesToolbarSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehiclesToolbar.tsx"), "utf8");
 const fleetVehiclesSectionSource = readFileSync(resolve(testDir, "../features/fleet/FleetVehiclesSection.tsx"), "utf8");
 const fleetVehicleModelSource = readFileSync(resolve(testDir, "../features/fleet/fleetVehicleModel.ts"), "utf8");
+const fleetDailyStateSource = readFileSync(resolve(testDir, "../lib/domain/fleet/daily-state.ts"), "utf8");
 
 function collectProductionSources(dir: string, sources: string[] = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -94,7 +95,7 @@ assert.doesNotMatch(useSectionSelectionStateSource, /\bfleetTab\b|\bsetFleetTab\
 assert.match(vehicleTablePrimaryContentSource, /mode:\s*"readonly"\s*\|\s*"admin"/);
 assert.match(vehicleTablePrimaryContentSource, /const canManageVehicles = true/);
 assert.match(vehicleTablePrimaryContentSource, /canManageVehicles,/);
-assert.match(fleetPrimaryContentSource, /return <FleetVehiclesSection vehicleRows=\{appState\.vehicleRows\} \/>;/);
+assert.match(fleetPrimaryContentSource, /return <FleetVehiclesSection vehicleRows=\{appState\.vehicleRows\} workDate=\{appState\.reportDate\} \/>;/);
 assert.match(fleetPrimaryContentSource, /setAdminVehiclesEditing/);
 assert.match(fleetPrimaryContentSource, /setSelectedVehicleCellKeys/);
 assert.match(fleetPrimaryContentSource, /setEditingVehicleCell/);
@@ -110,6 +111,8 @@ assert.match(adminVehiclesToolbarSource, /\{canManageVehicles \? \([\s\S]*<input
 assert.match(fleetVehiclesSectionSource, /Закрепление водителей за техникой/);
 assert.match(fleetVehiclesSectionSource, /Дата выхода в ремонт/);
 assert.match(fleetVehiclesSectionSource, /Примечание/);
+assert.match(fleetVehiclesSectionSource, /dailyStates = \[\]/);
+assert.match(fleetVehiclesSectionSource, /createFleetVehicleListRows\(vehicleRows, \{ workDate, dailyStates \}\)/);
 assert.match(fleetVehiclesSectionSource, /driversExpanded/);
 assert.match(fleetVehiclesSectionSource, /window\.requestAnimationFrame\(\(\) => window\.print\(\)\)/);
 assert.match(fleetVehiclesSectionSource, /IconButton label="Печать списка техники: A3, альбомная ориентация"/);
@@ -122,7 +125,9 @@ assert.match(fleetVehiclesSectionSource, /display: table-header-group !important
 assert.match(fleetVehiclesSectionSource, /break-inside: avoid !important/);
 assert.doesNotMatch(fleetVehiclesSectionSource, /Год выпуска|VIN|Собственник|manufactureYear|owner|vin/);
 assert.match(fleetVehicleModelSource, /deriveFleetVehicleStatus/);
-assert.match(fleetVehicleModelSource, /vehicle\.repair > 0[\s\S]*"В ремонте"/);
-assert.match(fleetVehicleModelSource, /vehicle\.downtime > 0 \|\| vehicle\.active === false[\s\S]*"В простое"/);
+assert.match(fleetVehicleModelSource, /resolveFleetDailyState/);
+assert.match(fleetDailyStateSource, /vehicle\.repair > 0[\s\S]*"В ремонте"/);
+assert.match(fleetDailyStateSource, /vehicle\.downtime > 0 \|\| vehicle\.active === false[\s\S]*"В простое"/);
+assert.match(fleetDailyStateSource, /fleetDailyStateKey/);
 assert.match(fleetVehicleModelSource, /vehicle\.visible !== false/);
 assert.doesNotMatch(productionSources, /useFleetRows/);
