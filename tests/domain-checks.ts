@@ -156,6 +156,11 @@ assert.equal(defaultUserCard.fullName, "Альберт");
 const defaultSubTabs = createDefaultSubTabs(["AA Mining"]);
 assert.equal(defaultSubTabs.contractors[0].value, "AA Mining");
 assert.equal(defaultTopTabs.some((tab) => tab.id === "ai-assistant" && tab.label === "AI-ассистент"), true);
+assert.equal(defaultTopTabs.at(-1)?.id, "ai-assistant");
+assert.deepEqual(
+  normalizeStoredTopTabs(defaultTopTabs.filter((tab) => tab.id !== "ai-assistant")).map((tab) => tab.id),
+  defaultTopTabs.map((tab) => tab.id),
+);
 assert.equal(
   normalizeStoredTopTabs(defaultTopTabs.filter((tab) => tab.id !== "ai-assistant"))
     .some((tab) => tab.id === "ai-assistant"),
