@@ -89,11 +89,14 @@ export function AiAssistantIntegrationStatus({
       <div style={aiAssistantTableWrapStyle}>
         <table style={integrationTableStyle}>
           <colgroup>
-            <col style={{ width: "23%" }} />
+            <col style={{ width: "18%" }} />
             <col style={{ width: 140 }} />
             <col style={{ width: 150 }} />
-            <col style={{ width: "31%" }} />
-            <col style={{ width: "22%" }} />
+            <col style={{ width: "23%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "17%" }} />
+            <col style={{ width: "16%" }} />
             <col style={{ width: 86 }} />
           </colgroup>
           <thead>
@@ -102,6 +105,9 @@ export function AiAssistantIntegrationStatus({
               <th style={compactThStyle}>Статус</th>
               <th style={compactThStyle}>Режим</th>
               <th style={aiAssistantThStyle}>Описание</th>
+              <th style={aiAssistantThStyle}>Возможности</th>
+              <th style={aiAssistantThStyle}>Заглушка</th>
+              <th style={aiAssistantThStyle}>Следующий шаг</th>
               <th style={aiAssistantThStyle}>Права</th>
               <th style={compactCenterThStyle}></th>
             </tr>
@@ -130,6 +136,9 @@ export function AiAssistantIntegrationStatus({
                   <td style={compactTdStyle}>{aiAssistantConnectorStatusLabels[integration.status]}</td>
                   <td style={compactTdStyle}>{formatMode(integration.mode)}</td>
                   <td style={textTdStyle}>{integration.description}</td>
+                  <td style={textTdStyle}>{integration.availableCapabilities?.join(", ") || "Не задано"}</td>
+                  <td style={textTdStyle}>{integration.stubNotes || "Dry-run"}</td>
+                  <td style={textTdStyle}>{integration.nextStep || "Определить подключение"}</td>
                   <td style={textTdStyle}>{integration.requiredScopes.join(", ")}</td>
                   <td style={compactCenterTdStyle}>
                     <span style={rowActionsStyle}>
@@ -207,6 +216,30 @@ function IntegrationEditRow({
       </td>
       <td style={editTdStyle}>
         <textarea
+          aria-label="Возможности"
+          value={draft.availableCapabilities?.join(", ") ?? ""}
+          onChange={(event) => onChange({ ...draft, availableCapabilities: splitList(event.target.value) })}
+          style={textareaStyle}
+        />
+      </td>
+      <td style={editTdStyle}>
+        <textarea
+          aria-label="Заглушка"
+          value={draft.stubNotes ?? ""}
+          onChange={(event) => onChange({ ...draft, stubNotes: event.target.value })}
+          style={textareaStyle}
+        />
+      </td>
+      <td style={editTdStyle}>
+        <textarea
+          aria-label="Следующий шаг"
+          value={draft.nextStep ?? ""}
+          onChange={(event) => onChange({ ...draft, nextStep: event.target.value })}
+          style={textareaStyle}
+        />
+      </td>
+      <td style={editTdStyle}>
+        <textarea
           aria-label="Права"
           value={draft.requiredScopes.join(", ")}
           onChange={(event) => onChange({ ...draft, requiredScopes: splitScopes(event.target.value) })}
@@ -258,6 +291,9 @@ function createIntegrationDraft(): IntegrationDraft {
     mode: "read-write",
     description: "",
     requiredScopes: [],
+    availableCapabilities: [],
+    stubNotes: "",
+    nextStep: "",
   };
 }
 
@@ -268,6 +304,10 @@ function toIntegrationDraft(integration: AiAssistantIntegration): IntegrationDra
     mode: integration.mode,
     description: integration.description,
     requiredScopes: integration.requiredScopes,
+    availableCapabilities: integration.availableCapabilities ?? [],
+    stubNotes: integration.stubNotes ?? "",
+    nextStep: integration.nextStep ?? "",
+    usedByAgentIds: integration.usedByAgentIds,
     lastSyncAt: integration.lastSyncAt,
   };
 }
@@ -277,12 +317,19 @@ function normalizeIntegrationDraft(draft: IntegrationDraft): IntegrationDraft {
     ...draft,
     title: draft.title.trim(),
     description: draft.description.trim(),
+    availableCapabilities: (draft.availableCapabilities ?? []).map((item) => item.trim()).filter(Boolean),
+    stubNotes: draft.stubNotes?.trim() ?? "",
+    nextStep: draft.nextStep?.trim() ?? "",
     requiredScopes: draft.requiredScopes.map((scope) => scope.trim()).filter(Boolean) as AiAssistantPermission[],
   };
 }
 
 function splitScopes(value: string) {
   return value.split(",").map((scope) => scope.trim()).filter(Boolean) as AiAssistantPermission[];
+}
+
+function splitList(value: string) {
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
 function formatMode(mode: AiAssistantIntegration["mode"]) {
@@ -312,7 +359,7 @@ const panelTitleStyle: CSSProperties = {
 const integrationTableStyle: CSSProperties = {
   ...aiAssistantTableStyle,
   tableLayout: "fixed",
-  minWidth: 1080,
+  minWidth: 1480,
 };
 
 const compactThStyle: CSSProperties = {

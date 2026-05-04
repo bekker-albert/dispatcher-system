@@ -175,12 +175,23 @@ assert.equal(compactSubTabLabel("pto", { id: "x", label: "Custom", value: "custo
 assert.deepEqual(normalizeStoredCustomTabs([{ id: "c", title: " Custom ", description: " Text ", items: ["a", 1], visible: true }]), [{ id: "c", title: "Custom", description: "Text", items: ["a"], visible: true }]);
 
 const aiAssistantViewModel = createAiAssistantViewModel(defaultAiAssistantDataset);
-assert.equal(aiAssistantViewModel.summary.activeTasks, 2);
-assert.equal(aiAssistantViewModel.summary.approvalsRequired, 2);
+assert.equal(aiAssistantViewModel.summary.activeTasks, 4);
+assert.equal(aiAssistantViewModel.summary.approvalsRequired, 4);
 assert.equal(aiAssistantViewModel.summary.connectorWarnings, 1);
+assert.equal(aiAssistantViewModel.summary.activeAgents, 3);
+assert.equal(aiAssistantViewModel.summary.whatsappCandidatesPending, 1);
+assert.equal(aiAssistantViewModel.summary.documentsInProgress, 1);
+assert.equal(aiAssistantViewModel.summary.mailDraftsPendingApproval, 1);
+assert.equal(aiAssistantViewModel.summary.documentologWaiting, 1);
+assert.equal(aiAssistantViewModel.summary.activeKnowledgeRules, 1);
+assert.equal(aiAssistantViewModel.summary.developmentIdeasPending, 1);
 assert.equal(aiAssistantViewModel.chatMessages[0].role, "system");
-assert.equal(aiAssistantViewModel.approvalActions.filter((approval) => approval.status === "required").length, 2);
+assert.equal(aiAssistantViewModel.approvalActions.filter((approval) => approval.status === "required").length, 4);
 assert.equal(aiAssistantViewModel.evidenceById.get("ev-001")?.source.type, "dispatch-summary");
+assert.equal(aiAssistantViewModel.agents.some((agent) => agent.role === "whatsapp-monitor"), true);
+assert.equal(aiAssistantViewModel.highPriorityActions.some((action) => action.source === "whatsapp"), true);
+assert.equal(aiAssistantViewModel.developmentIdeas.some((idea) => idea.codexPromptDraftId === "codex-prompt-whatsapp-trip"), true);
+assert.equal(aiAssistantViewModel.documentologItems.some((item) => item.status === "in-approval"), true);
 assert.equal(aiAssistantViewModel.currentWorkDate, defaultAiAssistantDataset.currentWorkDate);
 assert.equal(aiAssistantViewModel.currentTasks.every((task) => task.workDate === aiAssistantViewModel.currentWorkDate), true);
 assert.equal(aiAssistantViewModel.currentTasks.some((task) => task.id === "ai-task-002"), true);

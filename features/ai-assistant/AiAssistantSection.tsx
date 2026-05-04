@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 
+import { AiAssistantAgentsPanel } from "@/features/ai-assistant/components/AiAssistantAgentsPanel";
 import { AiAssistantAuditLog } from "@/features/ai-assistant/components/AiAssistantAuditLog";
+import { AiAssistantDevelopmentPanel } from "@/features/ai-assistant/components/AiAssistantDevelopmentPanel";
 import { AiAssistantIntegrationStatus } from "@/features/ai-assistant/components/AiAssistantIntegrationStatus";
 import { AiAssistantKnowledgePanel } from "@/features/ai-assistant/components/AiAssistantKnowledgePanel";
 import { AiAssistantPlannerPanel } from "@/features/ai-assistant/components/AiAssistantPlannerPanel";
@@ -33,6 +35,8 @@ export function AiAssistantSection() {
     addKnowledgeSource,
     updateKnowledgeSource,
     deleteKnowledgeSource,
+    setDevelopmentIdeaStatus,
+    createCodexPromptDraftForIdea,
   } = useAiAssistantContext();
 
   useEffect(() => {
@@ -73,6 +77,19 @@ export function AiAssistantSection() {
           currentWorkDate={viewModel.currentWorkDate}
           plannerItems={viewModel.plannerItems}
           onChangePlannerItems={setPlannerItems}
+        />
+      )}
+
+      {activeTab === "agents" && (
+        <AiAssistantAgentsPanel agents={viewModel.agents} />
+      )}
+
+      {activeTab === "development" && (
+        <AiAssistantDevelopmentPanel
+          ideas={viewModel.developmentIdeas}
+          codexPromptDrafts={viewModel.codexPromptDrafts}
+          onSetIdeaStatus={setDevelopmentIdeaStatus}
+          onCreateCodexPromptDraft={createCodexPromptDraftForIdea}
         />
       )}
 

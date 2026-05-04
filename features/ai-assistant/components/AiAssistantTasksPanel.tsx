@@ -61,6 +61,10 @@ export function AiAssistantTasksPanel({
     () => createCurrentQueueRows(tasks, notifications, approvals, plannerItems),
     [approvals, notifications, plannerItems, tasks],
   );
+  const queueSections = useMemo(
+    () => createQueueSections(currentRows),
+    [currentRows],
+  );
 
   const startEdit = (approval: AiAssistantApprovalAction) => {
     setEditingId(approval.id);
@@ -86,65 +90,113 @@ export function AiAssistantTasksPanel({
 
   return (
     <section style={aiAssistantPanelStyle}>
-      <div style={tasksBlockStyle}>
+      <div style={tasksHeaderStyle}>
         <div style={tasksBlockTitleStyle}>Задачи на {formatDateLabel(currentWorkDate)}</div>
-        <div style={aiAssistantTableWrapStyle}>
-          <table style={tasksTableStyle}>
-            <colgroup>
-              <col style={{ width: "30%" }} />
-              <col style={{ width: 98 }} />
-              <col style={{ width: 132 }} />
-              <col style={{ width: "38%" }} />
-              <col style={{ width: 112 }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={aiAssistantThStyle}>Задача</th>
-                <th style={compactThStyle}>Канал</th>
-                <th style={compactThStyle}>Статус</th>
-                <th style={aiAssistantThStyle}>Текст</th>
-                <th style={compactCenterThStyle}>Решение</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentRows.map((row) => (
-                <tr key={row.id}>
-                  <td style={aiAssistantTextTdStyle}>
-                    <div style={{ fontWeight: 900 }}>{row.title}</div>
-                    {row.details && <div style={aiAssistantMutedTextStyle}>{row.details}</div>}
-                  </td>
-                  <td style={compactTdStyle}>{formatAiAssistantChannel(row.channel)}</td>
-                  <td style={compactTdStyle}><AiAssistantStatusPill status={row.status} /></td>
-                  <td style={aiAssistantMultilineTdStyle}>
-                    {row.approval ? (
-                      <ApprovalTextCell
-                        approval={row.approval}
-                        editingId={editingId}
-                        editingText={editingText}
-                        fallbackText={row.text}
-                        onChangeText={setEditingText}
-                      />
-                    ) : row.text}
-                  </td>
-                  <td style={compactCenterTdStyle}>
-                    {row.approval && (
-                      <ApprovalActionsCell
-                        approval={row.approval}
-                        editingId={editingId}
-                        onStartEdit={startEdit}
-                        onSave={saveEdit}
-                        onCancel={cancelEdit}
-                        onDecision={setDecision}
-                      />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
+
+      {queueSections.map((section) => (
+        <QueueSection
+          key={section.title}
+          title={section.title}
+          rows={section.rows}
+          editingId={editingId}
+          editingText={editingText}
+          onChangeEditingText={setEditingText}
+          onStartEdit={startEdit}
+          onSave={saveEdit}
+          onCancel={cancelEdit}
+          onDecision={setDecision}
+        />
+      ))}
     </section>
+  );
+}
+
+function QueueSection({
+  title,
+  rows,
+  editingId,
+  editingText,
+  onChangeEditingText,
+  onStartEdit,
+  onSave,
+  onCancel,
+  onDecision,
+}: {
+  title: string;
+  rows: CurrentQueueRow[];
+  editingId: string | null;
+  editingText: string;
+  onChangeEditingText: (value: string) => void;
+  onStartEdit: (approval: AiAssistantApprovalAction) => void;
+  onSave: (approvalId: string) => void;
+  onCancel: () => void;
+  onDecision: (approvalId: string, status: "approved" | "rejected") => void;
+}) {
+  return (
+    <div style={tasksBlockStyle}>
+      <div style={queueSectionTitleStyle}>{title}</div>
+      <div style={aiAssistantTableWrapStyle}>
+        <table style={tasksTableStyle}>
+          <colgroup>
+            <col style={{ width: "30%" }} />
+            <col style={{ width: 98 }} />
+            <col style={{ width: 132 }} />
+            <col style={{ width: "35%" }} />
+            <col style={{ width: 210 }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={aiAssistantThStyle}>Задача</th>
+              <th style={compactThStyle}>Канал</th>
+              <th style={compactThStyle}>Статус</th>
+              <th style={aiAssistantThStyle}>Текст</th>
+              <th style={compactCenterThStyle}>Решение</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td style={emptyTdStyle} colSpan={5}>Нет записей</td>
+              </tr>
+            )}
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td style={aiAssistantTextTdStyle}>
+                  <div style={{ fontWeight: 900 }}>{row.title}</div>
+                  {row.details && <div style={aiAssistantMutedTextStyle}>{row.details}</div>}
+                </td>
+                <td style={compactTdStyle}>{formatAiAssistantChannel(row.channel)}</td>
+                <td style={compactTdStyle}><AiAssistantStatusPill status={row.status} /></td>
+                <td style={aiAssistantMultilineTdStyle}>
+                  {row.approval ? (
+                    <ApprovalTextCell
+                      approval={row.approval}
+                      editingId={editingId}
+                      editingText={editingText}
+                      fallbackText={row.text}
+                      onChangeText={onChangeEditingText}
+                    />
+                  ) : row.text}
+                </td>
+                <td style={compactCenterTdStyle}>
+                  {row.approval && (
+                    <ApprovalActionsCell
+                      approval={row.approval}
+                      editingId={editingId}
+                      onStartEdit={onStartEdit}
+                      onSave={onSave}
+                      onCancel={onCancel}
+                      onDecision={onDecision}
+                    />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -194,9 +246,11 @@ function ApprovalActionsCell({
       <div style={iconActionsStyle}>
         <IconActionButton label="Сохранить" tone="primary" onClick={() => onSave(approval.id)}>
           <Check size={15} />
+          <span>Сохранить</span>
         </IconActionButton>
         <IconActionButton label="Отмена" onClick={onCancel}>
           <X size={15} />
+          <span>Отмена</span>
         </IconActionButton>
       </div>
     );
@@ -206,6 +260,7 @@ function ApprovalActionsCell({
     return (
       <IconActionButton label="Редактировать" onClick={() => onStartEdit(approval)}>
         <Pencil size={15} />
+        <span>Редактировать</span>
       </IconActionButton>
     );
   }
@@ -214,12 +269,19 @@ function ApprovalActionsCell({
     <div style={iconActionsStyle}>
       <IconActionButton label="Согласовать" tone="primary" onClick={() => onDecision(approval.id, "approved")}>
         <Check size={15} />
+        <span>Согласовать</span>
       </IconActionButton>
       <IconActionButton label="Отказать" tone="danger" onClick={() => onDecision(approval.id, "rejected")}>
         <X size={15} />
+        <span>Отказать</span>
       </IconActionButton>
       <IconActionButton label="Редактировать" onClick={() => onStartEdit(approval)}>
         <Pencil size={15} />
+        <span>Редактировать</span>
+      </IconActionButton>
+      <IconActionButton label="Вернуть на доработку" onClick={() => onDecision(approval.id, "rejected")}>
+        <X size={15} />
+        <span>Доработать</span>
       </IconActionButton>
     </div>
   );
@@ -256,6 +318,7 @@ function createCurrentQueueRows(
   plannerItems: AiAssistantPlannerItem[],
 ): CurrentQueueRow[] {
   const approvalsByTaskId = new Map(approvals.map((approval) => [approval.taskId, approval]));
+  const approvalsById = new Map(approvals.map((approval) => [approval.id, approval]));
   const plannerByTaskId = new Map(
     plannerItems
       .filter((item) => item.linkedTaskId)
@@ -268,7 +331,9 @@ function createCurrentQueueRows(
   );
   const taskRows = tasks.map((task) => {
     const linkedNotification = notificationsByTaskId.get(task.id);
-    const approval = task.approvalActionId ? approvalsByTaskId.get(task.id) : undefined;
+    const approval = task.approvalActionId
+      ? approvalsById.get(task.approvalActionId) ?? approvalsByTaskId.get(task.id)
+      : undefined;
     const plannerItem = plannerByTaskId.get(task.id);
 
     return {
@@ -297,6 +362,30 @@ function createCurrentQueueRows(
   return [...taskRows, ...notificationRows];
 }
 
+function createQueueSections(rows: CurrentQueueRow[]) {
+  const decisionRows = rows.filter(isDecisionRow);
+  const decisionIds = new Set(decisionRows.map((row) => row.id));
+  const draftRows = rows.filter((row) => !decisionIds.has(row.id) && isDraftRow(row));
+  const draftIds = new Set(draftRows.map((row) => row.id));
+  const currentTaskRows = rows.filter((row) => !decisionIds.has(row.id) && !draftIds.has(row.id));
+
+  return [
+    { title: "Требуют моего решения", rows: decisionRows },
+    { title: "Текущие задачи", rows: currentTaskRows },
+    { title: "Черновики и подготовленные действия", rows: draftRows },
+  ];
+}
+
+function isDecisionRow(row: CurrentQueueRow) {
+  return row.approval?.status === "required"
+    || row.task?.approvalStatus === "required"
+    || row.status === "needs-approval";
+}
+
+function isDraftRow(row: CurrentQueueRow) {
+  return row.status === "draft" || Boolean(row.approval && row.approval.status !== "required");
+}
+
 function formatTaskDetails(
   task: AiAssistantTask,
   plannerItem?: AiAssistantPlannerItem,
@@ -320,10 +409,24 @@ function formatDateLabel(value: string) {
 const tasksBlockStyle: CSSProperties = {
   display: "grid",
   gap: 8,
+  marginTop: 10,
+};
+
+const tasksHeaderStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 10,
 };
 
 const tasksBlockTitleStyle: CSSProperties = {
   fontSize: 17,
+  fontWeight: 900,
+  color: "#0f172a",
+};
+
+const queueSectionTitleStyle: CSSProperties = {
+  fontSize: 14,
   fontWeight: 900,
   color: "#0f172a",
 };
@@ -354,6 +457,12 @@ const compactCenterTdStyle: CSSProperties = {
   textAlign: "center",
 };
 
+const emptyTdStyle: CSSProperties = {
+  ...aiAssistantTdStyle,
+  color: "#64748b",
+  textAlign: "center",
+};
+
 const aiAssistantTextTdStyle: CSSProperties = {
   ...aiAssistantTdStyle,
   overflowWrap: "anywhere",
@@ -378,17 +487,20 @@ const approvalTextareaStyle: CSSProperties = {
 const iconActionsStyle: CSSProperties = {
   display: "flex",
   justifyContent: "center",
+  flexWrap: "wrap",
   gap: 5,
-  whiteSpace: "nowrap",
 };
 
 const baseIconButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 28,
-  height: 28,
+  gap: 4,
+  minHeight: 28,
+  padding: "0 7px",
   borderRadius: 8,
+  fontSize: 11,
+  fontWeight: 800,
   cursor: "pointer",
 };
 

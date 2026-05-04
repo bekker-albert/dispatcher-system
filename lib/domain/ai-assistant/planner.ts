@@ -9,6 +9,7 @@ import type {
   AiAssistantTaskKind,
   AiAssistantTaskStatus,
 } from "./types";
+import { requiresAiAssistantApproval } from "./approval-policy";
 
 const closedPlannerStatuses = new Set<AiAssistantPlannerStatus>(["done", "cancelled"]);
 
@@ -78,7 +79,7 @@ export function createDuePlannerApprovalActions(
   const existingApprovalIds = new Set(existingApprovals.map((approval) => approval.id));
 
   return plannerItems
-    .filter((item) => item.requireApproval)
+    .filter(plannerItemRequiresApproval)
     .filter((item) => isAiAssistantPlannerItemDue(item, currentDateTime))
     .filter((item) => !existingTaskIds.has(createAiAssistantPlannerTaskId(item)))
     .filter((item) => !existingApprovalIds.has(createAiAssistantPlannerApprovalId(item)))
@@ -99,7 +100,7 @@ export function createDuePlannerNotifications(
 }
 
 function createTaskFromPlannerItem(item: AiAssistantPlannerItem): AiAssistantTask {
-  const needsApproval = item.requireApproval;
+  const needsApproval = plannerItemRequiresApproval(item);
   const taskId = createAiAssistantPlannerTaskId(item);
 
   return {
@@ -120,14 +121,17 @@ function createTaskFromPlannerItem(item: AiAssistantPlannerItem): AiAssistantTas
 }
 
 function createApprovalFromPlannerItem(item: AiAssistantPlannerItem): AiAssistantApprovalAction {
+  const targetConnector = plannerConnectorByAction(item.actionType);
+  const risk = requiresAiAssistantApproval(item.actionType, "low", targetConnector) ? "critical" : "low";
+
   return {
     id: createAiAssistantPlannerApprovalId(item),
     taskId: createAiAssistantPlannerTaskId(item),
     title: item.title,
     actionType: item.actionType,
-    risk: "critical",
+    risk,
     status: "required",
-    targetConnector: plannerConnectorByAction(item.actionType),
+    targetConnector,
     targetLabel: item.target,
     draftText: item.preparedText,
     requestedBy: item.owner,
@@ -137,6 +141,8 @@ function createApprovalFromPlannerItem(item: AiAssistantPlannerItem): AiAssistan
 }
 
 function createNotificationFromPlannerItem(item: AiAssistantPlannerItem): AiAssistantNotification {
+  const needsApproval = plannerItemRequiresApproval(item);
+
   return {
     id: createAiAssistantPlannerNotificationId(item),
     title: item.title,
@@ -144,7 +150,7 @@ function createNotificationFromPlannerItem(item: AiAssistantPlannerItem): AiAssi
     status: plannerTaskStatus(item),
     target: item.target,
     body: item.preparedText || item.description,
-    approvalStatus: item.requireApproval ? "required" : "not-required",
+    approvalStatus: needsApproval ? "required" : "not-required",
     workDate: item.plannedDate,
     linkedTaskId: createAiAssistantPlannerTaskId(item),
     plannerItemId: item.id,
@@ -153,9 +159,14 @@ function createNotificationFromPlannerItem(item: AiAssistantPlannerItem): AiAssi
 }
 
 function plannerTaskStatus(item: AiAssistantPlannerItem): AiAssistantTaskStatus {
-  if (item.requireApproval) return "needs-approval";
+  if (plannerItemRequiresApproval(item)) return "needs-approval";
   if (item.actionType === "send-whatsapp" || item.actionType === "send-mail") return "draft";
   return "queued";
+}
+
+function plannerItemRequiresApproval(item: AiAssistantPlannerItem): boolean {
+  return item.requireApproval
+    || requiresAiAssistantApproval(item.actionType, "low", plannerConnectorByAction(item.actionType));
 }
 
 function plannerTaskKindByAction(actionType: AiAssistantActionType): AiAssistantTaskKind {
@@ -168,6 +179,10 @@ function plannerTaskKindByAction(actionType: AiAssistantActionType): AiAssistant
     "start-documentolog": "prepare-document",
     "create-push-notification": "create-notification",
     "update-report-reason": "prepare-document",
+    draft: "draft-message",
+    "update-knowledge-rule": "summarize",
+    "create-business-trip": "prepare-document",
+    "delete-data": "summarize",
   };
 
   return map[actionType];
@@ -183,6 +198,10 @@ function plannerConnectorByAction(actionType: AiAssistantActionType): AiAssistan
     "start-documentolog": "documentolog",
     "create-push-notification": "push",
     "update-report-reason": "ai-api",
+    draft: "ai-api",
+    "update-knowledge-rule": "knowledge-base",
+    "create-business-trip": "documentolog",
+    "delete-data": "ai-api",
   };
 
   return map[actionType];

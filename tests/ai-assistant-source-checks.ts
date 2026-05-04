@@ -23,10 +23,14 @@ const aiSectionSource = readFileSync(resolve(root, "features/ai-assistant/AiAssi
 const aiTabsSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTabs.tsx"), "utf8");
 const aiTasksPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTasksPanel.tsx"), "utf8");
 const aiPlannerPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantPlannerPanel.tsx"), "utf8");
+const aiAgentsPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantAgentsPanel.tsx"), "utf8");
+const aiDevelopmentPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantDevelopmentPanel.tsx"), "utf8");
 const aiKnowledgePanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantKnowledgePanel.tsx"), "utf8");
 const aiIntegrationPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantIntegrationStatus.tsx"), "utf8");
 const aiStateSource = readFileSync(resolve(root, "features/ai-assistant/lib/useAiAssistantState.tsx"), "utf8");
 const navigationEventsSource = readFileSync(resolve(root, "lib/domain/navigation/appNavigationEvents.ts"), "utf8");
+const approvalPolicySource = readFileSync(resolve(root, "lib/domain/ai-assistant/approval-policy.ts"), "utf8");
+const domainConnectorsDir = resolve(root, "lib/domain/ai-assistant/connectors");
 
 const aiFeatureSources = collectSourceFiles(aiFeatureDir).map((file) => ({
   file,
@@ -46,10 +50,18 @@ assert.match(appPrimaryContentSource, /renderedTopTab === "ai-assistant"/);
 assert.match(appPrimaryContentSource, /<AiAssistantPrimaryContent \/>/);
 assert.match(aiTypesSource, /\|\s*"tasks"/);
 assert.match(aiTypesSource, /\|\s*"planner"/);
+assert.match(aiTypesSource, /\|\s*"agents"/);
+assert.match(aiTypesSource, /\|\s*"development"/);
 assert.doesNotMatch(aiTypesSource, /\|\s*"approvals"/);
 assert.doesNotMatch(aiTypesSource, /\|\s*"notifications"/);
 assert.match(aiTypesSource, /export type AiAssistantApprovalAction/);
 assert.match(aiTypesSource, /export type AiAssistantPlannerItem/);
+assert.match(aiTypesSource, /export type AiAssistantAgentRole/);
+assert.match(aiTypesSource, /export type AiAssistantWhatsAppMessageCandidate/);
+assert.match(aiTypesSource, /export type AiAssistantDocumentologItem/);
+assert.match(aiTypesSource, /export type AiAssistantDevelopmentIdea/);
+assert.match(aiTypesSource, /export type AiAssistantCodexPromptDraft/);
+assert.match(aiTypesSource, /export type AiAssistantRecurrenceRule/);
 assert.match(aiTypesSource, /key: string/);
 
 assert.match(aiSectionSource, /<AiAssistantTasksPanel/);
@@ -59,6 +71,8 @@ assert.match(aiSectionSource, /tasks=\{viewModel\.currentTasks\}/);
 assert.match(aiSectionSource, /notifications=\{viewModel\.currentNotifications\}/);
 assert.match(aiSectionSource, /plannerItems=\{viewModel\.plannerItems\}/);
 assert.match(aiSectionSource, /<AiAssistantPlannerPanel/);
+assert.match(aiSectionSource, /<AiAssistantAgentsPanel/);
+assert.match(aiSectionSource, /<AiAssistantDevelopmentPanel/);
 assert.match(aiSectionSource, /onAddIntegration=\{addIntegration\}/);
 assert.match(aiSectionSource, /onAddSource=\{addKnowledgeSource\}/);
 assert.doesNotMatch(aiSectionSource, /evidenceById=\{viewModel\.evidenceById\}/);
@@ -80,9 +94,16 @@ assert.doesNotMatch(aiTasksPanelSource, /placeholder="Комментарий"/);
 assert.match(aiTasksPanelSource, /label="Согласовать"/);
 assert.match(aiTasksPanelSource, /label="Отказать"/);
 assert.match(aiTasksPanelSource, /label="Редактировать"/);
+assert.match(aiTasksPanelSource, /Требуют моего решения/);
+assert.match(aiTasksPanelSource, /Текущие задачи/);
+assert.match(aiTasksPanelSource, /Черновики и подготовленные действия/);
+assert.match(aiTasksPanelSource, /label="Вернуть на доработку"/);
 
 assert.match(aiPlannerPanelSource, /Планировщик/);
 assert.match(aiPlannerPanelSource, /plannedDate/);
+assert.match(aiPlannerPanelSource, /aria-label="Повтор"/);
+assert.match(aiPlannerPanelSource, /formatRecurrence/);
+assert.match(aiPlannerPanelSource, /window\.confirm/);
 assert.match(aiPlannerPanelSource, /label="Добавить задачу"/);
 assert.match(aiPlannerPanelSource, />Кому \/ канал</);
 assert.match(aiPlannerPanelSource, />Выполнение</);
@@ -102,6 +123,14 @@ assert.doesNotMatch(aiTabsSource, /\{ id: "approvals"/);
 assert.doesNotMatch(aiTabsSource, /\{ id: "notifications"/);
 assert.match(aiTabsSource, /\{ id: "tasks"/);
 assert.match(aiTabsSource, /\{ id: "planner"/);
+assert.match(aiTabsSource, /\{ id: "agents"/);
+assert.match(aiTabsSource, /\{ id: "development"/);
+
+assert.match(aiAgentsPanelSource, /Внутренние роли одного AI-модуля/);
+assert.match(aiAgentsPanelSource, /requiresUserApproval/);
+assert.match(aiDevelopmentPanelSource, /Сформировать ТЗ/);
+assert.match(aiDevelopmentPanelSource, /Сформировать промт для Codex/);
+assert.match(aiDevelopmentPanelSource, /onCreateCodexPromptDraft/);
 
 assert.match(appPageShellSource, /<AiAssistantFloatingDockHost \/>/);
 assert.match(appPageShellSource, /\.ai-floating-dock/);
@@ -141,9 +170,32 @@ assert.match(aiIntegrationPanelSource, /onAddIntegration/);
 assert.match(aiIntegrationPanelSource, /onUpdateIntegration/);
 assert.match(aiIntegrationPanelSource, /onDeleteIntegration/);
 assert.match(aiIntegrationPanelSource, /label="Добавить интеграцию"/);
+assert.match(aiIntegrationPanelSource, />Возможности</);
+assert.match(aiIntegrationPanelSource, />Заглушка</);
+assert.match(aiIntegrationPanelSource, />Следующий шаг</);
 assert.match(aiStateSource, /setKnowledgeSources/);
 assert.match(aiStateSource, /setIntegrations/);
+assert.match(aiStateSource, /setDevelopmentIdeas/);
+assert.match(aiStateSource, /createCodexPromptDraftForIdea/);
 assert.match(aiStateSource, /item\.linkedTaskId === approval\.taskId/);
+assert.match(approvalPolicySource, /requiresAiAssistantApproval/);
+assert.match(approvalPolicySource, /send-whatsapp/);
+assert.match(approvalPolicySource, /delete-data/);
+
+[
+  "ai-api-connector.ts",
+  "whatsapp-connector.ts",
+  "mail-connector.ts",
+  "calendar-connector.ts",
+  "documentolog-connector.ts",
+  "notification-connector.ts",
+  "knowledge-base-connector.ts",
+].forEach((fileName) => {
+  const source = readFileSync(resolve(domainConnectorsDir, fileName), "utf8");
+  assert.match(source, /dry-run|Dry-run|dryRun|backend|сервер|backend\/API/i, `${fileName} must document dry-run backend boundary`);
+  assert.doesNotMatch(source, /fetch\(/, `${fileName} must not call external API`);
+  assert.doesNotMatch(source, /OPENAI_API_KEY|WHATSAPP_API_TOKEN|CLIENT_SECRET|PASSWORD/, `${fileName} must not contain secret names`);
+});
 
 for (const { file, source } of aiFeatureSources) {
   assert.doesNotMatch(source, /NEXT_PUBLIC_[A-Z0-9_]*AI/i, `${file} must not expose AI keys as public env`);

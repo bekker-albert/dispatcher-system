@@ -4,6 +4,8 @@ import { aiAssistantTabsStyle } from "@/features/ai-assistant/aiAssistantStyles"
 const aiAssistantTabs: { id: AiAssistantTab; label: string }[] = [
   { id: "tasks", label: "Задачи" },
   { id: "planner", label: "Планировщик" },
+  { id: "agents", label: "Агенты" },
+  { id: "development", label: "Развитие / ТЗ / Codex" },
   { id: "integrations", label: "Интеграции" },
   { id: "knowledge", label: "Знания" },
   { id: "audit", label: "Журнал" },

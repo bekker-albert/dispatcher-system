@@ -28,6 +28,7 @@ type PlannerDraft = Pick<
   | "actionType"
   | "preparedText"
   | "requireApproval"
+  | "recurrence"
 >;
 
 export function AiAssistantPlannerPanel({
@@ -65,6 +66,7 @@ export function AiAssistantPlannerPanel({
       actionType: item.actionType,
       preparedText: item.preparedText,
       requireApproval: item.requireApproval,
+      recurrence: item.recurrence ?? { type: "none" },
     });
   };
 
@@ -80,6 +82,7 @@ export function AiAssistantPlannerPanel({
       description: draft.description.trim(),
       target: draft.target.trim(),
       plannedTime: draft.plannedTime?.trim() || undefined,
+      recurrence: normalizeRecurrence(draft.recurrence ?? { type: "none" }),
     };
 
     if (!normalizedDraft.title || !normalizedDraft.target) return;
@@ -105,9 +108,20 @@ export function AiAssistantPlannerPanel({
     cancelEdit();
   };
 
-  const deleteItem = (itemId: string) => {
-    onChangePlannerItems((current) => current.filter((item) => item.id !== itemId));
-    if (editingId === itemId) cancelEdit();
+  const deleteItem = (item: AiAssistantPlannerItem) => {
+    const needsFutureApproval = item.requireApproval
+      || Boolean(item.linkedTaskId || item.linkedNotificationId)
+      || item.channel === "whatsapp"
+      || item.channel === "mail"
+      || item.channel === "documentolog";
+    const message = needsFutureApproval
+      ? `Удалить задачу "${item.title}"? В будущем такие связанные действия будут уходить на согласование.`
+      : `Удалить задачу "${item.title}"?`;
+
+    if (!window.confirm(message)) return;
+
+    onChangePlannerItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
+    if (editingId === item.id) cancelEdit();
   };
 
   return (
@@ -166,6 +180,9 @@ export function AiAssistantPlannerPanel({
                   <td style={compactTdStyle}>
                     <div style={{ fontWeight: 900 }}>{formatDateLabel(item.plannedDate)}</div>
                     {item.plannedTime && <div style={aiAssistantMutedTextStyle}>{item.plannedTime}</div>}
+                    {item.recurrence && item.recurrence.type !== "none" && (
+                      <div style={aiAssistantMutedTextStyle}>{formatRecurrence(item.recurrence)}</div>
+                    )}
                   </td>
                   <td style={aiAssistantTextTdStyle}>
                     <div style={{ fontWeight: 900 }}>{item.title}</div>
@@ -188,7 +205,7 @@ export function AiAssistantPlannerPanel({
                       <IconButton label="Редактировать задачу" onClick={() => startEdit(item)}>
                         <Pencil size={15} />
                       </IconButton>
-                      <IconButton label="Удалить задачу" tone="danger" onClick={() => deleteItem(item.id)}>
+                      <IconButton label="Удалить задачу" tone="danger" onClick={() => deleteItem(item)}>
                         <Trash2 size={15} />
                       </IconButton>
                     </span>
@@ -231,6 +248,41 @@ function PlannerEditRow({
           onChange={(event) => onChange({ ...draft, plannedTime: event.target.value })}
           style={plannerInputStyle}
         />
+        <select
+          aria-label="Повтор"
+          value={draft.recurrence?.type ?? "none"}
+          onChange={(event) => onChange({
+            ...draft,
+            recurrence: {
+              ...(draft.recurrence ?? { type: "none" }),
+              type: event.target.value as NonNullable<AiAssistantPlannerItem["recurrence"]>["type"],
+            },
+          })}
+          style={plannerInputStyle}
+        >
+          <option value="none">Нет повтора</option>
+          <option value="daily">Ежедневно</option>
+          <option value="weekly">Еженедельно</option>
+          <option value="monthly">Ежемесячно</option>
+          <option value="every-n-days">Каждые N дней</option>
+          <option value="custom">Настраиваемый</option>
+        </select>
+        {(draft.recurrence?.type === "every-n-days" || draft.recurrence?.type === "custom") && (
+          <input
+            aria-label="Интервал повтора"
+            type="number"
+            min={1}
+            value={draft.recurrence.interval ?? 1}
+            onChange={(event) => onChange({
+              ...draft,
+              recurrence: {
+                ...(draft.recurrence ?? { type: "every-n-days" }),
+                interval: Math.max(1, Number(event.target.value) || 1),
+              },
+            })}
+            style={plannerInputStyle}
+          />
+        )}
       </td>
       <td style={plannerMainEditTdStyle}>
         <input
@@ -254,12 +306,16 @@ function PlannerEditRow({
           style={plannerInputStyle}
         >
           <option value="ask-assistant">Поставить задачу</option>
+          <option value="draft">Черновик</option>
           <option value="send-whatsapp">WhatsApp</option>
           <option value="send-mail">Письмо</option>
           <option value="create-calendar-event">Календарь</option>
           <option value="start-documentolog">Documentolog</option>
           <option value="prepare-document">Документ</option>
           <option value="create-push-notification">Push</option>
+          <option value="update-knowledge-rule">Правило знаний</option>
+          <option value="create-business-trip">Командировка</option>
+          <option value="delete-data">Удаление данных</option>
         </select>
         <textarea
           aria-label="Текст выполнения"
@@ -374,6 +430,7 @@ function createPlannerDraft(currentWorkDate: string): PlannerDraft {
     actionType: "ask-assistant",
     preparedText: "",
     requireApproval: true,
+    recurrence: { type: "none" },
   };
 }
 
@@ -407,6 +464,7 @@ function formatPlannerStatus(status: AiAssistantPlannerItem["status"]) {
 function formatActionType(actionType: AiAssistantPlannerItem["actionType"]) {
   const labels: Record<AiAssistantPlannerItem["actionType"], string> = {
     "ask-assistant": "Поставить задачу",
+    draft: "Черновик",
     "prepare-document": "Документ",
     "send-whatsapp": "WhatsApp",
     "send-mail": "Письмо",
@@ -414,9 +472,37 @@ function formatActionType(actionType: AiAssistantPlannerItem["actionType"]) {
     "start-documentolog": "Documentolog",
     "create-push-notification": "Push",
     "update-report-reason": "Поставить задачу",
+    "update-knowledge-rule": "Правило знаний",
+    "create-business-trip": "Командировка",
+    "delete-data": "Удаление",
   };
 
   return labels[actionType];
+}
+
+function normalizeRecurrence(recurrence: NonNullable<AiAssistantPlannerItem["recurrence"]>) {
+  if (recurrence.type === "none") return { type: "none" as const };
+  if (recurrence.type === "every-n-days" || recurrence.type === "custom") {
+    return {
+      ...recurrence,
+      interval: Math.max(1, recurrence.interval ?? 1),
+    };
+  }
+
+  return recurrence;
+}
+
+function formatRecurrence(recurrence: NonNullable<AiAssistantPlannerItem["recurrence"]>) {
+  const labels: Record<NonNullable<AiAssistantPlannerItem["recurrence"]>["type"], string> = {
+    none: "Без повтора",
+    daily: "Ежедневно",
+    weekly: "Еженедельно",
+    monthly: "Ежемесячно",
+    "every-n-days": `Каждые ${recurrence.interval ?? 1} дн.`,
+    custom: `Повтор: ${recurrence.interval ?? 1}`,
+  };
+
+  return labels[recurrence.type];
 }
 
 const plannerHeaderStyle: CSSProperties = {

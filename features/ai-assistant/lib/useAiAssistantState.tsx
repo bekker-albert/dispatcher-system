@@ -12,6 +12,8 @@ import {
 import { defaultAiAssistantDataset, defaultAiAssistantRole } from "@/features/ai-assistant/data";
 import type {
   AiAssistantApprovalAction,
+  AiAssistantCodexPromptDraft,
+  AiAssistantDevelopmentIdea,
   AiAssistantIntegration,
   AiAssistantKnowledgeSource,
   AiAssistantTab,
@@ -30,6 +32,19 @@ export function useAiAssistantState() {
   const [plannerItems, setPlannerItems] = useState(defaultAiAssistantDataset.plannerItems);
   const [integrations, setIntegrations] = useState(defaultAiAssistantDataset.integrations);
   const [knowledgeSources, setKnowledgeSources] = useState(defaultAiAssistantDataset.knowledgeSources);
+  const [agents] = useState(defaultAiAssistantDataset.agents);
+  const [whatsappGroups] = useState(defaultAiAssistantDataset.whatsappGroups);
+  const [whatsappMessageCandidates] = useState(defaultAiAssistantDataset.whatsappMessageCandidates);
+  const [documents] = useState(defaultAiAssistantDataset.documents);
+  const [documentTemplates] = useState(defaultAiAssistantDataset.documentTemplates);
+  const [mailItems] = useState(defaultAiAssistantDataset.mailItems);
+  const [mailDrafts] = useState(defaultAiAssistantDataset.mailDrafts);
+  const [calendarEvents] = useState(defaultAiAssistantDataset.calendarEvents);
+  const [documentologItems] = useState(defaultAiAssistantDataset.documentologItems);
+  const [knowledgeRules] = useState(defaultAiAssistantDataset.knowledgeRules);
+  const [knowledgeBaseItems] = useState(defaultAiAssistantDataset.knowledgeBaseItems);
+  const [developmentIdeas, setDevelopmentIdeas] = useState(defaultAiAssistantDataset.developmentIdeas);
+  const [codexPromptDrafts, setCodexPromptDrafts] = useState(defaultAiAssistantDataset.codexPromptDrafts);
 
   const permissions = useMemo(
     () => resolveAiAssistantPermissions(defaultAiAssistantRole),
@@ -45,8 +60,42 @@ export function useAiAssistantState() {
       plannerItems,
       integrations,
       knowledgeSources,
+      agents,
+      whatsappGroups,
+      whatsappMessageCandidates,
+      documents,
+      documentTemplates,
+      mailItems,
+      mailDrafts,
+      calendarEvents,
+      documentologItems,
+      knowledgeRules,
+      knowledgeBaseItems,
+      developmentIdeas,
+      codexPromptDrafts,
     }),
-    [approvalActions, chatMessages, integrations, knowledgeSources, notifications, plannerItems, tasks],
+    [
+      agents,
+      approvalActions,
+      calendarEvents,
+      chatMessages,
+      codexPromptDrafts,
+      developmentIdeas,
+      documentTemplates,
+      documentologItems,
+      documents,
+      integrations,
+      knowledgeBaseItems,
+      knowledgeRules,
+      knowledgeSources,
+      mailDrafts,
+      mailItems,
+      notifications,
+      plannerItems,
+      tasks,
+      whatsappGroups,
+      whatsappMessageCandidates,
+    ],
   );
   const viewModel = useMemo(
     () => createAiAssistantViewModel(dataset),
@@ -199,6 +248,55 @@ export function useAiAssistantState() {
   const deleteIntegration = useCallback((integrationKey: string) => {
     setIntegrations((current) => current.filter((item) => item.key !== integrationKey));
   }, []);
+  const setDevelopmentIdeaStatus = useCallback((
+    ideaId: string,
+    status: AiAssistantDevelopmentIdea["status"],
+  ) => {
+    setDevelopmentIdeas((current) => current.map((idea) => (
+      idea.id === ideaId
+        ? { ...idea, status, updatedAt: new Date().toISOString() }
+        : idea
+    )));
+  }, []);
+  const createCodexPromptDraftForIdea = useCallback((idea: AiAssistantDevelopmentIdea) => {
+    const updatedAt = new Date().toISOString();
+    const promptDraft: AiAssistantCodexPromptDraft = {
+      id: idea.codexPromptDraftId || `codex-prompt-${Date.now()}`,
+      title: `Промт Codex: ${idea.title}`,
+      body: [
+        `Задача: ${idea.title}`,
+        "",
+        idea.description,
+        "",
+        "Бизнес-логика:",
+        ...idea.businessLogic.map((item) => `- ${item}`),
+        "",
+        "Критерии приемки:",
+        ...idea.acceptanceCriteria.map((item) => `- ${item}`),
+        "",
+        "Ограничения: не подключать реальные внешние API, не хранить ключи в frontend, критические действия только через approval.",
+      ].join("\n"),
+      linkedIdeaId: idea.id,
+      status: "ready",
+      updatedAt,
+    };
+
+    setCodexPromptDrafts((current) => {
+      const exists = current.some((item) => item.id === promptDraft.id);
+      if (!exists) return [...current, promptDraft];
+      return current.map((item) => (item.id === promptDraft.id ? promptDraft : item));
+    });
+    setDevelopmentIdeas((current) => current.map((item) => (
+      item.id === idea.id
+        ? {
+          ...item,
+          codexPromptDraftId: promptDraft.id,
+          status: "spec-ready",
+          updatedAt,
+        }
+        : item
+    )));
+  }, []);
 
   return {
     activeTab,
@@ -213,6 +311,8 @@ export function useAiAssistantState() {
     addKnowledgeSource,
     updateKnowledgeSource,
     deleteKnowledgeSource,
+    setDevelopmentIdeaStatus,
+    createCodexPromptDraftForIdea,
     appendChatMessage,
     updateApprovalDraftText,
     setApprovalDecision,

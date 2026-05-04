@@ -7,6 +7,16 @@ import { knowledgeBaseConnector } from "../features/ai-assistant/connectors/know
 import { mailConnector } from "../features/ai-assistant/connectors/mailConnector";
 import { pushConnector } from "../features/ai-assistant/connectors/pushConnector";
 import { whatsappConnector } from "../features/ai-assistant/connectors/whatsappConnector";
+import {
+  aiApiDomainConnector,
+  calendarDomainConnector,
+  documentologDomainConnector,
+  knowledgeBaseDomainConnector,
+  mailDomainConnector,
+  notificationDomainConnector,
+  whatsappDomainConnector,
+} from "../lib/domain/ai-assistant/connectors";
+import { requiresAiAssistantApproval } from "../lib/domain/ai-assistant/approval-policy";
 import type { AiAssistantConnectorContext } from "../lib/domain/ai-assistant/types";
 
 const dryRunContext: AiAssistantConnectorContext = {
@@ -90,5 +100,61 @@ assert.equal(
   (await knowledgeBaseConnector.sync?.(liveContext))?.errorCode,
   "KNOWLEDGE_DRY_RUN_REQUIRED",
 );
+
+assert.equal(requiresAiAssistantApproval("send-whatsapp", "low", "whatsapp"), true);
+assert.equal(requiresAiAssistantApproval("send-mail", "low", "mail"), true);
+assert.equal(requiresAiAssistantApproval("start-documentolog", "low", "documentolog"), true);
+assert.equal(requiresAiAssistantApproval("create-calendar-event", "low", "calendar"), true);
+assert.equal(requiresAiAssistantApproval("prepare-document", "low", "documentolog"), true);
+assert.equal(requiresAiAssistantApproval("update-knowledge-rule", "low", "knowledge-base"), true);
+assert.equal(requiresAiAssistantApproval("delete-data", "low", "ai-api"), true);
+assert.equal(requiresAiAssistantApproval("ask-assistant", "low", "ai-api"), false);
+assert.equal(requiresAiAssistantApproval("draft", "low", "ai-api"), false);
+assert.equal(requiresAiAssistantApproval("draft", "critical", "ai-api"), true);
+
+for (const connector of [
+  aiApiDomainConnector,
+  whatsappDomainConnector,
+  mailDomainConnector,
+  calendarDomainConnector,
+  documentologDomainConnector,
+  notificationDomainConnector,
+  knowledgeBaseDomainConnector,
+]) {
+  const draft = await connector.createDraft?.(dryRunContext, draftInput);
+  assert.equal(draft?.ok, true);
+  assert.equal(draft?.auditId, dryRunContext.correlationId);
+
+  const blockedExecution = await connector.execute?.(dryRunContext, {
+    actionType: "send-mail",
+    approved: false,
+    idempotencyKey: `not-approved-${connector.key}`,
+    target: "target",
+    body: "body",
+  });
+  assert.equal(blockedExecution?.ok, false);
+  assert.equal(blockedExecution?.errorCode, "AI_ASSISTANT_APPROVAL_REQUIRED");
+
+  const dryRunExecution = await connector.execute?.(dryRunContext, {
+    actionType: "send-mail",
+    approvalActionId: "approval-1",
+    approved: true,
+    idempotencyKey: `approved-${connector.key}`,
+    target: "target",
+    body: "body",
+  });
+  assert.equal(dryRunExecution?.ok, true);
+  assert.equal(typeof dryRunExecution?.data?.executionId, "string");
+
+  const liveExecution = await connector.execute?.(liveContext, {
+    actionType: "send-mail",
+    approvalActionId: "approval-1",
+    approved: true,
+    idempotencyKey: `live-${connector.key}`,
+    target: "target",
+    body: "body",
+  });
+  assert.equal(liveExecution?.ok, false);
+}
 
 console.log("AI assistant connector checks passed");

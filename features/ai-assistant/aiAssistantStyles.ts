@@ -9,9 +9,9 @@ export const aiAssistantShellStyle: CSSProperties = {
 
 export const aiAssistantHeaderStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "minmax(260px, 1fr) auto",
+  gridTemplateColumns: "minmax(0, 1fr)",
   gap: 12,
-  alignItems: "end",
+  alignItems: "start",
 };
 
 export const aiAssistantTitleStyle: CSSProperties = {
@@ -33,7 +33,7 @@ export const aiAssistantTabsStyle: CSSProperties = {
   display: "flex",
   gap: 8,
   flexWrap: "wrap",
-  justifyContent: "flex-end",
+  justifyContent: "flex-start",
 };
 
 export const aiAssistantCardStyle: CSSProperties = {
