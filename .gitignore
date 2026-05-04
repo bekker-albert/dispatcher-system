@@ -36,6 +36,9 @@ excel-analysis-*
 excel-formula-deps.json
 pdf-report-*
 .chrome-pdf-profile*/
+/audit-source/
+/dispatcher-source-only.zip
+/repo-files.txt
 /tmp/
 
 # env files (can opt-in for committing if needed)

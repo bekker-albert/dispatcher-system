@@ -17,12 +17,23 @@ const floatingNotificationsSource = readFileSync(resolve(root, "features/ai-assi
 const lazyPrimaryContentSource = readFileSync(resolve(root, "features/app/lazyPrimaryContent.tsx"), "utf8");
 const tabsSource = readFileSync(resolve(root, "lib/domain/navigation/tabs.ts"), "utf8");
 const envExampleSource = readFileSync(resolve(root, ".env.example"), "utf8");
-const aiTypesSource = readFileSync(resolve(root, "lib/domain/ai-assistant/types.ts"), "utf8");
+const aiTypesFacadeSource = readFileSync(resolve(root, "lib/domain/ai-assistant/types.ts"), "utf8");
+const aiTypesSource = readJoinedSources([
+  resolve(root, "lib/domain/ai-assistant/types.ts"),
+  ...collectSourceFiles(resolve(root, "lib/domain/ai-assistant/types")),
+]);
 const aiStatusSource = readFileSync(resolve(root, "lib/domain/ai-assistant/status.ts"), "utf8");
 const aiSectionSource = readFileSync(resolve(root, "features/ai-assistant/AiAssistantSection.tsx"), "utf8");
 const aiTabsSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTabs.tsx"), "utf8");
-const aiTasksPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTasksPanel.tsx"), "utf8");
-const aiPlannerPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantPlannerPanel.tsx"), "utf8");
+const aiChatMockSource = readFileSync(resolve(root, "features/ai-assistant/mock/chat.mock.ts"), "utf8");
+const aiTasksPanelSource = readJoinedSources([
+  resolve(root, "features/ai-assistant/components/AiAssistantTasksPanel.tsx"),
+  ...collectSourceFiles(resolve(root, "features/ai-assistant/components/tasks")),
+]);
+const aiPlannerPanelSource = readJoinedSources([
+  resolve(root, "features/ai-assistant/components/AiAssistantPlannerPanel.tsx"),
+  ...collectSourceFiles(resolve(root, "features/ai-assistant/components/planner")),
+]);
 const aiAgentsPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantAgentsPanel.tsx"), "utf8");
 const aiDevelopmentPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantDevelopmentPanel.tsx"), "utf8");
 const aiKnowledgePanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantKnowledgePanel.tsx"), "utf8");
@@ -63,6 +74,7 @@ assert.match(aiTypesSource, /export type AiAssistantDevelopmentIdea/);
 assert.match(aiTypesSource, /export type AiAssistantCodexPromptDraft/);
 assert.match(aiTypesSource, /export type AiAssistantRecurrenceRule/);
 assert.match(aiTypesSource, /key: string/);
+assert.match(aiTypesFacadeSource, /export type \* from "\.\/types\/index"/);
 
 assert.match(aiSectionSource, /<AiAssistantTasksPanel/);
 assert.match(aiSectionSource, /approvals=\{viewModel\.approvalActions\}/);
@@ -76,6 +88,8 @@ assert.match(aiSectionSource, /<AiAssistantDevelopmentPanel/);
 assert.match(aiSectionSource, /onAddIntegration=\{addIntegration\}/);
 assert.match(aiSectionSource, /onAddSource=\{addKnowledgeSource\}/);
 assert.doesNotMatch(aiSectionSource, /evidenceById=\{viewModel\.evidenceById\}/);
+assert.match(aiChatMockSource, /вкладку Задачи/);
+assert.doesNotMatch(aiChatMockSource, /Одобрения/);
 
 assert.doesNotMatch(aiTasksPanelSource, />Основание</);
 assert.doesNotMatch(aiTasksPanelSource, />Ответственный</);
@@ -102,14 +116,14 @@ assert.match(aiTasksPanelSource, /label="Вернуть на доработку"
 assert.match(aiPlannerPanelSource, /Планировщик/);
 assert.match(aiPlannerPanelSource, /plannedDate/);
 assert.match(aiPlannerPanelSource, /aria-label="Повтор"/);
-assert.match(aiPlannerPanelSource, /formatRecurrence/);
+assert.match(aiPlannerPanelSource, /formatPlannerRecurrence/);
 assert.match(aiPlannerPanelSource, /window\.confirm/);
 assert.match(aiPlannerPanelSource, /label="Добавить задачу"/);
 assert.match(aiPlannerPanelSource, />Кому \/ канал</);
 assert.match(aiPlannerPanelSource, />Выполнение</);
 assert.match(aiPlannerPanelSource, /aria-label="Текст выполнения"/);
 assert.match(aiPlannerPanelSource, /Согласовать перед выполнением/);
-assert.match(aiPlannerPanelSource, /formatActionType/);
+assert.match(aiPlannerPanelSource, /formatPlannerActionType/);
 assert.doesNotMatch(aiPlannerPanelSource, />Ответственный</);
 assert.match(aiPlannerPanelSource, /label="Редактировать задачу"/);
 assert.match(aiPlannerPanelSource, /label="Удалить задачу"/);
@@ -234,6 +248,10 @@ function collectSourceFiles(dir: string): string[] {
     if (stat.isDirectory()) return collectSourceFiles(fullPath);
     return /\.(ts|tsx)$/.test(name) ? [fullPath] : [];
   });
+}
+
+function readJoinedSources(files: string[]) {
+  return files.map((file) => readFileSync(file, "utf8")).join("\n");
 }
 
 function escapeRegExp(value: string) {
