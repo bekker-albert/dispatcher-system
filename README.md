@@ -37,7 +37,9 @@ npm run release:check
 ```
 
 This also checks whitespace in the current diff and shows whether local env
-files are ignored. Do not print or commit values from `.env.local`.
+files are ignored. The command now fails if any repo-root `.env*` file except
+`.env.example` is tracked or stops being ignored. Do not print or commit values
+from `.env.local`.
 
 ## База данных
 
@@ -73,10 +75,24 @@ DATABASE_ALLOWED_ORIGINS=
 На сервере workflow:
 
 1. подключается по SSH;
-2. обновляет код до `origin/main`;
-3. устанавливает зависимости;
-4. собирает проект;
-5. перезапускает `pm2`-процесс `aam-dispatch`.
+2. проверяет и фиксирует нужный commit;
+3. устанавливает production-зависимости через `npm ci --omit=dev`;
+4. подменяет `.next` заранее собранным артефактом из GitHub Actions;
+5. перезапускает `pm2`-процесс `aam-dispatch`;
+6. запускает smoke-проверку сайта, статуса базы и загрузки техники без записи данных.
+
+Required GitHub Actions secrets:
+
+- `DEPLOY_HOST`
+- `DEPLOY_PORT`
+- `DEPLOY_USER`
+- `DEPLOY_SSH_KEY`
+
+Optional smoke overrides:
+
+- `PRODUCTION_SMOKE_URL`
+- `PRODUCTION_SMOKE_API_URL`
+- `PRODUCTION_SMOKE_MIN_VEHICLE_ROWS`
 
 Рабочий сайт:
 

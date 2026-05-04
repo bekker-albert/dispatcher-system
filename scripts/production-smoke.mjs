@@ -6,7 +6,12 @@ const apiBaseUrl = (
   process.env.PRODUCTION_SMOKE_API_URL
   || defaultApiBaseUrl
 ).replace(/\/+$/, "");
-const minVehicleRows = Number(process.env.PRODUCTION_SMOKE_MIN_VEHICLE_ROWS || 100);
+const minVehicleRowsRaw = process.env.PRODUCTION_SMOKE_MIN_VEHICLE_ROWS || "100";
+const minVehicleRows = Number(minVehicleRowsRaw);
+
+if (!Number.isFinite(minVehicleRows) || minVehicleRows <= 0) {
+  throw new Error("PRODUCTION_SMOKE_MIN_VEHICLE_ROWS must be a positive number");
+}
 
 console.log(`site url: ${baseUrl}`);
 console.log(`api url: ${apiBaseUrl}`);
@@ -62,7 +67,22 @@ async function databasePost(label, resource, action, payload = null, validate) {
   });
 
   if (!response.ok) {
-    throw new Error(`${label} returned HTTP ${response.status}: ${await response.text()}`);
+    let summary = "";
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      try {
+        const body = await response.json();
+        const message = body?.error ?? body?.message ?? "";
+        if (typeof message === "string" && message.trim()) {
+          summary = `: ${message.trim()}`;
+        }
+      } catch {
+        summary = "";
+      }
+    }
+
+    throw new Error(`${label} returned HTTP ${response.status}${summary}`);
   }
 
   const body = await response.json();

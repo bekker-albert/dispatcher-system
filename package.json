@@ -16,7 +16,7 @@
     "refactor:ai:review": "node scripts/refactor-ai-agent.mjs --mode review --include-diff",
     "migrate:supabase-to-mysql": "jiti scripts/migrate-supabase-to-mysql.ts",
     "smoke:production": "node scripts/production-smoke.mjs",
-    "release:check": "npm run verify && git diff --check && git status --ignored --short .env.local .env .env.example",
+    "release:check": "npm run verify && node scripts/check-env-ignored.mjs && git diff --check && git status --ignored --short -- .env*",
     "verify": "npm run lint && npm run build && npm run check:domain && npm run check:project"
   },
   "dependencies": {

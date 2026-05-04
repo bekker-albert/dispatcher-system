@@ -19,7 +19,10 @@ function PrimaryContentLoading({ label }: { label: string }) {
 
 export const AdminPrimaryContent = dynamic(
   () => import("./AdminPrimaryContent").then((module) => module.AdminPrimaryContent),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Админка" />,
+  },
 );
 
 export const AiAssistantPrimaryContent = dynamic(
@@ -32,37 +35,58 @@ export const AiAssistantPrimaryContent = dynamic(
 
 export const DispatchPrimaryContent = dynamic(
   () => import("./DispatchPrimaryContent").then((module) => module.DispatchPrimaryContent),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Диспетчер" />,
+  },
 );
 
 export const PtoPrimaryContent = dynamic(
   () => import("./PtoPrimaryContent").then((module) => module.PtoPrimaryContent),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="ПТО" />,
+  },
 );
 
 export const ReportsPrimaryContent = dynamic(
   () => import("./ReportsPrimaryContent").then((module) => module.ReportsPrimaryContent),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Отчеты" />,
+  },
 );
 
 export const FleetPrimaryContent = dynamic(
   () => import("./FleetPrimaryContent").then((module) => module.FleetPrimaryContent),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Автопарк" />,
+  },
 );
 
 export const ContractorsPrimaryContent = dynamic(
   () => import("../contractors/ContractorsSection").then((module) => module.ContractorsSection),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Подрядчики" />,
+  },
 );
 
 export const FuelPrimaryContent = dynamic(
   () => import("../fuel/FuelSection").then((module) => module.FuelSection),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="ГСМ" />,
+  },
 );
 
 export const SafetyPrimaryContent = dynamic(
   () => import("../safety-driving/SafetySection").then((module) => module.SafetySection),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="ТБ" />,
+  },
 );
 
 export const UserPrimaryContent = dynamic(
@@ -79,10 +103,16 @@ export const UserPrimaryContent = dynamic(
       return <UserProfileSection userCard={defaultUserCard} />;
     };
   },
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Профиль" />,
+  },
 );
 
 export const CustomTabPrimaryContent = dynamic(
   () => import("../navigation/CustomTabSection").then((module) => module.CustomTabSection),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Дополнительная вкладка" />,
+  },
 );

@@ -18,17 +18,32 @@ not change business rules.
 Before treating a deploy as successful:
 
 - Run `npm run release:check` before pushing to `main`.
+- Treat `release:check` as failed if any repo-root `.env*` file except `.env.example` is tracked or no longer ignored.
 - Confirm Git `main` and `origin/main` point at the intended commit.
 - Confirm `.github/workflows/deploy.yml` ran for that commit, if GitHub Actions
   status is available.
 - Run `npm run smoke:production` after deploy, or manually confirm the site
-  loads and `GET /api/database` returns the expected database status without
-  sending write requests.
+  loads and `GET /api/database` returns the expected database status. The
+  scripted smoke stays read-only at the data level, but it currently uses a
+  `POST /api/database` load action for vehicles.
 - Confirm no local secret files were staged or printed.
 
 If GitHub Actions status is unavailable, use only read-only checks first: Git
 refs, workflow file contents, site availability, and a read-only API status
-request.
+request. Use the scripted vehicle-load smoke only after those checks pass.
+
+Required GitHub Actions secrets for deploy:
+
+- `DEPLOY_HOST`
+- `DEPLOY_PORT`
+- `DEPLOY_USER`
+- `DEPLOY_SSH_KEY`
+
+Optional smoke overrides:
+
+- `PRODUCTION_SMOKE_URL`
+- `PRODUCTION_SMOKE_API_URL`
+- `PRODUCTION_SMOKE_MIN_VEHICLE_ROWS`
 
 ## Data Recovery Rules
 

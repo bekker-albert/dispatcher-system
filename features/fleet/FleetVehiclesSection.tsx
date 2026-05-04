@@ -25,6 +25,7 @@ export function FleetVehiclesSection({
   dailyStates = [],
 }: FleetVehiclesSectionProps) {
   const [driversExpanded, setDriversExpanded] = useState(false);
+  const visibleColumnCount = driversExpanded ? 15 : 11;
   const rows = useMemo(
     () => createFleetVehicleListRows(vehicleRows, { workDate, dailyStates }),
     [dailyStates, vehicleRows, workDate],
@@ -102,9 +103,17 @@ export function FleetVehiclesSection({
             ) : null}
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <FleetVehicleTableRow key={row.id} row={row} driversExpanded={driversExpanded} />
-            ))}
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={visibleColumnCount} style={emptyStateCellStyle}>
+                  Нет техники для отображения на выбранную дату.
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <FleetVehicleTableRow key={row.id} row={row} driversExpanded={driversExpanded} />
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -262,6 +271,14 @@ const tdStyle: CSSProperties = {
 const tdCenterStyle: CSSProperties = {
   ...tdBaseStyle,
   textAlign: "center",
+};
+
+const emptyStateCellStyle: CSSProperties = {
+  ...tdBaseStyle,
+  padding: "18px 12px",
+  textAlign: "center",
+  color: "#64748b",
+  fontStyle: "italic",
 };
 
 const badgeStyle: CSSProperties = {

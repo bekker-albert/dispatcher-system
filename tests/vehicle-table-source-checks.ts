@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFleetVehicleListRows, deriveFleetVehicleStatus } from "../features/fleet/fleetVehicleModel";
 import type { VehicleRow } from "../lib/domain/vehicles/types";
+import { resetVehicleInteractionState } from "../shared/editable-grid/resetVehicleInteractionState";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(testDir, "..");
@@ -11,6 +12,7 @@ const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const appPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/AppPrimaryContent.tsx"), "utf8");
 const fleetPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/FleetPrimaryContent.tsx"), "utf8");
 const lazyPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/lazyPrimaryContent.tsx"), "utf8");
+const resetVehicleInteractionStateSource = readFileSync(resolve(testDir, "../shared/editable-grid/resetVehicleInteractionState.ts"), "utf8");
 const useAppDerivedModelsSource = readFileSync(resolve(testDir, "../features/app/useAppDerivedModels.ts"), "utf8");
 const useSectionSelectionStateSource = readFileSync(resolve(testDir, "../features/navigation/useSectionSelectionState.ts"), "utf8");
 const vehicleTablePrimaryContentSource = readFileSync(resolve(testDir, "../features/app/VehicleTablePrimaryContent.tsx"), "utf8");
@@ -96,11 +98,70 @@ assert.match(vehicleTablePrimaryContentSource, /mode:\s*"readonly"\s*\|\s*"admin
 assert.match(vehicleTablePrimaryContentSource, /const canManageVehicles = true/);
 assert.match(vehicleTablePrimaryContentSource, /canManageVehicles,/);
 assert.match(fleetPrimaryContentSource, /return <FleetVehiclesSection vehicleRows=\{appState\.vehicleRows\} workDate=\{appState\.reportDate\} \/>;/);
-assert.match(fleetPrimaryContentSource, /setAdminVehiclesEditing/);
-assert.match(fleetPrimaryContentSource, /setSelectedVehicleCellKeys/);
-assert.match(fleetPrimaryContentSource, /setEditingVehicleCell/);
+assert.match(fleetPrimaryContentSource, /resetVehicleInteractionState/);
 assert.doesNotMatch(fleetPrimaryContentSource, /AdminVehiclesSection|useAppAdminVehiclesScreenProps|useAppVehicleControllers/);
 assert.match(appPrimaryContentSource, /<FleetPrimaryContent[\s\S]*mode="readonly"/);
+assert.match(resetVehicleInteractionStateSource, /setAdminVehiclesEditing/);
+assert.match(resetVehicleInteractionStateSource, /setPendingVehicleFocus/);
+assert.match(resetVehicleInteractionStateSource, /setSelectedVehicleCellKeys/);
+assert.match(resetVehicleInteractionStateSource, /setVehicleCellInitialDraft/);
+
+type VehicleInteractionResetFixture = {
+  activeVehicleCell: string | null;
+  adminVehiclesEditing: boolean;
+  editingVehicleCell: string | null;
+  pendingVehicleFocus: { id: number } | null;
+  selectedVehicleCellKeys: string[];
+  vehicleCellDraft: string;
+  vehicleCellInitialDraft: string;
+  vehicleSelectionAnchorCell: { id: number; field: string } | null;
+};
+
+function fixtureSetter<K extends keyof VehicleInteractionResetFixture>(
+  fixture: VehicleInteractionResetFixture,
+  key: K,
+) {
+  return (
+    update: VehicleInteractionResetFixture[K] |
+      ((current: VehicleInteractionResetFixture[K]) => VehicleInteractionResetFixture[K]),
+  ) => {
+    fixture[key] = typeof update === "function"
+      ? (update as (current: VehicleInteractionResetFixture[K]) => VehicleInteractionResetFixture[K])(fixture[key])
+      : update;
+  };
+}
+
+const vehicleInteractionResetFixture: VehicleInteractionResetFixture = {
+  activeVehicleCell: "1::brand",
+  adminVehiclesEditing: true,
+  editingVehicleCell: "1::model",
+  pendingVehicleFocus: { id: 1 },
+  selectedVehicleCellKeys: ["1::brand", "1::model"],
+  vehicleCellDraft: "draft",
+  vehicleCellInitialDraft: "initial",
+  vehicleSelectionAnchorCell: { id: 1, field: "brand" },
+};
+
+resetVehicleInteractionState({
+  setActiveVehicleCell: fixtureSetter(vehicleInteractionResetFixture, "activeVehicleCell"),
+  setAdminVehiclesEditing: fixtureSetter(vehicleInteractionResetFixture, "adminVehiclesEditing"),
+  setEditingVehicleCell: fixtureSetter(vehicleInteractionResetFixture, "editingVehicleCell"),
+  setPendingVehicleFocus: fixtureSetter(vehicleInteractionResetFixture, "pendingVehicleFocus"),
+  setSelectedVehicleCellKeys: fixtureSetter(vehicleInteractionResetFixture, "selectedVehicleCellKeys"),
+  setVehicleCellDraft: fixtureSetter(vehicleInteractionResetFixture, "vehicleCellDraft"),
+  setVehicleCellInitialDraft: fixtureSetter(vehicleInteractionResetFixture, "vehicleCellInitialDraft"),
+  setVehicleSelectionAnchorCell: fixtureSetter(vehicleInteractionResetFixture, "vehicleSelectionAnchorCell"),
+});
+assert.deepEqual(vehicleInteractionResetFixture, {
+  activeVehicleCell: null,
+  adminVehiclesEditing: false,
+  editingVehicleCell: null,
+  pendingVehicleFocus: null,
+  selectedVehicleCellKeys: [],
+  vehicleCellDraft: "",
+  vehicleCellInitialDraft: "",
+  vehicleSelectionAnchorCell: null,
+});
 assert.match(adminVehiclesPrimaryContentSource, /<VehicleTablePrimaryContent[\s\S]*mode="admin"/);
 assert.match(adminVehiclesSectionSource, /canManageVehicles\?: boolean/);
 assert.match(adminVehiclesSectionSource, /canManageVehicles = false/);

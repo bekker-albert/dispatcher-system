@@ -148,10 +148,13 @@ export function useAppVehicleEditing({
     commitVehicleInlineCellEdit,
     setAdminVehiclesEditing,
     setShowAllVehicleRows,
+    setPendingVehicleFocus,
     setActiveVehicleCell,
     setVehicleSelectionAnchorCell,
     setSelectedVehicleCellKeys,
     setEditingVehicleCell,
+    setVehicleCellDraft,
+    setVehicleCellInitialDraft,
     vehicleRowsRef,
   });
 
