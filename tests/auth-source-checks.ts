@@ -9,6 +9,7 @@ const appPageSource = readFileSync(resolve(root, "app/page.tsx"), "utf8");
 const appRootSource = readFileSync(resolve(root, "features/app/AppRoot.tsx"), "utf8");
 const appHeaderSource = readFileSync(resolve(root, "components/layout/AppHeader.tsx"), "utf8");
 const authSessionButtonSource = readFileSync(resolve(root, "features/auth/AuthSessionButton.tsx"), "utf8");
+const userProfileSource = readFileSync(resolve(root, "features/users/UserProfileSection.tsx"), "utf8");
 const databaseRouterSource = readFileSync(resolve(root, "lib/server/database/router.ts"), "utf8");
 const authSchemaSource = readFileSync(resolve(root, "lib/server/auth/schema.ts"), "utf8");
 const envExampleSource = readFileSync(resolve(root, ".env.example"), "utf8");
@@ -39,6 +40,9 @@ assert.match(appHeaderSource, /<AuthSessionButton onOpenProfile=\{\(\) => onSele
 assert.doesNotMatch(authSessionButtonSource, /position:\s*"fixed"/);
 assert.match(authSessionButtonSource, /UserCircle/);
 assert.match(authSessionButtonSource, /Открыть карточку пользователя/);
+assert.match(userProfileSource, /Административный профиль/);
+assert.match(userProfileSource, /Профиль пользователя/);
+assert.match(userProfileSource, /canManageUsers \? <UserManagementPanel \/> : null/);
 assert.match(databaseRouterSource, /authRequired\(\) && !await getAuthSessionFromRequest\(request\)/);
 assert.match(databaseRouterSource, /createDatabaseAuthRequiredResponse/);
 
