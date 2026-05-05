@@ -96,6 +96,8 @@ Optional smoke overrides:
 - `PRODUCTION_SMOKE_URL`
 - `PRODUCTION_SMOKE_API_URL`
 - `PRODUCTION_SMOKE_MIN_VEHICLE_ROWS`
+- `PRODUCTION_SMOKE_AUTH_LOGIN`
+- `PRODUCTION_SMOKE_AUTH_PASSWORD`
 
 Рабочий сайт:
 
@@ -114,3 +116,23 @@ https://aam-dispatch.kz
 3. сохранение через нейтральный слой `lib/data`;
 4. серверная работа с MySQL через `lib/server/mysql`;
 5. тяжелые таблицы открывать в режиме просмотра, редактирование включать отдельно.
+## Auth
+
+The site is protected by a server-side login. User accounts are stored in MySQL
+in `auth_users`; passwords are stored only as PBKDF2 hashes.
+
+Initial access is configured through server environment variables only:
+
+```bash
+AUTH_REQUIRED=true
+AUTH_SESSION_SECRET=
+AUTH_INITIAL_LOGIN=albert.bekker
+AUTH_INITIAL_PASSWORD=
+AUTH_INITIAL_DISPLAY_NAME=Альберт Беккер
+```
+
+Do not commit real passwords or session secrets. Put the real
+`AUTH_INITIAL_PASSWORD` and `AUTH_SESSION_SECRET` only into `.env.local`,
+server environment variables, or hosting secrets. The first user receives the
+`dispatch-chief` role and can create other users. That user can also delegate
+the right to create users through the user-management screen.

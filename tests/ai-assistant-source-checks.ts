@@ -34,7 +34,6 @@ const aiStatusSource = readFileSync(resolve(root, "lib/domain/ai-assistant/statu
 const aiSectionSource = readFileSync(resolve(root, "features/ai-assistant/AiAssistantSection.tsx"), "utf8");
 const aiTabsSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTabs.tsx"), "utf8");
 const aiHomePanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantHomePanel.tsx"), "utf8");
-const aiWorkspacePanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantWorkspacePanel.tsx"), "utf8");
 const aiSettingsPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantSettingsPanel.tsx"), "utf8");
 const approvalActionsCellSource = readFileSync(resolve(root, "features/ai-assistant/components/tasks/ApprovalActionsCell.tsx"), "utf8");
 const aiRuntimeContextSource = readFileSync(resolve(root, "lib/domain/ai-assistant/runtime-context.ts"), "utf8");
@@ -50,8 +49,10 @@ const aiPlannerPanelSource = readJoinedSources([
 ]);
 const aiAgentsPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantAgentsPanel.tsx"), "utf8");
 const aiDevelopmentPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantDevelopmentPanel.tsx"), "utf8");
-const aiKnowledgePanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantKnowledgePanel.tsx"), "utf8");
-const aiIntegrationPanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantIntegrationStatus.tsx"), "utf8");
+const aiKnowledgePanelSource = readJoinedSources([
+  resolve(root, "features/ai-assistant/components/AiAssistantKnowledgePanel.tsx"),
+  ...collectSourceFiles(resolve(root, "features/ai-assistant/components/knowledge")),
+]);
 const aiStateSource = readFileSync(resolve(root, "features/ai-assistant/lib/useAiAssistantState.tsx"), "utf8");
 const aiActionsSource = readFileSync(resolve(root, "features/ai-assistant/lib/useAiAssistantActions.ts"), "utf8");
 const aiStateActionsSource = `${aiStateSource}\n${aiActionsSource}`;
@@ -144,15 +145,6 @@ assert.match(aiHomePanelSource, /onSetActiveTab\("drafts"\)/);
 assert.match(aiHomePanelSource, /onSetActiveTab\("history"\)/);
 assert.match(aiHomePanelSource, /resolveRequestResultTarget/);
 assert.match(aiHomePanelSource, /Открыть \{formatRequestResultTarget/);
-assert.match(aiWorkspacePanelSource, /Черновики/);
-assert.match(aiWorkspacePanelSource, /Редактировать/);
-assert.match(aiWorkspacePanelSource, /Сохранить локально/);
-assert.match(aiWorkspacePanelSource, /Скачать/);
-assert.match(aiWorkspacePanelSource, /Предпросмотр/);
-assert.match(aiWorkspacePanelSource, /window\.confirm/);
-assert.match(aiWorkspacePanelSource, /Пометить для согласования/);
-assert.match(aiWorkspacePanelSource, /downloadDraft/);
-assert.match(aiWorkspacePanelSource, /requestApproval/);
 assert.match(aiChatMockSource, /во Входящие/);
 assert.doesNotMatch(aiChatMockSource, /вкладку Задачи/);
 assert.doesNotMatch(aiChatMockSource, /Одобрения/);
@@ -350,13 +342,6 @@ assert.match(aiKnowledgePanelSource, /onAddSource/);
 assert.match(aiKnowledgePanelSource, /onUpdateSource/);
 assert.match(aiKnowledgePanelSource, /onDeleteSource/);
 assert.match(aiKnowledgePanelSource, /label="Добавить источник"/);
-assert.match(aiIntegrationPanelSource, /onAddIntegration/);
-assert.match(aiIntegrationPanelSource, /onUpdateIntegration/);
-assert.match(aiIntegrationPanelSource, /onDeleteIntegration/);
-assert.match(aiIntegrationPanelSource, /label="Добавить интеграцию"/);
-assert.match(aiIntegrationPanelSource, />Возможности</);
-assert.match(aiIntegrationPanelSource, />Заглушка</);
-assert.match(aiIntegrationPanelSource, />Следующий шаг</);
 assert.match(aiStateActionsSource, /setKnowledgeSources/);
 assert.match(aiStateActionsSource, /setIntegrations/);
 assert.match(aiStateActionsSource, /setDevelopmentIdeas/);

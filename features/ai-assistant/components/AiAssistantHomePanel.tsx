@@ -81,18 +81,27 @@ export function AiAssistantHomePanel({
     () => new Map(viewModel.tasks.map((task) => [task.approvalActionId, task])),
     [viewModel.tasks],
   );
-  const todayItems = viewModel.plannerItems.filter((item) => item.plannedDate === viewModel.currentWorkDate);
-  const draftItems = createDraftCards(viewModel.documents, viewModel.mailDrafts, viewModel.documentologItems);
+  const todayItems = useMemo(
+    () => viewModel.plannerItems.filter((item) => item.plannedDate === viewModel.currentWorkDate),
+    [viewModel.currentWorkDate, viewModel.plannerItems],
+  );
+  const draftItems = useMemo(
+    () => createDraftCards(viewModel.documents, viewModel.mailDrafts, viewModel.documentologItems),
+    [viewModel.documents, viewModel.documentologItems, viewModel.mailDrafts],
+  );
   const latestAuditActions = viewModel.auditEvents;
-  const approvalCards = viewModel.approvalActions
-    .filter((approval) => approval.status === "required")
-    .slice(0, 3);
+  const approvalCards = useMemo(
+    () => viewModel.approvalActions
+      .filter((approval) => approval.status === "required")
+      .slice(0, 3),
+    [viewModel.approvalActions],
+  );
   const todayCards = todayItems;
-  const visibleTodayCards = todayItems.slice(0, 5);
+  const visibleTodayCards = useMemo(() => todayItems.slice(0, 5), [todayItems]);
   const draftCards = draftItems;
-  const visibleDraftCards = draftItems.slice(0, 3);
+  const visibleDraftCards = useMemo(() => draftItems.slice(0, 3), [draftItems]);
   const latestActions = latestAuditActions;
-  const visibleLatestActions = latestAuditActions.slice(0, 4);
+  const visibleLatestActions = useMemo(() => latestAuditActions.slice(0, 4), [latestAuditActions]);
 
   const submitRequest = (text = requestText) => {
     const normalizedText = text.trim();

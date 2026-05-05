@@ -8,6 +8,8 @@ const apiBaseUrl = (
 ).replace(/\/+$/, "");
 const minVehicleRowsRaw = process.env.PRODUCTION_SMOKE_MIN_VEHICLE_ROWS || "100";
 const minVehicleRows = Number(minVehicleRowsRaw);
+const smokeAuthLogin = process.env.PRODUCTION_SMOKE_AUTH_LOGIN || "";
+const smokeAuthPassword = process.env.PRODUCTION_SMOKE_AUTH_PASSWORD || "";
 
 if (!Number.isFinite(minVehicleRows) || minVehicleRows <= 0) {
   throw new Error("PRODUCTION_SMOKE_MIN_VEHICLE_ROWS must be a positive number");
@@ -54,6 +56,12 @@ await checkUrl("database status", `${apiBaseUrl}/api/database`, async (response)
 });
 
 async function databasePost(label, resource, action, payload = null, validate) {
+  const smokeAuthCookie = await getSmokeAuthCookie();
+  if (!smokeAuthCookie) {
+    console.log(`${label}: SKIPPED (PRODUCTION_SMOKE_AUTH_LOGIN/PASSWORD are not set)`);
+    return;
+  }
+
   const response = await fetch(`${apiBaseUrl}/api/database`, {
     method: "POST",
     headers: {
@@ -62,6 +70,7 @@ async function databasePost(label, resource, action, payload = null, validate) {
       "Referer": `${baseUrl}/`,
       "X-Dispatcher-Request": "same-origin",
       "User-Agent": "dispatcher-production-smoke/1.0",
+      "Cookie": smokeAuthCookie,
     },
     body: JSON.stringify({ resource, action, payload }),
   });
@@ -88,6 +97,50 @@ async function databasePost(label, resource, action, payload = null, validate) {
   const body = await response.json();
   await validate(body?.data ?? body);
   console.log(`${label}: OK`);
+}
+
+let smokeAuthCookiePromise = null;
+
+function getSetCookieHeaders(response) {
+  if (typeof response.headers.getSetCookie === "function") {
+    return response.headers.getSetCookie();
+  }
+
+  const header = response.headers.get("set-cookie");
+  return header ? [header] : [];
+}
+
+async function getSmokeAuthCookie() {
+  if (!smokeAuthLogin || !smokeAuthPassword) return "";
+
+  smokeAuthCookiePromise = smokeAuthCookiePromise ?? (async () => {
+    const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Origin": baseUrl,
+        "Referer": `${baseUrl}/`,
+        "X-Dispatcher-Request": "same-origin",
+        "User-Agent": "dispatcher-production-smoke/1.0",
+      },
+      body: JSON.stringify({ login: smokeAuthLogin, password: smokeAuthPassword }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`auth login returned HTTP ${response.status}`);
+    }
+
+    const cookie = getSetCookieHeaders(response)
+      .map((value) => value.split(";")[0])
+      .filter(Boolean)
+      .join("; ");
+    if (!cookie) throw new Error("auth login did not return a session cookie");
+
+    console.log("auth login: OK");
+    return cookie;
+  })();
+
+  return await smokeAuthCookiePromise;
 }
 
 await databasePost("vehicles data", "vehicles", "load", null, async (data) => {
