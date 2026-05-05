@@ -41,14 +41,11 @@ export const aiAssistantApprovalLabels: Record<AiAssistantApprovalStatus, string
   "not-required": "Не требуется",
   required: "Нужно согласовать",
   approved: "Согласовано",
-  returned: "Возвращено на доработку",
   rejected: "Отклонено",
 };
 
 export function getAiAssistantTaskStatusForApprovalDecision(
-  decision: Extract<AiAssistantApprovalStatus, "approved" | "returned" | "rejected">,
+  decision: Extract<AiAssistantApprovalStatus, "approved" | "rejected">,
 ): AiAssistantTaskStatus {
-  if (decision === "approved") return "approved";
-  if (decision === "returned") return "draft";
-  return "cancelled";
+  return decision === "approved" ? "approved" : "cancelled";
 }

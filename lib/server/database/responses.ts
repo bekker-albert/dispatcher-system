@@ -63,10 +63,3 @@ export function createDatabaseWriteGuardResponse(request?: Request) {
     { status: 403, headers: corsHeaders(request) },
   );
 }
-
-export function createDatabaseAuthRequiredResponse(request?: Request) {
-  return NextResponse.json(
-    { error: "Нужно войти в систему." },
-    { status: 401, headers: corsHeaders(request) },
-  );
-}

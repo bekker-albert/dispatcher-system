@@ -11,7 +11,7 @@ export type AiAssistantApprovalAction = {
   title: string;
   actionType: AiAssistantActionType;
   risk: AiAssistantActionRisk;
-  status: Extract<AiAssistantApprovalStatus, "required" | "approved" | "returned" | "rejected">;
+  status: Extract<AiAssistantApprovalStatus, "required" | "approved" | "rejected">;
   targetConnector: AiAssistantConnectorKey;
   targetLabel: string;
   draftText: string;

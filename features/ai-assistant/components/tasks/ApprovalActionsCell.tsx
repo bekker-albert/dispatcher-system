@@ -17,7 +17,7 @@ export function ApprovalActionsCell({
   onStartEdit: (approval: AiAssistantApprovalAction) => void;
   onSave: (approvalId: string) => void;
   onCancel: () => void;
-  onDecision: (approvalId: string, status: "approved" | "returned" | "rejected") => void;
+  onDecision: (approvalId: string, status: "approved" | "rejected") => void;
 }) {
   if (editingId === approval.id) {
     return (
@@ -34,7 +34,14 @@ export function ApprovalActionsCell({
     );
   }
 
-  if (approval.status !== "required") return null;
+  if (approval.status !== "required") {
+    return (
+      <TaskActionButton label="Редактировать" onClick={() => onStartEdit(approval)}>
+        <Pencil size={15} />
+        <span>Редактировать</span>
+      </TaskActionButton>
+    );
+  }
 
   return (
     <div style={iconActionsStyle}>
@@ -50,7 +57,7 @@ export function ApprovalActionsCell({
         <Pencil size={15} />
         <span>Редактировать</span>
       </TaskActionButton>
-      <TaskActionButton label="Вернуть на доработку" onClick={() => onDecision(approval.id, "returned")}>
+      <TaskActionButton label="Вернуть на доработку" onClick={() => onDecision(approval.id, "rejected")}>
         <X size={15} />
         <span>Доработать</span>
       </TaskActionButton>

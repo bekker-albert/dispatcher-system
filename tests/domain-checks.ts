@@ -212,7 +212,6 @@ const aiAssistantEvidenceIds = new Set(defaultAiAssistantDataset.evidence.map((e
 assert.equal(defaultAiAssistantDataset.approvalActions.every((approval) => aiAssistantTaskIds.has(approval.taskId)), true);
 assert.equal(defaultAiAssistantDataset.tasks.every((task) => task.evidenceIds.every((id) => aiAssistantEvidenceIds.has(id))), true);
 assert.equal(getAiAssistantTaskStatusForApprovalDecision("approved"), "approved");
-assert.equal(getAiAssistantTaskStatusForApprovalDecision("returned"), "draft");
 assert.equal(getAiAssistantTaskStatusForApprovalDecision("rejected"), "cancelled");
 assert.equal(resolveAiAssistantPermissions("operator").includes("ai.external.draft"), true);
 assert.equal(canApproveAiAssistantAction("supervisor"), true);

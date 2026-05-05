@@ -22,7 +22,6 @@ import { ptoMatrixTableMeta } from "../lib/domain/pto/tabs";
 
 const testDir = dirname(fileURLToPath(import.meta.url));
 const ptoSectionSource = readFileSync(resolve(testDir, "../features/pto/PtoSection.tsx"), "utf8");
-const usePtoBucketsGridEditingSource = readFileSync(resolve(testDir, "../features/pto/usePtoBucketsGridEditing.ts"), "utf8");
 
 const rowKeys = ["row-a", "row-b", "row-c"];
 const columnKeys = ["eq-1", "eq-2", "eq-3"];
@@ -225,7 +224,3 @@ assert.deepEqual(resolvePtoBucketKeyboardAction(",", false), { type: "start-edit
 assert.deepEqual(resolvePtoBucketKeyboardAction("7", true), { type: "none" });
 assert.deepEqual(resolvePtoBucketKeyboardAction("Backspace", false), { type: "none" });
 assert.deepEqual(resolvePtoBucketKeyboardAction("A", false), { type: "none" });
-
-assert.match(usePtoBucketsGridEditingSource, /const commitActiveEdit = useCallback/);
-assert.match(usePtoBucketsGridEditingSource, /skipNextBlurCommit\(editKey\);[\s\S]*finishEdit\(editKey\);/);
-assert.match(usePtoBucketsGridEditingSource, /commitActiveEdit,/);

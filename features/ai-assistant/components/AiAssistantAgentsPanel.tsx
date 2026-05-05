@@ -1,13 +1,8 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
 
-import type {
-  AiAssistantAgent,
-  AiAssistantAgentRole,
-  AiAssistantAgentRuntimeStatus,
-} from "@/features/ai-assistant/types";
+import type { AiAssistantAgent, AiAssistantAgentRole, AiAssistantAgentRuntimeStatus } from "@/features/ai-assistant/types";
 import {
   aiAssistantMutedTextStyle,
   aiAssistantPanelStyle,
@@ -19,50 +14,25 @@ import {
 
 export function AiAssistantAgentsPanel({
   agents,
-  activationDrafts,
-  onSetActivationDraft,
 }: {
   agents: AiAssistantAgent[];
-  activationDrafts: Record<string, boolean>;
-  onSetActivationDraft: (agentId: string, value: boolean) => void;
 }) {
-  const [activationKeys, setActivationKeys] = useState<Record<string, string>>({});
-  const activatedCount = useMemo(
-    () => Object.values(activationDrafts).filter(Boolean).length,
-    [activationDrafts],
-  );
-
-  const setActivationKey = (agentId: string, value: string) => {
-    setActivationKeys((current) => ({ ...current, [agentId]: value }));
-  };
-
-  const activateAgent = (agent: AiAssistantAgent) => {
-    const key = activationKeys[agent.id]?.trim();
-    if (!key || key.length < 8) return;
-
-    onSetActivationDraft(agent.id, true);
-    setActivationKeys((current) => ({ ...current, [agent.id]: "" }));
-  };
-
   return (
     <section style={aiAssistantPanelStyle}>
       <div style={panelHeaderStyle}>
         <div style={panelTitleStyle}>Агенты</div>
-        <div style={aiAssistantMutedTextStyle}>
-          Активировано в текущем сеансе: {activatedCount}. Ключ не сохраняется в браузере после нажатия.
-        </div>
+        <div style={aiAssistantMutedTextStyle}>Внутренние роли одного AI-модуля. Реальные действия выполняются только через согласование.</div>
       </div>
 
       <div style={aiAssistantTableWrapStyle}>
         <table style={agentsTableStyle}>
           <colgroup>
-            <col style={{ width: "20%" }} />
-            <col style={{ width: 130 }} />
             <col style={{ width: "22%" }} />
-            <col style={{ width: "18%" }} />
-            <col style={{ width: "16%" }} />
             <col style={{ width: 130 }} />
-            <col style={{ width: 240 }} />
+            <col style={{ width: "25%" }} />
+            <col style={{ width: "21%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: 130 }} />
           </colgroup>
           <thead>
             <tr>
@@ -71,59 +41,24 @@ export function AiAssistantAgentsPanel({
               <th style={aiAssistantThStyle}>Назначение</th>
               <th style={aiAssistantThStyle}>Разрешено</th>
               <th style={aiAssistantThStyle}>Запрещено</th>
-              <th style={compactThStyle}>Решение</th>
-              <th style={compactThStyle}>Активация</th>
+              <th style={compactThStyle}>Подтверждение</th>
             </tr>
           </thead>
           <tbody>
-            {agents.map((agent) => {
-              const isActivated = Boolean(activationDrafts[agent.id]);
-              const activationKey = activationKeys[agent.id] ?? "";
-              const isActivationReady = activationKey.trim().length >= 8;
-
-              return (
-                <tr key={agent.id}>
-                  <td style={textTdStyle}>
-                    <div style={strongTextStyle}>{agent.title}</div>
-                    <div style={aiAssistantMutedTextStyle}>{formatAgentRole(agent.role)}</div>
-                    <div style={aiAssistantMutedTextStyle}>{agent.requiredConnectors.join(", ")}</div>
-                  </td>
-                  <td style={compactTdStyle}><AgentStatusPill status={agent.status} /></td>
-                  <td style={textTdStyle}>{agent.description}</td>
-                  <td style={textTdStyle}>{agent.allowedActions.join(", ")}</td>
-                  <td style={textTdStyle}>{agent.blockedActions.join(", ")}</td>
-                  <td style={compactTdStyle}>{agent.requiresUserApproval ? "Требуется" : "Не требуется"}</td>
-                  <td style={activationTdStyle}>
-                    <div style={activationFormStyle}>
-                      <input
-                        aria-label={`Ключ активации: ${agent.title}`}
-                        autoComplete="off"
-                        type="password"
-                        value={activationKey}
-                        placeholder={isActivated ? "Активирован" : "Ключ"}
-                        onChange={(event) => setActivationKey(agent.id, event.target.value)}
-                        style={activationInputStyle}
-                      />
-                      <button
-                        type="button"
-                        disabled={!isActivationReady}
-                        onClick={() => activateAgent(agent)}
-                        style={{
-                          ...activationButtonStyle,
-                          opacity: isActivationReady ? 1 : 0.45,
-                          cursor: isActivationReady ? "pointer" : "default",
-                        }}
-                      >
-                        Вкл.
-                      </button>
-                    </div>
-                    <div style={aiAssistantMutedTextStyle}>
-                      {isActivated ? "Ключ принят. Серверная проверка будет подключена позже." : "Минимум 8 символов."}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {agents.map((agent) => (
+              <tr key={agent.id}>
+                <td style={textTdStyle}>
+                  <div style={strongTextStyle}>{agent.title}</div>
+                  <div style={aiAssistantMutedTextStyle}>{formatAgentRole(agent.role)}</div>
+                  <div style={aiAssistantMutedTextStyle}>{agent.requiredConnectors.join(", ")}</div>
+                </td>
+                <td style={compactTdStyle}><AgentStatusPill status={agent.status} /></td>
+                <td style={textTdStyle}>{agent.description}</td>
+                <td style={textTdStyle}>{agent.allowedActions.join(", ")}</td>
+                <td style={textTdStyle}>{agent.blockedActions.join(", ")}</td>
+                <td style={compactTdStyle}>{agent.requiresUserApproval ? "Требуется" : "Не требуется"}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -189,7 +124,7 @@ const panelTitleStyle: CSSProperties = {
 const agentsTableStyle: CSSProperties = {
   ...aiAssistantTableStyle,
   tableLayout: "fixed",
-  minWidth: 1320,
+  minWidth: 1180,
 };
 
 const compactThStyle: CSSProperties = {
@@ -208,40 +143,6 @@ const compactTdStyle: CSSProperties = {
 };
 
 const strongTextStyle: CSSProperties = {
-  fontWeight: 900,
-};
-
-const activationTdStyle: CSSProperties = {
-  ...aiAssistantTdStyle,
-  minWidth: 220,
-};
-
-const activationFormStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
-  gap: 6,
-  alignItems: "center",
-  marginBottom: 4,
-};
-
-const activationInputStyle: CSSProperties = {
-  minWidth: 0,
-  width: "100%",
-  boxSizing: "border-box",
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  padding: "7px 8px",
-  font: "inherit",
-  fontSize: 12,
-};
-
-const activationButtonStyle: CSSProperties = {
-  border: "1px solid #0f172a",
-  borderRadius: 8,
-  background: "#0f172a",
-  color: "#ffffff",
-  padding: "7px 9px",
-  fontSize: 12,
   fontWeight: 900,
 };
 

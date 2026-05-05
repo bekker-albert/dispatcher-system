@@ -3,46 +3,20 @@
 import { Send } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { AiAssistantFloatingNotifications } from "@/features/ai-assistant/components/AiAssistantFloatingNotifications";
-import type {
-  AiAssistantChatMessage,
-  AiAssistantNotification,
-} from "@/features/ai-assistant/types";
-import {
-  appNavigationEventName,
-  type AppNavigationEventDetail,
-} from "@/lib/domain/navigation/appNavigationEvents";
-import type { AiAssistantTab } from "@/lib/domain/ai-assistant/types";
+import type { AiAssistantChatMessage } from "@/features/ai-assistant/types";
 
 export function AiAssistantFloatingChat({
-  contextLabel,
-  detailLabel,
   messages,
-  notifications,
-  onNavigate,
   onSendMessage,
-  onSetNotificationDecision,
-  quickActions,
-  suggestions,
-  workDate,
 }: {
-  contextLabel: string;
-  detailLabel?: string;
   messages: AiAssistantChatMessage[];
-  notifications: AiAssistantNotification[];
-  onNavigate: () => void;
   onSendMessage: (text: string) => void;
-  onSetNotificationDecision: (notification: AiAssistantNotification, status: "approved" | "rejected") => void;
-  quickActions: string[];
-  suggestions: string[];
-  workDate: string;
 }) {
   const [draft, setDraft] = useState("");
   const visibleMessages = useMemo(
     () => messages.slice(-8),
     [messages],
   );
-  const hiddenMessagesCount = Math.max(0, messages.length - visibleMessages.length);
 
   const sendMessage = () => {
     const text = draft.trim();
@@ -52,61 +26,9 @@ export function AiAssistantFloatingChat({
     setDraft("");
   };
 
-  const sendPreset = (text: string) => {
-    const targetTab = resolvePresetTab(text);
-    if (targetTab) {
-      const detail: AppNavigationEventDetail = {
-        topTab: "ai-assistant",
-        aiAssistantTab: targetTab,
-      };
-
-      window.dispatchEvent(new CustomEvent(appNavigationEventName, { detail }));
-      onNavigate();
-      return;
-    }
-
-    onSendMessage(`[${contextLabel}] ${text}`);
-  };
-
   return (
     <div style={chatContentStyle}>
       <div style={messagesStyle}>
-        <div style={contextCardStyle}>
-          <div style={contextTitleStyle}>
-            <span>{contextLabel}</span>
-            <span style={contextDateStyle}>{workDate}</span>
-          </div>
-          {detailLabel && <div style={contextDetailStyle}>{detailLabel}</div>}
-          <div style={quickActionsStyle}>
-            {quickActions.slice(0, 4).map((action) => (
-              <button key={action} type="button" onClick={() => sendPreset(action)} style={quickActionStyle}>
-                {action}
-              </button>
-            ))}
-          </div>
-          <div style={suggestionsStyle}>
-            {suggestions.slice(0, 5).map((suggestion) => (
-              <button key={suggestion} type="button" onClick={() => sendPreset(suggestion)} style={suggestionStyle}>
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {notifications.length > 0 && (
-          <AiAssistantFloatingNotifications
-            notifications={notifications}
-            onNavigate={onNavigate}
-            onSetDecision={onSetNotificationDecision}
-          />
-        )}
-
-        {hiddenMessagesCount > 0 && (
-          <div style={historyHintStyle}>
-            Показаны последние 8 сообщений. Еще {hiddenMessagesCount} см. во вкладке «История».
-          </div>
-        )}
-
         {visibleMessages.map((message) => (
           <div
             key={message.id}
@@ -134,7 +56,7 @@ export function AiAssistantFloatingChat({
               sendMessage();
             }
           }}
-          placeholder={`Что сделать в разделе ${contextLabel}?`}
+          placeholder="Напишите вопрос"
           style={textareaStyle}
         />
         <button
@@ -155,51 +77,6 @@ export function AiAssistantFloatingChat({
   );
 }
 
-function resolvePresetTab(text: string): AiAssistantTab | null {
-  const normalizedText = text.trim().toLowerCase();
-  if (!normalizedText) return null;
-
-  if (
-    normalizedText.includes("входящ")
-    || normalizedText.includes("решени")
-  ) {
-    return "inbox";
-  }
-
-  if (
-    normalizedText.includes("чернов")
-    || normalizedText.includes("документ")
-  ) {
-    return "drafts";
-  }
-
-  if (
-    normalizedText.includes("истори")
-    || normalizedText.includes("последн")
-    || normalizedText.includes("аудит")
-    || normalizedText.includes("действ")
-  ) {
-    return "history";
-  }
-
-  if (
-    normalizedText.includes("настрой")
-    || normalizedText.includes("интеграц")
-    || normalizedText.includes("агент")
-  ) {
-    return "settings";
-  }
-
-  if (
-    normalizedText.includes("главн")
-    || normalizedText.includes("сводк")
-  ) {
-    return "main";
-  }
-
-  return null;
-}
-
 const chatContentStyle = {
   minHeight: 260,
   display: "grid",
@@ -209,76 +86,10 @@ const chatContentStyle = {
 
 const messagesStyle = {
   display: "grid",
-  alignContent: "start",
+  alignContent: "end",
   gap: 8,
   padding: 10,
   overflow: "auto",
-} as const;
-
-const contextCardStyle = {
-  display: "grid",
-  gap: 8,
-  border: "1px solid #dbe3ec",
-  borderRadius: 8,
-  background: "#ffffff",
-  padding: 10,
-} as const;
-
-const contextTitleStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 8,
-  color: "#0f172a",
-  fontSize: 13,
-  fontWeight: 900,
-} as const;
-
-const contextDateStyle = {
-  color: "#64748b",
-  fontSize: 11,
-  fontWeight: 800,
-} as const;
-
-const contextDetailStyle = {
-  color: "#475569",
-  fontSize: 12,
-  fontWeight: 800,
-} as const;
-
-const quickActionsStyle = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 6,
-} as const;
-
-const quickActionStyle = {
-  border: "1px solid #0f172a",
-  borderRadius: 8,
-  background: "#0f172a",
-  color: "#ffffff",
-  padding: "6px 8px",
-  font: "inherit",
-  fontSize: 12,
-  fontWeight: 900,
-  cursor: "pointer",
-} as const;
-
-const suggestionsStyle = {
-  display: "grid",
-  gap: 5,
-} as const;
-
-const suggestionStyle = {
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  background: "#f8fafc",
-  color: "#0f172a",
-  padding: "6px 8px",
-  font: "inherit",
-  fontSize: 12,
-  textAlign: "left",
-  cursor: "pointer",
 } as const;
 
 const messageStyle = {
@@ -287,16 +98,6 @@ const messageStyle = {
   padding: "7px 9px",
   fontSize: 13,
   lineHeight: 1.35,
-} as const;
-
-const historyHintStyle = {
-  border: "1px dashed #cbd5e1",
-  borderRadius: 8,
-  background: "#f8fafc",
-  color: "#475569",
-  padding: "8px 10px",
-  fontSize: 12,
-  fontWeight: 700,
 } as const;
 
 const messageAuthorStyle = {

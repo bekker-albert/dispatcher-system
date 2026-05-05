@@ -8,6 +8,7 @@ export const defaultDatabaseCorsAllowedOrigins = [
 ];
 
 export function databaseApiUrlForHostname(hostname: string | undefined) {
-  void hostname;
-  return databaseApiPath;
+  return hostname === new URL(productionApexOrigin).hostname
+    ? `${productionCanonicalOrigin}${databaseApiPath}`
+    : databaseApiPath;
 }
