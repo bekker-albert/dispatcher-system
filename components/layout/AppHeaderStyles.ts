@@ -74,6 +74,15 @@ export const workDateStyle: CSSProperties = {
   flex: "0 0 170px",
 };
 
+export const headerActionsStyle: CSSProperties = {
+  flex: "0 0 auto",
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "flex-end",
+  gap: 8,
+  marginLeft: "auto",
+};
+
 export const dateInputStyle: CSSProperties = {
   width: "100%",
   padding: "8px 10px",

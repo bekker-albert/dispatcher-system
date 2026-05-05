@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 
 import { AiAssistantFloatingDockHost } from "@/features/app/AiAssistantFloatingDockHost";
-import { AuthSessionButton } from "@/features/auth/AuthSessionButton";
 import { reportPrintCss } from "@/features/reports/printCss";
 import { SaveStatusIndicator, type SaveStatusState } from "@/shared/ui/SaveStatusIndicator";
 
@@ -36,7 +35,6 @@ export function AppPageShell({
   return (
     <div className="app-print-root" style={appRootStyle}>
       <style>{`${reportPrintCss}\n@media print { .app-save-status, .ai-floating-dock, .app-auth-session { display: none !important; } }`}</style>
-      <AuthSessionButton />
       <SaveStatusIndicator status={saveStatus} onClose={onCloseSaveStatus} />
       <div className="app-print-shell" style={appShellStyle}>
         {children}

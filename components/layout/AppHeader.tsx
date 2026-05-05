@@ -2,11 +2,14 @@
 
 import Image from "next/image";
 
+import { AuthSessionButton } from "@/features/auth/AuthSessionButton";
+
 import { AppHeaderMainTabs, AppHeaderSubtabs, AppHeaderWorkDate } from "./AppHeaderParts";
 import {
   appHeaderLogoCellStyle,
   appHeaderRowStyle,
   appHeaderStyle,
+  headerActionsStyle,
   headerNavStackPtoStyle,
   headerNavStackStyle,
   logoImageStyle,
@@ -82,7 +85,10 @@ export function AppHeader({
             />
           )}
         </div>
-        <AppHeaderWorkDate reportDate={reportDate} onSelectReportDate={onSelectReportDate} />
+        <div style={headerActionsStyle}>
+          <AppHeaderWorkDate reportDate={reportDate} onSelectReportDate={onSelectReportDate} />
+          <AuthSessionButton />
+        </div>
       </div>
     </div>
   );
