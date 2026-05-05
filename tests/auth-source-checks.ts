@@ -42,6 +42,8 @@ assert.match(appPageSource, /<AppRoot initialAuthUser=\{session\.user\} \/>/);
 assert.match(appPageSource, /<LoginScreen \/>/);
 assert.match(appRootSource, /AuthProvider initialUser=\{initialAuthUser\}/);
 assert.match(appHeaderStylesSource, /zIndex: 200/);
+assert.match(appHeaderStylesSource, /flex: "0 0 auto"/);
+assert.doesNotMatch(appHeaderStylesSource, /flex: "0 0 170px"/);
 assert.match(appHeaderStylesSource, /alignSelf: "flex-start"/);
 assert.match(appHeaderStylesSource, /height: "fit-content"/);
 assert.match(appHeaderStylesSource, /justifyContent: "flex-start"/);

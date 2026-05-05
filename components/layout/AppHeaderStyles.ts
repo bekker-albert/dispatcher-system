@@ -73,7 +73,7 @@ export const logoImageStyle: CSSProperties = {
 
 export const workDateStyle: CSSProperties = {
   width: 170,
-  flex: "0 0 170px",
+  flex: "0 0 auto",
 };
 
 export const headerActionsStyle: CSSProperties = {
