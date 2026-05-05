@@ -12,7 +12,6 @@ import {
   PtoPrimaryContent,
   ReportsPrimaryContent,
   SafetyPrimaryContent,
-  UserPrimaryContent,
 } from "@/features/app/lazyPrimaryContent";
 import { useAppSectionPreloader } from "@/features/app/useAppSectionPreloader";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
@@ -106,8 +105,6 @@ export function AppPrimaryContent({
       )}
 
       {renderedTopTab === "ai-assistant" && <AiAssistantPrimaryContent />}
-
-      {renderedTopTab === "user" && <UserPrimaryContent />}
 
       {renderedTopTab === "admin" && (
         <AdminPrimaryContent

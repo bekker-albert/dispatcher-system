@@ -27,6 +27,15 @@ type CreateAuthUserInput = {
   canManageUsers: boolean;
 };
 
+type UpdateAuthUserInput = {
+  id: string;
+  displayName: string;
+  password?: string;
+  role: AuthUserRole;
+  canManageUsers: boolean;
+  active: boolean;
+};
+
 function createUserId() {
   return `usr_${randomBytes(12).toString("hex")}`;
 }
@@ -161,6 +170,52 @@ export async function createAuthUser(input: CreateAuthUserInput) {
 
   const record = await loadAuthUserRecordById(userId);
   if (!record) throw new Error("Пользователь не создан");
+
+  return toAuthUserListItem(record);
+}
+
+export async function updateAuthUser(input: UpdateAuthUserInput) {
+  if (!input.id.trim()) throw new Error("Пользователь не выбран");
+  if (!input.displayName.trim()) throw new Error("Имя пользователя обязательно");
+  if (input.password !== undefined && input.password.length > 0 && input.password.length < 8) {
+    throw new Error("Пароль должен быть не короче 8 символов");
+  }
+
+  const existing = await loadAuthUserRecordById(input.id);
+  if (!existing) throw new Error("Пользователь не найден");
+
+  if (input.password && input.password.length > 0) {
+    const passwordHash = await hashPassword(input.password);
+    await authExecute(
+      `UPDATE auth_users
+      SET display_name = ?, role = ?, can_manage_users = ?, active = ?, password_hash = ?
+      WHERE user_id = ?`,
+      [
+        input.displayName.trim(),
+        input.role,
+        input.canManageUsers ? 1 : 0,
+        input.active ? 1 : 0,
+        passwordHash,
+        input.id,
+      ],
+    );
+  } else {
+    await authExecute(
+      `UPDATE auth_users
+      SET display_name = ?, role = ?, can_manage_users = ?, active = ?
+      WHERE user_id = ?`,
+      [
+        input.displayName.trim(),
+        input.role,
+        input.canManageUsers ? 1 : 0,
+        input.active ? 1 : 0,
+        input.id,
+      ],
+    );
+  }
+
+  const record = await loadAuthUserRecordById(input.id);
+  if (!record) throw new Error("Пользователь не найден");
 
   return toAuthUserListItem(record);
 }

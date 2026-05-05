@@ -21,6 +21,8 @@ import {
   AdminNavigationSection,
   AdminStructureSection,
 } from "@/features/app/lazySections";
+import { UserProfileSection } from "@/features/users/UserProfileSection";
+import { defaultUserCard } from "@/lib/domain/reference/defaults";
 import { SectionCard } from "@/shared/ui/layout";
 
 type AppDerivedModels = ReturnType<typeof useAppDerivedModels>;
@@ -74,6 +76,9 @@ export function useAppAdminScreenProps({
       )}
       {adminSection === "reports" && (
         <AdminReportsPrimaryContent appState={appState} models={models} />
+      )}
+      {adminSection === "users" && (
+        <UserProfileSection userCard={defaultUserCard} />
       )}
     </SectionCard>
   );

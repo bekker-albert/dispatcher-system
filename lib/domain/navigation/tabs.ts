@@ -59,7 +59,6 @@ export const defaultTopTabs: TopTabDefinition[] = [
   { id: "fuel", label: "Топливо", visible: true },
   { id: "pto", label: "ПТО", visible: true },
   { id: "tb", label: "ТБ", visible: true },
-  { id: "user", label: "Профиль", visible: true },
   { id: "admin", label: "Админка", visible: true, locked: true },
   { id: "ai-assistant", label: "AI-ассистент", visible: true },
 ];
