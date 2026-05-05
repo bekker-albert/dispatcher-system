@@ -13,7 +13,10 @@ const wrapperStyle: CSSProperties = {
   background: "#ffffff",
   padding: "7px 8px",
   boxShadow: "none",
+  boxSizing: "border-box",
   fontSize: 12,
+  justifyContent: "space-between",
+  width: "100%",
   whiteSpace: "nowrap",
 };
 
