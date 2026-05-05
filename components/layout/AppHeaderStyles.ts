@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 
 export const appHeaderStyle: CSSProperties = {
+  position: "relative",
+  zIndex: 200,
   background: "#ffffff",
   border: "1px solid #e2e8f0",
   borderRadius: 8,

@@ -46,7 +46,7 @@ const popupStyle: CSSProperties = {
   position: "absolute",
   right: 0,
   top: "calc(100% + 6px)",
-  zIndex: 40,
+  zIndex: 300,
   width: 280,
   border: "1px solid #dbe3ec",
   borderRadius: 8,
