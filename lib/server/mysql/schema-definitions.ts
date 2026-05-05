@@ -52,21 +52,6 @@ export const schemaStatements = [
     KEY app_state_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  `CREATE TABLE IF NOT EXISTS auth_users (
-    user_id VARCHAR(64) NOT NULL,
-    login VARCHAR(191) NOT NULL,
-    display_name VARCHAR(191) NOT NULL,
-    role VARCHAR(64) NOT NULL,
-    can_manage_users TINYINT(1) NOT NULL DEFAULT 0,
-    active TINYINT(1) NOT NULL DEFAULT 1,
-    password_hash TEXT NOT NULL,
-    created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (user_id),
-    UNIQUE KEY auth_users_login_idx (login),
-    KEY auth_users_updated_idx (updated_at)
-  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
-
   `CREATE TABLE IF NOT EXISTS pto_rows (
     table_type VARCHAR(32) NOT NULL,
     row_id VARCHAR(191) NOT NULL,
@@ -158,18 +143,6 @@ export const schemaMigrations: MysqlSchemaMigration[] = [
     tableName: "app_state",
     indexName: "app_state_updated_idx",
     statement: "ALTER TABLE app_state ADD INDEX app_state_updated_idx (updated_at)",
-  },
-  {
-    kind: "index",
-    tableName: "auth_users",
-    indexName: "auth_users_login_idx",
-    statement: "ALTER TABLE auth_users ADD UNIQUE INDEX auth_users_login_idx (login)",
-  },
-  {
-    kind: "index",
-    tableName: "auth_users",
-    indexName: "auth_users_updated_idx",
-    statement: "ALTER TABLE auth_users ADD INDEX auth_users_updated_idx (updated_at)",
   },
   {
     kind: "index",

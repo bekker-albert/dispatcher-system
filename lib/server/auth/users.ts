@@ -3,9 +3,9 @@ import { randomBytes } from "node:crypto";
 
 import type { AuthUser, AuthUserListItem, AuthUserRole } from "../../domain/auth/types";
 import { normalizeAuthUserRole } from "../../domain/auth/types";
-import { dbExecute, dbRows } from "../mysql/pool";
 import { getInitialAuthUserConfig } from "./config";
 import { hashPassword, verifyPassword } from "./password";
+import { authExecute, authRows } from "./schema";
 
 type AuthUserRecord = RowDataPacket & {
   user_id: string;
@@ -55,7 +55,7 @@ function toAuthUserListItem(record: AuthUserRecord): AuthUserListItem {
 }
 
 async function loadAuthUserRecordByLogin(login: string) {
-  const rows = await dbRows<AuthUserRecord>(
+  const rows = await authRows<AuthUserRecord>(
     `SELECT user_id, login, display_name, role, can_manage_users, active, password_hash, created_at, updated_at
     FROM auth_users
     WHERE login = ?
@@ -67,7 +67,7 @@ async function loadAuthUserRecordByLogin(login: string) {
 }
 
 async function loadAuthUserRecordById(userId: string) {
-  const rows = await dbRows<AuthUserRecord>(
+  const rows = await authRows<AuthUserRecord>(
     `SELECT user_id, login, display_name, role, can_manage_users, active, password_hash, created_at, updated_at
     FROM auth_users
     WHERE user_id = ?
@@ -115,7 +115,7 @@ export async function getAuthUserById(userId: string) {
 
 export async function listAuthUsers() {
   await ensureInitialAuthUser();
-  const rows = await dbRows<AuthUserRecord>(
+  const rows = await authRows<AuthUserRecord>(
     `SELECT user_id, login, display_name, role, can_manage_users, active, password_hash, created_at, updated_at
     FROM auth_users
     ORDER BY created_at ASC, login ASC`,
@@ -132,7 +132,7 @@ export async function createAuthUser(input: CreateAuthUserInput) {
 
   const userId = createUserId();
   const passwordHash = await hashPassword(input.password);
-  await dbExecute(
+  await authExecute(
     `INSERT INTO auth_users
       (user_id, login, display_name, role, can_manage_users, active, password_hash)
     VALUES (?, ?, ?, ?, ?, 1, ?)`,

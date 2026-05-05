@@ -9,6 +9,7 @@ const appPageSource = readFileSync(resolve(root, "app/page.tsx"), "utf8");
 const appRootSource = readFileSync(resolve(root, "features/app/AppRoot.tsx"), "utf8");
 const appShellSource = readFileSync(resolve(root, "features/app/AppPageShell.tsx"), "utf8");
 const databaseRouterSource = readFileSync(resolve(root, "lib/server/database/router.ts"), "utf8");
+const authSchemaSource = readFileSync(resolve(root, "lib/server/auth/schema.ts"), "utf8");
 const envExampleSource = readFileSync(resolve(root, ".env.example"), "utf8");
 const readmeSource = readFileSync(resolve(root, "README.md"), "utf8");
 const authSources = readJoinedSources([
@@ -58,6 +59,9 @@ assert.match(authSources, /isAuthMutationAllowed/);
 assert.match(authSources, /canManageUsers/);
 assert.match(authSources, /can_manage_users/);
 assert.match(authSources, /createAuthUser/);
+assert.match(authSchemaSource, /CREATE TABLE IF NOT EXISTS auth_users/);
+assert.match(authSchemaSource, /authRows/);
+assert.match(authSchemaSource, /authExecute/);
 assert.doesNotMatch(authSources, /localStorage/);
 const initialPasswordAssignmentPattern = new RegExp(["AUTH_INITIAL_PASSWORD", "="].join("") + "[^\\r\\n]+");
 assert.doesNotMatch(allTrackedSource, initialPasswordAssignmentPattern);
