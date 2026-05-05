@@ -79,8 +79,10 @@ export const headerActionsStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
-  justifyContent: "center",
-  gap: 3,
+  alignSelf: "flex-start",
+  justifyContent: "flex-start",
+  gap: 8,
+  height: "fit-content",
   marginLeft: "auto",
 };
 
