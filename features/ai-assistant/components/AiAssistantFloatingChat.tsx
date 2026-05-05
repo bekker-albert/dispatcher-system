@@ -3,14 +3,24 @@
 import { Send } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { AiAssistantChatMessage } from "@/features/ai-assistant/types";
+import { AiAssistantFloatingNotifications } from "@/features/ai-assistant/components/AiAssistantFloatingNotifications";
+import type {
+  AiAssistantChatMessage,
+  AiAssistantNotification,
+} from "@/features/ai-assistant/types";
 
 export function AiAssistantFloatingChat({
   messages,
+  notifications,
+  onNavigate,
   onSendMessage,
+  onSetNotificationDecision,
 }: {
   messages: AiAssistantChatMessage[];
+  notifications: AiAssistantNotification[];
+  onNavigate: () => void;
   onSendMessage: (text: string) => void;
+  onSetNotificationDecision: (notification: AiAssistantNotification, status: "approved" | "rejected") => void;
 }) {
   const [draft, setDraft] = useState("");
   const visibleMessages = useMemo(
@@ -29,6 +39,14 @@ export function AiAssistantFloatingChat({
   return (
     <div style={chatContentStyle}>
       <div style={messagesStyle}>
+        {notifications.length > 0 && (
+          <AiAssistantFloatingNotifications
+            notifications={notifications}
+            onNavigate={onNavigate}
+            onSetDecision={onSetNotificationDecision}
+          />
+        )}
+
         {visibleMessages.map((message) => (
           <div
             key={message.id}

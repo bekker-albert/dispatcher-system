@@ -23,8 +23,16 @@ import { createAiAssistantViewModel } from "@/lib/domain/ai-assistant/view-model
 import { resolveAiAssistantPermissions } from "@/lib/domain/ai-assistant/permissions";
 import { getAiAssistantTaskStatusForApprovalDecision } from "@/lib/domain/ai-assistant/status";
 
-export function useAiAssistantState() {
-  const [activeTab, setActiveTab] = useState<AiAssistantTab>("tasks");
+type UseAiAssistantStateOptions = {
+  currentWorkDate?: string;
+  currentDateTime?: string;
+};
+
+export function useAiAssistantState({
+  currentWorkDate = defaultAiAssistantDataset.currentWorkDate,
+  currentDateTime,
+}: UseAiAssistantStateOptions = {}) {
+  const [activeTab, setActiveTab] = useState<AiAssistantTab>("main");
   const [chatMessages, setChatMessages] = useState(defaultAiAssistantDataset.chatMessages);
   const [approvalActions, setApprovalActions] = useState(defaultAiAssistantDataset.approvalActions);
   const [tasks, setTasks] = useState(defaultAiAssistantDataset.tasks);
@@ -32,6 +40,7 @@ export function useAiAssistantState() {
   const [plannerItems, setPlannerItems] = useState(defaultAiAssistantDataset.plannerItems);
   const [integrations, setIntegrations] = useState(defaultAiAssistantDataset.integrations);
   const [knowledgeSources, setKnowledgeSources] = useState(defaultAiAssistantDataset.knowledgeSources);
+  const [agentActivationDrafts, setAgentActivationDrafts] = useState<Record<string, boolean>>({});
   const [agents] = useState(defaultAiAssistantDataset.agents);
   const [whatsappGroups] = useState(defaultAiAssistantDataset.whatsappGroups);
   const [whatsappMessageCandidates] = useState(defaultAiAssistantDataset.whatsappMessageCandidates);
@@ -50,9 +59,15 @@ export function useAiAssistantState() {
     () => resolveAiAssistantPermissions(defaultAiAssistantRole),
     [],
   );
+  const resolvedCurrentDateTime = useMemo(
+    () => currentDateTime ?? createAiAssistantCurrentDateTime(currentWorkDate),
+    [currentDateTime, currentWorkDate],
+  );
   const dataset = useMemo(
     () => ({
       ...defaultAiAssistantDataset,
+      currentWorkDate,
+      currentDateTime: resolvedCurrentDateTime,
       chatMessages,
       approvalActions,
       tasks,
@@ -80,6 +95,8 @@ export function useAiAssistantState() {
       calendarEvents,
       chatMessages,
       codexPromptDrafts,
+      currentWorkDate,
+      resolvedCurrentDateTime,
       developmentIdeas,
       documentTemplates,
       documentologItems,
@@ -142,7 +159,7 @@ export function useAiAssistantState() {
   }, []);
   const setApprovalDecision = useCallback((
     approval: AiAssistantApprovalAction,
-    status: "approved" | "rejected",
+    status: "approved" | "returned" | "rejected",
     task?: AiAssistantTask,
   ) => {
     const updatedAt = new Date().toISOString();
@@ -204,7 +221,7 @@ export function useAiAssistantState() {
       item.linkedTaskId === approval.taskId
         ? {
           ...item,
-          status: status === "approved" ? "done" : "cancelled",
+          status: status === "approved" ? "done" : status === "returned" ? "needs-decision" : "cancelled",
           updatedAt,
         }
         : item
@@ -247,6 +264,9 @@ export function useAiAssistantState() {
   }, []);
   const deleteIntegration = useCallback((integrationKey: string) => {
     setIntegrations((current) => current.filter((item) => item.key !== integrationKey));
+  }, []);
+  const setAgentActivationDraft = useCallback((agentId: string, value: boolean) => {
+    setAgentActivationDrafts((current) => ({ ...current, [agentId]: value }));
   }, []);
   const setDevelopmentIdeaStatus = useCallback((
     ideaId: string,
@@ -305,6 +325,8 @@ export function useAiAssistantState() {
     permissions,
     viewModel,
     setPlannerItems,
+    agentActivationDrafts,
+    setAgentActivationDraft,
     addIntegration,
     updateIntegration,
     deleteIntegration,
@@ -323,8 +345,16 @@ type AiAssistantStateValue = ReturnType<typeof useAiAssistantState>;
 
 const AiAssistantStateContext = createContext<AiAssistantStateValue | null>(null);
 
-export function AiAssistantProvider({ children }: { children: ReactNode }) {
-  const value = useAiAssistantState();
+export function AiAssistantProvider({
+  children,
+  currentDateTime,
+  currentWorkDate,
+}: {
+  children: ReactNode;
+  currentDateTime?: string;
+  currentWorkDate?: string;
+}) {
+  const value = useAiAssistantState({ currentDateTime, currentWorkDate });
 
   return (
     <AiAssistantStateContext.Provider value={value}>
@@ -340,4 +370,12 @@ export function useAiAssistantContext(): AiAssistantStateValue {
   }
 
   return value;
+}
+
+function createAiAssistantCurrentDateTime(currentWorkDate: string) {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
+  return `${currentWorkDate}T${hours}:${minutes}`;
 }

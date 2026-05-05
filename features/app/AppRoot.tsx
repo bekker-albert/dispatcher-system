@@ -35,7 +35,7 @@ export default function App() {
   });
 
   return (
-    <AiAssistantProvider>
+    <AiAssistantProvider currentWorkDate={appState.reportDate}>
       <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
         <AppHeader {...appHeaderProps} />
         <AppPrimaryContent {...primaryContentProps} />

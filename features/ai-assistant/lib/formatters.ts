@@ -34,6 +34,7 @@ export function formatAiAssistantApprovalStatus(status: AiAssistantApprovalActio
   const labels: Record<AiAssistantApprovalAction["status"], string> = {
     required: "Ожидает решения",
     approved: "Одобрено",
+    returned: "Возвращено на доработку",
     rejected: "Отклонено",
   };
 

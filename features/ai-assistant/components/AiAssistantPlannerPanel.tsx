@@ -5,15 +5,24 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
 import type { AiAssistantPlannerItem } from "@/features/ai-assistant/types";
+import { PlannerCalendar } from "@/features/ai-assistant/components/planner/PlannerCalendar";
+import { PlannerDayTasks } from "@/features/ai-assistant/components/planner/PlannerDayTasks";
 import {
   createPlannerDraft,
   normalizePlannerDraft,
   type PlannerDraft,
 } from "@/features/ai-assistant/components/planner/plannerDraft";
 import { PlannerIconButton } from "@/features/ai-assistant/components/planner/PlannerIconButton";
-import { PlannerTable } from "@/features/ai-assistant/components/planner/PlannerTable";
+import {
+  createPlannerCalendarDays,
+  getPlannerMonthKey,
+  shiftPlannerMonth,
+} from "@/features/ai-assistant/components/planner/plannerCalendarModel";
 import { formatPlannerDateLabel } from "@/features/ai-assistant/components/planner/plannerFormatters";
-import { plannerHeaderStyle } from "@/features/ai-assistant/components/planner/plannerStyles";
+import {
+  plannerCalendarLayoutStyle,
+  plannerHeaderStyle,
+} from "@/features/ai-assistant/components/planner/plannerStyles";
 import {
   aiAssistantMutedTextStyle,
   aiAssistantPanelStyle,
@@ -28,19 +37,57 @@ export function AiAssistantPlannerPanel({
   plannerItems: AiAssistantPlannerItem[];
   onChangePlannerItems: Dispatch<SetStateAction<AiAssistantPlannerItem[]>>;
 }) {
+  return (
+    <AiAssistantPlannerPanelContent
+      key={currentWorkDate}
+      currentWorkDate={currentWorkDate}
+      plannerItems={plannerItems}
+      onChangePlannerItems={onChangePlannerItems}
+    />
+  );
+}
+
+function AiAssistantPlannerPanelContent({
+  currentWorkDate,
+  plannerItems,
+  onChangePlannerItems,
+}: {
+  currentWorkDate: string;
+  plannerItems: AiAssistantPlannerItem[];
+  onChangePlannerItems: Dispatch<SetStateAction<AiAssistantPlannerItem[]>>;
+}) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PlannerDraft>(() => createPlannerDraft(currentWorkDate));
+  const [selectedDate, setSelectedDate] = useState(currentWorkDate);
+  const [calendarMonth, setCalendarMonth] = useState(() => getPlannerMonthKey(currentWorkDate));
+
   const sortedItems = useMemo(
     () => [...plannerItems].sort((a, b) => `${a.plannedDate} ${a.plannedTime ?? ""}`.localeCompare(`${b.plannedDate} ${b.plannedTime ?? ""}`)),
     [plannerItems],
   );
+  const selectedDateItems = useMemo(
+    () => sortedItems.filter((item) => item.plannedDate === selectedDate),
+    [selectedDate, sortedItems],
+  );
+  const calendarDays = useMemo(
+    () => createPlannerCalendarDays({
+      currentWorkDate,
+      items: plannerItems,
+      monthKey: calendarMonth,
+    }),
+    [calendarMonth, currentWorkDate, plannerItems],
+  );
 
-  const startCreate = () => {
+  const startCreate = (date = selectedDate) => {
+    setSelectedDate(date);
+    setCalendarMonth(getPlannerMonthKey(date));
     setEditingId("new");
-    setDraft(createPlannerDraft(currentWorkDate));
+    setDraft(createPlannerDraft(date));
   };
 
   const startEdit = (item: AiAssistantPlannerItem) => {
+    setSelectedDate(item.plannedDate);
+    setCalendarMonth(getPlannerMonthKey(item.plannedDate));
     setEditingId(item.id);
     setDraft({
       title: item.title,
@@ -58,9 +105,13 @@ export function AiAssistantPlannerPanel({
     });
   };
 
-  const cancelEdit = () => {
+  const finishEdit = (date = selectedDate) => {
     setEditingId(null);
-    setDraft(createPlannerDraft(currentWorkDate));
+    setDraft(createPlannerDraft(date));
+  };
+
+  const cancelEdit = () => {
+    finishEdit();
   };
 
   const saveDraft = () => {
@@ -77,15 +128,48 @@ export function AiAssistantPlannerPanel({
           updatedAt: new Date().toISOString(),
         },
       ]);
+      setSelectedDate(normalizedDraft.plannedDate);
+      setCalendarMonth(getPlannerMonthKey(normalizedDraft.plannedDate));
     } else if (editingId) {
       onChangePlannerItems((current) => current.map((item) => (
         item.id === editingId
           ? { ...item, ...normalizedDraft, updatedAt: new Date().toISOString() }
           : item
       )));
+      setSelectedDate(normalizedDraft.plannedDate);
+      setCalendarMonth(getPlannerMonthKey(normalizedDraft.plannedDate));
     }
 
-    cancelEdit();
+    finishEdit(normalizedDraft.plannedDate);
+  };
+
+  const setPlannerDecision = (item: AiAssistantPlannerItem, decision: "approved" | "rejected") => {
+    if (item.requireApproval) {
+      onChangePlannerItems((current) => current.map((currentItem) => (
+        currentItem.id === item.id
+          ? {
+              ...currentItem,
+              status: "needs-decision",
+              comment: "Требуется решение в очереди задач",
+              updatedAt: new Date().toISOString(),
+            }
+          : currentItem
+      )));
+      return;
+    }
+
+    onChangePlannerItems((current) => current.map((currentItem) => (
+      currentItem.id === item.id
+        ? {
+            ...currentItem,
+            status: decision === "approved" ? "done" : "cancelled",
+            requireApproval: false,
+            comment: decision === "approved" ? "Согласовано на сайте" : "Отклонено на сайте",
+            updatedAt: new Date().toISOString(),
+          }
+        : currentItem
+    )));
+    if (editingId === item.id) cancelEdit();
   };
 
   const deleteItem = (item: AiAssistantPlannerItem) => {
@@ -104,6 +188,16 @@ export function AiAssistantPlannerPanel({
     if (editingId === item.id) cancelEdit();
   };
 
+  const selectDate = (date: string) => {
+    setSelectedDate(date);
+    setCalendarMonth(getPlannerMonthKey(date));
+    if (!editingId) setDraft(createPlannerDraft(date));
+  };
+
+  const changeMonth = (offset: number) => {
+    setCalendarMonth((current) => shiftPlannerMonth(current, offset));
+  };
+
   return (
     <section style={aiAssistantPanelStyle}>
       <div style={plannerHeaderStyle}>
@@ -111,20 +205,34 @@ export function AiAssistantPlannerPanel({
           <div style={{ fontSize: 17, fontWeight: 900, color: "#0f172a" }}>Планировщик</div>
           <div style={aiAssistantMutedTextStyle}>Рабочая дата: {formatPlannerDateLabel(currentWorkDate)}</div>
         </div>
-        <PlannerIconButton label="Добавить задачу" onClick={startCreate}>
+        <PlannerIconButton label="Добавить задачу" onClick={() => startCreate()}>
           <Plus size={15} />
         </PlannerIconButton>
       </div>
-      <PlannerTable
-        draft={draft}
-        editingId={editingId}
-        items={sortedItems}
-        onCancelEdit={cancelEdit}
-        onChangeDraft={setDraft}
-        onDeleteItem={deleteItem}
-        onSaveDraft={saveDraft}
-        onStartEdit={startEdit}
-      />
+
+      <div style={plannerCalendarLayoutStyle}>
+        <PlannerCalendar
+          currentWorkDate={currentWorkDate}
+          days={calendarDays}
+          monthKey={calendarMonth}
+          selectedDate={selectedDate}
+          onChangeMonth={changeMonth}
+          onSelectDate={selectDate}
+        />
+        <PlannerDayTasks
+          draft={draft}
+          editingId={editingId}
+          items={selectedDateItems}
+          selectedDate={selectedDate}
+          onCancelEdit={cancelEdit}
+          onChangeDraft={setDraft}
+          onDeleteItem={deleteItem}
+          onSaveDraft={saveDraft}
+          onSetPlannerDecision={setPlannerDecision}
+          onStartCreate={() => startCreate(selectedDate)}
+          onStartEdit={startEdit}
+        />
+      </div>
     </section>
   );
 }

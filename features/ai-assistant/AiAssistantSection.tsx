@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import { AiAssistantAgentsPanel } from "@/features/ai-assistant/components/AiAssistantAgentsPanel";
-import { AiAssistantAuditLog } from "@/features/ai-assistant/components/AiAssistantAuditLog";
-import { AiAssistantDevelopmentPanel } from "@/features/ai-assistant/components/AiAssistantDevelopmentPanel";
-import { AiAssistantIntegrationStatus } from "@/features/ai-assistant/components/AiAssistantIntegrationStatus";
-import { AiAssistantKnowledgePanel } from "@/features/ai-assistant/components/AiAssistantKnowledgePanel";
-import { AiAssistantPlannerPanel } from "@/features/ai-assistant/components/AiAssistantPlannerPanel";
+import { AiAssistantDocumentsPanel } from "@/features/ai-assistant/components/AiAssistantDocumentsPanel";
+import { AiAssistantHomePanel } from "@/features/ai-assistant/components/AiAssistantHomePanel";
+import {
+  AiAssistantSettingsPanel,
+  type SettingsSection,
+} from "@/features/ai-assistant/components/AiAssistantSettingsPanel";
 import { AiAssistantTabs } from "@/features/ai-assistant/components/AiAssistantTabs";
 import { AiAssistantTasksPanel } from "@/features/ai-assistant/components/AiAssistantTasksPanel";
 import {
@@ -22,13 +22,17 @@ import {
 } from "@/lib/domain/navigation/appNavigationEvents";
 
 export function AiAssistantSection() {
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("agents");
   const {
     activeTab,
+    agentActivationDrafts,
+    appendChatMessage,
     setActiveTab,
+    setPlannerItems,
+    setAgentActivationDraft,
     setApprovalDecision,
     updateApprovalDraftText,
     viewModel,
-    setPlannerItems,
     addIntegration,
     updateIntegration,
     deleteIntegration,
@@ -60,6 +64,19 @@ export function AiAssistantSection() {
         <AiAssistantTabs activeTab={activeTab} onSelectTab={setActiveTab} />
       </div>
 
+      {activeTab === "main" && (
+        <AiAssistantHomePanel
+          viewModel={viewModel}
+          onAppendChatMessage={appendChatMessage}
+          onOpenSettingsSection={(section) => {
+            setSettingsSection(section);
+            setActiveTab("settings");
+          }}
+          onSetActiveTab={setActiveTab}
+          onSetApprovalDecision={setApprovalDecision}
+        />
+      )}
+
       {activeTab === "tasks" && (
         <AiAssistantTasksPanel
           approvals={viewModel.approvalActions}
@@ -67,52 +84,36 @@ export function AiAssistantSection() {
           tasks={viewModel.currentTasks}
           notifications={viewModel.currentNotifications}
           plannerItems={viewModel.plannerItems}
+          onChangePlannerItems={setPlannerItems}
           onUpdateApprovalDraftText={updateApprovalDraftText}
           onSetApprovalDecision={setApprovalDecision}
         />
       )}
 
-      {activeTab === "planner" && (
-        <AiAssistantPlannerPanel
-          currentWorkDate={viewModel.currentWorkDate}
-          plannerItems={viewModel.plannerItems}
-          onChangePlannerItems={setPlannerItems}
+      {activeTab === "documents" && (
+        <AiAssistantDocumentsPanel
+          documents={viewModel.documents}
+          documentologItems={viewModel.documentologItems}
+          mailDrafts={viewModel.mailDrafts}
         />
       )}
 
-      {activeTab === "agents" && (
-        <AiAssistantAgentsPanel agents={viewModel.agents} />
-      )}
-
-      {activeTab === "development" && (
-        <AiAssistantDevelopmentPanel
-          ideas={viewModel.developmentIdeas}
-          codexPromptDrafts={viewModel.codexPromptDrafts}
-          onSetIdeaStatus={setDevelopmentIdeaStatus}
-          onCreateCodexPromptDraft={createCodexPromptDraftForIdea}
+      {activeTab === "settings" && (
+        <AiAssistantSettingsPanel
+          viewModel={viewModel}
+          agentActivationDrafts={agentActivationDrafts}
+          setAgentActivationDraft={setAgentActivationDraft}
+          section={settingsSection}
+          onSetSection={setSettingsSection}
+          addIntegration={addIntegration}
+          updateIntegration={updateIntegration}
+          deleteIntegration={deleteIntegration}
+          addKnowledgeSource={addKnowledgeSource}
+          updateKnowledgeSource={updateKnowledgeSource}
+          deleteKnowledgeSource={deleteKnowledgeSource}
+          setDevelopmentIdeaStatus={setDevelopmentIdeaStatus}
+          createCodexPromptDraftForIdea={createCodexPromptDraftForIdea}
         />
-      )}
-
-      {activeTab === "integrations" && (
-        <AiAssistantIntegrationStatus
-          integrations={viewModel.integrations}
-          onAddIntegration={addIntegration}
-          onUpdateIntegration={updateIntegration}
-          onDeleteIntegration={deleteIntegration}
-        />
-      )}
-
-      {activeTab === "knowledge" && (
-        <AiAssistantKnowledgePanel
-          sources={viewModel.knowledgeSources}
-          onAddSource={addKnowledgeSource}
-          onUpdateSource={updateKnowledgeSource}
-          onDeleteSource={deleteKnowledgeSource}
-        />
-      )}
-
-      {activeTab === "audit" && (
-        <AiAssistantAuditLog events={viewModel.auditEvents} />
       )}
     </div>
   );
