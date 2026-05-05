@@ -8,10 +8,13 @@ import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import { useAppScreenProps } from "@/features/app/useAppScreenProps";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import { AuthProvider } from "@/features/auth/AuthContext";
 import { AiAssistantProvider } from "@/features/ai-assistant/lib/useAiAssistantState";
 import { databaseConfigured } from "@/lib/data/config";
+import type { AuthUser } from "@/lib/domain/auth/types";
+import { createAiAssistantRuntimeContext } from "@/lib/domain/ai-assistant/runtime-context";
 
-export default function App() {
+export default function App({ initialAuthUser }: { initialAuthUser: AuthUser }) {
   const appState = useAppStateBundle();
   const {
     saveStatus,
@@ -33,13 +36,27 @@ export default function App() {
     runtime,
     navigation,
   });
+  const activeReportCustomer = appState.reportCustomers.find((customer) => customer.id === appState.reportCustomerId);
+  const aiAssistantRuntimeContext = createAiAssistantRuntimeContext({
+    adminSection: appState.adminSection,
+    dispatchTab: appState.dispatchTab,
+    ptoTab: appState.ptoTab,
+    reportCustomerLabel: activeReportCustomer?.label,
+    topTab: appState.topTab,
+    workDate: appState.reportDate,
+  });
 
   return (
-    <AiAssistantProvider>
-      <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
-        <AppHeader {...appHeaderProps} />
-        <AppPrimaryContent {...primaryContentProps} />
-      </AppPageShell>
-    </AiAssistantProvider>
+    <AuthProvider initialUser={initialAuthUser}>
+      <AiAssistantProvider
+        currentContext={aiAssistantRuntimeContext}
+        currentWorkDate={appState.reportDate}
+      >
+        <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
+          <AppHeader {...appHeaderProps} />
+          <AppPrimaryContent {...primaryContentProps} />
+        </AppPageShell>
+      </AiAssistantProvider>
+    </AuthProvider>
   );
 }

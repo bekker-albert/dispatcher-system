@@ -1,8 +1,8 @@
 "use client";
 
 import { Printer } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import type { FleetDailyState } from "@/lib/domain/fleet/daily-state";
@@ -10,8 +10,24 @@ import { IconButton } from "@/shared/ui/buttons";
 import {
   createFleetVehicleListRows,
   type FleetVehicleListRow,
-  type FleetVehicleStatus,
 } from "@/features/fleet/fleetVehicleModel";
+import {
+  driverToggleStyle,
+  emptyStateCellStyle,
+  fleetPrintCss,
+  sectionStyle,
+  spacerCellStyle,
+  statusBadgeStyle,
+  summaryStyle,
+  tableScrollStyle,
+  tableStyle,
+  tdCenterStyle,
+  tdStyle,
+  thStyle,
+  toolbarActionsStyle,
+  toolbarStyle,
+} from "@/features/fleet/fleetVehicleTableStyles";
+import { createFleetVehicleVirtualRows } from "@/features/fleet/fleetVehicleVirtualRows";
 
 export type FleetVehiclesSectionProps = {
   vehicleRows: VehicleRow[];
@@ -25,13 +41,68 @@ export function FleetVehiclesSection({
   dailyStates = [],
 }: FleetVehiclesSectionProps) {
   const [driversExpanded, setDriversExpanded] = useState(false);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const viewportFrameRef = useRef<number | null>(null);
+  const [rowsViewport, setRowsViewport] = useState({ height: 520, scrollTop: 0 });
   const visibleColumnCount = driversExpanded ? 15 : 11;
   const rows = useMemo(
     () => createFleetVehicleListRows(vehicleRows, { workDate, dailyStates }),
     [dailyStates, vehicleRows, workDate],
   );
+  const virtualRows = useMemo(
+    () => createFleetVehicleVirtualRows(rows, rowsViewport, !isPreparingPrint),
+    [isPreparingPrint, rows, rowsViewport],
+  );
+
+  const updateRowsViewport = useCallback(() => {
+    const element = tableScrollRef.current;
+    if (!element) return;
+
+    const nextViewport = {
+      height: element.clientHeight || 520,
+      scrollTop: element.scrollTop,
+    };
+
+    setRowsViewport((current) => (
+      current.height === nextViewport.height && current.scrollTop === nextViewport.scrollTop
+        ? current
+        : nextViewport
+    ));
+  }, []);
+
+  const scheduleRowsViewportUpdate = useCallback(() => {
+    if (viewportFrameRef.current !== null) return;
+
+    viewportFrameRef.current = window.requestAnimationFrame(() => {
+      viewportFrameRef.current = null;
+      updateRowsViewport();
+    });
+  }, [updateRowsViewport]);
+
+  useEffect(() => {
+    updateRowsViewport();
+    window.addEventListener("resize", updateRowsViewport);
+
+    return () => {
+      window.removeEventListener("resize", updateRowsViewport);
+
+      if (viewportFrameRef.current !== null) {
+        window.cancelAnimationFrame(viewportFrameRef.current);
+        viewportFrameRef.current = null;
+      }
+    };
+  }, [driversExpanded, rows.length, updateRowsViewport]);
+
+  useEffect(() => {
+    const finishPrint = () => setIsPreparingPrint(false);
+    window.addEventListener("afterprint", finishPrint);
+
+    return () => window.removeEventListener("afterprint", finishPrint);
+  }, []);
 
   const printFleetVehicles = useCallback(() => {
+    setIsPreparingPrint(true);
     window.requestAnimationFrame(() => window.print());
   }, []);
 
@@ -55,7 +126,12 @@ export function FleetVehiclesSection({
         </div>
       </div>
 
-      <div className="fleet-print-table-scroll" style={tableScrollStyle}>
+      <div
+        ref={tableScrollRef}
+        className="fleet-print-table-scroll"
+        onScroll={scheduleRowsViewportUpdate}
+        style={tableScrollStyle}
+      >
         <table className="fleet-print-table" style={tableStyle}>
           <colgroup>
             <col style={{ width: 46 }} />
@@ -110,9 +186,21 @@ export function FleetVehiclesSection({
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <FleetVehicleTableRow key={row.id} row={row} driversExpanded={driversExpanded} />
-              ))
+              <>
+                {virtualRows.topSpacerHeight > 0 ? (
+                  <tr aria-hidden>
+                    <td colSpan={visibleColumnCount} style={{ ...spacerCellStyle, height: virtualRows.topSpacerHeight }} />
+                  </tr>
+                ) : null}
+                {virtualRows.rows.map((row) => (
+                  <FleetVehicleTableRow key={row.id} row={row} driversExpanded={driversExpanded} />
+                ))}
+                {virtualRows.bottomSpacerHeight > 0 ? (
+                  <tr aria-hidden>
+                    <td colSpan={visibleColumnCount} style={{ ...spacerCellStyle, height: virtualRows.bottomSpacerHeight }} />
+                  </tr>
+                ) : null}
+              </>
             )}
           </tbody>
         </table>
@@ -168,181 +256,3 @@ function Th({
 function Td({ children, center = false }: { children: ReactNode; center?: boolean }) {
   return <td style={center ? tdCenterStyle : tdStyle}>{children}</td>;
 }
-
-function statusBadgeStyle(status: FleetVehicleStatus): CSSProperties {
-  if (status === "В ремонте") {
-    return { ...badgeStyle, background: "#fee2e2", color: "#991b1b" };
-  }
-
-  if (status === "В простое") {
-    return { ...badgeStyle, background: "#fef3c7", color: "#92400e" };
-  }
-
-  return { ...badgeStyle, background: "#dcfce7", color: "#166534" };
-}
-
-const sectionStyle: CSSProperties = {
-  minHeight: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-};
-
-const toolbarStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 10,
-  flexWrap: "wrap",
-};
-
-const toolbarActionsStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  flexWrap: "wrap",
-};
-
-const summaryStyle: CSSProperties = {
-  color: "#475569",
-  fontSize: 13,
-  fontWeight: 700,
-};
-
-const driverToggleStyle: CSSProperties = {
-  borderStyle: "solid",
-  borderWidth: 1,
-  borderColor: "#cbd5e1",
-  background: "#ffffff",
-  color: "#0f172a",
-  borderRadius: 6,
-  padding: "7px 10px",
-  cursor: "pointer",
-  fontSize: 12,
-  fontWeight: 700,
-};
-
-const tableScrollStyle: CSSProperties = {
-  overflow: "auto",
-  borderStyle: "solid",
-  borderWidth: 1,
-  borderColor: "#0f172a",
-  maxHeight: "calc(100vh - 174px)",
-};
-
-const tableStyle: CSSProperties = {
-  width: "100%",
-  borderCollapse: "collapse",
-  tableLayout: "auto",
-  fontSize: 12,
-};
-
-const thStyle: CSSProperties = {
-  position: "sticky",
-  top: 0,
-  zIndex: 2,
-  background: "#f8fafc",
-  borderStyle: "solid",
-  borderWidth: 1,
-  borderColor: "#94a3b8",
-  padding: "7px 8px",
-  textAlign: "center",
-  verticalAlign: "middle",
-  fontWeight: 700,
-  whiteSpace: "normal",
-  lineHeight: 1.2,
-};
-
-const tdBaseStyle: CSSProperties = {
-  borderStyle: "solid",
-  borderWidth: 1,
-  borderColor: "#cbd5e1",
-  padding: "6px 8px",
-  verticalAlign: "middle",
-  lineHeight: 1.2,
-  overflowWrap: "break-word",
-};
-
-const tdStyle: CSSProperties = {
-  ...tdBaseStyle,
-  textAlign: "left",
-};
-
-const tdCenterStyle: CSSProperties = {
-  ...tdBaseStyle,
-  textAlign: "center",
-};
-
-const emptyStateCellStyle: CSSProperties = {
-  ...tdBaseStyle,
-  padding: "18px 12px",
-  textAlign: "center",
-  color: "#64748b",
-  fontStyle: "italic",
-};
-
-const badgeStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minWidth: 78,
-  borderRadius: 6,
-  padding: "3px 7px",
-  fontSize: 11,
-  fontWeight: 700,
-};
-
-const fleetPrintCss = `@media print {
-  @page {
-    size: A3 landscape;
-    margin: 5mm;
-  }
-
-  .fleet-print-area,
-  .fleet-print-area * {
-    print-color-adjust: exact !important;
-    -webkit-print-color-adjust: exact !important;
-  }
-
-  .fleet-print-toolbar {
-    display: none !important;
-  }
-
-  .fleet-print-area {
-    display: block !important;
-    gap: 0 !important;
-    width: 100% !important;
-  }
-
-  .fleet-print-table-scroll {
-    border-color: #0f172a !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  .fleet-print-table {
-    font-size: 8pt !important;
-    width: 100% !important;
-  }
-
-  .fleet-print-table th {
-    background: #f1f5f9 !important;
-    position: static !important;
-  }
-
-  .fleet-print-table thead {
-    display: table-header-group !important;
-  }
-
-  .fleet-print-table tr {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  .fleet-print-table th,
-  .fleet-print-table td {
-    border-color: #64748b !important;
-    padding: 3px 4px !important;
-    line-height: 1.1 !important;
-  }
-}`;

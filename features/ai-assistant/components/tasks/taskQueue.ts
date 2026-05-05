@@ -7,6 +7,7 @@ import type {
   AiAssistantTaskStatus,
 } from "@/features/ai-assistant/types";
 import { formatTaskDateLabel } from "@/features/ai-assistant/components/tasks/taskFormatters";
+import { aiAssistantTaskStatusLabels } from "@/lib/domain/ai-assistant/status";
 
 export type CurrentQueueRow = {
   id: string;
@@ -23,6 +24,34 @@ export type CurrentQueueSection = {
   title: string;
   rows: CurrentQueueRow[];
 };
+
+export type TaskStatusFilter = AiAssistantTaskStatus | "all";
+
+export const taskStatusFilterOptions: Array<{
+  value: TaskStatusFilter;
+  label: string;
+}> = [
+  { value: "all", label: "Все статусы" },
+  { value: "needs-approval", label: aiAssistantTaskStatusLabels["needs-approval"] },
+  { value: "queued", label: aiAssistantTaskStatusLabels.queued },
+  { value: "running", label: aiAssistantTaskStatusLabels.running },
+  { value: "draft", label: aiAssistantTaskStatusLabels.draft },
+  { value: "approved", label: aiAssistantTaskStatusLabels.approved },
+  { value: "sent", label: aiAssistantTaskStatusLabels.sent },
+  { value: "cancelled", label: aiAssistantTaskStatusLabels.cancelled },
+  { value: "failed", label: aiAssistantTaskStatusLabels.failed },
+];
+
+const taskStatusOrder: AiAssistantTaskStatus[] = [
+  "needs-approval",
+  "queued",
+  "running",
+  "draft",
+  "approved",
+  "sent",
+  "cancelled",
+  "failed",
+];
 
 export function createCurrentQueueRows(
   tasks: AiAssistantTask[],
@@ -75,28 +104,47 @@ export function createCurrentQueueRows(
   return [...taskRows, ...notificationRows];
 }
 
-export function createQueueSections(rows: CurrentQueueRow[]): CurrentQueueSection[] {
-  const decisionRows = rows.filter(isDecisionRow);
-  const decisionIds = new Set(decisionRows.map((row) => row.id));
-  const draftRows = rows.filter((row) => !decisionIds.has(row.id) && isDraftRow(row));
-  const draftIds = new Set(draftRows.map((row) => row.id));
-  const currentTaskRows = rows.filter((row) => !decisionIds.has(row.id) && !draftIds.has(row.id));
-
-  return [
-    { title: "Требуют моего решения", rows: decisionRows },
-    { title: "Текущие задачи", rows: currentTaskRows },
-    { title: "Черновики и подготовленные действия", rows: draftRows },
-  ];
+export function createStatusQueueSections(rows: CurrentQueueRow[]): CurrentQueueSection[] {
+  return taskStatusOrder
+    .map((status) => ({
+      title: aiAssistantTaskStatusLabels[status],
+      rows: rows.filter((row) => row.status === status),
+    }))
+    .filter((section) => section.rows.length > 0);
 }
 
-function isDecisionRow(row: CurrentQueueRow) {
-  return row.approval?.status === "required"
-    || row.task?.approvalStatus === "required"
-    || row.status === "needs-approval";
+export function filterQueueRows(
+  rows: CurrentQueueRow[],
+  searchQuery: string,
+  statusFilter: TaskStatusFilter,
+) {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  return rows.filter((row) => {
+    if (statusFilter !== "all" && row.status !== statusFilter) return false;
+    if (!normalizedQuery) return true;
+
+    return [
+      row.title,
+      row.details,
+      row.text,
+      row.channel,
+      row.status,
+      row.approval?.draftText,
+      row.task?.prompt,
+      row.task?.owner,
+    ].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
+  });
 }
 
-function isDraftRow(row: CurrentQueueRow) {
-  return row.status === "draft" || Boolean(row.approval && row.approval.status !== "required");
+export function createTaskStatusSummary(rows: CurrentQueueRow[]) {
+  return taskStatusOrder
+    .map((status) => ({
+      status,
+      label: aiAssistantTaskStatusLabels[status],
+      count: rows.filter((row) => row.status === status).length,
+    }))
+    .filter((item) => item.count > 0);
 }
 
 function formatTaskDetails(

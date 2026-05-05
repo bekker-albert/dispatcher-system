@@ -109,7 +109,7 @@ export const aiAssistantNotificationsMock: AiAssistantNotification[] = [
       status: "queued",
       target: "Руководитель участка Аксу",
       body: "Нужно подтвердить причину отставания перед отправкой отчета заказчику.",
-      approvalStatus: "not-required",
+      approvalStatus: "required",
       workDate: "2026-04-24",
       linkedTaskId: "ai-task-001",
       plannerItemId: "plan-ai-001",

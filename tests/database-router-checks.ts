@@ -28,6 +28,8 @@ const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysq
 const mysqlPtoVersionSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-version.ts"), "utf8");
 const mysqlPtoLoadSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-load.ts"), "utf8");
 
+process.env.AUTH_REQUIRED = "false";
+
 assert.match(mysqlSchemaSource, /const schemaVersionMetaKey = createSchemaVersionMetaKey\(\);/);
 assert.match(mysqlSchemaSource, /createHash\("sha256"\)/);
 assert.match(mysqlSchemaSource, /SELECT 1 AS schema_ready FROM pto_meta WHERE meta_key = \? LIMIT 1/);
@@ -37,6 +39,9 @@ assert.match(mysqlSchemaSource, /for \(const statement of schemaStatements\) \{[
 assert.match(mysqlSchemaSource, /for \(const migration of schemaMigrations\) \{[\s\S]*await applyMysqlSchemaMigration\(migration\);[\s\S]*\}/);
 assert.match(mysqlSchemaSource, /INSERT IGNORE INTO pto_meta \(meta_key\) VALUES \(\?\)/);
 assert.match(mysqlSchemaDefinitionsSource, /ALTER TABLE vehicles ADD INDEX vehicles_sort_index_idx \(sort_index\)/);
+assert.match(mysqlSchemaDefinitionsSource, /CREATE TABLE IF NOT EXISTS auth_users/);
+assert.match(mysqlSchemaDefinitionsSource, /UNIQUE KEY auth_users_login_idx \(login\)/);
+assert.match(mysqlSchemaDefinitionsSource, /ALTER TABLE auth_users ADD UNIQUE INDEX auth_users_login_idx \(login\)/);
 assert.match(mysqlSchemaDefinitionsSource, /ALTER TABLE pto_rows ADD INDEX pto_rows_sort_idx \(table_type, sort_index\)/);
 assert.match(mysqlSchemaDefinitionsSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_idx \(work_date\)/);
 assert.match(mysqlSchemaDefinitionsSource, /ALTER TABLE pto_day_values ADD INDEX pto_day_values_date_row_idx \(work_date, table_type, row_id\)/);
@@ -184,6 +189,16 @@ const routedPost = createDatabasePostHandler({
     throw new Error("Injected database failure");
   },
 });
+
+process.env.AUTH_REQUIRED = "true";
+const authRequiredResponse = await routedPost(new Request("https://aam-dispatch.kz/api/database", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", origin },
+  body: JSON.stringify({ resource: "fake", action: "load", payload: { id: 6 } }),
+}));
+assert.equal(authRequiredResponse.status, 401);
+assert.deepEqual(routedCalls, []);
+process.env.AUTH_REQUIRED = "false";
 
 const routedResponse = await routedPost(new Request("https://aam-dispatch.kz/api/database", {
   method: "POST",

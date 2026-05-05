@@ -2,32 +2,52 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { Bell, Bot, X } from "lucide-react";
+import { Bot, X } from "lucide-react";
 
 import { AiAssistantFloatingChat } from "@/features/ai-assistant/components/AiAssistantFloatingChat";
-import { AiAssistantFloatingNotifications } from "@/features/ai-assistant/components/AiAssistantFloatingNotifications";
 import { useAiAssistantContext } from "@/features/ai-assistant/lib/useAiAssistantState";
-
-type FloatingPanel = "chat" | "notifications";
+import type {
+  AiAssistantApprovalAction,
+  AiAssistantNotification,
+  AiAssistantTask,
+} from "@/features/ai-assistant/types";
 
 export function AiAssistantFloatingDock() {
   const {
     appendChatMessage,
+    currentContext,
+    setApprovalDecision,
     viewModel,
   } = useAiAssistantContext();
   const [isOpen, setIsOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<FloatingPanel>("chat");
-  const currentNotifications = useMemo(
-    () => viewModel.currentNotifications.slice(0, 5),
+  const activeNotifications = useMemo(
+    () => viewModel.currentNotifications.filter(isActiveNotification).slice(0, 5),
     [viewModel.currentNotifications],
   );
-  const activeNotificationsCount = currentNotifications.filter((notification) => (
-    notification.status === "queued"
-    || notification.status === "draft"
-    || notification.approvalStatus === "required"
-  )).length;
-  const isChatOpen = activePanel === "chat";
-  const isNotificationsOpen = activePanel === "notifications";
+  const approvalsByTaskId = useMemo(
+    () => new Map(viewModel.approvalActions.map((approval) => [approval.taskId, approval])),
+    [viewModel.approvalActions],
+  );
+  const tasksById = useMemo(
+    () => new Map(viewModel.currentTasks.map((task) => [task.id, task])),
+    [viewModel.currentTasks],
+  );
+
+  const setNotificationDecision = (
+    notification: AiAssistantNotification,
+    status: "approved" | "rejected",
+  ) => {
+    if (!notification.linkedTaskId) return;
+
+    const approval = approvalsByTaskId.get(notification.linkedTaskId);
+    if (!approval || approval.status !== "required") return;
+
+    setApprovalDecision(
+      approval as AiAssistantApprovalAction,
+      status,
+      tasksById.get(notification.linkedTaskId) as AiAssistantTask | undefined,
+    );
+  };
 
   return (
     <div className="ai-floating-dock" style={floatingDockStyle}>
@@ -39,25 +59,16 @@ export function AiAssistantFloatingDock() {
         >
           <div style={floatingPanelHeaderStyle}>
             <div style={floatingPanelTitleStyle}>
-              {isNotificationsOpen ? <Bell size={17} /> : <Bot size={18} />}
-              <span>{isNotificationsOpen ? "Уведомления" : "AI-ассистент"}</span>
+              <Bot size={18} />
+              <span>AI: {currentContext.sectionLabel}</span>
+              {activeNotifications.length > 0 && <span style={panelTitleBadgeStyle}>{activeNotifications.length}</span>}
+              {currentContext.detailLabel && <span style={panelDetailStyle}>{currentContext.detailLabel}</span>}
             </div>
 
             <div style={floatingPanelHeaderActionsStyle}>
-              <FloatingPanelTab
-                active={isChatOpen}
-                label="Чат"
-                onClick={() => setActivePanel("chat")}
-              />
-              <FloatingPanelTab
-                active={isNotificationsOpen}
-                count={activeNotificationsCount}
-                label="Уведомления"
-                onClick={() => setActivePanel("notifications")}
-              />
               <button
                 type="button"
-                aria-label="Свернуть виджет"
+                aria-label="Свернуть AI-виджет"
                 onClick={() => setIsOpen(false)}
                 style={floatingPanelCloseButtonStyle}
               >
@@ -66,57 +77,42 @@ export function AiAssistantFloatingDock() {
             </div>
           </div>
 
-          {isNotificationsOpen ? (
-            <AiAssistantFloatingNotifications
-              notifications={currentNotifications}
-              onNavigate={() => setIsOpen(false)}
-            />
-          ) : (
-            <AiAssistantFloatingChat
-              messages={viewModel.chatMessages}
-              onSendMessage={appendChatMessage}
-            />
-          )}
+          <AiAssistantFloatingChat
+            contextLabel={currentContext.sectionLabel}
+            detailLabel={currentContext.detailLabel}
+            messages={viewModel.chatMessages}
+            notifications={activeNotifications}
+            onNavigate={() => setIsOpen(false)}
+            onSendMessage={appendChatMessage}
+            onSetNotificationDecision={setNotificationDecision}
+            quickActions={currentContext.quickActions}
+            suggestions={currentContext.suggestions}
+            workDate={currentContext.workDate}
+          />
         </section>
       )}
 
-      <div style={floatingButtonsStyle}>
-        <FloatingDockButton
-          active={isOpen}
-          label={isOpen ? "Свернуть AI-виджет" : "Открыть AI-виджет"}
-          onClick={() => setIsOpen((current) => !current)}
-          primary
-        >
-          <Bot size={20} />
-          {activeNotificationsCount > 0 && <span style={notificationBadgeStyle}>{activeNotificationsCount}</span>}
-        </FloatingDockButton>
-      </div>
+      {!isOpen && (
+        <div style={floatingButtonsStyle}>
+          <FloatingDockButton
+            active={isOpen}
+            label="Открыть AI-панель"
+            onClick={() => setIsOpen(true)}
+            primary
+          >
+            <Bot size={20} />
+            {activeNotifications.length > 0 && <span style={notificationBadgeStyle}>{activeNotifications.length}</span>}
+          </FloatingDockButton>
+        </div>
+      )}
     </div>
   );
 }
 
-function FloatingPanelTab({
-  active,
-  count = 0,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  count?: number;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      style={active ? activePanelTabStyle : panelTabStyle}
-    >
-      {label}
-      {count > 0 && <span style={panelTabBadgeStyle}>{count}</span>}
-    </button>
-  );
+function isActiveNotification(notification: AiAssistantNotification) {
+  return notification.status === "queued"
+    || notification.status === "draft"
+    || notification.approvalStatus === "required";
 }
 
 function FloatingDockButton({
@@ -161,12 +157,16 @@ const floatingDockStyle: CSSProperties = {
 };
 
 const floatingPanelStyle: CSSProperties = {
-  width: "min(420px, calc(100vw - 36px))",
-  maxHeight: "min(560px, calc(100vh - 110px))",
+  position: "fixed",
+  top: 0,
+  right: 0,
+  bottom: 0,
+  width: "min(460px, 100vw)",
+  maxHeight: "100vh",
   display: "grid",
   gridTemplateRows: "auto minmax(160px, 1fr)",
   border: "1px solid #cbd5e1",
-  borderRadius: 8,
+  borderRadius: "8px 0 0 8px",
   background: "#f8fafc",
   boxShadow: "0 16px 36px rgba(15, 23, 42, 0.18)",
   overflow: "hidden",
@@ -189,6 +189,7 @@ const floatingPanelTitleStyle: CSSProperties = {
   gap: 8,
   fontWeight: 900,
   minWidth: 0,
+  flexWrap: "wrap",
 };
 
 const floatingPanelHeaderActionsStyle: CSSProperties = {
@@ -198,37 +199,23 @@ const floatingPanelHeaderActionsStyle: CSSProperties = {
   marginLeft: "auto",
 };
 
-const panelTabStyle: CSSProperties = {
-  position: "relative",
-  border: "1px solid rgba(255,255,255,0.28)",
-  borderRadius: 8,
-  background: "transparent",
-  color: "#ffffff",
-  padding: "5px 8px",
-  font: "inherit",
-  fontSize: 12,
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const activePanelTabStyle: CSSProperties = {
-  ...panelTabStyle,
-  background: "#ffffff",
-  color: "#0f172a",
-};
-
-const panelTabBadgeStyle: CSSProperties = {
+const panelTitleBadgeStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   minWidth: 16,
   height: 16,
-  marginLeft: 5,
   borderRadius: 999,
   background: "#b91c1c",
   color: "#ffffff",
   fontSize: 10,
   fontWeight: 900,
+};
+
+const panelDetailStyle: CSSProperties = {
+  color: "#cbd5e1",
+  fontSize: 11,
+  fontWeight: 800,
 };
 
 const floatingPanelCloseButtonStyle: CSSProperties = {
