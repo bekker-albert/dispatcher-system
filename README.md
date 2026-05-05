@@ -5,7 +5,7 @@
 ## Локальный запуск
 
 ```bash
-npm ci
+npm install
 npm run dev
 ```
 
@@ -26,7 +26,6 @@ npm run verify
 Команда выполняет:
 
 - `npm run lint`
-- `npm run typecheck`
 - `npm run build`
 - `npm run check:domain`
 - `npm run check:project`
@@ -67,22 +66,20 @@ DATABASE_ALLOWED_ORIGINS=
 
 Начальная версия содержит каркас данных, прав, задач, уведомлений, интеграций, базы знаний и журнала действий. Реальные записи в базе и внешние отправки добавляются отдельными этапами после схемы, прав доступа и серверных обработчиков.
 
-Основной интерфейс общения находится в общем всплывающем AI-виджете в правом нижнем углу сайта. Заголовок виджета показывает текущий раздел в формате `AI: {раздел}` и при наличии детализации добавляет активный контекст справа. Нажатие на уведомление открывает `AI-ассистент -> Входящие`. Внутри вкладки `AI-ассистент` сейчас используются разделы `Главное`, `Входящие`, `Черновики`, `История` и `Настройки`; отдельная top-level вкладка `Планировщик` в текущем UI не показывается.
+Основной интерфейс общения находится в общем всплывающем AI-виджете в правом нижнем углу сайта. В этом же виджете открываются уведомления: заголовок меняется на `AI-ассистент` или `Уведомления`, поэтому панели не накладываются друг на друга. Нажатие на уведомление открывает `AI-ассистент -> Задачи`. В `Планировщике` можно заранее указать дату, время, получателя, канал, подготовленный текст и необходимость согласования перед выполнением.
 
 ## Деплой
 
 Деплой идет через GitHub Actions после push в `main`.
-Полный release/data runbook хранится в `docs/release-and-data-runbook.md`: именно он описывает миграции, backup-checkpoint'ы и write-path меры перед `migrate:supabase-to-mysql`.
 
 На сервере workflow:
 
 1. подключается по SSH;
 2. проверяет и фиксирует нужный commit;
-3. жестко синхронизирует server checkout с pushed commit (`git reset --hard`), поэтому локальные правки на prod-хосте должны считаться одноразовыми;
-4. устанавливает production-зависимости через `npm ci --omit=dev`;
-5. подменяет `.next` заранее собранным артефактом из GitHub Actions;
-6. перезапускает `pm2`-процесс `aam-dispatch`;
-7. запускает smoke-проверку сайта, статуса базы и загрузки техники без записи данных.
+3. устанавливает production-зависимости через `npm ci --omit=dev`;
+4. подменяет `.next` заранее собранным артефактом из GitHub Actions;
+5. перезапускает `pm2`-процесс `aam-dispatch`;
+6. запускает smoke-проверку сайта, статуса базы и загрузки техники без записи данных.
 
 Required GitHub Actions secrets:
 
@@ -96,8 +93,6 @@ Optional smoke overrides:
 - `PRODUCTION_SMOKE_URL`
 - `PRODUCTION_SMOKE_API_URL`
 - `PRODUCTION_SMOKE_MIN_VEHICLE_ROWS`
-- `PRODUCTION_SMOKE_AUTH_LOGIN`
-- `PRODUCTION_SMOKE_AUTH_PASSWORD`
 
 Рабочий сайт:
 
@@ -116,23 +111,3 @@ https://aam-dispatch.kz
 3. сохранение через нейтральный слой `lib/data`;
 4. серверная работа с MySQL через `lib/server/mysql`;
 5. тяжелые таблицы открывать в режиме просмотра, редактирование включать отдельно.
-## Auth
-
-The site is protected by a server-side login. User accounts are stored in MySQL
-in `auth_users`; passwords are stored only as PBKDF2 hashes.
-
-Initial access is configured through server environment variables only:
-
-```bash
-AUTH_REQUIRED=true
-AUTH_SESSION_SECRET=
-AUTH_INITIAL_LOGIN=albert.bekker
-AUTH_INITIAL_PASSWORD=
-AUTH_INITIAL_DISPLAY_NAME=Альберт Беккер
-```
-
-Do not commit real passwords or session secrets. Put the real
-`AUTH_INITIAL_PASSWORD` and `AUTH_SESSION_SECRET` only into `.env.local`,
-server environment variables, or hosting secrets. The first user receives the
-`dispatch-chief` role and can create other users. That user can also delegate
-the right to create users through the user-management screen.

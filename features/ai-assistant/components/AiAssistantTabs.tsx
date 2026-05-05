@@ -2,11 +2,13 @@ import type { AiAssistantTab } from "@/features/ai-assistant/types";
 import { aiAssistantTabsStyle } from "@/features/ai-assistant/aiAssistantStyles";
 
 const aiAssistantTabs: { id: AiAssistantTab; label: string }[] = [
-  { id: "main", label: "Главное" },
-  { id: "inbox", label: "Входящие" },
-  { id: "drafts", label: "Черновики" },
-  { id: "history", label: "История" },
-  { id: "settings", label: "Настройки" },
+  { id: "tasks", label: "Задачи" },
+  { id: "planner", label: "Планировщик" },
+  { id: "agents", label: "Агенты" },
+  { id: "development", label: "Развитие / ТЗ / Codex" },
+  { id: "integrations", label: "Интеграции" },
+  { id: "knowledge", label: "Знания" },
+  { id: "audit", label: "Журнал" },
 ];
 
 export function AiAssistantTabs({

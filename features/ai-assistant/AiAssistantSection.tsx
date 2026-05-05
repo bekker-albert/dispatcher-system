@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect } from "react";
 
+import { AiAssistantAgentsPanel } from "@/features/ai-assistant/components/AiAssistantAgentsPanel";
+import { AiAssistantAuditLog } from "@/features/ai-assistant/components/AiAssistantAuditLog";
+import { AiAssistantDevelopmentPanel } from "@/features/ai-assistant/components/AiAssistantDevelopmentPanel";
+import { AiAssistantIntegrationStatus } from "@/features/ai-assistant/components/AiAssistantIntegrationStatus";
+import { AiAssistantKnowledgePanel } from "@/features/ai-assistant/components/AiAssistantKnowledgePanel";
+import { AiAssistantPlannerPanel } from "@/features/ai-assistant/components/AiAssistantPlannerPanel";
 import { AiAssistantTabs } from "@/features/ai-assistant/components/AiAssistantTabs";
+import { AiAssistantTasksPanel } from "@/features/ai-assistant/components/AiAssistantTasksPanel";
 import {
   aiAssistantHeaderStyle,
-  aiAssistantMutedTextStyle,
-  aiAssistantPanelStyle,
   aiAssistantShellStyle,
   aiAssistantTitleStyle,
 } from "@/features/ai-assistant/aiAssistantStyles";
@@ -16,72 +20,15 @@ import {
   appNavigationEventName,
   isAppNavigationEvent,
 } from "@/lib/domain/navigation/appNavigationEvents";
-import type { AiAssistantTab } from "@/features/ai-assistant/types";
-import type { SettingsSection } from "@/features/ai-assistant/components/AiAssistantSettingsPanel";
-
-const aiAssistantTabIds: AiAssistantTab[] = ["main", "inbox", "drafts", "history", "settings"];
-
-const legacyAiAssistantTabMap: Record<string, AiAssistantTab> = {
-  agents: "settings",
-  approvals: "inbox",
-  development: "settings",
-  documents: "drafts",
-  notifications: "inbox",
-  planner: "inbox",
-  tasks: "inbox",
-};
-
-const AiAssistantHomePanel = dynamic(
-  () => import("@/features/ai-assistant/components/AiAssistantHomePanel").then((module) => module.AiAssistantHomePanel),
-  {
-    ssr: false,
-    loading: () => <AiAssistantPanelLoading label="Загрузка сводки AI-ассистента..." />,
-  },
-);
-
-const AiAssistantTasksPanel = dynamic(
-  () => import("@/features/ai-assistant/components/AiAssistantTasksPanel").then((module) => module.AiAssistantTasksPanel),
-  {
-    ssr: false,
-    loading: () => <AiAssistantPanelLoading label="Загрузка задач и уведомлений..." />,
-  },
-);
-
-const AiAssistantWorkspacePanel = dynamic(
-  () => import("@/features/ai-assistant/components/AiAssistantWorkspacePanel").then((module) => module.AiAssistantWorkspacePanel),
-  {
-    ssr: false,
-    loading: () => <AiAssistantPanelLoading label="Загрузка черновиков и документов..." />,
-  },
-);
-
-const AiAssistantAuditLog = dynamic(
-  () => import("@/features/ai-assistant/components/AiAssistantAuditLog").then((module) => module.AiAssistantAuditLog),
-  {
-    ssr: false,
-    loading: () => <AiAssistantPanelLoading label="Загрузка журнала действий..." />,
-  },
-);
-
-const AiAssistantSettingsPanel = dynamic(
-  () => import("@/features/ai-assistant/components/AiAssistantSettingsPanel").then((module) => module.AiAssistantSettingsPanel),
-  {
-    ssr: false,
-    loading: () => <AiAssistantPanelLoading label="Загрузка настроек AI-ассистента..." />,
-  },
-);
 
 export function AiAssistantSection() {
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>("overview");
   const {
     activeTab,
-    agentActivationDrafts,
-    appendChatMessage,
     setActiveTab,
-    setAgentActivationDraft,
     setApprovalDecision,
     updateApprovalDraftText,
     viewModel,
+    setPlannerItems,
     addIntegration,
     updateIntegration,
     deleteIntegration,
@@ -95,11 +42,8 @@ export function AiAssistantSection() {
   useEffect(() => {
     const handleNavigation = (event: Event) => {
       if (!isAppNavigationEvent(event)) return;
-      if (
-        event.detail.topTab === "ai-assistant"
-      ) {
-        const nextTab = normalizeAiAssistantTab(event.detail.aiAssistantTab);
-        if (nextTab) setActiveTab(nextTab);
+      if (event.detail.topTab === "ai-assistant" && event.detail.aiAssistantTab) {
+        setActiveTab(event.detail.aiAssistantTab);
       }
     };
 
@@ -116,16 +60,7 @@ export function AiAssistantSection() {
         <AiAssistantTabs activeTab={activeTab} onSelectTab={setActiveTab} />
       </div>
 
-      {activeTab === "main" && (
-        <AiAssistantHomePanel
-          viewModel={viewModel}
-          onAppendChatMessage={appendChatMessage}
-          onSetActiveTab={setActiveTab}
-          onSetApprovalDecision={setApprovalDecision}
-        />
-      )}
-
-      {activeTab === "inbox" && (
+      {activeTab === "tasks" && (
         <AiAssistantTasksPanel
           approvals={viewModel.approvalActions}
           currentWorkDate={viewModel.currentWorkDate}
@@ -137,49 +72,48 @@ export function AiAssistantSection() {
         />
       )}
 
-      {activeTab === "drafts" && (
-        <AiAssistantWorkspacePanel
-          documents={viewModel.documents}
-          documentologItems={viewModel.documentologItems}
-          mailDrafts={viewModel.mailDrafts}
+      {activeTab === "planner" && (
+        <AiAssistantPlannerPanel
+          currentWorkDate={viewModel.currentWorkDate}
+          plannerItems={viewModel.plannerItems}
+          onChangePlannerItems={setPlannerItems}
         />
       )}
 
-      {activeTab === "history" && (
+      {activeTab === "agents" && (
+        <AiAssistantAgentsPanel agents={viewModel.agents} />
+      )}
+
+      {activeTab === "development" && (
+        <AiAssistantDevelopmentPanel
+          ideas={viewModel.developmentIdeas}
+          codexPromptDrafts={viewModel.codexPromptDrafts}
+          onSetIdeaStatus={setDevelopmentIdeaStatus}
+          onCreateCodexPromptDraft={createCodexPromptDraftForIdea}
+        />
+      )}
+
+      {activeTab === "integrations" && (
+        <AiAssistantIntegrationStatus
+          integrations={viewModel.integrations}
+          onAddIntegration={addIntegration}
+          onUpdateIntegration={updateIntegration}
+          onDeleteIntegration={deleteIntegration}
+        />
+      )}
+
+      {activeTab === "knowledge" && (
+        <AiAssistantKnowledgePanel
+          sources={viewModel.knowledgeSources}
+          onAddSource={addKnowledgeSource}
+          onUpdateSource={updateKnowledgeSource}
+          onDeleteSource={deleteKnowledgeSource}
+        />
+      )}
+
+      {activeTab === "audit" && (
         <AiAssistantAuditLog events={viewModel.auditEvents} />
       )}
-
-      {activeTab === "settings" && (
-        <AiAssistantSettingsPanel
-          viewModel={viewModel}
-          agentActivationDrafts={agentActivationDrafts}
-          setAgentActivationDraft={setAgentActivationDraft}
-          section={settingsSection}
-          onSetSection={setSettingsSection}
-          addIntegration={addIntegration}
-          updateIntegration={updateIntegration}
-          deleteIntegration={deleteIntegration}
-          addKnowledgeSource={addKnowledgeSource}
-          updateKnowledgeSource={updateKnowledgeSource}
-          deleteKnowledgeSource={deleteKnowledgeSource}
-          setDevelopmentIdeaStatus={setDevelopmentIdeaStatus}
-          createCodexPromptDraftForIdea={createCodexPromptDraftForIdea}
-        />
-      )}
     </div>
-  );
-}
-
-function normalizeAiAssistantTab(value: unknown): AiAssistantTab | null {
-  if (typeof value !== "string") return null;
-  if (aiAssistantTabIds.includes(value as AiAssistantTab)) return value as AiAssistantTab;
-  return legacyAiAssistantTabMap[value] ?? null;
-}
-
-function AiAssistantPanelLoading({ label }: { label: string }) {
-  return (
-    <section style={aiAssistantPanelStyle}>
-      <div style={aiAssistantMutedTextStyle}>{label}</div>
-    </section>
   );
 }

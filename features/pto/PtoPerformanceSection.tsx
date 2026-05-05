@@ -1,7 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
-
 import { PtoBucketsToolbar } from "@/features/pto/PtoBucketsToolbar";
 import { allAreasLabel } from "@/features/pto/ptoBucketsConfig";
 import { ptoBucketsHintStyle, ptoBucketsLayoutStyle } from "@/features/pto/ptoBucketsStyles";
@@ -41,7 +39,6 @@ export default function PtoPerformanceSection({
   const {
     activeCell,
     draft,
-    commitActiveEdit,
     editKey,
     editingMode,
     handleCellBlur,
@@ -67,11 +64,8 @@ export default function PtoPerformanceSection({
     rows,
     columns,
     viewport,
+    suspendVirtualization: Boolean(editKey),
   });
-  const handleScheduleViewportUpdate = useCallback(() => {
-    commitActiveEdit();
-    scheduleViewportUpdate();
-  }, [commitActiveEdit, scheduleViewportUpdate]);
 
   return (
     <div style={ptoBucketsLayoutStyle}>
@@ -107,7 +101,7 @@ export default function PtoPerformanceSection({
         onCellDraftChange={handleCellDraftChange}
         onCellKeyDown={handleCellKeyDown}
         onCellMouseDown={handleCellMouseDown}
-        onScheduleViewportUpdate={handleScheduleViewportUpdate}
+        onScheduleViewportUpdate={scheduleViewportUpdate}
         onSelectCell={selectCell}
         onStartEdit={startEdit}
       />

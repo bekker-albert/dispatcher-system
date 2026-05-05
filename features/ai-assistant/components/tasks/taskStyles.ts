@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
 
 import {
+  aiAssistantTableStyle,
   aiAssistantTdStyle,
+  aiAssistantThStyle,
 } from "@/features/ai-assistant/aiAssistantStyles";
 
 export const tasksBlockStyle: CSSProperties = {
@@ -17,50 +19,6 @@ export const tasksHeaderStyle: CSSProperties = {
   gap: 10,
 };
 
-export const tasksToolbarStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(240px, 1fr) 210px",
-  gap: 8,
-  alignItems: "center",
-  marginTop: 10,
-};
-
-export const tasksSearchInputStyle: CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  padding: "8px 10px",
-  font: "inherit",
-  fontSize: 13,
-};
-
-export const tasksStatusSelectStyle: CSSProperties = {
-  ...tasksSearchInputStyle,
-  cursor: "pointer",
-};
-
-export const statusSummaryStyle: CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 6,
-  marginTop: 8,
-};
-
-export const statusSummaryItemStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 5,
-  border: "1px solid #dbe3ec",
-  borderRadius: 8,
-  background: "#ffffff",
-  color: "#334155",
-  padding: "4px 7px",
-  fontSize: 12,
-  fontWeight: 800,
-};
-
 export const tasksBlockTitleStyle: CSSProperties = {
   fontSize: 17,
   fontWeight: 900,
@@ -68,62 +26,41 @@ export const tasksBlockTitleStyle: CSSProperties = {
 };
 
 export const queueSectionTitleStyle: CSSProperties = {
-  display: "inline-flex",
-  width: "fit-content",
-  border: "1px solid #cbd5e1",
-  borderRadius: 8,
-  background: "#f8fafc",
-  padding: "4px 8px",
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 900,
-  color: "#334155",
+  color: "#0f172a",
 };
 
-export const taskCardsStyle: CSSProperties = {
-  display: "grid",
-  gap: 7,
+export const tasksTableStyle: CSSProperties = {
+  ...aiAssistantTableStyle,
+  tableLayout: "fixed",
+  minWidth: 1080,
 };
 
-export const taskCardStyle: CSSProperties = {
-  display: "grid",
-  gap: 7,
-  border: "1px solid #dbe3ec",
-  borderRadius: 8,
-  background: "#ffffff",
-  padding: "9px 10px",
+export const compactThStyle: CSSProperties = {
+  ...aiAssistantThStyle,
+  whiteSpace: "nowrap",
 };
 
-export const taskCardTopStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "minmax(220px, 1fr) auto",
-  alignItems: "start",
-  gap: 10,
+export const compactCenterThStyle: CSSProperties = {
+  ...compactThStyle,
+  textAlign: "center",
 };
 
-export const taskCardMetaStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  flexWrap: "wrap",
-  gap: 6,
+export const compactTdStyle: CSSProperties = {
+  ...aiAssistantTdStyle,
+  whiteSpace: "nowrap",
 };
 
-export const taskCardTextStyle: CSSProperties = {
-  color: "#334155",
-  fontSize: 12,
-  lineHeight: 1.35,
-  whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere",
+export const compactCenterTdStyle: CSSProperties = {
+  ...compactTdStyle,
+  textAlign: "center",
 };
 
-export const emptyTaskStateStyle: CSSProperties = {
-  border: "1px dashed #cbd5e1",
-  borderRadius: 8,
-  padding: 14,
+export const emptyTdStyle: CSSProperties = {
+  ...aiAssistantTdStyle,
   color: "#64748b",
   textAlign: "center",
-  background: "#ffffff",
-  fontSize: 13,
 };
 
 export const aiAssistantTextTdStyle: CSSProperties = {
@@ -149,7 +86,7 @@ export const approvalTextareaStyle: CSSProperties = {
 
 export const iconActionsStyle: CSSProperties = {
   display: "flex",
-  justifyContent: "flex-end",
+  justifyContent: "center",
   flexWrap: "wrap",
   gap: 5,
 };

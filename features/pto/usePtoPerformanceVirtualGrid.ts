@@ -18,23 +18,33 @@ import type { PtoPerformanceColumn, PtoPerformanceRow } from "@/lib/domain/pto/p
 type PtoPerformanceVirtualGridOptions = {
   columns: PtoPerformanceColumn[];
   rows: PtoPerformanceRow[];
+  suspendVirtualization?: boolean;
   viewport: PtoGridViewport;
 };
 
 export function usePtoPerformanceVirtualGrid({
   columns,
   rows,
+  suspendVirtualization = false,
   viewport,
 }: PtoPerformanceVirtualGridOptions) {
   const { height, scrollLeft, scrollTop, width } = viewport;
   const tableMinWidth = ptoPerformanceTableMinWidth(columns.length);
   const virtualRows = useMemo(
-    () => createPtoBucketsVirtualRows(rows, { height, scrollTop }),
-    [height, rows, scrollTop],
+    () => (
+      suspendVirtualization
+        ? { rows, topSpacerHeight: 0, bottomSpacerHeight: 0 }
+        : createPtoBucketsVirtualRows(rows, { height, scrollTop })
+    ),
+    [height, rows, scrollTop, suspendVirtualization],
   );
   const virtualColumns = useMemo(
-    () => createPtoBucketsVirtualColumns(columns, { scrollLeft, width }, performanceFrozenWidth),
-    [columns, scrollLeft, width],
+    () => (
+      suspendVirtualization
+        ? { columns, leftSpacerWidth: 0, rightSpacerWidth: 0 }
+        : createPtoBucketsVirtualColumns(columns, { scrollLeft, width }, performanceFrozenWidth)
+    ),
+    [columns, scrollLeft, suspendVirtualization, width],
   );
   const renderedColumnSpan = ptoBucketsRenderedColumnSpan(virtualColumns, performanceFrozenColumnCount) + 1;
 

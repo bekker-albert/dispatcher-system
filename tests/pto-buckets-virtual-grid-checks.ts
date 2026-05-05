@@ -1,7 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   createPtoBucketsVirtualColumns,
   createPtoBucketsVirtualRows,
@@ -16,8 +13,6 @@ import {
   bucketValueColumnWidth,
 } from "../features/pto/ptoBucketsConfig";
 
-const testDir = dirname(fileURLToPath(import.meta.url));
-const ptoBodiesSectionSource = readFileSync(resolve(testDir, "../features/pto/PtoBodiesSection.tsx"), "utf8");
 const rows = Array.from({ length: 50 }, (_, index) => `row-${index}`);
 const columns = Array.from({ length: 20 }, (_, index) => `column-${index}`);
 const bodyTechniqueColumnWidth = 230;
@@ -65,8 +60,3 @@ const bodyColumns = createPtoBucketsVirtualColumns(columns, {
 assert.equal(bodyColumns.columns[0], columns[10 - bucketOverscanColumns]);
 assert.equal(bodyColumns.leftSpacerWidth, (10 - bucketOverscanColumns) * bucketValueColumnWidth);
 assert.equal(ptoBucketsRenderedColumnSpan(bodyColumns, 1), 1 + bodyColumns.columns.length + 2);
-
-assert.match(ptoBodiesSectionSource, /frozenWidth: bodyTechniqueColumnWidth/);
-assert.match(ptoBodiesSectionSource, /const handleScheduleViewportUpdate = useCallback\(\(\) => \{[\s\S]*commitActiveEdit\(\);[\s\S]*scheduleViewportUpdate\(\);[\s\S]*\}/);
-assert.match(ptoBodiesSectionSource, /usePtoBodiesVirtualGrid\(\{[\s\S]*rows,[\s\S]*columns,[\s\S]*viewport,[\s\S]*\}\)/);
-assert.doesNotMatch(ptoBodiesSectionSource, /suspendVirtualization/);

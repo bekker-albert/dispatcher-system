@@ -60,9 +60,7 @@ assert.equal(
 );
 
 assert.match(performanceSectionSource, /frozenWidth: performanceFrozenWidth/);
-assert.match(performanceSectionSource, /const handleScheduleViewportUpdate = useCallback\(\(\) => \{[\s\S]*commitActiveEdit\(\);[\s\S]*scheduleViewportUpdate\(\);[\s\S]*\}/);
-assert.match(performanceSectionSource, /usePtoPerformanceVirtualGrid\(\{[\s\S]*rows,[\s\S]*columns,[\s\S]*viewport,[\s\S]*\}\)/);
-assert.doesNotMatch(performanceSectionSource, /suspendVirtualization/);
+assert.match(performanceSectionSource, /usePtoPerformanceVirtualGrid\(\{[\s\S]*rows,[\s\S]*columns,[\s\S]*viewport,[\s\S]*suspendVirtualization: Boolean\(editKey\),[\s\S]*\}\)/);
 assert.match(usePtoPerformanceVirtualGridSource, /createPtoBucketsVirtualColumns\(columns, \{ scrollLeft, width \}, performanceFrozenWidth\)/);
 assert.match(usePtoPerformanceVirtualGridSource, /ptoBucketsRenderedColumnSpan\(virtualColumns, performanceFrozenColumnCount\) \+ 1/);
 assert.match(performanceTableSource, /virtualRows\.rows\.map/);

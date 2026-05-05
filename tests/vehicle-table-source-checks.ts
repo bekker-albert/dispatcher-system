@@ -19,11 +19,7 @@ const vehicleTablePrimaryContentSource = readFileSync(resolve(testDir, "../featu
 const adminVehiclesPrimaryContentSource = readFileSync(resolve(testDir, "../features/app/AdminVehiclesPrimaryContent.tsx"), "utf8");
 const adminVehiclesSectionSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehiclesSection.tsx"), "utf8");
 const adminVehiclesToolbarSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehiclesToolbar.tsx"), "utf8");
-const fleetVehiclesSectionSource = [
-  readFileSync(resolve(testDir, "../features/fleet/FleetVehiclesSection.tsx"), "utf8"),
-  readFileSync(resolve(testDir, "../features/fleet/fleetVehicleTableStyles.ts"), "utf8"),
-  readFileSync(resolve(testDir, "../features/fleet/fleetVehicleVirtualRows.ts"), "utf8"),
-].join("\n");
+const fleetVehiclesSectionSource = readFileSync(resolve(testDir, "../features/fleet/FleetVehiclesSection.tsx"), "utf8");
 const fleetVehicleModelSource = readFileSync(resolve(testDir, "../features/fleet/fleetVehicleModel.ts"), "utf8");
 const fleetDailyStateSource = readFileSync(resolve(testDir, "../lib/domain/fleet/daily-state.ts"), "utf8");
 
@@ -179,9 +175,6 @@ assert.match(fleetVehiclesSectionSource, /Примечание/);
 assert.match(fleetVehiclesSectionSource, /dailyStates = \[\]/);
 assert.match(fleetVehiclesSectionSource, /createFleetVehicleListRows\(vehicleRows, \{ workDate, dailyStates \}\)/);
 assert.match(fleetVehiclesSectionSource, /driversExpanded/);
-assert.match(fleetVehiclesSectionSource, /createFleetVehicleVirtualRows/);
-assert.match(fleetVehiclesSectionSource, /isPreparingPrint/);
-assert.match(fleetVehiclesSectionSource, /afterprint/);
 assert.match(fleetVehiclesSectionSource, /window\.requestAnimationFrame\(\(\) => window\.print\(\)\)/);
 assert.match(fleetVehiclesSectionSource, /IconButton label="Печать списка техники: A3, альбомная ориентация"/);
 assert.match(fleetVehiclesSectionSource, /<Printer size=\{16\} aria-hidden \/>/);

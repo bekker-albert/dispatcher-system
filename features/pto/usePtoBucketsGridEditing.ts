@@ -102,13 +102,6 @@ export function usePtoBucketsGridEditing({
     onClearCells(targetKeys);
   }, [cancelEdit, editKey, editingMode, onClearCells, selectedCellKeys, skipNextBlurCommit]);
 
-  const commitActiveEdit = useCallback(() => {
-    if (!editKey) return;
-
-    skipNextBlurCommit(editKey);
-    finishEdit(editKey);
-  }, [editKey, finishEdit, skipNextBlurCommit]);
-
   const startEdit = useCallback((cell: PtoBucketCell, value: number | undefined, initialDraft?: string) => {
     if (!editingMode) return;
     const cellKey = ptoBucketSelectionKey(cell);
@@ -210,7 +203,6 @@ export function usePtoBucketsGridEditing({
   return {
     activeCell,
     addManualRow,
-    commitActiveEdit,
     draft,
     draftRow,
     editKey,

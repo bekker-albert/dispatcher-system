@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
+import type { CSSProperties } from "react";
 
 import { AiAssistantStatusPill } from "@/features/ai-assistant/components/AiAssistantStatusPill";
 import { formatAiAssistantChannel } from "@/features/ai-assistant/lib/formatters";
@@ -13,51 +13,30 @@ import {
 export function AiAssistantFloatingNotifications({
   notifications,
   onNavigate,
-  onSetDecision,
 }: {
   notifications: AiAssistantNotification[];
   onNavigate: () => void;
-  onSetDecision: (notification: AiAssistantNotification, status: "approved" | "rejected") => void;
 }) {
   const openAiTasks = () => {
     const detail: AppNavigationEventDetail = {
       topTab: "ai-assistant",
-      aiAssistantTab: "inbox",
+      aiAssistantTab: "tasks",
     };
 
     window.dispatchEvent(new CustomEvent(appNavigationEventName, { detail }));
     onNavigate();
   };
 
-  const handleDecision = (
-    event: MouseEvent<HTMLButtonElement>,
-    notification: AiAssistantNotification,
-    status: "approved" | "rejected",
-  ) => {
-    event.stopPropagation();
-    onSetDecision(notification, status);
-  };
-
-  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.currentTarget !== event.target) return;
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    openAiTasks();
-  };
-
   return (
     <div className="ai-floating-notifications" style={notificationListStyle}>
-      <div style={notificationHeaderStyle}>Уведомления</div>
-      {notifications.map((notification) => {
-        const canDecide = notification.approvalStatus === "required" && Boolean(notification.linkedTaskId);
-
-        return (
-          <div
+      {notifications.length === 0 ? (
+        <div style={emptyStateStyle}>Нет текущих уведомлений</div>
+      ) : (
+        notifications.map((notification) => (
+          <button
             key={notification.id}
-            role="button"
-            tabIndex={0}
+            type="button"
             onClick={openAiTasks}
-            onKeyDown={handleCardKeyDown}
             style={notificationItemStyle}
           >
             <div style={notificationItemTopStyle}>
@@ -70,27 +49,9 @@ export function AiAssistantFloatingNotifications({
               <AiAssistantStatusPill status={notification.status} />
             </div>
             <div style={notificationBodyStyle}>{notification.body}</div>
-            {canDecide && (
-              <div style={notificationActionsStyle}>
-                <button
-                  type="button"
-                  onClick={(event) => handleDecision(event, notification, "approved")}
-                  style={approveButtonStyle}
-                >
-                  Согласовать
-                </button>
-                <button
-                  type="button"
-                  onClick={(event) => handleDecision(event, notification, "rejected")}
-                  style={rejectButtonStyle}
-                >
-                  Отказать
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
+          </button>
+        ))
+      )}
     </div>
   );
 }
@@ -99,13 +60,8 @@ const notificationListStyle: CSSProperties = {
   display: "grid",
   gap: 6,
   minHeight: 0,
-};
-
-const notificationHeaderStyle: CSSProperties = {
-  color: "#475569",
-  fontSize: 11,
-  fontWeight: 900,
-  textTransform: "uppercase",
+  padding: 8,
+  overflow: "auto",
 };
 
 const notificationItemStyle: CSSProperties = {
@@ -118,6 +74,7 @@ const notificationItemStyle: CSSProperties = {
   fontSize: 12,
   color: "#0f172a",
   cursor: "pointer",
+  font: "inherit",
   textAlign: "left",
 };
 
@@ -147,31 +104,12 @@ const notificationBodyStyle: CSSProperties = {
   color: "#334155",
 };
 
-const notificationActionsStyle: CSSProperties = {
-  display: "flex",
-  gap: 6,
-  justifyContent: "flex-end",
-};
-
-const decisionButtonBaseStyle: CSSProperties = {
+const emptyStateStyle: CSSProperties = {
+  border: "1px dashed #cbd5e1",
   borderRadius: 8,
-  padding: "5px 8px",
-  font: "inherit",
-  fontSize: 11,
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const approveButtonStyle: CSSProperties = {
-  ...decisionButtonBaseStyle,
-  border: "1px solid #15803d",
-  background: "#f0fdf4",
-  color: "#166534",
-};
-
-const rejectButtonStyle: CSSProperties = {
-  ...decisionButtonBaseStyle,
-  border: "1px solid #b91c1c",
-  background: "#fef2f2",
-  color: "#991b1b",
+  padding: 12,
+  color: "#64748b",
+  fontSize: 12,
+  textAlign: "center",
+  background: "#ffffff",
 };
