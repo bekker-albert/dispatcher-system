@@ -74,3 +74,22 @@ export function normalizeAuthTabPermissions(value: unknown): AuthTabPermissions 
     return result;
   }, {});
 }
+
+export function hasConfiguredAuthTabPermissions(user: AuthUser) {
+  return Object.keys(user.tabPermissions).length > 0;
+}
+
+export function canAuthUserViewTab(user: AuthUser, tabId: string) {
+  if (user.canManageUsers) return true;
+  if (!hasConfiguredAuthTabPermissions(user)) return true;
+
+  const access = user.tabPermissions[tabId];
+  return Boolean(access?.view || access?.edit);
+}
+
+export function canAuthUserEditTab(user: AuthUser, tabId: string) {
+  if (user.canManageUsers) return true;
+  if (!hasConfiguredAuthTabPermissions(user)) return true;
+
+  return Boolean(user.tabPermissions[tabId]?.edit);
+}

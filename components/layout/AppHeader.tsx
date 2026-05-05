@@ -3,6 +3,8 @@
 import Image from "next/image";
 
 import { AuthSessionButton } from "@/features/auth/AuthSessionButton";
+import { useAuth } from "@/features/auth/AuthContext";
+import { canAuthUserViewTab } from "@/lib/domain/auth/types";
 
 import { AppHeaderMainTabs, AppHeaderSubtabs, AppHeaderWorkDate } from "./AppHeaderParts";
 import {
@@ -42,6 +44,9 @@ export function AppHeader({
   onSelectAdminSection,
   onSelectReportDate,
 }: AppHeaderProps) {
+  const { user } = useAuth();
+  const allowedTopTabs = topTabs.filter((tab) => canAuthUserViewTab(user, tab.id));
+
   return (
     <div className="app-print-header" style={appHeaderStyle}>
       <div style={appHeaderRowStyle}>
@@ -60,7 +65,7 @@ export function AppHeader({
           style={{ ...headerNavStackStyle, ...(headerHasSubtabs ? headerNavStackPtoStyle : null) }}
         >
           <AppHeaderMainTabs
-            topTabs={topTabs}
+            topTabs={allowedTopTabs}
             customTabs={customTabs}
             topTab={topTab}
             activeHeaderTabRef={activeHeaderTabRef}
