@@ -3,8 +3,8 @@ import { randomBytes } from "node:crypto";
 
 import type { AuthUser, AuthUserListItem, AuthUserRole } from "../../domain/auth/types";
 import { normalizeAuthUserRole } from "../../domain/auth/types";
-import { getInitialAuthUserConfig } from "./config";
-import { hashPassword, verifyPassword } from "./password";
+import { getInitialAuthBootstrapUser, getInitialAuthUserConfig, initialAuthUserId } from "./config";
+import { hashPassword, verifyPassword, verifyPlainPassword } from "./password";
 import { authExecute, authRows } from "./schema";
 
 type AuthUserRecord = RowDataPacket & {
@@ -95,6 +95,15 @@ export async function ensureInitialAuthUser() {
 }
 
 export async function authenticateAuthUser(login: string, password: string) {
+  const initialUser = getInitialAuthUserConfig();
+  if (
+    initialUser
+    && normalizeLogin(login) === normalizeLogin(initialUser.login)
+    && verifyPlainPassword(password, initialUser.password)
+  ) {
+    return getInitialAuthBootstrapUser();
+  }
+
   await ensureInitialAuthUser();
   const record = await loadAuthUserRecordByLogin(login);
   if (!record || !record.active) return null;
@@ -106,6 +115,10 @@ export async function authenticateAuthUser(login: string, password: string) {
 }
 
 export async function getAuthUserById(userId: string) {
+  if (userId === initialAuthUserId) {
+    return getInitialAuthBootstrapUser();
+  }
+
   await ensureInitialAuthUser();
   const record = await loadAuthUserRecordById(userId);
   if (!record || !record.active) return null;

@@ -32,3 +32,11 @@ export async function verifyPassword(password: string, storedHash: string) {
 
   return timingSafeEqual(actual, expected);
 }
+
+export function verifyPlainPassword(password: string, expectedPassword: string) {
+  const actual = Buffer.from(password);
+  const expected = Buffer.from(expectedPassword);
+  if (actual.length !== expected.length) return false;
+
+  return timingSafeEqual(actual, expected);
+}

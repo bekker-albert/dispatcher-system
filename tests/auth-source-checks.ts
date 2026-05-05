@@ -52,6 +52,8 @@ assert.match(authSources, /AUTH_INITIAL_LOGIN/);
 assert.match(authSources, /AUTH_INITIAL_PASSWORD/);
 assert.match(authSources, /hashPassword/);
 assert.match(authSources, /verifyPassword/);
+assert.match(authSources, /verifyPlainPassword/);
+assert.match(authSources, /initialAuthUserId/);
 assert.match(authSources, /pbkdf2/);
 assert.match(authSources, /checkAuthLoginRateLimit/);
 assert.match(authSources, /recordFailedAuthAttempt/);

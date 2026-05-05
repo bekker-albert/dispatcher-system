@@ -1,6 +1,7 @@
 import type { AuthUser } from "../../domain/auth/types";
 
 export const authSessionCookieName = "aam_dispatch_session";
+export const initialAuthUserId = "initial-auth-user";
 
 export function authRequired() {
   return process.env.AUTH_REQUIRED !== "false";
@@ -28,6 +29,19 @@ export function getInitialAuthUserConfig() {
     login,
     password,
     displayName: displayName || login,
+  };
+}
+
+export function getInitialAuthBootstrapUser(): AuthUser | null {
+  const initialUser = getInitialAuthUserConfig();
+  if (!initialUser) return null;
+
+  return {
+    id: initialAuthUserId,
+    login: initialUser.login.trim().toLowerCase(),
+    displayName: initialUser.displayName,
+    role: "dispatch-chief",
+    canManageUsers: true,
   };
 }
 
