@@ -13,7 +13,6 @@ import type {
   AiAssistantViewModel,
 } from "@/features/ai-assistant/types";
 import { aiAssistantMutedTextStyle, aiAssistantPanelStyle } from "@/features/ai-assistant/aiAssistantStyles";
-import type { SettingsSection } from "@/features/ai-assistant/components/AiAssistantSettingsPanel";
 import { createDraftCards, type DraftCardItem } from "@/features/ai-assistant/components/home/homeDraftCards";
 import {
   contextLineStyle,
@@ -63,13 +62,11 @@ const quickCommands: QuickCommand[] = [
 export function AiAssistantHomePanel({
   viewModel,
   onAppendChatMessage,
-  onOpenSettingsSection,
   onSetActiveTab,
   onSetApprovalDecision,
 }: {
   viewModel: AiAssistantViewModel;
   onAppendChatMessage: (text: string) => void;
-  onOpenSettingsSection: (section: SettingsSection) => void;
   onSetActiveTab: (tab: AiAssistantTab) => void;
   onSetApprovalDecision: (
     approval: AiAssistantApprovalAction,
@@ -79,6 +76,7 @@ export function AiAssistantHomePanel({
 }) {
   const [requestText, setRequestText] = useState("");
   const [lastSubmittedRequest, setLastSubmittedRequest] = useState("");
+  const [lastSubmittedTargetTab, setLastSubmittedTargetTab] = useState<AiAssistantTab>("inbox");
   const tasksByApprovalId = useMemo(
     () => new Map(viewModel.tasks.map((task) => [task.approvalActionId, task])),
     [viewModel.tasks],
@@ -101,6 +99,7 @@ export function AiAssistantHomePanel({
     if (!normalizedText) return;
     onAppendChatMessage(normalizedText);
     setLastSubmittedRequest(normalizedText);
+    setLastSubmittedTargetTab(resolveRequestResultTarget(normalizedText));
     setRequestText("");
   };
 
@@ -137,15 +136,27 @@ export function AiAssistantHomePanel({
           ))}
         </div>
         {lastSubmittedRequest ? (
-          <div style={requestFeedbackStyle}>Запрос принят: {lastSubmittedRequest}</div>
+          <div style={requestFeedbackStyle}>
+            <div>Запрос принят: {lastSubmittedRequest}</div>
+            <div style={miniActionsStyle}>
+              <button type="button" onClick={() => onSetActiveTab(lastSubmittedTargetTab)} style={primaryMiniButtonStyle}>
+                Открыть {formatRequestResultTarget(lastSubmittedTargetTab)}
+              </button>
+              {lastSubmittedTargetTab !== "inbox" && (
+                <button type="button" onClick={() => onSetActiveTab("inbox")} style={secondaryMiniButtonStyle}>
+                  Входящие
+                </button>
+              )}
+            </div>
+          </div>
         ) : null}
       </div>
 
       <div style={summaryGridStyle}>
-        <SummaryCard title="Требуют решения" value={viewModel.summary.approvalsRequired} onClick={() => onSetActiveTab("tasks")} />
-        <SummaryCard title="Черновики" value={draftCards.length} onClick={() => onSetActiveTab("documents")} />
-        <SummaryCard title="Сегодня" value={todayCards.length} onClick={() => onSetActiveTab("tasks")} />
-        <SummaryCard title="Последние действия" value={latestActions.length} onClick={() => onOpenSettingsSection("audit")} />
+        <SummaryCard title="Требуют решения" value={viewModel.summary.approvalsRequired} onClick={() => onSetActiveTab("inbox")} />
+        <SummaryCard title="Черновики" value={draftCards.length} onClick={() => onSetActiveTab("drafts")} />
+        <SummaryCard title="Сегодня" value={todayCards.length} onClick={() => onSetActiveTab("inbox")} />
+        <SummaryCard title="Последние действия" value={latestActions.length} onClick={() => onSetActiveTab("history")} />
       </div>
 
       <div style={dashboardGridStyle}>
@@ -159,7 +170,7 @@ export function AiAssistantHomePanel({
                 approval={approval}
                 task={task}
                 onApprove={() => onSetApprovalDecision(approval, "approved", task)}
-                onEdit={() => onSetActiveTab("tasks")}
+                onEdit={() => onSetActiveTab("inbox")}
                 onReturn={() => onSetApprovalDecision(approval, "returned", task)}
               />
             );
@@ -168,13 +179,13 @@ export function AiAssistantHomePanel({
 
         <HomeBlock title="Черновики">
           {draftCards.length > 0 ? visibleDraftCards.map((draft) => (
-            <DraftCard key={draft.id} draft={draft} onOpen={() => onSetActiveTab("documents")} />
+            <DraftCard key={draft.id} draft={draft} onOpen={() => onSetActiveTab("drafts")} />
           )) : <EmptyLine text="Черновиков нет." />}
         </HomeBlock>
 
         <HomeBlock title="Сегодня">
           {todayCards.length > 0 ? visibleTodayCards.map((item) => (
-            <TodayCard key={item.id} item={item} onOpen={() => onSetActiveTab("tasks")} />
+            <TodayCard key={item.id} item={item} onOpen={() => onSetActiveTab("inbox")} />
           )) : <EmptyLine text="На сегодня задач нет." />}
         </HomeBlock>
 
@@ -288,4 +299,26 @@ function formatDraftStatus(status: string) {
   };
 
   return labels[status] ?? status;
+}
+
+function resolveRequestResultTarget(text: string): AiAssistantTab {
+  const normalized = text.toLowerCase();
+  if (
+    normalized.includes("служеб")
+    || normalized.includes("командиров")
+    || normalized.includes("письм")
+    || normalized.includes("чернов")
+  ) {
+    return "drafts";
+  }
+
+  return "inbox";
+}
+
+function formatRequestResultTarget(tab: AiAssistantTab) {
+  if (tab === "drafts") return "черновик";
+  if (tab === "history") return "историю";
+  if (tab === "settings") return "настройки";
+
+  return "входящие";
 }

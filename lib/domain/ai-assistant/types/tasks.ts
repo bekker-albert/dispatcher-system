@@ -1,7 +1,8 @@
 export type AiAssistantTab =
   | "main"
-  | "tasks"
-  | "documents"
+  | "inbox"
+  | "drafts"
+  | "history"
   | "settings";
 
 export type AiAssistantTaskKind =

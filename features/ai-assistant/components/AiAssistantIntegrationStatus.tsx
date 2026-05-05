@@ -32,25 +32,37 @@ export function AiAssistantIntegrationStatus({
 }) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<IntegrationDraft>(() => createIntegrationDraft());
+  const [validationError, setValidationError] = useState("");
 
   const startCreate = () => {
     setEditingKey("new");
     setDraft(createIntegrationDraft());
+    setValidationError("");
   };
 
   const startEdit = (integration: AiAssistantIntegration) => {
     setEditingKey(integration.key);
     setDraft(toIntegrationDraft(integration));
+    setValidationError("");
   };
 
   const cancelEdit = () => {
     setEditingKey(null);
     setDraft(createIntegrationDraft());
+    setValidationError("");
+  };
+
+  const handleDraftChange = (nextDraft: IntegrationDraft) => {
+    setDraft(nextDraft);
+    if (validationError) setValidationError("");
   };
 
   const saveDraft = () => {
     const normalizedDraft = normalizeIntegrationDraft(draft);
-    if (!normalizedDraft.title) return;
+    if (!normalizedDraft.title) {
+      setValidationError("Укажите название интеграции.");
+      return;
+    }
 
     if (editingKey === "new") {
       onAddIntegration(normalizedDraft);
@@ -85,6 +97,7 @@ export function AiAssistantIntegrationStatus({
           <Plus size={15} />
         </IconButton>
       </div>
+      {validationError && <div style={validationErrorStyle}>{validationError}</div>}
 
       <div style={aiAssistantTableWrapStyle}>
         <table style={integrationTableStyle}>
@@ -117,7 +130,7 @@ export function AiAssistantIntegrationStatus({
               <IntegrationEditRow
                 draft={draft}
                 onCancel={cancelEdit}
-                onChange={setDraft}
+                onChange={handleDraftChange}
                 onSave={saveDraft}
               />
             )}
@@ -127,7 +140,7 @@ export function AiAssistantIntegrationStatus({
                   key={integration.key}
                   draft={draft}
                   onCancel={cancelEdit}
-                  onChange={setDraft}
+                  onChange={handleDraftChange}
                   onSave={saveDraft}
                 />
               ) : (
@@ -354,6 +367,17 @@ const panelTitleStyle: CSSProperties = {
   fontSize: 17,
   fontWeight: 900,
   color: "#0f172a",
+};
+
+const validationErrorStyle: CSSProperties = {
+  marginBottom: 10,
+  border: "1px solid #fecaca",
+  borderRadius: 8,
+  background: "#fff1f2",
+  color: "#b91c1c",
+  padding: "8px 10px",
+  fontSize: 12,
+  fontWeight: 800,
 };
 
 const integrationTableStyle: CSSProperties = {

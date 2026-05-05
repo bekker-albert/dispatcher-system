@@ -27,6 +27,7 @@ import {
   aiAssistantMutedTextStyle,
   aiAssistantPanelStyle,
 } from "@/features/ai-assistant/aiAssistantStyles";
+import { requiresAiAssistantApproval } from "@/lib/domain/ai-assistant/approval-policy";
 
 export function AiAssistantPlannerPanel({
   currentWorkDate,
@@ -117,39 +118,56 @@ function AiAssistantPlannerPanelContent({
   const saveDraft = () => {
     const normalizedDraft = normalizePlannerDraft(draft);
     if (!normalizedDraft.title || !normalizedDraft.target) return;
+    const safeDraft = {
+      ...normalizedDraft,
+      requireApproval: normalizedDraft.requireApproval
+        || requiresAiAssistantApproval(
+          normalizedDraft.actionType,
+          normalizedDraft.requireApproval ? "critical" : "low",
+          normalizedDraft.channel,
+        ),
+    };
 
     if (editingId === "new") {
       onChangePlannerItems((current) => [
         ...current,
         {
           id: `plan-ai-${Date.now()}`,
-          ...normalizedDraft,
+          ...safeDraft,
           owner: "Текущий пользователь",
           updatedAt: new Date().toISOString(),
         },
       ]);
-      setSelectedDate(normalizedDraft.plannedDate);
-      setCalendarMonth(getPlannerMonthKey(normalizedDraft.plannedDate));
+      setSelectedDate(safeDraft.plannedDate);
+      setCalendarMonth(getPlannerMonthKey(safeDraft.plannedDate));
     } else if (editingId) {
       onChangePlannerItems((current) => current.map((item) => (
         item.id === editingId
-          ? { ...item, ...normalizedDraft, updatedAt: new Date().toISOString() }
+          ? { ...item, ...safeDraft, updatedAt: new Date().toISOString() }
           : item
       )));
-      setSelectedDate(normalizedDraft.plannedDate);
-      setCalendarMonth(getPlannerMonthKey(normalizedDraft.plannedDate));
+      setSelectedDate(safeDraft.plannedDate);
+      setCalendarMonth(getPlannerMonthKey(safeDraft.plannedDate));
     }
 
-    finishEdit(normalizedDraft.plannedDate);
+    finishEdit(safeDraft.plannedDate);
   };
 
   const setPlannerDecision = (item: AiAssistantPlannerItem, decision: "approved" | "rejected") => {
-    if (item.requireApproval) {
+    const needsApproval = item.requireApproval
+      || requiresAiAssistantApproval(
+        item.actionType,
+        item.requireApproval ? "critical" : "low",
+        item.channel,
+      );
+
+    if (needsApproval) {
       onChangePlannerItems((current) => current.map((currentItem) => (
         currentItem.id === item.id
           ? {
               ...currentItem,
               status: "needs-decision",
+              requireApproval: true,
               comment: "Требуется решение в очереди задач",
               updatedAt: new Date().toISOString(),
             }

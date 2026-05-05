@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 
-import { AiAssistantDocumentsPanel } from "@/features/ai-assistant/components/AiAssistantDocumentsPanel";
-import { AiAssistantHomePanel } from "@/features/ai-assistant/components/AiAssistantHomePanel";
-import {
-  AiAssistantSettingsPanel,
-  type SettingsSection,
-} from "@/features/ai-assistant/components/AiAssistantSettingsPanel";
 import { AiAssistantTabs } from "@/features/ai-assistant/components/AiAssistantTabs";
-import { AiAssistantTasksPanel } from "@/features/ai-assistant/components/AiAssistantTasksPanel";
 import {
   aiAssistantHeaderStyle,
+  aiAssistantMutedTextStyle,
+  aiAssistantPanelStyle,
   aiAssistantShellStyle,
   aiAssistantTitleStyle,
 } from "@/features/ai-assistant/aiAssistantStyles";
@@ -20,15 +16,68 @@ import {
   appNavigationEventName,
   isAppNavigationEvent,
 } from "@/lib/domain/navigation/appNavigationEvents";
+import type { AiAssistantTab } from "@/features/ai-assistant/types";
+import type { SettingsSection } from "@/features/ai-assistant/components/AiAssistantSettingsPanel";
+
+const aiAssistantTabIds: AiAssistantTab[] = ["main", "inbox", "drafts", "history", "settings"];
+
+const legacyAiAssistantTabMap: Record<string, AiAssistantTab> = {
+  agents: "settings",
+  approvals: "inbox",
+  development: "settings",
+  documents: "drafts",
+  notifications: "inbox",
+  planner: "inbox",
+  tasks: "inbox",
+};
+
+const AiAssistantHomePanel = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantHomePanel").then((module) => module.AiAssistantHomePanel),
+  {
+    ssr: false,
+    loading: () => <AiAssistantPanelLoading label="Загрузка сводки AI-ассистента..." />,
+  },
+);
+
+const AiAssistantTasksPanel = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantTasksPanel").then((module) => module.AiAssistantTasksPanel),
+  {
+    ssr: false,
+    loading: () => <AiAssistantPanelLoading label="Загрузка задач и уведомлений..." />,
+  },
+);
+
+const AiAssistantWorkspacePanel = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantWorkspacePanel").then((module) => module.AiAssistantWorkspacePanel),
+  {
+    ssr: false,
+    loading: () => <AiAssistantPanelLoading label="Загрузка черновиков и документов..." />,
+  },
+);
+
+const AiAssistantAuditLog = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantAuditLog").then((module) => module.AiAssistantAuditLog),
+  {
+    ssr: false,
+    loading: () => <AiAssistantPanelLoading label="Загрузка журнала действий..." />,
+  },
+);
+
+const AiAssistantSettingsPanel = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantSettingsPanel").then((module) => module.AiAssistantSettingsPanel),
+  {
+    ssr: false,
+    loading: () => <AiAssistantPanelLoading label="Загрузка настроек AI-ассистента..." />,
+  },
+);
 
 export function AiAssistantSection() {
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>("agents");
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("overview");
   const {
     activeTab,
     agentActivationDrafts,
     appendChatMessage,
     setActiveTab,
-    setPlannerItems,
     setAgentActivationDraft,
     setApprovalDecision,
     updateApprovalDraftText,
@@ -46,8 +95,11 @@ export function AiAssistantSection() {
   useEffect(() => {
     const handleNavigation = (event: Event) => {
       if (!isAppNavigationEvent(event)) return;
-      if (event.detail.topTab === "ai-assistant" && event.detail.aiAssistantTab) {
-        setActiveTab(event.detail.aiAssistantTab);
+      if (
+        event.detail.topTab === "ai-assistant"
+      ) {
+        const nextTab = normalizeAiAssistantTab(event.detail.aiAssistantTab);
+        if (nextTab) setActiveTab(nextTab);
       }
     };
 
@@ -68,34 +120,33 @@ export function AiAssistantSection() {
         <AiAssistantHomePanel
           viewModel={viewModel}
           onAppendChatMessage={appendChatMessage}
-          onOpenSettingsSection={(section) => {
-            setSettingsSection(section);
-            setActiveTab("settings");
-          }}
           onSetActiveTab={setActiveTab}
           onSetApprovalDecision={setApprovalDecision}
         />
       )}
 
-      {activeTab === "tasks" && (
+      {activeTab === "inbox" && (
         <AiAssistantTasksPanel
           approvals={viewModel.approvalActions}
           currentWorkDate={viewModel.currentWorkDate}
           tasks={viewModel.currentTasks}
           notifications={viewModel.currentNotifications}
           plannerItems={viewModel.plannerItems}
-          onChangePlannerItems={setPlannerItems}
           onUpdateApprovalDraftText={updateApprovalDraftText}
           onSetApprovalDecision={setApprovalDecision}
         />
       )}
 
-      {activeTab === "documents" && (
-        <AiAssistantDocumentsPanel
+      {activeTab === "drafts" && (
+        <AiAssistantWorkspacePanel
           documents={viewModel.documents}
           documentologItems={viewModel.documentologItems}
           mailDrafts={viewModel.mailDrafts}
         />
+      )}
+
+      {activeTab === "history" && (
+        <AiAssistantAuditLog events={viewModel.auditEvents} />
       )}
 
       {activeTab === "settings" && (
@@ -116,5 +167,19 @@ export function AiAssistantSection() {
         />
       )}
     </div>
+  );
+}
+
+function normalizeAiAssistantTab(value: unknown): AiAssistantTab | null {
+  if (typeof value !== "string") return null;
+  if (aiAssistantTabIds.includes(value as AiAssistantTab)) return value as AiAssistantTab;
+  return legacyAiAssistantTabMap[value] ?? null;
+}
+
+function AiAssistantPanelLoading({ label }: { label: string }) {
+  return (
+    <section style={aiAssistantPanelStyle}>
+      <div style={aiAssistantMutedTextStyle}>{label}</div>
+    </section>
   );
 }

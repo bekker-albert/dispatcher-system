@@ -2,9 +2,10 @@ import type { AiAssistantTab } from "@/features/ai-assistant/types";
 import { aiAssistantTabsStyle } from "@/features/ai-assistant/aiAssistantStyles";
 
 const aiAssistantTabs: { id: AiAssistantTab; label: string }[] = [
-  { id: "main", label: "Пульт" },
-  { id: "tasks", label: "Задачи" },
-  { id: "documents", label: "Документы" },
+  { id: "main", label: "Главное" },
+  { id: "inbox", label: "Входящие" },
+  { id: "drafts", label: "Черновики" },
+  { id: "history", label: "История" },
   { id: "settings", label: "Настройки" },
 ];
 

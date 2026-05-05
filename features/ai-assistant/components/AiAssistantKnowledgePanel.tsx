@@ -29,25 +29,41 @@ export function AiAssistantKnowledgePanel({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<KnowledgeDraft>(() => createKnowledgeDraft());
+  const [validationError, setValidationError] = useState("");
 
   const startCreate = () => {
     setEditingId("new");
     setDraft(createKnowledgeDraft());
+    setValidationError("");
   };
 
   const startEdit = (source: AiAssistantKnowledgeSource) => {
     setEditingId(source.id);
     setDraft(toKnowledgeDraft(source));
+    setValidationError("");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setDraft(createKnowledgeDraft());
+    setValidationError("");
+  };
+
+  const handleDraftChange = (nextDraft: KnowledgeDraft) => {
+    setDraft(nextDraft);
+    if (validationError) setValidationError("");
   };
 
   const saveDraft = () => {
     const normalizedDraft = normalizeKnowledgeDraft(draft);
-    if (!normalizedDraft.title || !normalizedDraft.owner) return;
+    if (!normalizedDraft.title || !normalizedDraft.owner) {
+      setValidationError(
+        !normalizedDraft.title
+          ? "Укажите название источника."
+          : "Укажите владельца источника.",
+      );
+      return;
+    }
 
     if (editingId === "new") {
       onAddSource(normalizedDraft);
@@ -82,6 +98,7 @@ export function AiAssistantKnowledgePanel({
           <Plus size={15} />
         </IconButton>
       </div>
+      {validationError && <div style={validationErrorStyle}>{validationError}</div>}
 
       <div style={aiAssistantTableWrapStyle}>
         <table style={knowledgeTableStyle}>
@@ -108,7 +125,7 @@ export function AiAssistantKnowledgePanel({
               <KnowledgeEditRow
                 draft={draft}
                 onCancel={cancelEdit}
-                onChange={setDraft}
+                onChange={handleDraftChange}
                 onSave={saveDraft}
               />
             )}
@@ -118,7 +135,7 @@ export function AiAssistantKnowledgePanel({
                   key={source.id}
                   draft={draft}
                   onCancel={cancelEdit}
-                  onChange={setDraft}
+                  onChange={handleDraftChange}
                   onSave={saveDraft}
                 />
               ) : (
@@ -318,6 +335,17 @@ const panelTitleStyle: CSSProperties = {
   fontSize: 17,
   fontWeight: 900,
   color: "#0f172a",
+};
+
+const validationErrorStyle: CSSProperties = {
+  marginBottom: 10,
+  border: "1px solid #fecaca",
+  borderRadius: 8,
+  background: "#fff1f2",
+  color: "#b91c1c",
+  padding: "8px 10px",
+  fontSize: 12,
+  fontWeight: 800,
 };
 
 const knowledgeTableStyle: CSSProperties = {

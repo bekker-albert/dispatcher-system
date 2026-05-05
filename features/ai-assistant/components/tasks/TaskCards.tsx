@@ -101,7 +101,7 @@ export function TaskCards({
                       <span>Согласовать</span>
                     </TaskActionButton>
                   )}
-                  {row.approval && (
+                  {canDecide && row.approval && (
                     <TaskActionButton label="Редактировать" onClick={() => onStartEdit(row.approval!)}>
                       <Pencil size={15} />
                       <span>Редактировать</span>

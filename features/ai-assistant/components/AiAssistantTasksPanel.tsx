@@ -1,9 +1,7 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 
-import { AiAssistantPlannerPanel } from "@/features/ai-assistant/components/AiAssistantPlannerPanel";
 import { TaskQueueSection } from "@/features/ai-assistant/components/tasks/TaskQueueSection";
 import {
   createCurrentQueueRows,
@@ -38,7 +36,6 @@ export function AiAssistantTasksPanel({
   tasks,
   notifications,
   plannerItems,
-  onChangePlannerItems,
   onUpdateApprovalDraftText,
   onSetApprovalDecision,
 }: {
@@ -47,7 +44,6 @@ export function AiAssistantTasksPanel({
   tasks: AiAssistantTask[];
   notifications: AiAssistantNotification[];
   plannerItems: AiAssistantPlannerItem[];
-  onChangePlannerItems: Dispatch<SetStateAction<AiAssistantPlannerItem[]>>;
   onUpdateApprovalDraftText: (approval: AiAssistantApprovalAction, draftText: string) => void;
   onSetApprovalDecision: (
     approval: AiAssistantApprovalAction,
@@ -105,12 +101,11 @@ export function AiAssistantTasksPanel({
   };
 
   return (
-    <>
-      <section style={aiAssistantPanelStyle}>
+    <section style={aiAssistantPanelStyle}>
       <div style={tasksHeaderStyle}>
         <div>
-          <div style={tasksBlockTitleStyle}>Задачи на {formatTaskDateLabel(currentWorkDate)}</div>
-          <div style={aiAssistantMutedTextStyle}>Статусный журнал задач, решений и подготовленных действий.</div>
+          <div style={tasksBlockTitleStyle}>Входящие на {formatTaskDateLabel(currentWorkDate)}</div>
+          <div style={aiAssistantMutedTextStyle}>Решения, задачи и подготовленные AI-действия без технической таблицы.</div>
         </div>
       </div>
 
@@ -174,12 +169,6 @@ export function AiAssistantTasksPanel({
       ) : (
         <div style={emptyTaskStateStyle}>По выбранным условиям задач нет.</div>
       )}
-      </section>
-      <AiAssistantPlannerPanel
-        currentWorkDate={currentWorkDate}
-        plannerItems={plannerItems}
-        onChangePlannerItems={onChangePlannerItems}
-      />
-    </>
+    </section>
   );
 }

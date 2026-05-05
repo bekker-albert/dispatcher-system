@@ -26,7 +26,13 @@ export function AiAssistantDocumentsPanel({
       id: document.id,
       title: document.title,
       subtitle: formatDocumentStatus(document.status),
-      text: document.type,
+      text: formatDocumentType(document.type),
+      detailLines: [
+        `Тип: ${formatDocumentType(document.type)}`,
+        document.linkedApprovalId ? `Согласование: ${document.linkedApprovalId}` : "",
+        document.linkedTaskId ? `Задача: ${document.linkedTaskId}` : "",
+        `Обновлено: ${formatDocumentDate(document.updatedAt)}`,
+      ].filter(Boolean),
       kind: "document" as const,
     })),
     ...mailDrafts.map((draft) => ({
@@ -34,6 +40,12 @@ export function AiAssistantDocumentsPanel({
       title: draft.subject,
       subtitle: formatMailStatus(draft.status),
       text: draft.to.join(", "),
+      detailLines: [
+        `Кому: ${draft.to.join(", ")}`,
+        draft.cc.length > 0 ? `Копия: ${draft.cc.join(", ")}` : "",
+        draft.body,
+        draft.linkedApprovalId ? `Согласование: ${draft.linkedApprovalId}` : "",
+      ].filter(Boolean),
       kind: "mail" as const,
     })),
     ...documentologItems.map((item) => ({
@@ -41,6 +53,12 @@ export function AiAssistantDocumentsPanel({
       title: item.title,
       subtitle: formatDocumentologStatus(item.status),
       text: item.comment || item.approver,
+      detailLines: [
+        item.externalId ? `Documentolog: ${item.externalId}` : "",
+        item.approver ? `Согласующий: ${item.approver}` : "",
+        item.comment ? `Комментарий: ${item.comment}` : "",
+        item.linkedDocumentId ? `Документ: ${item.linkedDocumentId}` : "",
+      ].filter(Boolean),
       kind: "documentolog" as const,
     })),
   ];
@@ -68,9 +86,19 @@ export function AiAssistantDocumentsPanel({
               </div>
               <div style={cardTextStyle}>{card.text}</div>
               {isOpen && (
-                <div style={detailsStyle}>Открыто для просмотра: {card.subtitle}</div>
+                <div style={detailsStyle}>
+                  {card.detailLines.map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
               )}
-              <button type="button" onClick={() => setSelectedCardId(card.id)} style={openButtonStyle}>Открыть</button>
+              <button
+                type="button"
+                onClick={() => setSelectedCardId((current) => (current === card.id ? null : card.id))}
+                style={openButtonStyle}
+              >
+                {isOpen ? "Скрыть" : "Открыть"}
+              </button>
             </article>
           );
         })}
@@ -92,6 +120,25 @@ function formatDocumentStatus(status: AiAssistantDocument["status"]) {
   };
 
   return labels[status];
+}
+
+function formatDocumentType(type: AiAssistantDocument["type"]) {
+  const labels: Record<AiAssistantDocument["type"], string> = {
+    memo: "Служебная записка",
+    "business-trip": "Командировка",
+    letter: "Письмо",
+    report: "Отчет",
+    explanation: "Объяснительная",
+    template: "Шаблон",
+    other: "Документ",
+  };
+
+  return labels[type];
+}
+
+function formatDocumentDate(value: string) {
+  const [date, time] = value.split("T");
+  return [date, time?.slice(0, 5)].filter(Boolean).join(" ");
 }
 
 function formatMailStatus(status: AiAssistantMailDraft["status"]) {

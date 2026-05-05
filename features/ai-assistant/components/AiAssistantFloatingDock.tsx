@@ -15,6 +15,7 @@ import type {
 export function AiAssistantFloatingDock() {
   const {
     appendChatMessage,
+    currentContext,
     setApprovalDecision,
     viewModel,
   } = useAiAssistantContext();
@@ -59,8 +60,9 @@ export function AiAssistantFloatingDock() {
           <div style={floatingPanelHeaderStyle}>
             <div style={floatingPanelTitleStyle}>
               <Bot size={18} />
-              <span>AI-ассистент</span>
+              <span>AI: {currentContext.sectionLabel}</span>
               {activeNotifications.length > 0 && <span style={panelTitleBadgeStyle}>{activeNotifications.length}</span>}
+              {currentContext.detailLabel && <span style={panelDetailStyle}>{currentContext.detailLabel}</span>}
             </div>
 
             <div style={floatingPanelHeaderActionsStyle}>
@@ -76,26 +78,33 @@ export function AiAssistantFloatingDock() {
           </div>
 
           <AiAssistantFloatingChat
+            contextLabel={currentContext.sectionLabel}
+            detailLabel={currentContext.detailLabel}
             messages={viewModel.chatMessages}
             notifications={activeNotifications}
             onNavigate={() => setIsOpen(false)}
             onSendMessage={appendChatMessage}
             onSetNotificationDecision={setNotificationDecision}
+            quickActions={currentContext.quickActions}
+            suggestions={currentContext.suggestions}
+            workDate={currentContext.workDate}
           />
         </section>
       )}
 
-      <div style={floatingButtonsStyle}>
-        <FloatingDockButton
-          active={isOpen}
-          label={isOpen ? "Свернуть AI-виджет" : "Открыть AI-виджет"}
-          onClick={() => setIsOpen((current) => !current)}
-          primary
-        >
-          <Bot size={20} />
-          {activeNotifications.length > 0 && <span style={notificationBadgeStyle}>{activeNotifications.length}</span>}
-        </FloatingDockButton>
-      </div>
+      {!isOpen && (
+        <div style={floatingButtonsStyle}>
+          <FloatingDockButton
+            active={isOpen}
+            label="Открыть AI-панель"
+            onClick={() => setIsOpen(true)}
+            primary
+          >
+            <Bot size={20} />
+            {activeNotifications.length > 0 && <span style={notificationBadgeStyle}>{activeNotifications.length}</span>}
+          </FloatingDockButton>
+        </div>
+      )}
     </div>
   );
 }
@@ -148,12 +157,16 @@ const floatingDockStyle: CSSProperties = {
 };
 
 const floatingPanelStyle: CSSProperties = {
-  width: "min(420px, calc(100vw - 36px))",
-  maxHeight: "min(560px, calc(100vh - 110px))",
+  position: "fixed",
+  top: 0,
+  right: 0,
+  bottom: 0,
+  width: "min(460px, 100vw)",
+  maxHeight: "100vh",
   display: "grid",
   gridTemplateRows: "auto minmax(160px, 1fr)",
   border: "1px solid #cbd5e1",
-  borderRadius: 8,
+  borderRadius: "8px 0 0 8px",
   background: "#f8fafc",
   boxShadow: "0 16px 36px rgba(15, 23, 42, 0.18)",
   overflow: "hidden",
@@ -176,6 +189,7 @@ const floatingPanelTitleStyle: CSSProperties = {
   gap: 8,
   fontWeight: 900,
   minWidth: 0,
+  flexWrap: "wrap",
 };
 
 const floatingPanelHeaderActionsStyle: CSSProperties = {
@@ -196,6 +210,12 @@ const panelTitleBadgeStyle: CSSProperties = {
   color: "#ffffff",
   fontSize: 10,
   fontWeight: 900,
+};
+
+const panelDetailStyle: CSSProperties = {
+  color: "#cbd5e1",
+  fontSize: 11,
+  fontWeight: 800,
 };
 
 const floatingPanelCloseButtonStyle: CSSProperties = {

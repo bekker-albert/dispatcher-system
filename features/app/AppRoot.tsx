@@ -10,6 +10,7 @@ import { useAppScreenProps } from "@/features/app/useAppScreenProps";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
 import { AiAssistantProvider } from "@/features/ai-assistant/lib/useAiAssistantState";
 import { databaseConfigured } from "@/lib/data/config";
+import { createAiAssistantRuntimeContext } from "@/lib/domain/ai-assistant/runtime-context";
 
 export default function App() {
   const appState = useAppStateBundle();
@@ -33,9 +34,21 @@ export default function App() {
     runtime,
     navigation,
   });
+  const activeReportCustomer = appState.reportCustomers.find((customer) => customer.id === appState.reportCustomerId);
+  const aiAssistantRuntimeContext = createAiAssistantRuntimeContext({
+    adminSection: appState.adminSection,
+    dispatchTab: appState.dispatchTab,
+    ptoTab: appState.ptoTab,
+    reportCustomerLabel: activeReportCustomer?.label,
+    topTab: appState.topTab,
+    workDate: appState.reportDate,
+  });
 
   return (
-    <AiAssistantProvider currentWorkDate={appState.reportDate}>
+    <AiAssistantProvider
+      currentContext={aiAssistantRuntimeContext}
+      currentWorkDate={appState.reportDate}
+    >
       <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
         <AppHeader {...appHeaderProps} />
         <AppPrimaryContent {...primaryContentProps} />

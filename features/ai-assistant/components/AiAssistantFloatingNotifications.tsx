@@ -22,7 +22,7 @@ export function AiAssistantFloatingNotifications({
   const openAiTasks = () => {
     const detail: AppNavigationEventDetail = {
       topTab: "ai-assistant",
-      aiAssistantTab: "tasks",
+      aiAssistantTab: "inbox",
     };
 
     window.dispatchEvent(new CustomEvent(appNavigationEventName, { detail }));

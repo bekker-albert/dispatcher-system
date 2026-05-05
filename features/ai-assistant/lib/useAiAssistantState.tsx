@@ -1,34 +1,26 @@
 "use client";
 
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
 
 import { defaultAiAssistantDataset, defaultAiAssistantRole } from "@/features/ai-assistant/data";
 import type {
-  AiAssistantApprovalAction,
-  AiAssistantCodexPromptDraft,
-  AiAssistantDevelopmentIdea,
-  AiAssistantIntegration,
-  AiAssistantKnowledgeSource,
+  AiAssistantRuntimeContext,
   AiAssistantTab,
-  AiAssistantTask,
 } from "@/features/ai-assistant/types";
+import { useAiAssistantActions } from "@/features/ai-assistant/lib/useAiAssistantActions";
+import { createAiAssistantCurrentDateTime } from "@/features/ai-assistant/lib/aiAssistantStateHelpers";
 import { createAiAssistantViewModel } from "@/lib/domain/ai-assistant/view-model";
 import { resolveAiAssistantPermissions } from "@/lib/domain/ai-assistant/permissions";
-import { getAiAssistantTaskStatusForApprovalDecision } from "@/lib/domain/ai-assistant/status";
+import { defaultAiAssistantRuntimeContext } from "@/lib/domain/ai-assistant/runtime-context";
 
 type UseAiAssistantStateOptions = {
+  currentContext?: AiAssistantRuntimeContext;
   currentWorkDate?: string;
   currentDateTime?: string;
 };
 
 export function useAiAssistantState({
+  currentContext = defaultAiAssistantRuntimeContext,
   currentWorkDate = defaultAiAssistantDataset.currentWorkDate,
   currentDateTime,
 }: UseAiAssistantStateOptions = {}) {
@@ -44,10 +36,10 @@ export function useAiAssistantState({
   const [agents] = useState(defaultAiAssistantDataset.agents);
   const [whatsappGroups] = useState(defaultAiAssistantDataset.whatsappGroups);
   const [whatsappMessageCandidates] = useState(defaultAiAssistantDataset.whatsappMessageCandidates);
-  const [documents] = useState(defaultAiAssistantDataset.documents);
+  const [documents, setDocuments] = useState(defaultAiAssistantDataset.documents);
   const [documentTemplates] = useState(defaultAiAssistantDataset.documentTemplates);
   const [mailItems] = useState(defaultAiAssistantDataset.mailItems);
-  const [mailDrafts] = useState(defaultAiAssistantDataset.mailDrafts);
+  const [mailDrafts, setMailDrafts] = useState(defaultAiAssistantDataset.mailDrafts);
   const [calendarEvents] = useState(defaultAiAssistantDataset.calendarEvents);
   const [documentologItems] = useState(defaultAiAssistantDataset.documentologItems);
   const [knowledgeRules] = useState(defaultAiAssistantDataset.knowledgeRules);
@@ -118,226 +110,32 @@ export function useAiAssistantState({
     () => createAiAssistantViewModel(dataset),
     [dataset],
   );
-  const appendChatMessage = useCallback((text: string) => {
-    const normalizedText = text.trim();
-    if (!normalizedText) return;
-
-    const createdAt = new Date().toISOString();
-    setChatMessages((current) => [
-      ...current,
-      {
-        id: `chat-user-${createdAt}`,
-        role: "user",
-        author: "Вы",
-        text: normalizedText,
-        createdAt,
-      },
-      {
-        id: `chat-assistant-${createdAt}`,
-        role: "assistant",
-        author: "AI-ассистент",
-        text: "Запрос принят. Если потребуется действие, оно появится в Задачах.",
-        createdAt,
-      },
-    ]);
-  }, []);
-  const updateApprovalDraftText = useCallback((
-    approval: AiAssistantApprovalAction,
-    draftText: string,
-  ) => {
-    const updatedAt = new Date().toISOString();
-    setApprovalActions((current) => {
-      const exists = current.some((item) => item.id === approval.id);
-      if (!exists) return [...current, { ...approval, draftText, updatedAt }];
-
-      return current.map((item) => (
-        item.id === approval.id
-          ? { ...item, draftText, updatedAt }
-          : item
-      ));
-    });
-  }, []);
-  const setApprovalDecision = useCallback((
-    approval: AiAssistantApprovalAction,
-    status: "approved" | "returned" | "rejected",
-    task?: AiAssistantTask,
-  ) => {
-    const updatedAt = new Date().toISOString();
-    const taskStatus = getAiAssistantTaskStatusForApprovalDecision(status);
-
-    setApprovalActions((current) => {
-      const exists = current.some((item) => item.id === approval.id);
-      if (!exists) {
-        return [
-          ...current,
-          {
-            ...approval,
-            status,
-            approver: "Текущий пользователь",
-            updatedAt,
-          },
-        ];
-      }
-
-      return current.map((item) => (
-        item.id === approval.id
-          ? {
-            ...item,
-            status,
-            approver: "Текущий пользователь",
-            updatedAt,
-          }
-          : item
-      ));
-    });
-
-    if (task) {
-      setTasks((current) => {
-        const exists = current.some((item) => item.id === task.id);
-        const decidedTask = {
-          ...task,
-          status: taskStatus,
-          approvalStatus: status,
-          updatedAt,
-        };
-
-        if (!exists) return [...current, decidedTask];
-        return current.map((item) => (item.id === task.id ? decidedTask : item));
-      });
-    }
-
-    setNotifications((current) => current.map((notification) => (
-      notification.linkedTaskId === approval.taskId
-        ? {
-          ...notification,
-          status: taskStatus,
-          approvalStatus: status,
-          updatedAt,
-        }
-        : notification
-    )));
-
-    setPlannerItems((current) => current.map((item) => (
-      item.linkedTaskId === approval.taskId
-        ? {
-          ...item,
-          status: status === "approved" ? "done" : status === "returned" ? "needs-decision" : "cancelled",
-          updatedAt,
-        }
-        : item
-    )));
-  }, []);
-  const addKnowledgeSource = useCallback((source: Omit<AiAssistantKnowledgeSource, "id" | "updatedAt">) => {
-    const updatedAt = new Date().toISOString();
-    setKnowledgeSources((current) => [
-      ...current,
-      {
-        ...source,
-        id: `knowledge-${Date.now()}`,
-        updatedAt,
-      },
-    ]);
-  }, []);
-  const updateKnowledgeSource = useCallback((source: AiAssistantKnowledgeSource) => {
-    setKnowledgeSources((current) => current.map((item) => (
-      item.id === source.id
-        ? { ...source, updatedAt: new Date().toISOString() }
-        : item
-    )));
-  }, []);
-  const deleteKnowledgeSource = useCallback((sourceId: string) => {
-    setKnowledgeSources((current) => current.filter((item) => item.id !== sourceId));
-  }, []);
-  const addIntegration = useCallback((integration: Omit<AiAssistantIntegration, "key">) => {
-    setIntegrations((current) => [
-      ...current,
-      {
-        ...integration,
-        key: `custom-${Date.now()}`,
-      },
-    ]);
-  }, []);
-  const updateIntegration = useCallback((integration: AiAssistantIntegration) => {
-    setIntegrations((current) => current.map((item) => (
-      item.key === integration.key ? integration : item
-    )));
-  }, []);
-  const deleteIntegration = useCallback((integrationKey: string) => {
-    setIntegrations((current) => current.filter((item) => item.key !== integrationKey));
-  }, []);
-  const setAgentActivationDraft = useCallback((agentId: string, value: boolean) => {
-    setAgentActivationDrafts((current) => ({ ...current, [agentId]: value }));
-  }, []);
-  const setDevelopmentIdeaStatus = useCallback((
-    ideaId: string,
-    status: AiAssistantDevelopmentIdea["status"],
-  ) => {
-    setDevelopmentIdeas((current) => current.map((idea) => (
-      idea.id === ideaId
-        ? { ...idea, status, updatedAt: new Date().toISOString() }
-        : idea
-    )));
-  }, []);
-  const createCodexPromptDraftForIdea = useCallback((idea: AiAssistantDevelopmentIdea) => {
-    const updatedAt = new Date().toISOString();
-    const promptDraft: AiAssistantCodexPromptDraft = {
-      id: idea.codexPromptDraftId || `codex-prompt-${Date.now()}`,
-      title: `Промт Codex: ${idea.title}`,
-      body: [
-        `Задача: ${idea.title}`,
-        "",
-        idea.description,
-        "",
-        "Бизнес-логика:",
-        ...idea.businessLogic.map((item) => `- ${item}`),
-        "",
-        "Критерии приемки:",
-        ...idea.acceptanceCriteria.map((item) => `- ${item}`),
-        "",
-        "Ограничения: не подключать реальные внешние API, не хранить ключи в frontend, критические действия только через approval.",
-      ].join("\n"),
-      linkedIdeaId: idea.id,
-      status: "ready",
-      updatedAt,
-    };
-
-    setCodexPromptDrafts((current) => {
-      const exists = current.some((item) => item.id === promptDraft.id);
-      if (!exists) return [...current, promptDraft];
-      return current.map((item) => (item.id === promptDraft.id ? promptDraft : item));
-    });
-    setDevelopmentIdeas((current) => current.map((item) => (
-      item.id === idea.id
-        ? {
-          ...item,
-          codexPromptDraftId: promptDraft.id,
-          status: "spec-ready",
-          updatedAt,
-        }
-        : item
-    )));
-  }, []);
+  const actions = useAiAssistantActions({
+    currentWorkDate,
+    setAgentActivationDrafts,
+    setApprovalActions,
+    setChatMessages,
+    setCodexPromptDrafts,
+    setDevelopmentIdeas,
+    setDocuments,
+    setIntegrations,
+    setKnowledgeSources,
+    setMailDrafts,
+    setNotifications,
+    setPlannerItems,
+    setTasks,
+  });
 
   return {
     activeTab,
+    currentContext,
     setActiveTab,
     role: defaultAiAssistantRole,
     permissions,
     viewModel,
     setPlannerItems,
     agentActivationDrafts,
-    setAgentActivationDraft,
-    addIntegration,
-    updateIntegration,
-    deleteIntegration,
-    addKnowledgeSource,
-    updateKnowledgeSource,
-    deleteKnowledgeSource,
-    setDevelopmentIdeaStatus,
-    createCodexPromptDraftForIdea,
-    appendChatMessage,
-    updateApprovalDraftText,
-    setApprovalDecision,
+    ...actions,
   };
 }
 
@@ -347,14 +145,16 @@ const AiAssistantStateContext = createContext<AiAssistantStateValue | null>(null
 
 export function AiAssistantProvider({
   children,
+  currentContext,
   currentDateTime,
   currentWorkDate,
 }: {
   children: ReactNode;
+  currentContext?: AiAssistantRuntimeContext;
   currentDateTime?: string;
   currentWorkDate?: string;
 }) {
-  const value = useAiAssistantState({ currentDateTime, currentWorkDate });
+  const value = useAiAssistantState({ currentContext, currentDateTime, currentWorkDate });
 
   return (
     <AiAssistantStateContext.Provider value={value}>
@@ -370,12 +170,4 @@ export function useAiAssistantContext(): AiAssistantStateValue {
   }
 
   return value;
-}
-
-function createAiAssistantCurrentDateTime(currentWorkDate: string) {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return `${currentWorkDate}T${hours}:${minutes}`;
 }

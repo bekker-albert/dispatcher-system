@@ -4,6 +4,7 @@ import { Check, CheckCircle2, Pencil, Plus, Trash2, X, XCircle } from "lucide-re
 
 import { formatAiAssistantChannel } from "@/features/ai-assistant/lib/formatters";
 import type { AiAssistantPlannerItem } from "@/features/ai-assistant/types";
+import { requiresAiAssistantApproval } from "@/lib/domain/ai-assistant/approval-policy";
 import type { PlannerDraft } from "@/features/ai-assistant/components/planner/plannerDraft";
 import { PlannerIconButton } from "@/features/ai-assistant/components/planner/PlannerIconButton";
 import {
@@ -124,7 +125,13 @@ function PlannerDayTaskCard({
   onSetPlannerDecision: (item: AiAssistantPlannerItem, decision: PlannerDecision) => void;
   onStartEdit: (item: AiAssistantPlannerItem) => void;
 }) {
-  const canDecide = !item.requireApproval && item.status !== "done" && item.status !== "cancelled";
+  const needsApproval = item.requireApproval
+    || requiresAiAssistantApproval(
+      item.actionType,
+      item.requireApproval ? "critical" : "low",
+      item.channel,
+    );
+  const canDecide = !needsApproval && item.status !== "done" && item.status !== "cancelled";
 
   return (
     <div style={plannerDayTaskCardStyle}>
@@ -175,7 +182,7 @@ function PlannerDayTaskCard({
       <div style={plannerDayTaskMetaStyle}>
         <span style={aiAssistantMutedTextStyle}>{item.target}</span>
         <span style={aiAssistantMutedTextStyle}>{formatAiAssistantChannel(item.channel)}</span>
-        {item.requireApproval && <span style={aiAssistantMutedTextStyle}>Требует решения</span>}
+        {needsApproval && <span style={aiAssistantMutedTextStyle}>Требует решения</span>}
       </div>
     </div>
   );

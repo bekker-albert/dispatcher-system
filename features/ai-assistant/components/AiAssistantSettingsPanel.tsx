@@ -1,12 +1,9 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import dynamic from "next/dynamic";
 
-import { AiAssistantAgentsPanel } from "@/features/ai-assistant/components/AiAssistantAgentsPanel";
 import { AiAssistantAuditLog } from "@/features/ai-assistant/components/AiAssistantAuditLog";
-import { AiAssistantDevelopmentPanel } from "@/features/ai-assistant/components/AiAssistantDevelopmentPanel";
-import { AiAssistantIntegrationStatus } from "@/features/ai-assistant/components/AiAssistantIntegrationStatus";
-import { AiAssistantKnowledgePanel } from "@/features/ai-assistant/components/AiAssistantKnowledgePanel";
 import type {
   AiAssistantCodexPromptDraft,
   AiAssistantDevelopmentIdea,
@@ -14,16 +11,81 @@ import type {
   AiAssistantKnowledgeSource,
   AiAssistantViewModel,
 } from "@/features/ai-assistant/types";
-import { aiAssistantPanelStyle } from "@/features/ai-assistant/aiAssistantStyles";
+import { aiAssistantMutedTextStyle, aiAssistantPanelStyle } from "@/features/ai-assistant/aiAssistantStyles";
 
-export type SettingsSection = "agents" | "integrations" | "knowledge" | "development" | "audit";
+const AiAssistantAgentsPanel = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantAgentsPanel").then((module) => module.AiAssistantAgentsPanel),
+  {
+    ssr: false,
+    loading: () => <SettingsSectionLoading label="Загрузка панели агентов..." />,
+  },
+);
+
+const AiAssistantIntegrationStatus = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantIntegrationStatus").then((module) => module.AiAssistantIntegrationStatus),
+  {
+    ssr: false,
+    loading: () => <SettingsSectionLoading label="Загрузка интеграций..." />,
+  },
+);
+
+const AiAssistantKnowledgePanel = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantKnowledgePanel").then((module) => module.AiAssistantKnowledgePanel),
+  {
+    ssr: false,
+    loading: () => <SettingsSectionLoading label="Загрузка базы знаний..." />,
+  },
+);
+
+const AiAssistantDevelopmentPanel = dynamic(
+  () => import("@/features/ai-assistant/components/AiAssistantDevelopmentPanel").then((module) => module.AiAssistantDevelopmentPanel),
+  {
+    ssr: false,
+    loading: () => <SettingsSectionLoading label="Загрузка панели развития..." />,
+  },
+);
+
+export type SettingsSection = "overview" | "agents" | "integrations" | "knowledge" | "development" | "audit";
 
 const settingsSections: Array<{ id: SettingsSection; label: string }> = [
+  { id: "overview", label: "Обзор" },
   { id: "agents", label: "Агенты" },
   { id: "integrations", label: "Интеграции" },
   { id: "knowledge", label: "Знания" },
   { id: "development", label: "Развитие" },
   { id: "audit", label: "Журнал" },
+];
+
+const settingsOverviewCards: Array<{
+  id: Exclude<SettingsSection, "overview">;
+  title: string;
+  text: string;
+}> = [
+  {
+    id: "agents",
+    title: "Агенты",
+    text: "Внутренние роли AI-модуля: что разрешено, что заблокировано и где требуется решение человека.",
+  },
+  {
+    id: "integrations",
+    title: "Интеграции",
+    text: "Каналы подключения: AI API, WhatsApp, почта, календарь, Documentolog и уведомления.",
+  },
+  {
+    id: "knowledge",
+    title: "Знания",
+    text: "Правила и источники, по которым ассистент готовит ответы и объясняет решения.",
+  },
+  {
+    id: "development",
+    title: "Развитие",
+    text: "Идеи, ТЗ и промты для Codex без запуска внешних действий.",
+  },
+  {
+    id: "audit",
+    title: "Журнал",
+    text: "История обнаруженных событий, решений и подготовленных действий.",
+  },
 ];
 
 export function AiAssistantSettingsPanel({
@@ -74,6 +136,22 @@ export function AiAssistantSettingsPanel({
           </button>
         ))}
       </div>
+
+      {section === "overview" && (
+        <div style={settingsOverviewGridStyle}>
+          {settingsOverviewCards.map((card) => (
+            <button
+              key={card.id}
+              type="button"
+              onClick={() => onSetSection(card.id)}
+              style={settingsOverviewCardStyle}
+            >
+              <span style={settingsOverviewTitleStyle}>{card.title}</span>
+              <span style={aiAssistantMutedTextStyle}>{card.text}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {section === "agents" && (
         <AiAssistantAgentsPanel
@@ -132,3 +210,32 @@ const settingsTabStyle: CSSProperties = {
   fontWeight: 900,
   cursor: "pointer",
 };
+
+const settingsOverviewGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+  gap: 8,
+};
+
+const settingsOverviewCardStyle: CSSProperties = {
+  ...aiAssistantPanelStyle,
+  minHeight: 0,
+  textAlign: "left",
+  cursor: "pointer",
+};
+
+const settingsOverviewTitleStyle: CSSProperties = {
+  display: "block",
+  color: "#0f172a",
+  fontSize: 15,
+  fontWeight: 900,
+  marginBottom: 5,
+};
+
+function SettingsSectionLoading({ label }: { label: string }) {
+  return (
+    <section style={aiAssistantPanelStyle}>
+      <div style={aiAssistantMutedTextStyle}>{label}</div>
+    </section>
+  );
+}
