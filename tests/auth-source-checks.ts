@@ -35,8 +35,10 @@ assert.match(appPageSource, /getAuthDisabledUser\(\)/);
 assert.match(appPageSource, /<AppRoot initialAuthUser=\{session\.user\} \/>/);
 assert.match(appPageSource, /<LoginScreen \/>/);
 assert.match(appRootSource, /AuthProvider initialUser=\{initialAuthUser\}/);
-assert.match(appHeaderSource, /<AuthSessionButton \/>/);
+assert.match(appHeaderSource, /<AuthSessionButton onOpenProfile=\{\(\) => onSelectTopTab\("user"\)\} \/>/);
 assert.doesNotMatch(authSessionButtonSource, /position:\s*"fixed"/);
+assert.match(authSessionButtonSource, /UserCircle/);
+assert.match(authSessionButtonSource, /Открыть карточку пользователя/);
 assert.match(databaseRouterSource, /authRequired\(\) && !await getAuthSessionFromRequest\(request\)/);
 assert.match(databaseRouterSource, /createDatabaseAuthRequiredResponse/);
 

@@ -87,7 +87,7 @@ export function AppHeader({
         </div>
         <div style={headerActionsStyle}>
           <AppHeaderWorkDate reportDate={reportDate} onSelectReportDate={onSelectReportDate} />
-          <AuthSessionButton />
+          <AuthSessionButton onOpenProfile={() => onSelectTopTab("user")} />
         </div>
       </div>
     </div>

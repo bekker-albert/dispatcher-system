@@ -75,12 +75,12 @@ export const workDateStyle: CSSProperties = {
 };
 
 export const headerActionsStyle: CSSProperties = {
-  flex: "0 0 auto",
+  flex: "0 0 190px",
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
-  justifyContent: "flex-end",
-  gap: 6,
+  justifyContent: "center",
+  gap: 3,
   marginLeft: "auto",
 };
 
