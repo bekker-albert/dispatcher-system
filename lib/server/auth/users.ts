@@ -207,7 +207,9 @@ export async function authenticateAuthUser(login: string, password: string) {
   await ensureInitialAuthUser();
 
   const record = await loadAuthUserRecordByLogin(login);
-  if (record?.active) {
+  if (record) {
+    if (!record.active) return null;
+
     const valid = await verifyPassword(password, record.password_hash);
     return valid ? toAuthUser(record) : null;
   }

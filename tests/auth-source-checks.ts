@@ -105,6 +105,7 @@ assert.match(authSources, /pbkdf2/);
 assert.match(authSources, /checkAuthLoginRateLimit/);
 assert.match(authSources, /recordFailedAuthAttempt/);
 assert.match(authSources, /isAuthMutationAllowed/);
+assert.match(authSources, /if \(!record\.active\) return null/);
 assert.match(authSources, /canManageUsers/);
 assert.match(authSources, /can_manage_users/);
 assert.match(authSources, /formatAuthDisplayName/);

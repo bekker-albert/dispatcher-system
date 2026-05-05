@@ -7,7 +7,7 @@ import { buildReportPtoIndex, createReportRowFromPtoPlan, deriveReportRowFromPto
 import { normalizeStoredReportCustomers } from "../lib/domain/reports/customers";
 import { defaultReportCustomerId, defaultReportCustomers, defaultReportRows } from "../lib/domain/reports/defaults";
 import { applyReportFactSourceRows, createReportSummaryRow, delta, formatReportTitleDate, reportAutoColumnWidth, reportCustomerEffectiveRowKeys, reportRowAutoStatus, reportRowHasAutoShowData, reportRowKey, reportRowsForCustomer } from "../lib/domain/reports/display";
-import { reportYearFact } from "../lib/domain/reports/facts";
+import { reportAnnualFact, reportMonthFact, reportYearFact } from "../lib/domain/reports/facts";
 import { reportPtoIndexKey } from "../lib/domain/reports/pto-index";
 
 const nbsp = "\u00a0";
@@ -214,6 +214,9 @@ assert.equal(reportYearFact(surveyCutoffDerivedRow), 104);
 assert.equal(noSurveyDerivedRow.monthSurveyFact, 0);
 assert.equal(noSurveyDerivedRow.monthOperFact, 24);
 assert.equal(reportYearFact(noSurveyDerivedRow), 24);
+assert.equal(reportMonthFact({ ...derivedReportRow, monthFact: 0, monthSurveyFact: 0, monthOperFact: 0 }), 0);
+assert.equal(reportYearFact({ ...derivedReportRow, yearFact: 0, yearSurveyFact: 0, yearOperFact: 0 }), 0);
+assert.equal(reportAnnualFact({ ...derivedReportRow, annualFact: 0, yearFact: 80 }), 0);
 
 const compactPlanWidth = reportAutoColumnWidth("day-plan", "План суточный", ["123 456"]);
 const widePlanWidth = reportAutoColumnWidth("day-plan", "План суточный", ["123 456 789"]);
