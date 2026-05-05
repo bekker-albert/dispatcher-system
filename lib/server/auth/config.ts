@@ -1,4 +1,5 @@
 import type { AuthUser } from "../../domain/auth/types";
+import { formatAuthDisplayName } from "../../domain/auth/types";
 
 export const authSessionCookieName = "aam_dispatch_session";
 export const initialAuthUserId = "initial-auth-user";
@@ -32,16 +33,31 @@ export function getInitialAuthUserConfig() {
   };
 }
 
+function splitDisplayName(displayName: string | undefined) {
+  const parts = displayName?.trim().split(/\s+/).filter(Boolean) ?? [];
+  return {
+    lastName: parts[0] ?? "",
+    firstName: parts[1] ?? parts[0] ?? "",
+    middleName: parts.slice(2).join(" "),
+  };
+}
+
 export function getInitialAuthBootstrapUser(): AuthUser | null {
   const initialUser = getInitialAuthUserConfig();
   if (!initialUser) return null;
 
+  const nameParts = splitDisplayName(initialUser.displayName);
   return {
     id: initialAuthUserId,
     login: initialUser.login.trim().toLowerCase(),
-    displayName: initialUser.displayName,
+    displayName: formatAuthDisplayName({ ...nameParts, displayName: initialUser.displayName, login: initialUser.login }),
+    ...nameParts,
+    email: "",
+    phone: "",
+    positionTitle: "",
     role: "dispatch-chief",
     canManageUsers: true,
+    tabPermissions: {},
   };
 }
 
@@ -50,7 +66,14 @@ export function getAuthDisabledUser(): AuthUser {
     id: "auth_disabled",
     login: "local",
     displayName: "Локальный пользователь",
+    lastName: "",
+    firstName: "Локальный",
+    middleName: "",
+    email: "",
+    phone: "",
+    positionTitle: "",
     role: "dispatch-chief",
     canManageUsers: true,
+    tabPermissions: {},
   };
 }

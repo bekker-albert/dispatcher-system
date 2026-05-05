@@ -185,6 +185,8 @@ export function AuthSessionButton({ onOpenProfile }: AuthSessionButtonProps) {
 
           <div style={detailsStyle}>
             <ProfileDetail label="Логин" value={user.login} />
+            {user.email ? <ProfileDetail label="Почта" value={user.email} /> : null}
+            {user.phone ? <ProfileDetail label="Телефон" value={user.phone} /> : null}
             <ProfileDetail label="Права" value={user.canManageUsers ? "Администратор" : "Пользователь"} />
           </div>
 

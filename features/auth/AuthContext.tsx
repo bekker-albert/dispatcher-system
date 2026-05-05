@@ -6,6 +6,7 @@ import type { AuthUser } from "@/lib/domain/auth/types";
 
 type AuthContextValue = {
   user: AuthUser;
+  updateCurrentUser: (user: AuthUser) => void;
   logout: () => Promise<void>;
 };
 
@@ -18,7 +19,10 @@ export function AuthProvider({
   children: ReactNode;
   initialUser: AuthUser;
 }) {
-  const [user] = useState(initialUser);
+  const [user, setUser] = useState(initialUser);
+  const updateCurrentUser = useCallback((updatedUser: AuthUser) => {
+    setUser(updatedUser);
+  }, []);
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", {
       method: "POST",
@@ -26,7 +30,7 @@ export function AuthProvider({
     });
     window.location.reload();
   }, []);
-  const value = useMemo(() => ({ user, logout }), [logout, user]);
+  const value = useMemo(() => ({ user, updateCurrentUser, logout }), [logout, updateCurrentUser, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
