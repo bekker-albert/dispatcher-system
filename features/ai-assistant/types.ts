@@ -50,3 +50,8 @@ export type {
   AiAssistantWhatsAppGroup,
   AiAssistantWhatsAppMessageCandidate,
 } from "@/lib/domain/ai-assistant/types";
+
+export type {
+  AiAssistantRuntimeContext,
+  AiAssistantRuntimeContextInput,
+} from "@/lib/domain/ai-assistant/runtime-context";

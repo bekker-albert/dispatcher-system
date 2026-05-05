@@ -1,11 +1,9 @@
 export type AiAssistantTab =
-  | "tasks"
-  | "planner"
-  | "agents"
-  | "development"
-  | "integrations"
-  | "knowledge"
-  | "audit";
+  | "main"
+  | "inbox"
+  | "drafts"
+  | "history"
+  | "settings";
 
 export type AiAssistantTaskKind =
   | "ask"
@@ -37,6 +35,7 @@ export type AiAssistantApprovalStatus =
   | "not-required"
   | "required"
   | "approved"
+  | "returned"
   | "rejected";
 
 export type AiAssistantMessageRole =

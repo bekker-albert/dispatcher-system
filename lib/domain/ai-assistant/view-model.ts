@@ -235,8 +235,8 @@ function syncTasksWithApprovalActions(
   const approvalByTaskId = new Map(
     approvalActions
       .filter((approval): approval is AiAssistantApprovalAction & {
-        status: Extract<AiAssistantApprovalStatus, "approved" | "rejected">;
-      } => approval.status === "approved" || approval.status === "rejected")
+        status: Extract<AiAssistantApprovalStatus, "approved" | "returned" | "rejected">;
+      } => approval.status === "approved" || approval.status === "returned" || approval.status === "rejected")
       .map((approval) => [approval.taskId, approval]),
   );
 

@@ -50,11 +50,12 @@ try {
   assert.deepEqual(await databaseRequest<{ ok: boolean }>("pto", "load-buckets"), { ok: true });
   assert.equal(fetchCalls.length, 3);
   assert.deepEqual(fetchCalls.map(({ input }) => input), [
-    "https://www.aam-dispatch.kz/api/database",
-    "https://www.aam-dispatch.kz/api/database",
-    "https://www.aam-dispatch.kz/api/database",
+    "/api/database",
+    "/api/database",
+    "/api/database",
   ]);
   assert.equal(fetchCalls[0]?.init?.method, "POST");
+  assert.equal(fetchCalls[0]?.init?.credentials, "same-origin");
   assert.deepEqual(JSON.parse(String(fetchCalls[0]?.init?.body)), {
     resource: "status",
     action: "status",

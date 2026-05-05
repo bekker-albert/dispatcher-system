@@ -28,6 +28,8 @@
 ```text
 OPENAI_API_KEY=your_key_here
 OPENAI_REFACTOR_MODEL=gpt-5.4
+# Optional compatibility fallback still accepted by scripts/refactor-ai-agent.mjs
+OPENAI_MODEL=gpt-5.4
 OPENAI_REFACTOR_MAX_OUTPUT_TOKENS=5000
 ```
 

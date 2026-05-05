@@ -72,6 +72,7 @@ async function sendDatabaseRequest<T>(
   try {
     response = await fetch(databaseApiUrl(), {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
         "X-Dispatcher-Request": "same-origin",

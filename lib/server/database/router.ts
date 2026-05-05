@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { databaseResourceHandlers } from "./handlers";
 import {
   corsHeaders,
+  createDatabaseAuthRequiredResponse,
   createDatabaseErrorResponse,
   createDatabaseWriteGuardResponse,
   createUnknownDatabaseActionResponse,
@@ -14,6 +15,8 @@ import {
   isDatabaseStatusRequest,
 } from "./status";
 import type { DatabaseRequest, DatabaseResourceHandler } from "./types";
+import { authRequired } from "../auth/config";
+import { getAuthSessionFromRequest } from "../auth/session";
 
 export { createDatabaseErrorResponse } from "./responses";
 
@@ -115,6 +118,10 @@ export async function routeDatabaseRequest(
 
   if (isDatabaseStatusRequest(resource, action)) {
     return createDatabaseStatusResponse(jsonForRequest);
+  }
+
+  if (authRequired() && !await getAuthSessionFromRequest(request)) {
+    return createDatabaseAuthRequiredResponse(request);
   }
 
   if (shouldRejectDatabaseWriteRequest(action, request)) {

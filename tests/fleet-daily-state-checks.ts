@@ -14,6 +14,10 @@ import {
   type FleetDailyState,
 } from "../lib/domain/fleet/daily-state";
 import { createFleetVehicleListRows } from "../features/fleet/fleetVehicleModel";
+import {
+  createFleetVehicleVirtualRows,
+  fleetVehicleVirtualizationThreshold,
+} from "../features/fleet/fleetVehicleVirtualRows";
 import type { VehicleRow } from "../lib/domain/vehicles/types";
 
 const vehicle = {
@@ -112,3 +116,16 @@ assert.equal(fleetRow.repairStartedAt, "2026-05-02");
 assert.equal(fleetRow.firstWatchFirstShiftDriver, "Иванов И.И.");
 assert.equal(fleetRow.secondWatchSecondShiftDriver, "Петров П.П.");
 assert.equal(fleetRow.note, "Ремонт ДВС; Ожидает запчасти");
+
+const fleetVirtualRows = createFleetVehicleVirtualRows(
+  Array.from({ length: fleetVehicleVirtualizationThreshold + 40 }, (_, index) => index),
+  { height: 120, scrollTop: 680 },
+  true,
+);
+assert.ok(fleetVirtualRows.rows.length < fleetVehicleVirtualizationThreshold + 40);
+assert.ok(fleetVirtualRows.topSpacerHeight > 0);
+assert.ok(fleetVirtualRows.bottomSpacerHeight > 0);
+assert.equal(
+  createFleetVehicleVirtualRows([1, 2, 3], { height: 120, scrollTop: 340 }, true).rows.length,
+  3,
+);
