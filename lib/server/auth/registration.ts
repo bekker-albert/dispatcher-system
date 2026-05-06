@@ -5,6 +5,7 @@ import type { AuthRegistrationRequest, AuthRegistrationRequestStatus } from "@/l
 import { formatAuthDisplayName } from "@/lib/domain/auth/types";
 
 import { hashPassword } from "./password";
+import { validateRequiredAuthProfile } from "./profile-validation";
 import { authExecute, authRows } from "./schema";
 import { createAuthUserFromPasswordHash, findAuthUserByLogin } from "./users";
 
@@ -156,9 +157,7 @@ export async function createRegistrationRequest(input: CreateRegistrationRequest
 
   if (!login) throw new Error("Логин обязателен");
   if (input.password.length < 8) throw new Error("Пароль должен быть не короче 8 символов");
-  if (!lastName) throw new Error("Фамилия обязательна");
-  if (!firstName) throw new Error("Имя обязательно");
-  if (!email && !phone) throw new Error("Укажите почту или телефон");
+  validateRequiredAuthProfile({ lastName, firstName, middleName, positionTitle, email, phone });
   if (await findAuthUserByLogin(login)) throw new Error("Пользователь с таким логином уже существует");
   if (await hasPendingRegistrationRequest(login)) throw new Error("Заявка с таким логином уже ожидает согласования");
 

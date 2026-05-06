@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { AuthTabPermissions, AuthUserRole } from "@/lib/domain/auth/types";
 import { normalizeAuthTabPermissions, normalizeAuthUserRole } from "@/lib/domain/auth/types";
+import { validateRequiredAuthProfile } from "@/lib/server/auth/profile-validation";
 import { createAuthMutationRejectedResponse, isAuthMutationAllowed } from "@/lib/server/auth/request-guard";
 import { getAuthSessionFromRequest } from "@/lib/server/auth/session";
 import { createAuthUser, deleteAuthUser, listAuthUsers, updateAuthUser } from "@/lib/server/auth/users";
@@ -77,6 +78,12 @@ function getProfilePayload(body: CreateUserRequestBody) {
   };
 }
 
+function validateProfilePayload(body: CreateUserRequestBody) {
+  const profile = getProfilePayload(body);
+  validateRequiredAuthProfile(profile);
+  return profile;
+}
+
 function validateTabPermissionsInput(value: unknown): AuthTabPermissions {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Поле tabPermissions должно быть объектом");
@@ -145,7 +152,7 @@ export async function POST(request: Request) {
 
     const user = await createAuthUser({
       login,
-      ...getProfilePayload(body),
+      ...validateProfilePayload(body),
       password,
       role,
       canManageUsers,
@@ -200,7 +207,7 @@ export async function PUT(request: Request) {
   try {
     const user = await updateAuthUser({
       id,
-      ...getProfilePayload(body),
+      ...validateProfilePayload(body),
       password,
       role: manager ? role : undefined,
       canManageUsers: manager ? canManageUsers : undefined,

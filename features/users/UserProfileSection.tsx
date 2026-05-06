@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
@@ -10,6 +10,12 @@ import { SectionCard } from "../../shared/ui/layout";
 import { UserManagementPanel } from "./UserManagementPanel";
 import { UserProfileModal } from "./UserProfileModal";
 import { UserRegistrationRequestsPanel } from "./UserRegistrationRequestsPanel";
+import {
+  getUserProfileFieldInputWarning,
+  noDigitsInputPattern,
+  noDigitsInputTitle,
+  validateRequiredUserProfileDraft,
+} from "./UserProfileValidation";
 
 type UserProfile = {
   fullName: string;
@@ -76,6 +82,12 @@ export function UserProfileSection({ addAdminLog = noopAddAdminLog, userCard }: 
   };
 
   const saveSelf = async () => {
+    const validationMessage = validateRequiredUserProfileDraft(draft);
+    if (validationMessage) {
+      setMessage(validationMessage);
+      return;
+    }
+
     setSavingSelf(true);
     setMessage("");
 
@@ -110,7 +122,7 @@ export function UserProfileSection({ addAdminLog = noopAddAdminLog, userCard }: 
   };
 
   return (
-    <SectionCard title={canManageUsers ? "Административный профиль" : "Профиль пользователя"}>
+    <SectionCard title={canManageUsers ? "" : "Профиль пользователя"}>
       <div style={canManageUsers ? adminLayoutStyle : userLayoutStyle}>
         <div style={leftColumnStyle}>
           <ProfileCard
@@ -147,17 +159,43 @@ export function UserProfileSection({ addAdminLog = noopAddAdminLog, userCard }: 
           )}
         >
           <div style={editGridStyle}>
-            <input value={draft.lastName} onChange={(event) => setDraft((current) => ({ ...current, lastName: event.target.value }))} placeholder="Фамилия" style={inputStyle} />
-            <input value={draft.firstName} onChange={(event) => setDraft((current) => ({ ...current, firstName: event.target.value }))} placeholder="Имя" style={inputStyle} />
-            <input value={draft.middleName} onChange={(event) => setDraft((current) => ({ ...current, middleName: event.target.value }))} placeholder="Отчество" style={inputStyle} />
-            <input value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="Почта" style={inputStyle} />
-            <input value={draft.phone} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="Телефон" style={inputStyle} />
-            <input value={draft.positionTitle} onChange={(event) => setDraft((current) => ({ ...current, positionTitle: event.target.value }))} placeholder="Должность" style={inputStyle} />
+            <ProfileInputCell label="Фамилия" warning={getUserProfileFieldInputWarning("lastName", draft.lastName)}>
+              <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="family-name" value={draft.lastName} onChange={(event) => setDraft((current) => ({ ...current, lastName: event.target.value }))} style={getProfileInputStyle(getUserProfileFieldInputWarning("lastName", draft.lastName))} />
+            </ProfileInputCell>
+            <ProfileInputCell label="Имя" warning={getUserProfileFieldInputWarning("firstName", draft.firstName)}>
+              <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="given-name" value={draft.firstName} onChange={(event) => setDraft((current) => ({ ...current, firstName: event.target.value }))} style={getProfileInputStyle(getUserProfileFieldInputWarning("firstName", draft.firstName))} />
+            </ProfileInputCell>
+            <ProfileInputCell label="Отчество" warning={getUserProfileFieldInputWarning("middleName", draft.middleName)}>
+              <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="additional-name" value={draft.middleName} onChange={(event) => setDraft((current) => ({ ...current, middleName: event.target.value }))} style={getProfileInputStyle(getUserProfileFieldInputWarning("middleName", draft.middleName))} />
+            </ProfileInputCell>
+            <ProfileInputCell label="Должность" warning={getUserProfileFieldInputWarning("positionTitle", draft.positionTitle)}>
+              <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="organization-title" value={draft.positionTitle} onChange={(event) => setDraft((current) => ({ ...current, positionTitle: event.target.value }))} style={getProfileInputStyle(getUserProfileFieldInputWarning("positionTitle", draft.positionTitle))} />
+            </ProfileInputCell>
+            <ProfileInputCell label="Почта">
+              <input required autoComplete="email" type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} style={inputStyle} />
+            </ProfileInputCell>
+            <ProfileInputCell label="Телефон">
+              <input required autoComplete="tel" value={draft.phone} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} style={inputStyle} />
+            </ProfileInputCell>
           </div>
         </UserProfileModal>
       ) : null}
     </SectionCard>
   );
+}
+
+function ProfileInputCell({ label, children, warning = "" }: { label: string; children: ReactNode; warning?: string }) {
+  return (
+    <label style={inputCellStyle}>
+      <span>{label}</span>
+      {children}
+      {warning ? <span aria-live="polite" style={inputWarningStyle}>{warning}</span> : null}
+    </label>
+  );
+}
+
+function getProfileInputStyle(warning: string): CSSProperties {
+  return warning ? invalidInputStyle : inputStyle;
 }
 
 function ProfileCard({
@@ -320,6 +358,27 @@ const inputStyle: CSSProperties = {
   minWidth: 0,
   boxSizing: "border-box",
   width: "100%",
+};
+
+const inputCellStyle: CSSProperties = {
+  display: "grid",
+  gap: 4,
+  fontSize: 12,
+  fontWeight: 800,
+  color: "#334155",
+};
+
+const invalidInputStyle: CSSProperties = {
+  ...inputStyle,
+  borderColor: "#f87171",
+  background: "#fff7f7",
+};
+
+const inputWarningStyle: CSSProperties = {
+  color: "#b91c1c",
+  fontSize: 11,
+  fontWeight: 700,
+  lineHeight: 1.25,
 };
 
 const fieldStyle: CSSProperties = {

@@ -30,6 +30,7 @@ import {
 } from "./UserManagementStyles";
 import { formatDisplayNameDescription, PermissionEditor, UserDraftFields } from "./UserManagementFields";
 import { UserProfileModal } from "./UserProfileModal";
+import { validateRequiredUserProfileDraft } from "./UserProfileValidation";
 
 type UserListResponse = {
   users?: AuthUserListItem[];
@@ -141,6 +142,20 @@ export function UserManagementPanel({ refreshToken = 0 }: UserManagementPanelPro
   };
 
   const createUser = async () => {
+    const validationMessage = validateRequiredUserProfileDraft(createDraft);
+    if (validationMessage) {
+      setMessage(validationMessage);
+      return;
+    }
+    if (!createDraft.login?.trim()) {
+      setMessage("Заполните поле: Логин");
+      return;
+    }
+    if (!createDraft.password.trim()) {
+      setMessage("Заполните поле: Пароль");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
@@ -189,6 +204,12 @@ export function UserManagementPanel({ refreshToken = 0 }: UserManagementPanelPro
 
   const saveEdit = async () => {
     if (!editDraft || !selectedUser) return;
+
+    const validationMessage = validateRequiredUserProfileDraft(editDraft);
+    if (validationMessage) {
+      setMessage(validationMessage);
+      return;
+    }
 
     setLoading(true);
     setMessage("");

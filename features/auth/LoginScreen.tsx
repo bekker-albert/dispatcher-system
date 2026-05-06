@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties, type FormEvent } from "react";
+import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 
 type AuthScreenMode = "login" | "register" | "forgot";
 type ResetStep = "request" | "confirm";
@@ -107,6 +107,9 @@ const logoStyle: CSSProperties = {
   margin: "0 auto 14px",
 };
 
+const noDigitsInputPattern = "[^0-9]*";
+const noDigitsInputTitle = "Цифры не допускаются";
+
 function createEmptyRegistrationDraft() {
   return {
     login: "",
@@ -118,6 +121,10 @@ function createEmptyRegistrationDraft() {
     email: "",
     phone: "",
   };
+}
+
+function getNoDigitsWarning(value: string) {
+  return /\d/.test(value) ? noDigitsInputTitle : "";
 }
 
 export function LoginScreen() {
@@ -269,7 +276,6 @@ export function LoginScreen() {
       <section style={cardStyle}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/mining-logo.png" alt="AA Mining" style={logoStyle} />
-        <div style={{ fontSize: 22, fontWeight: 900, textAlign: "center", marginBottom: 18 }}>Вход</div>
 
         {message ? <div style={{ ...messageStyle, marginBottom: 12 }}>{message}</div> : null}
         {error ? <div style={{ ...errorStyle, marginBottom: 12 }}>{error}</div> : null}
@@ -278,11 +284,11 @@ export function LoginScreen() {
           <form onSubmit={submitLogin} style={{ display: "grid", gap: 12 }}>
             <label style={labelStyle}>
               Логин
-              <input autoComplete="username" autoFocus value={login} onChange={(event) => setLogin(event.target.value)} style={inputStyle} />
+              <input required autoComplete="username" autoFocus value={login} onChange={(event) => setLogin(event.target.value)} style={inputStyle} />
             </label>
             <label style={labelStyle}>
               Пароль
-              <input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} style={inputStyle} />
+              <input required autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} style={inputStyle} />
             </label>
             <button type="submit" disabled={submitting} style={{ ...buttonStyle, opacity: submitting ? 0.65 : 1 }}>
               {submitting ? "Проверяем..." : "Войти"}
@@ -293,14 +299,34 @@ export function LoginScreen() {
         {mode === "register" ? (
           <form onSubmit={submitRegistration} style={{ display: "grid", gap: 12 }}>
             <div style={gridStyle}>
-              <input value={registrationDraft.login} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, login: event.target.value }))} placeholder="Логин" style={inputStyle} />
-              <input value={registrationDraft.password} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, password: event.target.value }))} placeholder="Пароль" type="password" style={inputStyle} />
-              <input value={registrationDraft.lastName} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, lastName: event.target.value }))} placeholder="Фамилия" style={inputStyle} />
-              <input value={registrationDraft.firstName} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, firstName: event.target.value }))} placeholder="Имя" style={inputStyle} />
-              <input value={registrationDraft.middleName} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, middleName: event.target.value }))} placeholder="Отчество" style={inputStyle} />
-              <input value={registrationDraft.positionTitle} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, positionTitle: event.target.value }))} placeholder="Должность" style={inputStyle} />
-              <input value={registrationDraft.email} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, email: event.target.value }))} placeholder="Почта" style={inputStyle} />
-              <input value={registrationDraft.phone} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, phone: event.target.value }))} placeholder="Телефон" style={inputStyle} />
+              <label style={labelStyle}>
+                Логин
+                <input required autoComplete="username" value={registrationDraft.login} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, login: event.target.value }))} style={inputStyle} />
+              </label>
+              <label style={labelStyle}>
+                Пароль
+                <input required autoComplete="new-password" value={registrationDraft.password} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, password: event.target.value }))} type="password" style={inputStyle} />
+              </label>
+              <AuthInputCell label="Фамилия" warning={getNoDigitsWarning(registrationDraft.lastName)}>
+                <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="family-name" value={registrationDraft.lastName} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, lastName: event.target.value }))} style={getAuthInputStyle(getNoDigitsWarning(registrationDraft.lastName))} />
+              </AuthInputCell>
+              <AuthInputCell label="Имя" warning={getNoDigitsWarning(registrationDraft.firstName)}>
+                <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="given-name" value={registrationDraft.firstName} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, firstName: event.target.value }))} style={getAuthInputStyle(getNoDigitsWarning(registrationDraft.firstName))} />
+              </AuthInputCell>
+              <AuthInputCell label="Отчество" warning={getNoDigitsWarning(registrationDraft.middleName)}>
+                <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="additional-name" value={registrationDraft.middleName} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, middleName: event.target.value }))} style={getAuthInputStyle(getNoDigitsWarning(registrationDraft.middleName))} />
+              </AuthInputCell>
+              <AuthInputCell label="Должность" warning={getNoDigitsWarning(registrationDraft.positionTitle)}>
+                <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="organization-title" value={registrationDraft.positionTitle} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, positionTitle: event.target.value }))} style={getAuthInputStyle(getNoDigitsWarning(registrationDraft.positionTitle))} />
+              </AuthInputCell>
+              <label style={labelStyle}>
+                Почта
+                <input required autoComplete="email" type="email" value={registrationDraft.email} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, email: event.target.value }))} style={inputStyle} />
+              </label>
+              <label style={labelStyle}>
+                Телефон
+                <input required autoComplete="tel" value={registrationDraft.phone} onChange={(event) => setRegistrationDraft((draft) => ({ ...draft, phone: event.target.value }))} style={inputStyle} />
+              </label>
             </div>
             <button type="submit" disabled={submitting} style={{ ...buttonStyle, opacity: submitting ? 0.65 : 1 }}>
               {submitting ? "Отправляем..." : "Отправить заявку"}
@@ -313,11 +339,11 @@ export function LoginScreen() {
             <form onSubmit={requestResetCode} style={{ display: "grid", gap: 12 }}>
               <label style={labelStyle}>
                 Логин
-                <input autoComplete="username" value={resetLogin} onChange={(event) => setResetLogin(event.target.value)} style={inputStyle} />
+                <input required autoComplete="username" value={resetLogin} onChange={(event) => setResetLogin(event.target.value)} style={inputStyle} />
               </label>
               <label style={labelStyle}>
                 Куда отправить код
-                <select value={resetChannel} onChange={(event) => setResetChannel(event.target.value === "phone" ? "phone" : "email")} style={inputStyle}>
+                <select required value={resetChannel} onChange={(event) => setResetChannel(event.target.value === "phone" ? "phone" : "email")} style={inputStyle}>
                   <option value="email">Почта</option>
                   <option value="phone">Телефон</option>
                 </select>
@@ -330,11 +356,11 @@ export function LoginScreen() {
             <form onSubmit={confirmResetCode} style={{ display: "grid", gap: 12 }}>
               <label style={labelStyle}>
                 Код
-                <input inputMode="numeric" value={resetCode} onChange={(event) => setResetCode(event.target.value)} style={inputStyle} />
+                <input required inputMode="numeric" value={resetCode} onChange={(event) => setResetCode(event.target.value)} style={inputStyle} />
               </label>
               <label style={labelStyle}>
                 Новый пароль
-                <input autoComplete="new-password" type="password" value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} style={inputStyle} />
+                <input required autoComplete="new-password" type="password" value={resetPassword} onChange={(event) => setResetPassword(event.target.value)} style={inputStyle} />
               </label>
               <button type="submit" disabled={submitting} style={{ ...buttonStyle, opacity: submitting ? 0.65 : 1 }}>
                 {submitting ? "Сохраняем..." : "Изменить пароль"}
@@ -364,3 +390,38 @@ export function LoginScreen() {
     </main>
   );
 }
+
+function AuthInputCell({
+  label,
+  warning = "",
+  children,
+}: {
+  label: string;
+  warning?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label style={labelStyle}>
+      {label}
+      {children}
+      {warning ? <span aria-live="polite" style={inputWarningStyle}>{warning}</span> : null}
+    </label>
+  );
+}
+
+function getAuthInputStyle(warning: string): CSSProperties {
+  return warning ? invalidInputStyle : inputStyle;
+}
+
+const invalidInputStyle: CSSProperties = {
+  ...inputStyle,
+  borderColor: "#f87171",
+  background: "#fff7f7",
+};
+
+const inputWarningStyle: CSSProperties = {
+  color: "#b91c1c",
+  fontSize: 11,
+  fontWeight: 700,
+  lineHeight: 1.25,
+};
