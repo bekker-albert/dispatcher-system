@@ -7,6 +7,12 @@ export function getRegistrationRequestNotificationId(requestId: string) {
   return `${registrationRequestNotificationPrefix}${requestId}`;
 }
 
+export function getRegistrationRequestIdFromNotificationId(notificationId: string) {
+  return notificationId.startsWith(registrationRequestNotificationPrefix)
+    ? notificationId.slice(registrationRequestNotificationPrefix.length)
+    : null;
+}
+
 export function dispatchRegistrationRequestNotification(request: AuthRegistrationRequest) {
   const contacts = [request.email, request.phone].filter(Boolean).join(" / ");
 

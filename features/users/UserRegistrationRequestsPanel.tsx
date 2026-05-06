@@ -13,7 +13,6 @@ import {
   iconButtonStyle,
   messageStyle,
   panelStyle,
-  secondaryButtonStyle,
   statusBoxStyle,
   tableStyle,
   tableWrapStyle,
@@ -77,9 +76,6 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
   useEffect(() => {
     void loadRequests();
 
-    const refreshTimer = window.setInterval(() => {
-      void loadRequests();
-    }, 15000);
     const handleFocus = () => {
       void loadRequests();
     };
@@ -87,7 +83,6 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
     window.addEventListener("focus", handleFocus);
 
     return () => {
-      window.clearInterval(refreshTimer);
       window.removeEventListener("focus", handleFocus);
     };
   }, [loadRequests]);
@@ -134,9 +129,6 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
         <div style={{ fontWeight: 900, fontSize: 18 }}>Заявки на регистрацию</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ color: "#64748b", fontSize: 13 }}>Ожидают: {pendingCount}</span>
-          <button type="button" onClick={() => void loadRequests()} disabled={loading} style={secondaryButtonStyle}>
-            Обновить
-          </button>
         </div>
       </div>
 

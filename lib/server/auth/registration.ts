@@ -46,6 +46,10 @@ type DecideRegistrationRequestInput = {
   comment?: string;
 };
 
+const processedRegistrationRequestLogRetentionDays = 45;
+const processedRegistrationRequestCleanupIntervalMs = 60 * 60 * 1000;
+let processedRegistrationRequestCleanupAt = 0;
+
 const registrationSelect = `
   SELECT
     request_id,
@@ -125,6 +129,18 @@ async function hasPendingRegistrationRequest(login: string) {
   return rows.length > 0;
 }
 
+async function cleanupOldProcessedRegistrationRequestLogs() {
+  const now = Date.now();
+  if (now - processedRegistrationRequestCleanupAt < processedRegistrationRequestCleanupIntervalMs) return;
+  processedRegistrationRequestCleanupAt = now;
+
+  await authExecute(
+    `DELETE FROM auth_registration_requests
+      WHERE status IN ('approved', 'rejected')
+        AND updated_at < DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL ${processedRegistrationRequestLogRetentionDays} DAY)`,
+  );
+}
+
 export async function createRegistrationRequest(input: CreateRegistrationRequestInput) {
   const login = normalizeLogin(input.login);
   const lastName = normalizeText(input.lastName);
@@ -180,10 +196,16 @@ export async function createRegistrationRequest(input: CreateRegistrationRequest
   return toRegistrationRequest(record);
 }
 
-export async function listRegistrationRequests() {
+export async function listRegistrationRequests({ status }: { status?: AuthRegistrationRequestStatus } = {}) {
+  await cleanupOldProcessedRegistrationRequestLogs();
+
+  const statusFilter = status ? "WHERE status = ?" : "";
+  const params = status ? [status] : [];
   const rows = await authRows<RegistrationRequestRecord>(
     `${registrationSelect}
+    ${statusFilter}
     ORDER BY status = 'pending' DESC, created_at DESC`,
+    params,
   );
 
   return rows.map(toRegistrationRequest);

@@ -6,6 +6,7 @@ import { Bot, X } from "lucide-react";
 
 import { AiAssistantFloatingChat } from "@/features/ai-assistant/components/AiAssistantFloatingChat";
 import { useAiAssistantContext } from "@/features/ai-assistant/lib/useAiAssistantState";
+import { dispatchAiAssistantSystemNotificationDecision } from "@/features/ai-assistant/lib/systemNotifications";
 import type {
   AiAssistantApprovalAction,
   AiAssistantNotification,
@@ -37,7 +38,10 @@ export function AiAssistantFloatingDock() {
     notification: AiAssistantNotification,
     status: "approved" | "rejected",
   ) => {
-    if (!notification.linkedTaskId) return;
+    if (!notification.linkedTaskId) {
+      dispatchAiAssistantSystemNotificationDecision({ id: notification.id, status });
+      return;
+    }
 
     const approval = approvalsByTaskId.get(notification.linkedTaskId);
     if (!approval || approval.status !== "required") return;
@@ -111,6 +115,7 @@ export function AiAssistantFloatingDock() {
 
 function isActiveNotification(notification: AiAssistantNotification) {
   return notification.status === "queued"
+    || notification.status === "needs-approval"
     || notification.status === "draft"
     || notification.approvalStatus === "required";
 }

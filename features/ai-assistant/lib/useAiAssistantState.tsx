@@ -29,10 +29,10 @@ export function useAiAssistantState({
   currentDateTime,
 }: UseAiAssistantStateOptions = {}) {
   const [activeTab, setActiveTab] = useState<AiAssistantTab>("main");
-  const [chatMessages, setChatMessages] = useState(defaultAiAssistantDataset.chatMessages);
+  const [chatMessages, setChatMessages] = useState<typeof defaultAiAssistantDataset.chatMessages>([]);
   const [approvalActions, setApprovalActions] = useState(defaultAiAssistantDataset.approvalActions);
   const [tasks, setTasks] = useState(defaultAiAssistantDataset.tasks);
-  const [notifications, setNotifications] = useState(defaultAiAssistantDataset.notifications);
+  const [notifications, setNotifications] = useState<typeof defaultAiAssistantDataset.notifications>([]);
   const [plannerItems, setPlannerItems] = useState(defaultAiAssistantDataset.plannerItems);
   const [integrations, setIntegrations] = useState(defaultAiAssistantDataset.integrations);
   const [knowledgeSources, setKnowledgeSources] = useState(defaultAiAssistantDataset.knowledgeSources);
@@ -52,6 +52,15 @@ export function useAiAssistantState({
   const [codexPromptDrafts, setCodexPromptDrafts] = useState(defaultAiAssistantDataset.codexPromptDrafts);
 
   useEffect(() => {
+    const clearSessionChat = () => {
+      setChatMessages([]);
+    };
+
+    window.addEventListener("pagehide", clearSessionChat);
+    return () => window.removeEventListener("pagehide", clearSessionChat);
+  }, []);
+
+  useEffect(() => {
     const handleSystemNotification = (event: Event) => {
       const detail = (event as CustomEvent<AiAssistantSystemNotificationDetail>).detail;
       if (!detail?.id) return;
@@ -69,7 +78,7 @@ export function useAiAssistantState({
         id: detail.id,
         title,
         channel: "app",
-        status: "queued",
+        status: "needs-approval",
         target: detail.target || "AI-чат",
         body,
         approvalStatus: "required",

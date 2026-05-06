@@ -49,7 +49,7 @@ export function AiAssistantFloatingNotifications({
     <div className="ai-floating-notifications" style={notificationListStyle}>
       <div style={notificationHeaderStyle}>Уведомления</div>
       {notifications.map((notification) => {
-        const canDecide = notification.approvalStatus === "required" && Boolean(notification.linkedTaskId);
+        const canDecide = notification.approvalStatus === "required";
 
         return (
           <div

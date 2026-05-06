@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
-  return NextResponse.json({ requests: await listRegistrationRequests() });
+  return NextResponse.json({ requests: await listRegistrationRequests({ status: "pending" }) });
 }
 
 export async function PATCH(request: Request) {

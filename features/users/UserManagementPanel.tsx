@@ -304,7 +304,7 @@ export function UserManagementPanel({ refreshToken = 0 }: UserManagementPanelPro
   };
 
   return (
-    <section style={{ ...panelStyle, marginTop: 14 }}>
+    <section style={panelStyle}>
       <div style={toolbarStyle}>
         <div style={{ fontWeight: 900, fontSize: 18 }}>Журнал пользователей</div>
         <button
