@@ -82,7 +82,11 @@ assert.match(authSources, /last_name/);
 assert.match(authSources, /first_name/);
 assert.match(authSources, /middle_name/);
 assert.match(authSources, /tab_permissions/);
-assert.match(databaseRouterSource, /authRequired\(\) && !await getAuthSessionFromRequest\(request\)/);
+assert.match(databaseRouterSource, /const requiresAuth = authRequired\(\)/);
+assert.match(databaseRouterSource, /const session = requiresAuth \? await getAuthSessionFromRequest\(request\) : null/);
+assert.match(databaseRouterSource, /requiresAuth && !session/);
+assert.match(databaseRouterSource, /authorizeDatabaseRequest\(session\.user, \{ resource, action, payload \}\)/);
+assert.match(databaseRouterSource, /createDatabaseForbiddenResponse/);
 assert.match(databaseRouterSource, /createDatabaseAuthRequiredResponse/);
 
 assert.match(envExampleSource, /AUTH_REQUIRED=true/);

@@ -10,6 +10,11 @@ import {
   handleDatabasePost,
 } from "../lib/server/database/router";
 import {
+  authorizeDatabaseRequest,
+  getDatabaseAccessRequirement,
+} from "../lib/server/database/authorization";
+import type { AuthUser } from "../lib/domain/auth/types";
+import {
   createSharedAppSettingsDatabaseSnapshot,
   createSharedAppSettingsSaveDelta,
 } from "../lib/domain/app/shared-settings-snapshot";
@@ -28,6 +33,8 @@ const authSchemaSource = readFileSync(resolve(testDir, "../lib/server/auth/schem
 const mysqlPtoCommandsSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-commands.ts"), "utf8");
 const mysqlPtoVersionSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-version.ts"), "utf8");
 const mysqlPtoLoadSource = readFileSync(resolve(testDir, "../lib/server/mysql/pto-load.ts"), "utf8");
+const databaseRouterSource = readFileSync(resolve(testDir, "../lib/server/database/router.ts"), "utf8");
+const databaseAuthorizationSource = readFileSync(resolve(testDir, "../lib/server/database/authorization.ts"), "utf8");
 
 process.env.AUTH_REQUIRED = "false";
 
@@ -71,6 +78,83 @@ assert.match(mysqlPtoLoadSource, /JSON_CONTAINS\(COALESCE\(rows_for_year\.years,
 assert.doesNotMatch(mysqlPtoLoadSource, /LEFT JOIN values_for_year/);
 assert.match(mysqlPtoLoadSource, /EXISTS \(\s*SELECT 1\s*FROM pto_day_values AS values_for_year/);
 assert.doesNotMatch(mysqlPtoLoadSource, /loadPtoStateFromMysqlForYear[\s\S]*SELECT \* FROM pto_rows ORDER BY table_type ASC, sort_index ASC/);
+assert.match(databaseRouterSource, /authorizeDatabaseRequest\(session\.user, \{ resource, action, payload \}\)/);
+assert.match(databaseRouterSource, /createDatabaseForbiddenResponse\(request\)/);
+assert.match(databaseAuthorizationSource, /settingsKeyTabMap/);
+assert.match(databaseAuthorizationSource, /adminStorageKeys\.reportReasons[\s\S]*"reports"/);
+assert.match(databaseAuthorizationSource, /adminStorageKeys\.topTabs[\s\S]*"admin"/);
+
+const authUserBase: AuthUser = {
+  id: "test-user",
+  login: "test",
+  displayName: "Test User",
+  lastName: "Test",
+  firstName: "User",
+  middleName: "",
+  email: "",
+  phone: "",
+  positionTitle: "",
+  role: "dispatcher",
+  canManageUsers: false,
+  tabPermissions: {},
+};
+
+function authUserWithPermissions(tabPermissions: AuthUser["tabPermissions"]): AuthUser {
+  return { ...authUserBase, tabPermissions };
+}
+
+function isAllowedFor(user: AuthUser, resource: string, action: string, payload?: unknown) {
+  return authorizeDatabaseRequest(user, { resource, action, payload }).allowed;
+}
+
+const ptoViewer = authUserWithPermissions({
+  pto: { view: true, edit: false },
+  fleet: { view: true, edit: false },
+});
+assert.equal(isAllowedFor(ptoViewer, "pto", "load"), true);
+assert.equal(isAllowedFor(ptoViewer, "pto", "save-day"), false);
+assert.equal(isAllowedFor(ptoViewer, "vehicles", "load"), true);
+assert.equal(isAllowedFor(ptoViewer, "vehicles", "delete"), false);
+assert.equal(isAllowedFor(ptoViewer, "settings", "load"), true);
+
+const ptoEditor = authUserWithPermissions({
+  pto: { view: true, edit: true },
+});
+assert.equal(isAllowedFor(ptoEditor, "pto", "save-days-with-row"), true);
+
+const reportsEditor = authUserWithPermissions({
+  reports: { view: true, edit: true },
+});
+assert.equal(
+  isAllowedFor(reportsEditor, "settings", "save", { settings: { "dispatcher:report-reasons": {} } }),
+  true,
+);
+assert.equal(
+  isAllowedFor(reportsEditor, "settings", "save", { settings: { "dispatcher:top-tabs": [] } }),
+  false,
+);
+
+const adminEditor = authUserWithPermissions({
+  admin: { view: true, edit: true },
+});
+assert.equal(
+  isAllowedFor(adminEditor, "settings", "save", { settings: { "dispatcher:top-tabs": [] } }),
+  true,
+);
+assert.equal(isAllowedFor(adminEditor, "app-state", "load-bootstrap"), true);
+assert.equal(isAllowedFor(adminEditor, "app-state", "load-client-snapshots"), true);
+
+const unrestrictedLegacyUser = authUserWithPermissions({});
+assert.equal(isAllowedFor(unrestrictedLegacyUser, "vehicles", "replace"), true);
+assert.equal(isAllowedFor(unrestrictedLegacyUser, "settings", "save", { settings: { "unknown": true } }), true);
+
+assert.deepEqual(getDatabaseAccessRequirement({ resource: "status", action: "status" }), {
+  level: "authenticated",
+});
+assert.deepEqual(getDatabaseAccessRequirement({ resource: "app-state", action: "save", payload: { storage: {} } }), {
+  level: "edit",
+  tabIds: ["admin"],
+});
 
 async function responseJson(response: Response) {
   return await response.json() as { data?: unknown; error?: unknown };

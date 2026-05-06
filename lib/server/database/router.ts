@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { databaseResourceHandlers } from "./handlers";
+import { authorizeDatabaseRequest } from "./authorization";
 import {
   corsHeaders,
   createDatabaseAuthRequiredResponse,
   createDatabaseErrorResponse,
+  createDatabaseForbiddenResponse,
   createDatabaseWriteGuardResponse,
   createUnknownDatabaseActionResponse,
   isAllowedCorsOrigin,
@@ -120,8 +122,14 @@ export async function routeDatabaseRequest(
     return createDatabaseStatusResponse(jsonForRequest);
   }
 
-  if (authRequired() && !await getAuthSessionFromRequest(request)) {
+  const requiresAuth = authRequired();
+  const session = requiresAuth ? await getAuthSessionFromRequest(request) : null;
+  if (requiresAuth && !session) {
     return createDatabaseAuthRequiredResponse(request);
+  }
+
+  if (session && !authorizeDatabaseRequest(session.user, { resource, action, payload }).allowed) {
+    return createDatabaseForbiddenResponse(request);
   }
 
   if (shouldRejectDatabaseWriteRequest(action, request)) {

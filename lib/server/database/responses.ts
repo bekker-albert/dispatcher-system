@@ -50,6 +50,13 @@ export function createDatabaseErrorResponse(error: unknown, request?: Request) {
   );
 }
 
+export function createDatabaseForbiddenResponse(request?: Request) {
+  return NextResponse.json(
+    { error: "\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e \u043f\u0440\u0430\u0432 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f." },
+    { status: 403, headers: corsHeaders(request) },
+  );
+}
+
 export function createUnknownDatabaseActionResponse(request?: Request) {
   return NextResponse.json(
     { error: "Неизвестное действие базы данных." },
