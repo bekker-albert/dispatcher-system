@@ -10,6 +10,7 @@ import { useAppScreenProps } from "@/features/app/useAppScreenProps";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
 import { AuthProvider } from "@/features/auth/AuthContext";
 import { AiAssistantProvider } from "@/features/ai-assistant/lib/useAiAssistantState";
+import { UserRegistrationRequestsWatcher } from "@/features/users/UserRegistrationRequestsWatcher";
 import { databaseConfigured } from "@/lib/data/config";
 import type { AuthUser } from "@/lib/domain/auth/types";
 import { createAiAssistantRuntimeContext } from "@/lib/domain/ai-assistant/runtime-context";
@@ -52,6 +53,7 @@ export default function App({ initialAuthUser }: { initialAuthUser: AuthUser }) 
         currentContext={aiAssistantRuntimeContext}
         currentWorkDate={appState.reportDate}
       >
+        <UserRegistrationRequestsWatcher />
         <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
           <AppHeader {...appHeaderProps} />
           <AppPrimaryContent {...primaryContentProps} />

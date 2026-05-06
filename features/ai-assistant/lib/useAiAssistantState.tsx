@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
 import { defaultAiAssistantDataset, defaultAiAssistantRole } from "@/features/ai-assistant/data";
 import type {
@@ -8,7 +8,11 @@ import type {
   AiAssistantTab,
 } from "@/features/ai-assistant/types";
 import { useAiAssistantActions } from "@/features/ai-assistant/lib/useAiAssistantActions";
-import { createAiAssistantCurrentDateTime } from "@/features/ai-assistant/lib/aiAssistantStateHelpers";
+import { createAiAssistantCurrentDateTime, upsertById } from "@/features/ai-assistant/lib/aiAssistantStateHelpers";
+import {
+  aiAssistantSystemNotificationEventName,
+  type AiAssistantSystemNotificationDetail,
+} from "@/features/ai-assistant/lib/systemNotifications";
 import { createAiAssistantViewModel } from "@/lib/domain/ai-assistant/view-model";
 import { resolveAiAssistantPermissions } from "@/lib/domain/ai-assistant/permissions";
 import { defaultAiAssistantRuntimeContext } from "@/lib/domain/ai-assistant/runtime-context";
@@ -46,6 +50,52 @@ export function useAiAssistantState({
   const [knowledgeBaseItems] = useState(defaultAiAssistantDataset.knowledgeBaseItems);
   const [developmentIdeas, setDevelopmentIdeas] = useState(defaultAiAssistantDataset.developmentIdeas);
   const [codexPromptDrafts, setCodexPromptDrafts] = useState(defaultAiAssistantDataset.codexPromptDrafts);
+
+  useEffect(() => {
+    const handleSystemNotification = (event: Event) => {
+      const detail = (event as CustomEvent<AiAssistantSystemNotificationDetail>).detail;
+      if (!detail?.id) return;
+
+      if (detail.action === "clear") {
+        setNotifications((current) => current.filter((notification) => notification.id !== detail.id));
+        return;
+      }
+
+      const updatedAt = new Date().toISOString();
+      const title = detail.title || "Системное уведомление";
+      const body = detail.body || "";
+
+      setNotifications((current) => upsertById(current, {
+        id: detail.id,
+        title,
+        channel: "app",
+        status: "queued",
+        target: detail.target || "AI-чат",
+        body,
+        approvalStatus: "required",
+        workDate: detail.workDate || currentWorkDate,
+        updatedAt,
+      }));
+      setChatMessages((current) => {
+        const messageId = `chat-system-${detail.id}`;
+        if (current.some((message) => message.id === messageId)) return current;
+
+        return [
+          ...current,
+          {
+            id: messageId,
+            role: "assistant",
+            author: "AI-ассистент",
+            text: [title, body].filter(Boolean).join("\n"),
+            createdAt: updatedAt,
+          },
+        ];
+      });
+    };
+
+    window.addEventListener(aiAssistantSystemNotificationEventName, handleSystemNotification);
+    return () => window.removeEventListener(aiAssistantSystemNotificationEventName, handleSystemNotification);
+  }, [currentWorkDate]);
 
   const permissions = useMemo(
     () => resolveAiAssistantPermissions(defaultAiAssistantRole),

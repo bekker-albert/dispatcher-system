@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import { type AuthUserListItem } from "@/lib/domain/auth/types";
@@ -30,7 +30,6 @@ import {
 } from "./UserManagementStyles";
 import { formatDisplayNameDescription, PermissionEditor, UserDraftFields } from "./UserManagementFields";
 import { UserProfileModal } from "./UserProfileModal";
-import { UserRegistrationRequestsPanel } from "./UserRegistrationRequestsPanel";
 
 type UserListResponse = {
   users?: AuthUserListItem[];
@@ -40,7 +39,11 @@ type UserListResponse = {
 
 const defaultLoadErrorMessage = "Не удалось загрузить пользователей";
 
-export function UserManagementPanel() {
+type UserManagementPanelProps = {
+  refreshToken?: number;
+};
+
+export function UserManagementPanel({ refreshToken = 0 }: UserManagementPanelProps) {
   const { user: currentUser, updateCurrentUser } = useAuth();
   const [users, setUsers] = useState<AuthUserListItem[]>([]);
   const [createDraft, setCreateDraft] = useState<UserEditDraft>(() => createEmptyDraft());
@@ -64,7 +67,7 @@ export function UserManagementPanel() {
   const hasUnsavedCreateChanges = hasUserDraftChanges(createDraft, createBaselineDraft);
   const hasUnsavedEditChanges = Boolean(editDraft && editBaselineDraft && hasUserDraftChanges(editDraft, editBaselineDraft));
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoadError("");
 
     try {
@@ -83,7 +86,7 @@ export function UserManagementPanel() {
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -91,7 +94,7 @@ export function UserManagementPanel() {
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [loadUsers, refreshToken]);
 
   const cancelCreate = () => {
     setCreatingUser(false);
@@ -301,14 +304,18 @@ export function UserManagementPanel() {
   };
 
   return (
-    <>
-      <UserRegistrationRequestsPanel onApproved={loadUsers} />
-      <section style={{ ...panelStyle, marginTop: 14 }}>
+    <section style={{ ...panelStyle, marginTop: 14 }}>
       <div style={toolbarStyle}>
         <div style={{ fontWeight: 900, fontSize: 18 }}>Журнал пользователей</div>
-        <button type="button" onClick={startCreate} disabled={loading || initialLoading} style={buttonStyle} title="Создать пользователя">
-          <Plus size={15} aria-hidden />
-          <span>Создать</span>
+        <button
+          type="button"
+          onClick={startCreate}
+          disabled={loading || initialLoading}
+          style={{ ...iconButtonStyle, width: 34, height: 34 }}
+          title="Создать пользователя"
+          aria-label="Создать пользователя"
+        >
+          <Plus size={17} aria-hidden />
         </button>
       </div>
 
@@ -415,7 +422,6 @@ export function UserManagementPanel() {
           <PermissionEditor draft={editDraft} onChange={updateEditDraft} />
         </UserProfileModal>
       ) : null}
-      </section>
-    </>
+    </section>
   );
 }

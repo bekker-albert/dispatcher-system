@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AuthRegistrationRequest } from "@/lib/domain/auth/types";
 
@@ -10,7 +10,6 @@ import {
   buttonStyle,
   cellStyle,
   dangerIconButtonStyle,
-  emptyStateCellStyle,
   iconButtonStyle,
   messageStyle,
   panelStyle,
@@ -21,6 +20,7 @@ import {
   toolbarStyle,
 } from "./UserManagementStyles";
 import { formatDateTime } from "./UserManagementModel";
+import { clearRegistrationRequestNotification } from "./registrationRequestNotifications";
 
 type RegistrationRequestsResponse = {
   requests?: AuthRegistrationRequest[];
@@ -50,7 +50,7 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
     [requests],
   );
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     setLoadError("");
 
     try {
@@ -64,18 +64,33 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
         return;
       }
 
-      setRequests(body.requests ?? []);
+      const pendingRequests = (body.requests ?? []).filter((request) => request.status === "pending");
+      setRequests(pendingRequests);
     } catch {
       setLoadError("Не удалось загрузить заявки");
       setRequests([]);
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadRequests();
-  }, []);
+
+    const refreshTimer = window.setInterval(() => {
+      void loadRequests();
+    }, 15000);
+    const handleFocus = () => {
+      void loadRequests();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [loadRequests]);
 
   const decideRequest = async (request: AuthRegistrationRequest, decision: "approve" | "reject") => {
     if (decision === "reject" && !window.confirm(`Отклонить заявку ${request.displayName}?`)) return;
@@ -99,6 +114,7 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
       }
 
       setMessage(decision === "approve" ? "Заявка согласована, пользователь создан" : "Заявка отклонена");
+      clearRegistrationRequestNotification(request.id);
       await loadRequests();
       if (decision === "approve") await onApproved();
     } catch {
@@ -107,6 +123,10 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
       setLoading(false);
     }
   };
+
+  if (!initialLoading && !loadError && requests.length === 0) {
+    return null;
+  }
 
   return (
     <section style={{ ...panelStyle, marginBottom: 14 }}>
@@ -145,7 +165,7 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
               </tr>
             </thead>
             <tbody>
-              {requests.length > 0 ? requests.map((request) => (
+              {requests.map((request) => (
                 <tr key={request.id}>
                   <td style={cellStyle}>{formatDateTime(request.createdAt)}</td>
                   <td style={cellStyle}>{request.login}</td>
@@ -167,11 +187,7 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
                     )}
                   </td>
                 </tr>
-              )) : (
-                <tr>
-                  <td colSpan={6} style={emptyStateCellStyle}>Заявок пока нет.</td>
-                </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>

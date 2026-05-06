@@ -8,6 +8,7 @@ import { authRoleLabels, formatAuthDisplayName, type AuthUser } from "@/lib/doma
 import { SectionCard } from "../../shared/ui/layout";
 import { UserManagementPanel } from "./UserManagementPanel";
 import { UserProfileModal } from "./UserProfileModal";
+import { UserRegistrationRequestsPanel } from "./UserRegistrationRequestsPanel";
 
 type UserProfile = {
   fullName: string;
@@ -41,6 +42,7 @@ export function UserProfileSection({ userCard }: UserProfileSectionProps) {
   const [savingSelf, setSavingSelf] = useState(false);
   const [message, setMessage] = useState("");
   const [draft, setDraft] = useState<ProfileDraft>(() => createProfileDraft(user));
+  const [userListRefreshToken, setUserListRefreshToken] = useState(0);
 
   const startEditSelf = () => {
     setDraft(createProfileDraft(user));
@@ -55,6 +57,10 @@ export function UserProfileSection({ userCard }: UserProfileSectionProps) {
   };
 
   const hasUnsavedSelfChanges = hasProfileDraftChanges(draft, createProfileDraft(user));
+
+  const refreshUserList = () => {
+    setUserListRefreshToken((current) => current + 1);
+  };
 
   const requestCloseSelf = () => {
     if (savingSelf) return;
@@ -111,7 +117,12 @@ export function UserProfileSection({ userCard }: UserProfileSectionProps) {
           />
         </div>
 
-        {canManageUsers ? <UserManagementPanel /> : null}
+        {canManageUsers ? (
+          <div style={rightColumnStyle}>
+            <UserRegistrationRequestsPanel onApproved={refreshUserList} />
+            <UserManagementPanel refreshToken={userListRefreshToken} />
+          </div>
+        ) : null}
       </div>
 
       {editingSelf ? (
@@ -240,6 +251,10 @@ const userLayoutStyle: CSSProperties = {
 };
 
 const leftColumnStyle: CSSProperties = {
+  minWidth: 0,
+};
+
+const rightColumnStyle: CSSProperties = {
   minWidth: 0,
 };
 
