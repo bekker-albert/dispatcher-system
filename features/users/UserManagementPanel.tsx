@@ -303,7 +303,7 @@ export function UserManagementPanel() {
   return (
     <>
       <UserRegistrationRequestsPanel onApproved={loadUsers} />
-      <section style={panelStyle}>
+      <section style={{ ...panelStyle, marginTop: 14 }}>
       <div style={toolbarStyle}>
         <div style={{ fontWeight: 900, fontSize: 18 }}>Журнал пользователей</div>
         <button type="button" onClick={startCreate} disabled={loading || initialLoading} style={buttonStyle} title="Создать пользователя">
