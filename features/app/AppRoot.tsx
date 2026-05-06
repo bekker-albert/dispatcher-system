@@ -53,7 +53,7 @@ export default function App({ initialAuthUser }: { initialAuthUser: AuthUser }) 
         currentContext={aiAssistantRuntimeContext}
         currentWorkDate={appState.reportDate}
       >
-        <UserRegistrationRequestsWatcher />
+        <UserRegistrationRequestsWatcher addAdminLog={appState.addAdminLog} />
         <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
           <AppHeader {...appHeaderProps} />
           <AppPrimaryContent {...primaryContentProps} />

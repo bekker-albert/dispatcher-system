@@ -85,21 +85,6 @@ export function useAiAssistantState({
         workDate: detail.workDate || currentWorkDate,
         updatedAt,
       }));
-      setChatMessages((current) => {
-        const messageId = `chat-system-${detail.id}`;
-        if (current.some((message) => message.id === messageId)) return current;
-
-        return [
-          ...current,
-          {
-            id: messageId,
-            role: "assistant",
-            author: "AI-ассистент",
-            text: [title, body].filter(Boolean).join("\n"),
-            createdAt: updatedAt,
-          },
-        ];
-      });
     };
 
     window.addEventListener(aiAssistantSystemNotificationEventName, handleSystemNotification);

@@ -78,7 +78,7 @@ export function useAppAdminScreenProps({
         <AdminReportsPrimaryContent appState={appState} models={models} />
       )}
       {adminSection === "users" && (
-        <UserProfileSection userCard={defaultUserCard} />
+        <UserProfileSection addAdminLog={appState.addAdminLog} userCard={defaultUserCard} />
       )}
     </SectionCard>
   );

@@ -3,6 +3,11 @@
 import { Check, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  aiAssistantSystemNotificationEventName,
+  type AiAssistantSystemNotificationDetail,
+} from "@/features/ai-assistant/lib/systemNotifications";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { AuthRegistrationRequest } from "@/lib/domain/auth/types";
 
 import {
@@ -19,7 +24,11 @@ import {
   toolbarStyle,
 } from "./UserManagementStyles";
 import { formatDateTime } from "./UserManagementModel";
-import { clearRegistrationRequestNotification } from "./registrationRequestNotifications";
+import {
+  clearRegistrationRequestNotification,
+  getRegistrationRequestIdFromNotificationId,
+} from "./registrationRequestNotifications";
+import { createRegistrationRequestDecisionLog } from "./registrationRequestAuditLog";
 
 type RegistrationRequestsResponse = {
   requests?: AuthRegistrationRequest[];
@@ -28,6 +37,7 @@ type RegistrationRequestsResponse = {
 };
 
 type UserRegistrationRequestsPanelProps = {
+  addAdminLog: (entry: AdminLogInput) => void;
   onApproved: () => Promise<void> | void;
 };
 
@@ -37,7 +47,7 @@ const statusLabels: Record<AuthRegistrationRequest["status"], string> = {
   rejected: "Отклонена",
 };
 
-export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRequestsPanelProps) {
+export function UserRegistrationRequestsPanel({ addAdminLog, onApproved }: UserRegistrationRequestsPanelProps) {
   const [requests, setRequests] = useState<AuthRegistrationRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -76,14 +86,18 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
   useEffect(() => {
     void loadRequests();
 
-    const handleFocus = () => {
+    const handleNotification = (event: Event) => {
+      const detail = (event as CustomEvent<AiAssistantSystemNotificationDetail>).detail;
+      if (!detail?.id) return;
+      if (!getRegistrationRequestIdFromNotificationId(detail.id)) return;
+
       void loadRequests();
     };
 
-    window.addEventListener("focus", handleFocus);
+    window.addEventListener(aiAssistantSystemNotificationEventName, handleNotification);
 
     return () => {
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener(aiAssistantSystemNotificationEventName, handleNotification);
     };
   }, [loadRequests]);
 
@@ -109,6 +123,7 @@ export function UserRegistrationRequestsPanel({ onApproved }: UserRegistrationRe
       }
 
       setMessage(decision === "approve" ? "Заявка согласована, пользователь создан" : "Заявка отклонена");
+      addAdminLog(createRegistrationRequestDecisionLog(body.request ?? request, decision));
       clearRegistrationRequestNotification(request.id);
       await loadRequests();
       if (decision === "approve") await onApproved();

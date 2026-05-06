@@ -44,7 +44,7 @@ assert.match(appPageSource, /getAuthDisabledUser\(\)/);
 assert.match(appPageSource, /<AppRoot initialAuthUser=\{session\.user\} \/>/);
 assert.match(appPageSource, /<LoginScreen \/>/);
 assert.match(appRootSource, /AuthProvider initialUser=\{initialAuthUser\}/);
-assert.match(appRootSource, /UserRegistrationRequestsWatcher/);
+assert.match(appRootSource, /<UserRegistrationRequestsWatcher addAdminLog=\{appState\.addAdminLog\} \/>/);
 assert.match(appHeaderStylesSource, /zIndex: 200/);
 assert.match(appHeaderStylesSource, /flex: "0 0 auto"/);
 assert.doesNotMatch(appHeaderStylesSource, /flex: "0 0 170px"/);
@@ -67,7 +67,7 @@ assert.match(authSessionButtonSource, /Редактировать профиль
 assert.match(authSessionButtonSource, /LogOut/);
 assert.match(userProfileSource, /Административный профиль/);
 assert.match(userProfileSource, /Профиль пользователя/);
-assert.match(userProfileSource, /UserRegistrationRequestsPanel onApproved=\{refreshUserList\}/);
+assert.match(userProfileSource, /UserRegistrationRequestsPanel addAdminLog=\{addAdminLog\} onApproved=\{refreshUserList\}/);
 assert.match(userProfileSource, /UserManagementPanel refreshToken=\{userListRefreshToken\}/);
 assert.doesNotMatch(userProfileSource, /gridColumn: "1 \/ -1"/);
 assert.match(userProfileSource, /updateCurrentUser/);
@@ -168,6 +168,9 @@ assert.match(authSources, /DATE_SUB\(CURRENT_TIMESTAMP\(3\), INTERVAL \$\{proces
 assert.match(authSources, /dispatchAiAssistantSystemNotification/);
 assert.match(authSources, /aiAssistantSystemNotificationDecisionEventName/);
 assert.match(authSources, /getRegistrationRequestIdFromNotificationId/);
+assert.match(authSources, /createRegistrationRequestDecisionLog/);
+assert.match(authSources, /addAdminLog\(createRegistrationRequestDecisionLog/);
+assert.match(authSources, /action: approved \? "Согласование" : "Отказ"/);
 assert.doesNotMatch(authSources, /setInterval/);
 assert.doesNotMatch(authSources, />Обновить</);
 assert.match(authSources, /auth-registration-/);

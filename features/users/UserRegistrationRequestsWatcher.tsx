@@ -4,21 +4,32 @@ import { useEffect, useRef } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import {
+  aiAssistantSystemNotificationEventName,
   aiAssistantSystemNotificationDecisionEventName,
+  type AiAssistantSystemNotificationDetail,
   type AiAssistantSystemNotificationDecisionDetail,
 } from "@/features/ai-assistant/lib/systemNotifications";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { AuthRegistrationRequest } from "@/lib/domain/auth/types";
 import {
   clearRegistrationRequestNotification,
   dispatchRegistrationRequestNotification,
   getRegistrationRequestIdFromNotificationId,
 } from "./registrationRequestNotifications";
+import { createRegistrationRequestDecisionLog } from "./registrationRequestAuditLog";
+
+const registrationRequestsPollIntervalMs = 15000;
 
 type RegistrationRequestsResponse = {
   requests?: AuthRegistrationRequest[];
+  request?: AuthRegistrationRequest;
 };
 
-export function UserRegistrationRequestsWatcher() {
+type UserRegistrationRequestsWatcherProps = {
+  addAdminLog: (entry: AdminLogInput) => void;
+};
+
+export function UserRegistrationRequestsWatcher({ addAdminLog }: UserRegistrationRequestsWatcherProps) {
   const { user } = useAuth();
   const knownPendingRequestIdsRef = useRef<Set<string> | null>(null);
 
@@ -29,6 +40,7 @@ export function UserRegistrationRequestsWatcher() {
     }
 
     let disposed = false;
+    let pollTimerId: number | null = null;
 
     const loadRequests = async ({ notifyNew = true }: { notifyNew?: boolean } = {}) => {
       try {
@@ -66,6 +78,18 @@ export function UserRegistrationRequestsWatcher() {
       }
     };
 
+    const scheduleNextPoll = () => {
+      if (disposed) return;
+      pollTimerId = window.setTimeout(() => {
+        void pollRequests();
+      }, registrationRequestsPollIntervalMs);
+    };
+
+    const pollRequests = async ({ notifyNew = true }: { notifyNew?: boolean } = {}) => {
+      await loadRequests({ notifyNew });
+      scheduleNextPoll();
+    };
+
     const decideFromNotification = async (detail: AiAssistantSystemNotificationDecisionDetail) => {
       const requestId = getRegistrationRequestIdFromNotificationId(detail.id);
       if (!requestId) return;
@@ -83,8 +107,15 @@ export function UserRegistrationRequestsWatcher() {
             decision: detail.status === "approved" ? "approve" : "reject",
           }),
         });
+        const body = await response.json().catch(() => ({})) as RegistrationRequestsResponse;
         if (!response.ok || disposed) return;
 
+        if (body.request) {
+          addAdminLog(createRegistrationRequestDecisionLog(
+            body.request,
+            detail.status === "approved" ? "approve" : "reject",
+          ));
+        }
         clearRegistrationRequestNotification(requestId);
         await loadRequests({ notifyNew: false });
       } catch {
@@ -98,21 +129,34 @@ export function UserRegistrationRequestsWatcher() {
       void decideFromNotification(detail);
     };
 
-    void loadRequests({ notifyNew: true });
+    const handleNotification = (event: Event) => {
+      const detail = (event as CustomEvent<AiAssistantSystemNotificationDetail>).detail;
+      if (!detail?.id) return;
+      if (!getRegistrationRequestIdFromNotificationId(detail.id)) return;
+
+      void loadRequests({ notifyNew: false });
+    };
+
+    void pollRequests({ notifyNew: false });
 
     const handleFocus = () => {
       void loadRequests();
     };
 
     window.addEventListener("focus", handleFocus);
+    window.addEventListener(aiAssistantSystemNotificationEventName, handleNotification);
     window.addEventListener(aiAssistantSystemNotificationDecisionEventName, handleNotificationDecision);
 
     return () => {
       disposed = true;
+      if (pollTimerId !== null) {
+        window.clearTimeout(pollTimerId);
+      }
       window.removeEventListener("focus", handleFocus);
+      window.removeEventListener(aiAssistantSystemNotificationEventName, handleNotification);
       window.removeEventListener(aiAssistantSystemNotificationDecisionEventName, handleNotificationDecision);
     };
-  }, [user.canManageUsers]);
+  }, [addAdminLog, user.canManageUsers]);
 
   return null;
 }

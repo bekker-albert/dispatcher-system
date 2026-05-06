@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import { useState, type CSSProperties } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
+import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import { authRoleLabels, formatAuthDisplayName, type AuthUser } from "@/lib/domain/auth/types";
 import { SectionCard } from "../../shared/ui/layout";
 import { UserManagementPanel } from "./UserManagementPanel";
@@ -18,6 +19,7 @@ type UserProfile = {
 };
 
 type UserProfileSectionProps = {
+  addAdminLog?: (entry: AdminLogInput) => void;
   userCard: UserProfile;
 };
 
@@ -35,7 +37,9 @@ type UserSaveResponse = {
   error?: string;
 };
 
-export function UserProfileSection({ userCard }: UserProfileSectionProps) {
+const noopAddAdminLog = () => {};
+
+export function UserProfileSection({ addAdminLog = noopAddAdminLog, userCard }: UserProfileSectionProps) {
   const { user, updateCurrentUser } = useAuth();
   const canManageUsers = user.canManageUsers;
   const [editingSelf, setEditingSelf] = useState(false);
@@ -119,7 +123,7 @@ export function UserProfileSection({ userCard }: UserProfileSectionProps) {
 
         {canManageUsers ? (
           <div style={rightColumnStyle}>
-            <UserRegistrationRequestsPanel onApproved={refreshUserList} />
+            <UserRegistrationRequestsPanel addAdminLog={addAdminLog} onApproved={refreshUserList} />
             <UserManagementPanel refreshToken={userListRefreshToken} />
           </div>
         ) : null}

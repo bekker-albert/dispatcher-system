@@ -134,11 +134,15 @@ async function cleanupOldProcessedRegistrationRequestLogs() {
   if (now - processedRegistrationRequestCleanupAt < processedRegistrationRequestCleanupIntervalMs) return;
   processedRegistrationRequestCleanupAt = now;
 
-  await authExecute(
-    `DELETE FROM auth_registration_requests
-      WHERE status IN ('approved', 'rejected')
-        AND updated_at < DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL ${processedRegistrationRequestLogRetentionDays} DAY)`,
-  );
+  try {
+    await authExecute(
+      `DELETE FROM auth_registration_requests
+        WHERE status IN ('approved', 'rejected')
+          AND updated_at < DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL ${processedRegistrationRequestLogRetentionDays} DAY)`,
+    );
+  } catch (error) {
+    console.warn("Failed to clean up processed registration requests", error);
+  }
 }
 
 export async function createRegistrationRequest(input: CreateRegistrationRequestInput) {

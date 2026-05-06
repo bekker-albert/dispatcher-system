@@ -1,8 +1,8 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useMemo, useState } from "react";
-import { Bot, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bot, Pin, X } from "lucide-react";
 
 import { AiAssistantFloatingChat } from "@/features/ai-assistant/components/AiAssistantFloatingChat";
 import { useAiAssistantContext } from "@/features/ai-assistant/lib/useAiAssistantState";
@@ -21,6 +21,12 @@ export function AiAssistantFloatingDock() {
     viewModel,
   } = useAiAssistantContext();
   const [isOpen, setIsOpen] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const totalActiveNotifications = useMemo(
+    () => viewModel.currentNotifications.filter(isActiveNotification).length,
+    [viewModel.currentNotifications],
+  );
   const activeNotifications = useMemo(
     () => viewModel.currentNotifications.filter(isActiveNotification).slice(0, 5),
     [viewModel.currentNotifications],
@@ -33,6 +39,21 @@ export function AiAssistantFloatingDock() {
     () => new Map(viewModel.currentTasks.map((task) => [task.id, task])),
     [viewModel.currentTasks],
   );
+
+  useEffect(() => {
+    if (!isOpen || isPinned) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      const panel = panelRef.current;
+      if (!panel || !(target instanceof Node) || panel.contains(target)) return;
+
+      setIsOpen(false);
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [isOpen, isPinned]);
 
   const setNotificationDecision = (
     notification: AiAssistantNotification,
@@ -57,6 +78,7 @@ export function AiAssistantFloatingDock() {
     <div className="ai-floating-dock" style={floatingDockStyle}>
       {isOpen && (
         <section
+          ref={panelRef}
           style={floatingPanelStyle}
           aria-label="AI-виджет"
           role="region"
@@ -65,16 +87,25 @@ export function AiAssistantFloatingDock() {
             <div style={floatingPanelTitleStyle}>
               <Bot size={18} />
               <span>AI: {currentContext.sectionLabel}</span>
-              {activeNotifications.length > 0 && <span style={panelTitleBadgeStyle}>{activeNotifications.length}</span>}
+              {totalActiveNotifications > 0 && <span style={panelTitleBadgeStyle}>{totalActiveNotifications}</span>}
               {currentContext.detailLabel && <span style={panelDetailStyle}>{currentContext.detailLabel}</span>}
             </div>
 
             <div style={floatingPanelHeaderActionsStyle}>
               <button
                 type="button"
+                aria-label={isPinned ? "Открепить AI-виджет" : "Закрепить AI-виджет"}
+                title={isPinned ? "Открепить" : "Закрепить"}
+                onClick={() => setIsPinned((current) => !current)}
+                style={isPinned ? pinnedPanelHeaderButtonStyle : floatingPanelHeaderButtonStyle}
+              >
+                <Pin size={15} fill={isPinned ? "currentColor" : "none"} />
+              </button>
+              <button
+                type="button"
                 aria-label="Свернуть AI-виджет"
                 onClick={() => setIsOpen(false)}
-                style={floatingPanelCloseButtonStyle}
+                style={floatingPanelHeaderButtonStyle}
               >
                 <X size={15} />
               </button>
@@ -105,7 +136,7 @@ export function AiAssistantFloatingDock() {
             primary
           >
             <Bot size={20} />
-            {activeNotifications.length > 0 && <span style={notificationBadgeStyle}>{activeNotifications.length}</span>}
+            {totalActiveNotifications > 0 && <span style={notificationBadgeStyle}>{totalActiveNotifications}</span>}
           </FloatingDockButton>
         </div>
       )}
@@ -223,7 +254,7 @@ const panelDetailStyle: CSSProperties = {
   fontWeight: 800,
 };
 
-const floatingPanelCloseButtonStyle: CSSProperties = {
+const floatingPanelHeaderButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -234,6 +265,12 @@ const floatingPanelCloseButtonStyle: CSSProperties = {
   background: "transparent",
   color: "#ffffff",
   cursor: "pointer",
+};
+
+const pinnedPanelHeaderButtonStyle: CSSProperties = {
+  ...floatingPanelHeaderButtonStyle,
+  background: "#ffffff",
+  color: "#0f172a",
 };
 
 const floatingButtonsStyle: CSSProperties = {
