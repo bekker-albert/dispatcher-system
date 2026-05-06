@@ -8,6 +8,13 @@ export const panelStyle: CSSProperties = {
   minWidth: 0,
 };
 
+export const toolbarStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+};
+
 export const formStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(150px, 1fr)) auto",
@@ -42,6 +49,29 @@ export const buttonStyle: CSSProperties = {
   cursor: "pointer",
 };
 
+export const secondaryButtonStyle: CSSProperties = {
+  ...buttonStyle,
+  borderColor: "#cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
+};
+
+export const messageStyle: CSSProperties = {
+  marginTop: 10,
+  color: "#334155",
+  fontSize: 13,
+};
+
+export const statusBoxStyle: CSSProperties = {
+  marginTop: 12,
+  border: "1px solid #e2e8f0",
+  borderRadius: 10,
+  padding: 14,
+  background: "#f8fafc",
+  display: "grid",
+  gap: 10,
+};
+
 export const tableWrapStyle: CSSProperties = {
   marginTop: 14,
   overflowX: "auto",
@@ -58,6 +88,12 @@ export const cellStyle: CSSProperties = {
   padding: "8px 6px",
   textAlign: "left",
   verticalAlign: "middle",
+};
+
+export const emptyStateCellStyle: CSSProperties = {
+  ...cellStyle,
+  textAlign: "center",
+  color: "#64748b",
 };
 
 export const actionCellStyle: CSSProperties = {

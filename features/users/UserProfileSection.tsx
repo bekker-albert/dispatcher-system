@@ -1,12 +1,13 @@
 "use client";
 
-import { Check, Pencil, X } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useState, type CSSProperties } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import { authRoleLabels, formatAuthDisplayName, type AuthUser } from "@/lib/domain/auth/types";
 import { SectionCard } from "../../shared/ui/layout";
 import { UserManagementPanel } from "./UserManagementPanel";
+import { UserProfileModal } from "./UserProfileModal";
 
 type UserProfile = {
   fullName: string;
@@ -53,33 +54,49 @@ export function UserProfileSection({ userCard }: UserProfileSectionProps) {
     setMessage("");
   };
 
+  const hasUnsavedSelfChanges = hasProfileDraftChanges(draft, createProfileDraft(user));
+
+  const requestCloseSelf = () => {
+    if (savingSelf) return;
+    if (hasUnsavedSelfChanges && !window.confirm("Есть несохраненные изменения профиля. Закрыть форму и потерять их?")) {
+      return;
+    }
+
+    cancelEditSelf();
+  };
+
   const saveSelf = async () => {
     setSavingSelf(true);
     setMessage("");
 
-    const response = await fetch("/api/auth/users", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Dispatcher-Request": "same-origin",
-      },
-      body: JSON.stringify({
-        id: user.id,
-        ...draft,
-        displayName: formatAuthDisplayName(draft),
-      }),
-    });
-    const body = await response.json().catch(() => ({})) as UserSaveResponse;
-    setSavingSelf(false);
+    try {
+      const response = await fetch("/api/auth/users", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Dispatcher-Request": "same-origin",
+        },
+        body: JSON.stringify({
+          id: user.id,
+          ...draft,
+          displayName: formatAuthDisplayName(draft),
+        }),
+      });
+      const body = await response.json().catch(() => ({})) as UserSaveResponse;
 
-    if (!response.ok || !body.user) {
-      setMessage(body.error || "Профиль не сохранен");
-      return;
+      if (!response.ok || !body.user) {
+        setMessage(body.error || "Профиль не сохранен");
+        return;
+      }
+
+      updateCurrentUser(body.user);
+      setEditingSelf(false);
+      setMessage("Профиль сохранен");
+    } catch {
+      setMessage("Не удалось сохранить профиль");
+    } finally {
+      setSavingSelf(false);
     }
-
-    updateCurrentUser(body.user);
-    setEditingSelf(false);
-    setMessage("Профиль сохранен");
   };
 
   return (
@@ -89,19 +106,41 @@ export function UserProfileSection({ userCard }: UserProfileSectionProps) {
           <ProfileCard
             user={user}
             userCard={userCard}
-            editing={editingSelf}
-            draft={draft}
             message={message}
-            saving={savingSelf}
             onStartEdit={startEditSelf}
-            onCancelEdit={cancelEditSelf}
-            onSave={() => void saveSelf()}
-            onChangeDraft={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           />
         </div>
 
         {canManageUsers ? <UserManagementPanel /> : null}
       </div>
+
+      {editingSelf ? (
+        <UserProfileModal
+          title="Редактирование профиля"
+          description="ФИО из карточки используется как имя в верхнем меню."
+          disableClose={savingSelf}
+          onClose={requestCloseSelf}
+          footer={(
+            <>
+              <button type="button" onClick={requestCloseSelf} style={secondaryButtonStyle}>
+                Отмена
+              </button>
+              <button type="button" onClick={() => void saveSelf()} disabled={savingSelf} style={primaryButtonStyle}>
+                Сохранить
+              </button>
+            </>
+          )}
+        >
+          <div style={editGridStyle}>
+            <input value={draft.lastName} onChange={(event) => setDraft((current) => ({ ...current, lastName: event.target.value }))} placeholder="Фамилия" style={inputStyle} />
+            <input value={draft.firstName} onChange={(event) => setDraft((current) => ({ ...current, firstName: event.target.value }))} placeholder="Имя" style={inputStyle} />
+            <input value={draft.middleName} onChange={(event) => setDraft((current) => ({ ...current, middleName: event.target.value }))} placeholder="Отчество" style={inputStyle} />
+            <input value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="Почта" style={inputStyle} />
+            <input value={draft.phone} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="Телефон" style={inputStyle} />
+            <input value={draft.positionTitle} onChange={(event) => setDraft((current) => ({ ...current, positionTitle: event.target.value }))} placeholder="Должность" style={inputStyle} />
+          </div>
+        </UserProfileModal>
+      ) : null}
     </SectionCard>
   );
 }
@@ -109,25 +148,13 @@ export function UserProfileSection({ userCard }: UserProfileSectionProps) {
 function ProfileCard({
   user,
   userCard,
-  editing,
-  draft,
   message,
-  saving,
   onStartEdit,
-  onCancelEdit,
-  onSave,
-  onChangeDraft,
 }: {
   user: AuthUser;
   userCard: UserProfile;
-  editing: boolean;
-  draft: ProfileDraft;
   message: string;
-  saving: boolean;
   onStartEdit: () => void;
-  onCancelEdit: () => void;
-  onSave: () => void;
-  onChangeDraft: (patch: Partial<ProfileDraft>) => void;
 }) {
   const canManageUsers = user.canManageUsers;
 
@@ -139,44 +166,22 @@ function ProfileCard({
           <div style={nameStyle}>{user.displayName || userCard.fullName}</div>
           <div style={roleStyle}>{authRoleLabels[user.role]}</div>
         </div>
-        {editing ? (
-          <div style={actionGroupStyle}>
-            <button type="button" onClick={onSave} disabled={saving} style={iconButtonStyle} title="Сохранить">
-              <Check size={15} aria-hidden />
-            </button>
-            <button type="button" onClick={onCancelEdit} style={iconButtonStyle} title="Отменить">
-              <X size={15} aria-hidden />
-            </button>
-          </div>
-        ) : (
-          <button type="button" onClick={onStartEdit} style={iconButtonStyle} title="Редактировать профиль">
-            <Pencil size={15} aria-hidden />
-          </button>
-        )}
+        <button type="button" onClick={onStartEdit} style={iconButtonStyle} title="Редактировать профиль">
+          <Pencil size={15} aria-hidden />
+        </button>
       </div>
 
-      {editing ? (
-        <div style={editGridStyle}>
-          <input value={draft.lastName} onChange={(event) => onChangeDraft({ lastName: event.target.value })} placeholder="Фамилия" style={inputStyle} />
-          <input value={draft.firstName} onChange={(event) => onChangeDraft({ firstName: event.target.value })} placeholder="Имя" style={inputStyle} />
-          <input value={draft.middleName} onChange={(event) => onChangeDraft({ middleName: event.target.value })} placeholder="Отчество" style={inputStyle} />
-          <input value={draft.email} onChange={(event) => onChangeDraft({ email: event.target.value })} placeholder="Почта" style={inputStyle} />
-          <input value={draft.phone} onChange={(event) => onChangeDraft({ phone: event.target.value })} placeholder="Телефон" style={inputStyle} />
-          <input value={draft.positionTitle} onChange={(event) => onChangeDraft({ positionTitle: event.target.value })} placeholder="Должность" style={inputStyle} />
-        </div>
-      ) : (
-        <div style={detailsGridStyle}>
-          <ProfileField label="Логин" value={user.login} />
-          <ProfileField label="Почта" value={user.email || "—"} />
-          <ProfileField label="Телефон" value={user.phone || "—"} />
-          <ProfileField label="Должность" value={user.positionTitle || userCard.department} />
-          <ProfileField
-            label="Права доступа"
-            value={canManageUsers ? "Управление пользователями" : userCard.access}
-          />
-          <ProfileField label="Тип карточки" value={canManageUsers ? "Администратор" : "Пользователь"} />
-        </div>
-      )}
+      <div style={detailsGridStyle}>
+        <ProfileField label="Логин" value={user.login} />
+        <ProfileField label="Почта" value={user.email || "—"} />
+        <ProfileField label="Телефон" value={user.phone || "—"} />
+        <ProfileField label="Должность" value={user.positionTitle || userCard.department} />
+        <ProfileField
+          label="Права доступа"
+          value={canManageUsers ? "Управление пользователями" : userCard.access}
+        />
+        <ProfileField label="Тип карточки" value={canManageUsers ? "Администратор" : "Пользователь"} />
+      </div>
 
       {message ? <div style={messageStyle}>{message}</div> : null}
     </div>
@@ -201,6 +206,15 @@ function createProfileDraft(user: AuthUser): ProfileDraft {
     phone: user.phone,
     positionTitle: user.positionTitle,
   };
+}
+
+function hasProfileDraftChanges(left: ProfileDraft, right: ProfileDraft) {
+  return left.lastName !== right.lastName
+    || left.firstName !== right.firstName
+    || left.middleName !== right.middleName
+    || left.email !== right.email
+    || left.phone !== right.phone
+    || left.positionTitle !== right.positionTitle;
 }
 
 function getInitials(name: string) {
@@ -275,9 +289,8 @@ const detailsGridStyle: CSSProperties = {
 
 const editGridStyle: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr",
+  gridTemplateColumns: "repeat(2, minmax(180px, 1fr))",
   gap: 8,
-  marginTop: 14,
 };
 
 const inputStyle: CSSProperties = {
@@ -323,9 +336,21 @@ const iconButtonStyle: CSSProperties = {
   cursor: "pointer",
 };
 
-const actionGroupStyle: CSSProperties = {
-  display: "inline-flex",
-  gap: 6,
+const primaryButtonStyle: CSSProperties = {
+  border: "1px solid #0f172a",
+  borderRadius: 8,
+  background: "#0f172a",
+  color: "#ffffff",
+  padding: "8px 12px",
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
+const secondaryButtonStyle: CSSProperties = {
+  ...primaryButtonStyle,
+  borderColor: "#cbd5e1",
+  background: "#ffffff",
+  color: "#0f172a",
 };
 
 const messageStyle: CSSProperties = {

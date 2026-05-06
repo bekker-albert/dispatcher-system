@@ -12,6 +12,7 @@ import {
   appNavigationEventName,
   type AppNavigationEventDetail,
 } from "@/lib/domain/navigation/appNavigationEvents";
+import { resolveAiAssistantPresetTab as resolveDomainPresetTab } from "@/lib/domain/ai-assistant/intent-routing";
 import type { AiAssistantTab } from "@/lib/domain/ai-assistant/types";
 
 export function AiAssistantFloatingChat({
@@ -156,48 +157,7 @@ export function AiAssistantFloatingChat({
 }
 
 function resolvePresetTab(text: string): AiAssistantTab | null {
-  const normalizedText = text.trim().toLowerCase();
-  if (!normalizedText) return null;
-
-  if (
-    normalizedText.includes("входящ")
-    || normalizedText.includes("решени")
-  ) {
-    return "inbox";
-  }
-
-  if (
-    normalizedText.includes("чернов")
-    || normalizedText.includes("документ")
-  ) {
-    return "drafts";
-  }
-
-  if (
-    normalizedText.includes("истори")
-    || normalizedText.includes("последн")
-    || normalizedText.includes("аудит")
-    || normalizedText.includes("действ")
-  ) {
-    return "history";
-  }
-
-  if (
-    normalizedText.includes("настрой")
-    || normalizedText.includes("интеграц")
-    || normalizedText.includes("агент")
-  ) {
-    return "settings";
-  }
-
-  if (
-    normalizedText.includes("главн")
-    || normalizedText.includes("сводк")
-  ) {
-    return "main";
-  }
-
-  return null;
+  return resolveDomainPresetTab(text);
 }
 
 const chatContentStyle = {

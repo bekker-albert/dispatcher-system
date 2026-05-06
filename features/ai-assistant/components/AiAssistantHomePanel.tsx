@@ -45,6 +45,7 @@ import {
   timeStyle,
   todayRowStyle,
 } from "@/features/ai-assistant/components/home/homeStyles";
+import { resolveAiAssistantRequestResultTarget } from "@/lib/domain/ai-assistant/intent-routing";
 
 type QuickCommand = {
   label: string;
@@ -146,7 +147,7 @@ export function AiAssistantHomePanel({
         </div>
         {lastSubmittedRequest ? (
           <div style={requestFeedbackStyle}>
-            <div>Запрос принят: {lastSubmittedRequest}</div>
+            <div>Запрос добавлен в текущий сеанс: {lastSubmittedRequest}</div>
             <div style={miniActionsStyle}>
               <button type="button" onClick={() => onSetActiveTab(lastSubmittedTargetTab)} style={primaryMiniButtonStyle}>
                 Открыть {formatRequestResultTarget(lastSubmittedTargetTab)}
@@ -311,17 +312,7 @@ function formatDraftStatus(status: string) {
 }
 
 function resolveRequestResultTarget(text: string): AiAssistantTab {
-  const normalized = text.toLowerCase();
-  if (
-    normalized.includes("служеб")
-    || normalized.includes("командиров")
-    || normalized.includes("письм")
-    || normalized.includes("чернов")
-  ) {
-    return "drafts";
-  }
-
-  return "inbox";
+  return resolveAiAssistantRequestResultTarget(text);
 }
 
 function formatRequestResultTarget(tab: AiAssistantTab) {

@@ -60,6 +60,33 @@ function normalizeLogin(login: string) {
   return login.trim().toLowerCase();
 }
 
+function isDevelopmentRuntime() {
+  return process.env.NODE_ENV !== "production";
+}
+
+function isDatabaseUnavailableError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  if (["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST"].includes(code)) return true;
+
+  const message = error instanceof Error ? error.message : "";
+  return /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|PROTOCOL_CONNECTION_LOST/i.test(message);
+}
+
+function authenticateInitialAuthUser(login: string, password: string) {
+  const initialUser = getInitialAuthUserConfig();
+  if (
+    initialUser
+    && normalizeLogin(login) === normalizeLogin(initialUser.login)
+    && verifyPlainPassword(password, initialUser.password)
+  ) {
+    return getInitialAuthBootstrapUser();
+  }
+
+  return null;
+}
+
 function normalizeText(value: string | undefined | null) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -212,26 +239,25 @@ export async function ensureInitialAuthUser() {
 }
 
 export async function authenticateAuthUser(login: string, password: string) {
-  await ensureInitialAuthUser();
+  try {
+    await ensureInitialAuthUser();
 
-  const record = await loadAuthUserRecordByLogin(login);
-  if (record) {
-    if (!record.active) return null;
+    const record = await loadAuthUserRecordByLogin(login);
+    if (record) {
+      if (!record.active) return null;
 
-    const valid = await verifyPassword(password, record.password_hash);
-    return valid ? toAuthUser(record) : null;
+      const valid = await verifyPassword(password, record.password_hash);
+      return valid ? toAuthUser(record) : null;
+    }
+  } catch (error) {
+    if (!isDevelopmentRuntime() || !isDatabaseUnavailableError(error)) {
+      throw error;
+    }
+
+    return authenticateInitialAuthUser(login, password);
   }
 
-  const initialUser = getInitialAuthUserConfig();
-  if (
-    initialUser
-    && normalizeLogin(login) === normalizeLogin(initialUser.login)
-    && verifyPlainPassword(password, initialUser.password)
-  ) {
-    return getInitialAuthBootstrapUser();
-  }
-
-  return null;
+  return authenticateInitialAuthUser(login, password);
 }
 
 export async function getAuthUserById(userId: string) {

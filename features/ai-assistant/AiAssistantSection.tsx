@@ -18,6 +18,10 @@ import {
 } from "@/lib/domain/navigation/appNavigationEvents";
 import type { AiAssistantTab } from "@/features/ai-assistant/types";
 import type { SettingsSection } from "@/features/ai-assistant/components/AiAssistantSettingsPanel";
+import {
+  createAiAssistantWorkspaceSessionState,
+  type AiAssistantWorkspaceSessionState,
+} from "@/features/ai-assistant/lib/workspaceSessionState";
 
 const aiAssistantTabIds: AiAssistantTab[] = ["main", "inbox", "drafts", "history", "settings"];
 
@@ -73,6 +77,9 @@ const AiAssistantSettingsPanel = dynamic(
 
 export function AiAssistantSection() {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("overview");
+  const [workspaceSessionState, setWorkspaceSessionState] = useState<AiAssistantWorkspaceSessionState>(
+    createAiAssistantWorkspaceSessionState,
+  );
   const {
     activeTab,
     agentActivationDrafts,
@@ -142,6 +149,8 @@ export function AiAssistantSection() {
           documents={viewModel.documents}
           documentologItems={viewModel.documentologItems}
           mailDrafts={viewModel.mailDrafts}
+          onSessionStateChange={setWorkspaceSessionState}
+          sessionState={workspaceSessionState}
         />
       )}
 

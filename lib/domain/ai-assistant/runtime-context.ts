@@ -113,7 +113,7 @@ function runtimeContextByTopTab(topTab: TopTab): Omit<AiAssistantRuntimeContext,
     },
     "ai-assistant": {
       sectionKey: "ai-assistant",
-      sectionLabel: "AI Center",
+      sectionLabel: "AI-ассистент",
       quickActions: ["Показать входящие", "Открыть черновики", "Проверить историю"],
       suggestions: ["Покажи задачи на сегодня", "Покажи черновики", "Проверь, что ждет решения"],
     },

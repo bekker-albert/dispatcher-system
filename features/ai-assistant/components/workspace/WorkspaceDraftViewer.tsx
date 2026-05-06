@@ -49,7 +49,7 @@ export function WorkspaceDraftViewer({
               <div style={aiAssistantMutedTextStyle}>{selectedDraft.subtitle}</div>
             </div>
             <div style={viewerActionsStyle}>
-              <button type="button" onClick={onStartEdit} style={viewerButtonStyle}>
+              <button type="button" onClick={onStartEdit} style={viewerButtonStyle} disabled={isEditing}>
                 <Pencil size={15} /> Редактировать
               </button>
               <button type="button" onClick={onSave} style={viewerButtonStyle} disabled={!isEditing}>

@@ -6,6 +6,7 @@ import type {
   AiAssistantPlannerItem,
   AiAssistantTask,
 } from "./types";
+import { classifyAiAssistantRequestIntent } from "./intent-routing";
 
 export type AiAssistantRequestArtifacts = {
   approval?: AiAssistantApprovalAction;
@@ -29,22 +30,22 @@ export function createAiAssistantRequestArtifacts({
   workDate,
 }: CreateRequestArtifactsInput): AiAssistantRequestArtifacts {
   const normalizedText = requestText.trim();
-  const normalizedLower = normalizedText.toLowerCase();
   const idSuffix = sanitizeArtifactId(createdAt);
+  const intent = classifyAiAssistantRequestIntent(normalizedText);
 
-  if (normalizedLower.includes("служеб") || normalizedLower.includes("командиров")) {
+  if (intent === "document") {
     return createDocumentRequest(normalizedText, idSuffix, createdAt, workDate);
   }
 
-  if (normalizedLower.includes("сообщ") || normalizedLower.includes("подряд")) {
+  if (intent === "message") {
     return createContractorMessageRequest(normalizedText, idSuffix, createdAt, workDate);
   }
 
-  if (normalizedLower.includes("причин") || normalizedLower.includes("невыполн")) {
+  if (intent === "report-reason") {
     return createReportReasonRequest(normalizedText, idSuffix, createdAt, workDate);
   }
 
-  if (normalizedLower.includes("техник") || normalizedLower.includes("ремонт")) {
+  if (intent === "equipment") {
     return createEquipmentCheckRequest(normalizedText, idSuffix, createdAt, workDate);
   }
 
@@ -63,7 +64,7 @@ function createDocumentRequest(
   const draftText = `Подготовить служебную записку по запросу: ${requestText}`;
 
   return {
-    assistantReply: "Создал черновик служебки и поставил действие в очередь решений.",
+    assistantReply: "Подготовил локальный черновик служебки и добавил действие в текущий сеанс.",
     task: createBaseTask({
       approvalActionId: approvalId,
       approvalStatus: "required",
@@ -111,7 +112,7 @@ function createContractorMessageRequest(
   const draftText = `Просим проверить информацию по запросу диспетчерской службы: ${requestText}`;
 
   return {
-    assistantReply: "Подготовил сообщение подрядчику. Отправка останется заблокированной до согласования.",
+    assistantReply: "Подготовил локальный черновик сообщения подрядчику. Отправка останется заблокированной до согласования.",
     task: createBaseTask({
       approvalActionId: approvalId,
       approvalStatus: "required",
@@ -162,7 +163,7 @@ function createReportReasonRequest(
   const draftText = `Проверить причины невыполнения плана и подготовить краткий вывод: ${requestText}`;
 
   return {
-    assistantReply: "Создал задачу на проверку причины. Итог попадет в решения перед использованием в отчете.",
+    assistantReply: "Добавил локальную задачу на проверку причины. Итог нужно проверить во входящих перед использованием.",
     task: createBaseTask({
       approvalActionId: approvalId,
       approvalStatus: "required",
@@ -199,7 +200,7 @@ function createEquipmentCheckRequest(
   const taskId = `ai-request-task-${idSuffix}`;
 
   return {
-    assistantReply: "Создал задачу на проверку техники. Сейчас это черновой поиск без внешних интеграций.",
+    assistantReply: "Добавил локальную задачу на проверку техники. Сейчас это черновой поиск без внешних интеграций.",
     task: createBaseTask({
       approvalStatus: "not-required",
       channel: "app",
@@ -226,7 +227,7 @@ function createPlannerRequest(
   const plannerItemId = `ai-request-plan-${idSuffix}`;
 
   return {
-    assistantReply: "Создал задачу на рабочую дату и сохранил ее как черновое напоминание в AI-ассистенте.",
+    assistantReply: "Добавил локальную задачу на рабочую дату и сохранил ее как черновое напоминание в текущем сеансе AI-ассистента.",
     task: createBaseTask({
       approvalStatus: "not-required",
       channel: "app",

@@ -11,7 +11,10 @@ const appHeaderSource = readFileSync(resolve(root, "components/layout/AppHeader.
 const appHeaderStylesSource = readFileSync(resolve(root, "components/layout/AppHeaderStyles.ts"), "utf8");
 const authSessionButtonSource = readFileSync(resolve(root, "features/auth/AuthSessionButton.tsx"), "utf8");
 const userProfileSource = readFileSync(resolve(root, "features/users/UserProfileSection.tsx"), "utf8");
-const userManagementSource = readFileSync(resolve(root, "features/users/UserManagementPanel.tsx"), "utf8");
+const userManagementSource = readJoinedSources([
+  resolve(root, "features/users/UserManagementPanel.tsx"),
+  resolve(root, "features/users/UserManagementFields.tsx"),
+]);
 const authUsersRouteSource = readFileSync(resolve(root, "app/api/auth/users/route.ts"), "utf8");
 const navigationTabsSource = readFileSync(resolve(root, "lib/domain/navigation/tabs.ts"), "utf8");
 const adminNavigationSource = readFileSync(resolve(root, "lib/domain/admin/navigation.ts"), "utf8");
@@ -65,6 +68,8 @@ assert.match(userProfileSource, /Административный профиль
 assert.match(userProfileSource, /Профиль пользователя/);
 assert.match(userProfileSource, /canManageUsers \? <UserManagementPanel \/> : null/);
 assert.match(userProfileSource, /updateCurrentUser/);
+assert.match(userProfileSource, /Есть несохраненные изменения профиля/);
+assert.match(userProfileSource, /disableClose=\{savingSelf\}/);
 assert.match(userManagementSource, /Журнал пользователей/);
 assert.match(userManagementSource, /Фамилия Имя Отчество/);
 assert.match(userManagementSource, /Почта/);
@@ -74,17 +79,33 @@ assert.match(userManagementSource, /method: "DELETE"/);
 assert.match(userManagementSource, /toggleActive/);
 assert.match(userManagementSource, /Trash2/);
 assert.match(userManagementSource, /Новый пароль/);
+assert.match(userManagementSource, /Повторить загрузку/);
+assert.match(userManagementSource, /Есть несохраненные изменения пользователя/);
+assert.match(userManagementSource, /Есть несохраненные изменения нового пользователя/);
+assert.match(userManagementSource, /createDraftFromUser/);
+assert.match(userManagementSource, /hasUserDraftChanges/);
 assert.match(userManagementSource, /useAuth/);
 assert.match(userManagementSource, /user: currentUser, updateCurrentUser/);
 assert.match(userManagementSource, /body\.user && body\.user\.id === currentUser\.id/);
 assert.match(userManagementSource, /updateCurrentUser\(body\.user\)/);
+assert.match(authSources, /select value=\{draft\.role\}/);
+assert.match(authSources, /role: draft\.role/);
 assert.match(authUsersRouteSource, /export async function PUT/);
 assert.match(authUsersRouteSource, /export async function DELETE/);
 assert.match(authUsersRouteSource, /function hasBodyField/);
-assert.match(authUsersRouteSource, /const role: AuthUserRole \| undefined = hasBodyField\(body, "role"\)/);
-assert.match(authUsersRouteSource, /const canManageUsers = hasBodyField\(body, "canManageUsers"\)/);
+assert.match(authUsersRouteSource, /function getBooleanField/);
+assert.match(authUsersRouteSource, /function getAuthUserRoleField/);
+assert.match(authUsersRouteSource, /function validateTabPermissionsInput/);
+assert.match(authUsersRouteSource, /let role: AuthUserRole \| undefined/);
+assert.match(authUsersRouteSource, /let canManageUsers: boolean \| undefined/);
+assert.match(authUsersRouteSource, /let active: boolean \| undefined/);
+assert.match(authUsersRouteSource, /role = getOptionalAuthUserRole\(body, "role"\)/);
+assert.match(authUsersRouteSource, /canManageUsers = getOptionalBooleanField\(body, "canManageUsers"\)/);
+assert.match(authUsersRouteSource, /active = getOptionalBooleanField\(body, "active"\)/);
 assert.match(authUsersRouteSource, /canManageUsers === false/);
 assert.match(authUsersRouteSource, /tabPermissions: manager \? tabPermissions : undefined/);
+assert.doesNotMatch(authUsersRouteSource, /Boolean\(body\.canManageUsers\)/);
+assert.doesNotMatch(authUsersRouteSource, /body\.active !== false/);
 assert.match(authSources, /updateAuthUser/);
 assert.match(authSources, /deleteAuthUser/);
 assert.match(authSources, /last_name/);
@@ -100,7 +121,7 @@ assert.match(databaseRouterSource, /createDatabaseAuthRequiredResponse/);
 
 assert.match(envExampleSource, /AUTH_REQUIRED=true/);
 assert.match(envExampleSource, /AUTH_SESSION_SECRET=/);
-assert.match(envExampleSource, /AUTH_INITIAL_LOGIN=albert\.bekker/);
+assert.match(envExampleSource, /AUTH_INITIAL_LOGIN=dispatcher\.admin/);
 assert.match(envExampleSource, new RegExp(["AUTH_INITIAL_PASSWORD", "="].join("")));
 assert.match(readmeSource, /AUTH_INITIAL_PASSWORD/);
 assert.match(readmeSource, /AUTH_SESSION_SECRET/);

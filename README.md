@@ -126,9 +126,9 @@ Initial access is configured through server environment variables only:
 ```bash
 AUTH_REQUIRED=true
 AUTH_SESSION_SECRET=
-AUTH_INITIAL_LOGIN=albert.bekker
+AUTH_INITIAL_LOGIN=dispatcher.admin
 AUTH_INITIAL_PASSWORD=
-AUTH_INITIAL_DISPLAY_NAME=Альберт Беккер
+AUTH_INITIAL_DISPLAY_NAME=Dispatcher Admin
 ```
 
 Do not commit real passwords or session secrets. Put the real

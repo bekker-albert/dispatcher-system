@@ -31,6 +31,7 @@ const aiTypesSource = readJoinedSources([
 ]);
 const aiTaskTypesSource = readFileSync(resolve(root, "lib/domain/ai-assistant/types/tasks.ts"), "utf8");
 const aiStatusSource = readFileSync(resolve(root, "lib/domain/ai-assistant/status.ts"), "utf8");
+const aiIntentRoutingSource = readFileSync(resolve(root, "lib/domain/ai-assistant/intent-routing.ts"), "utf8");
 const aiSectionSource = readFileSync(resolve(root, "features/ai-assistant/AiAssistantSection.tsx"), "utf8");
 const aiTabsSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantTabs.tsx"), "utf8");
 const aiHomePanelSource = readFileSync(resolve(root, "features/ai-assistant/components/AiAssistantHomePanel.tsx"), "utf8");
@@ -144,6 +145,8 @@ assert.match(aiHomePanelSource, /onSetActiveTab\("inbox"\)/);
 assert.match(aiHomePanelSource, /onSetActiveTab\("drafts"\)/);
 assert.match(aiHomePanelSource, /onSetActiveTab\("history"\)/);
 assert.match(aiHomePanelSource, /resolveRequestResultTarget/);
+assert.match(aiHomePanelSource, /resolveAiAssistantRequestResultTarget/);
+assert.match(aiHomePanelSource, /Запрос добавлен в текущий сеанс/);
 assert.match(aiHomePanelSource, /Открыть \{formatRequestResultTarget/);
 assert.match(aiChatMockSource, /во Входящие/);
 assert.doesNotMatch(aiChatMockSource, /вкладку Задачи/);
@@ -253,7 +256,10 @@ assert.match(requestArtifactsSource, /createDocumentRequest/);
 assert.match(requestArtifactsSource, /createContractorMessageRequest/);
 assert.match(requestArtifactsSource, /createReportReasonRequest/);
 assert.match(requestArtifactsSource, /createEquipmentCheckRequest/);
+assert.match(requestArtifactsSource, /classifyAiAssistantRequestIntent/);
 assert.match(requestArtifactsSource, /createPlannerRequest/);
+assert.match(requestArtifactsSource, /Подготовил локальный черновик/);
+assert.match(requestArtifactsSource, /Добавил локальную задачу/);
 assert.match(requestArtifactsSource, /title: requestText/);
 
 assert.doesNotMatch(aiTabsSource, /\{ id: "chat"/);
@@ -291,6 +297,7 @@ assert.match(aiStateSource, /currentDateTime: resolvedCurrentDateTime/);
 assert.match(aiRuntimeContextSource, /createAiAssistantRuntimeContext/);
 assert.match(aiRuntimeContextSource, /quickActions/);
 assert.match(aiRuntimeContextSource, /suggestions/);
+assert.match(aiRuntimeContextSource, /AI-ассистент/);
 assert.match(floatingDockHostSource, /dynamic\(/);
 assert.match(floatingDockHostSource, /AiAssistantFloatingDock/);
 assert.doesNotMatch(floatingDockSource, /AiAssistantFloatingNotifications/);
@@ -319,6 +326,7 @@ assert.match(floatingChatSource, /onSetNotificationDecision/);
 assert.match(floatingChatSource, /quickActions: string\[\]/);
 assert.match(floatingChatSource, /suggestions: string\[\]/);
 assert.match(floatingChatSource, /Что сделать в разделе/);
+assert.match(floatingChatSource, /resolveDomainPresetTab/);
 assert.doesNotMatch(floatingChatSource, /position: "fixed"/);
 assert.doesNotMatch(floatingChatSource, /onOpenChange/);
 assert.match(floatingNotificationsSource, /className="ai-floating-notifications"/);
@@ -412,3 +420,9 @@ function readJoinedSources(files: string[]) {
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+assert.match(aiIntentRoutingSource, /export function classifyAiAssistantRequestIntent/);
+assert.match(aiIntentRoutingSource, /export function resolveAiAssistantRequestResultTarget/);
+assert.match(aiIntentRoutingSource, /export function resolveAiAssistantPresetTab/);
+assert.match(aiIntentRoutingSource, /intent === "document" \|\| intent === "message"/);
+assert.match(aiIntentRoutingSource, /hasAiAssistantNavigationCue/);
+assert.match(aiIntentRoutingSource, /normalizedText\.includes\("задач"\)/);

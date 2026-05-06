@@ -41,6 +41,26 @@ function getString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+function getBooleanField(value: unknown, fieldName: string) {
+  if (typeof value !== "boolean") {
+    throw new Error(`Поле ${fieldName} должно быть true или false`);
+  }
+
+  return value;
+}
+
+function getAuthUserRoleField(value: unknown, fieldName: string): AuthUserRole {
+  if (typeof value !== "string") {
+    throw new Error(`Поле ${fieldName} должно содержать роль пользователя`);
+  }
+
+  if (value !== "admin" && value !== "dispatcher" && value !== "dispatch-chief") {
+    throw new Error(`Поле ${fieldName} содержит неизвестную роль`);
+  }
+
+  return value;
+}
+
 function hasBodyField(body: Record<string, unknown>, key: string) {
   return Object.prototype.hasOwnProperty.call(body, key);
 }
@@ -57,8 +77,42 @@ function getProfilePayload(body: CreateUserRequestBody) {
   };
 }
 
-function getTabPermissions(value: unknown): AuthTabPermissions {
+function validateTabPermissionsInput(value: unknown): AuthTabPermissions {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Поле tabPermissions должно быть объектом");
+  }
+
+  for (const [tabId, access] of Object.entries(value)) {
+    if (!access || typeof access !== "object" || Array.isArray(access)) {
+      throw new Error(`Права вкладки ${tabId} должны быть объектом`);
+    }
+
+    const rawAccess = access as Record<string, unknown>;
+    if (typeof rawAccess.view !== "boolean" || typeof rawAccess.edit !== "boolean") {
+      throw new Error(`Права вкладки ${tabId} должны содержать boolean поля view и edit`);
+    }
+  }
+
   return normalizeAuthTabPermissions(value);
+}
+
+function getTabPermissions(value: unknown): AuthTabPermissions {
+  return validateTabPermissionsInput(value);
+}
+
+function getOptionalAuthUserRole(body: Record<string, unknown>, key: string) {
+  if (!hasBodyField(body, key)) return undefined;
+  return getAuthUserRoleField(body[key], key);
+}
+
+function getOptionalBooleanField(body: Record<string, unknown>, key: string) {
+  if (!hasBodyField(body, key)) return undefined;
+  return getBooleanField(body[key], key);
+}
+
+function getOptionalTabPermissions(body: Record<string, unknown>, key: string) {
+  if (!hasBodyField(body, key)) return undefined;
+  return getTabPermissions(body[key]);
 }
 
 export async function GET(request: Request) {
@@ -79,19 +133,25 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({})) as CreateUserRequestBody;
-  const login = getString(body.login);
-  const password = getString(body.password);
-  const role: AuthUserRole = normalizeAuthUserRole(body.role);
-  const canManageUsers = Boolean(body.canManageUsers);
-
   try {
+    const login = getString(body.login);
+    const password = getString(body.password);
+    const role: AuthUserRole = hasBodyField(body, "role")
+      ? getAuthUserRoleField(body.role, "role")
+      : normalizeAuthUserRole(body.role);
+    const canManageUsers = hasBodyField(body, "canManageUsers")
+      ? getBooleanField(body.canManageUsers, "canManageUsers")
+      : false;
+
     const user = await createAuthUser({
       login,
       ...getProfilePayload(body),
       password,
       role,
       canManageUsers,
-      tabPermissions: getTabPermissions(body.tabPermissions),
+      tabPermissions: hasBodyField(body, "tabPermissions")
+        ? getTabPermissions(body.tabPermissions)
+        : {},
     });
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
@@ -113,17 +173,22 @@ export async function PUT(request: Request) {
   }
 
   const manager = requireUserManager(session);
-  const password = getString(body.password) || undefined;
-  const role: AuthUserRole | undefined = hasBodyField(body, "role")
-    ? normalizeAuthUserRole(body.role)
-    : undefined;
-  const canManageUsers = hasBodyField(body, "canManageUsers")
-    ? Boolean(body.canManageUsers)
-    : undefined;
-  const active = hasBodyField(body, "active") ? body.active !== false : undefined;
-  const tabPermissions = hasBodyField(body, "tabPermissions")
-    ? getTabPermissions(body.tabPermissions)
-    : undefined;
+  let password: string | undefined;
+  let role: AuthUserRole | undefined;
+  let canManageUsers: boolean | undefined;
+  let active: boolean | undefined;
+  let tabPermissions: AuthTabPermissions | undefined;
+
+  try {
+    password = getString(body.password) || undefined;
+    role = getOptionalAuthUserRole(body, "role");
+    canManageUsers = getOptionalBooleanField(body, "canManageUsers");
+    active = getOptionalBooleanField(body, "active");
+    tabPermissions = getOptionalTabPermissions(body, "tabPermissions");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Пользователь не сохранен";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 
   if (manager && isSelfUpdate && active === false) {
     return NextResponse.json({ error: "Нельзя заблокировать свою учетную запись" }, { status: 400 });
