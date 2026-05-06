@@ -30,6 +30,7 @@ import {
 } from "./UserManagementStyles";
 import { formatDisplayNameDescription, PermissionEditor, UserDraftFields } from "./UserManagementFields";
 import { UserProfileModal } from "./UserProfileModal";
+import { UserRegistrationRequestsPanel } from "./UserRegistrationRequestsPanel";
 
 type UserListResponse = {
   users?: AuthUserListItem[];
@@ -300,7 +301,9 @@ export function UserManagementPanel() {
   };
 
   return (
-    <section style={panelStyle}>
+    <>
+      <UserRegistrationRequestsPanel onApproved={loadUsers} />
+      <section style={panelStyle}>
       <div style={toolbarStyle}>
         <div style={{ fontWeight: 900, fontSize: 18 }}>Журнал пользователей</div>
         <button type="button" onClick={startCreate} disabled={loading || initialLoading} style={buttonStyle} title="Создать пользователя">
@@ -412,6 +415,7 @@ export function UserManagementPanel() {
           <PermissionEditor draft={editDraft} onChange={updateEditDraft} />
         </UserProfileModal>
       ) : null}
-    </section>
+      </section>
+    </>
   );
 }

@@ -28,6 +28,28 @@ export type AuthUserListItem = AuthUser & {
   updatedAt?: string;
 };
 
+export type AuthRegistrationRequestStatus = "pending" | "approved" | "rejected";
+
+export type AuthRegistrationRequest = {
+  id: string;
+  login: string;
+  displayName: string;
+  lastName: string;
+  firstName: string;
+  middleName: string;
+  email: string;
+  phone: string;
+  positionTitle: string;
+  status: AuthRegistrationRequestStatus;
+  reviewedByUserId?: string;
+  reviewedByDisplayName?: string;
+  decisionComment: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AuthPasswordResetChannel = "email" | "phone";
+
 export type AuthSession = {
   user: AuthUser;
   expiresAt: string;

@@ -44,6 +44,13 @@ type CreateAuthUserInput = AuthProfileInput & {
   canManageUsers: boolean;
 };
 
+type CreateAuthUserFromHashInput = AuthProfileInput & {
+  login: string;
+  passwordHash: string;
+  role: AuthUserRole;
+  canManageUsers: boolean;
+};
+
 type UpdateAuthUserInput = AuthProfileInput & {
   id: string;
   password?: string;
@@ -282,17 +289,16 @@ export async function listAuthUsers() {
   return rows.map(toAuthUserListItem);
 }
 
-export async function createAuthUser(input: CreateAuthUserInput) {
+async function createAuthUserWithPasswordHash(input: CreateAuthUserFromHashInput) {
   const login = normalizeLogin(input.login);
   if (!login) throw new Error("Логин обязателен");
-  if (input.password.length < 8) throw new Error("Пароль должен быть не короче 8 символов");
+  if (!input.passwordHash) throw new Error("Пароль не подготовлен");
 
   const profile = normalizeProfileInput(input);
   if (!profile.lastName) throw new Error("Фамилия обязательна");
   if (!profile.firstName) throw new Error("Имя обязательно");
 
   const userId = createUserId();
-  const passwordHash = await hashPassword(input.password);
   await authExecute(
     `INSERT INTO auth_users
       (
@@ -325,7 +331,7 @@ export async function createAuthUser(input: CreateAuthUserInput) {
       input.role,
       input.canManageUsers ? 1 : 0,
       serializeTabPermissions(profile.tabPermissions),
-      passwordHash,
+      input.passwordHash,
     ],
   );
 
@@ -333,6 +339,25 @@ export async function createAuthUser(input: CreateAuthUserInput) {
   if (!record) throw new Error("Пользователь не создан");
 
   return toAuthUserListItem(record);
+}
+
+export async function createAuthUser(input: CreateAuthUserInput) {
+  if (input.password.length < 8) throw new Error("Пароль должен быть не короче 8 символов");
+
+  return createAuthUserWithPasswordHash({
+    ...input,
+    passwordHash: await hashPassword(input.password),
+  });
+}
+
+export async function createAuthUserFromPasswordHash(input: CreateAuthUserFromHashInput) {
+  return createAuthUserWithPasswordHash(input);
+}
+
+export async function findAuthUserByLogin(login: string) {
+  await ensureInitialAuthUser();
+  const record = await loadAuthUserRecordByLogin(login);
+  return record ? toAuthUserListItem(record) : null;
 }
 
 export async function updateAuthUser(input: UpdateAuthUserInput) {

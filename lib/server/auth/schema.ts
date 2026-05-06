@@ -24,6 +24,44 @@ const authUsersTableStatement = `CREATE TABLE IF NOT EXISTS auth_users (
     KEY auth_users_updated_idx (updated_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;
 
+const authRegistrationRequestsTableStatement = `CREATE TABLE IF NOT EXISTS auth_registration_requests (
+    request_id VARCHAR(64) NOT NULL,
+    login VARCHAR(191) NOT NULL,
+    display_name VARCHAR(191) NOT NULL,
+    last_name VARCHAR(191) NULL,
+    first_name VARCHAR(191) NULL,
+    middle_name VARCHAR(191) NULL,
+    email VARCHAR(191) NULL,
+    phone VARCHAR(64) NULL,
+    position_title VARCHAR(191) NULL,
+    password_hash TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    reviewed_by_user_id VARCHAR(64) NULL,
+    reviewed_by_display_name VARCHAR(191) NULL,
+    decision_comment TEXT NULL,
+    created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (request_id),
+    KEY auth_registration_login_idx (login),
+    KEY auth_registration_status_idx (status, created_at)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;
+
+const authPasswordResetCodesTableStatement = `CREATE TABLE IF NOT EXISTS auth_password_reset_codes (
+    reset_id VARCHAR(64) NOT NULL,
+    user_id VARCHAR(64) NOT NULL,
+    login VARCHAR(191) NOT NULL,
+    channel VARCHAR(32) NOT NULL,
+    destination VARCHAR(191) NOT NULL,
+    code_hash TEXT NOT NULL,
+    expires_at TIMESTAMP(3) NOT NULL,
+    consumed_at TIMESTAMP(3) NULL,
+    created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (reset_id),
+    KEY auth_password_reset_user_idx (user_id, created_at),
+    KEY auth_password_reset_login_idx (login, created_at)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;
+
 type DbValue = string | number | boolean | null | Date | Buffer;
 type AuthColumnDefinition = {
   name: string;
@@ -52,6 +90,8 @@ function normalizeValues(values: unknown[]): DbValue[] {
 
 async function runAuthSchemaSetup() {
   await getMysqlPool().execute(authUsersTableStatement);
+  await getMysqlPool().execute(authRegistrationRequestsTableStatement);
+  await getMysqlPool().execute(authPasswordResetCodesTableStatement);
   await ensureAuthUserColumns([
     { name: "last_name", definition: "VARCHAR(191) NULL" },
     { name: "first_name", definition: "VARCHAR(191) NULL" },

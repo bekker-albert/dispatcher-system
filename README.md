@@ -129,6 +129,7 @@ AUTH_SESSION_SECRET=
 AUTH_INITIAL_LOGIN=dispatcher.admin
 AUTH_INITIAL_PASSWORD=
 AUTH_INITIAL_DISPLAY_NAME=Dispatcher Admin
+AUTH_CODE_DELIVERY_WEBHOOK_URL=
 ```
 
 Do not commit real passwords or session secrets. Put the real
@@ -136,3 +137,8 @@ Do not commit real passwords or session secrets. Put the real
 server environment variables, or hosting secrets. The first user receives the
 `dispatch-chief` role and can create other users. That user can also delegate
 the right to create users through the user-management screen.
+Registration requests are stored for approval in MySQL. Password-reset codes
+are generated server-side and can be delivered through
+`AUTH_CODE_DELIVERY_WEBHOOK_URL`; without a configured delivery hook,
+production reports that delivery is not configured and local development shows
+the code for testing only.
