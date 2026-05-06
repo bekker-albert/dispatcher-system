@@ -3,6 +3,7 @@
 import { Ban, Check, Pencil, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { useAuth } from "@/features/auth/AuthContext";
 import {
   authRoleLabels,
   formatAuthDisplayName,
@@ -37,6 +38,7 @@ type UserListResponse = {
 };
 
 export function UserManagementPanel() {
+  const { user: currentUser, updateCurrentUser } = useAuth();
   const [users, setUsers] = useState<AuthUserListItem[]>([]);
   const [createDraft, setCreateDraft] = useState<UserEditDraft>(() => createEmptyDraft());
   const [message, setMessage] = useState("");
@@ -139,6 +141,9 @@ export function UserManagementPanel() {
       return;
     }
 
+    if (body.user && body.user.id === currentUser.id) {
+      updateCurrentUser(body.user);
+    }
     setMessage("Пользователь сохранен");
     cancelEdit();
     await loadUsers();
