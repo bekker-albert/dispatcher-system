@@ -41,6 +41,10 @@ function getString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+function hasBodyField(body: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(body, key);
+}
+
 function getProfilePayload(body: CreateUserRequestBody) {
   return {
     displayName: getString(body.displayName),
@@ -110,12 +114,22 @@ export async function PUT(request: Request) {
 
   const manager = requireUserManager(session);
   const password = getString(body.password) || undefined;
-  const role: AuthUserRole = normalizeAuthUserRole(body.role);
-  const canManageUsers = Boolean(body.canManageUsers);
-  const active = body.active !== false;
+  const role: AuthUserRole | undefined = hasBodyField(body, "role")
+    ? normalizeAuthUserRole(body.role)
+    : undefined;
+  const canManageUsers = hasBodyField(body, "canManageUsers")
+    ? Boolean(body.canManageUsers)
+    : undefined;
+  const active = hasBodyField(body, "active") ? body.active !== false : undefined;
+  const tabPermissions = hasBodyField(body, "tabPermissions")
+    ? getTabPermissions(body.tabPermissions)
+    : undefined;
 
-  if (manager && session?.user.id === id && !active) {
+  if (manager && isSelfUpdate && active === false) {
     return NextResponse.json({ error: "Нельзя заблокировать свою учетную запись" }, { status: 400 });
+  }
+  if (manager && isSelfUpdate && canManageUsers === false) {
+    return NextResponse.json({ error: "Нельзя снять у себя право управлять пользователями" }, { status: 400 });
   }
 
   try {
@@ -126,7 +140,7 @@ export async function PUT(request: Request) {
       role: manager ? role : undefined,
       canManageUsers: manager ? canManageUsers : undefined,
       active: manager ? active : undefined,
-      tabPermissions: manager ? getTabPermissions(body.tabPermissions) : undefined,
+      tabPermissions: manager ? tabPermissions : undefined,
     });
     return NextResponse.json({ user });
   } catch (error) {

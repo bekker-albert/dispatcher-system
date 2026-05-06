@@ -189,7 +189,15 @@ export async function ensureInitialAuthUser() {
   if (!initialUser) return;
 
   const existing = await loadAuthUserRecordByLogin(initialUser.login);
-  if (existing) return;
+  if (existing) {
+    if (existing.active && (!existing.can_manage_users || normalizeAuthUserRole(existing.role) !== "dispatch-chief")) {
+      await authExecute(
+        "UPDATE auth_users SET role = ?, can_manage_users = 1 WHERE user_id = ?",
+        ["dispatch-chief", existing.user_id],
+      );
+    }
+    return;
+  }
 
   const nameParts = splitDisplayName(initialUser.displayName);
   await createAuthUser({
