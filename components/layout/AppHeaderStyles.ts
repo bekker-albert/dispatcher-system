@@ -74,6 +74,8 @@ export const logoImageStyle: CSSProperties = {
 export const workDateStyle: CSSProperties = {
   width: 170,
   flex: "0 0 auto",
+  marginLeft: "auto",
+  textAlign: "right",
 };
 
 export const headerActionsStyle: CSSProperties = {
@@ -96,6 +98,7 @@ export const dateInputStyle: CSSProperties = {
   outline: "none",
   fontSize: 14,
   background: "#ffffff",
+  textAlign: "right",
 };
 
 export function getHeaderSubtabsPositionStyle(headerSubtabsOffset: number): CSSProperties {
