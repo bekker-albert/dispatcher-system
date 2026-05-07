@@ -1,4 +1,4 @@
-import { dispatchAiAssistantSystemNotification } from "@/features/ai-assistant/lib/systemNotifications";
+import { dispatchAppSystemNotification } from "@/shared/notifications/appNotificationBus";
 import type { AuthRegistrationRequest } from "@/lib/domain/auth/types";
 
 const registrationRequestNotificationPrefix = "auth-registration-";
@@ -16,7 +16,7 @@ export function getRegistrationRequestIdFromNotificationId(notificationId: strin
 export function dispatchRegistrationRequestNotification(request: AuthRegistrationRequest) {
   const contacts = [request.email, request.phone].filter(Boolean).join(" / ");
 
-  dispatchAiAssistantSystemNotification({
+  dispatchAppSystemNotification({
     id: getRegistrationRequestNotificationId(request.id),
     title: "Новая заявка на регистрацию",
     body: [
@@ -28,7 +28,7 @@ export function dispatchRegistrationRequestNotification(request: AuthRegistratio
 }
 
 export function clearRegistrationRequestNotification(requestId: string) {
-  dispatchAiAssistantSystemNotification({
+  dispatchAppSystemNotification({
     action: "clear",
     id: getRegistrationRequestNotificationId(requestId),
   });

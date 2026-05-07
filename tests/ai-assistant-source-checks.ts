@@ -107,6 +107,7 @@ assert.match(aiSectionSource, /<AiAssistantHomePanel/);
 assert.match(aiSectionSource, /<AiAssistantWorkspacePanel/);
 assert.match(aiSectionSource, /<AiAssistantAuditLog/);
 assert.match(aiSectionSource, /<AiAssistantSettingsPanel/);
+assert.match(aiSectionSource, /AI data is session-only until backend persistence and real connectors are enabled/);
 assert.match(aiSectionSource, /const \[settingsSection, setSettingsSection\] = useState<SettingsSection>\("overview"\)/);
 assert.match(aiSectionSource, /normalizeAiAssistantTab/);
 assert.match(aiSectionSource, /legacyAiAssistantTabMap/);
@@ -416,8 +417,6 @@ for (const { file, source } of aiDomainSources) {
 });
 
 assert.doesNotMatch(envExampleSource, /^NEXT_PUBLIC_.*AI.*=/m);
-
-console.log("AI assistant source checks passed");
 
 function collectSourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

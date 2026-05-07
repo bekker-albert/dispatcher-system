@@ -417,6 +417,7 @@ export function UserManagementPanel({ refreshToken = 0 }: UserManagementPanelPro
             </>
           )}
         >
+          {message ? <div aria-live="polite" style={messageStyle}>{message}</div> : null}
           <UserDraftFields draft={createDraft} includeLogin onChange={updateCreateDraft} />
           <PermissionEditor draft={createDraft} onChange={updateCreateDraft} />
         </UserProfileModal>
@@ -439,6 +440,7 @@ export function UserManagementPanel({ refreshToken = 0 }: UserManagementPanelPro
             </>
           )}
         >
+          {message ? <div aria-live="polite" style={messageStyle}>{message}</div> : null}
           <UserDraftFields draft={editDraft} includeLogin loginReadOnly includeActive onChange={updateEditDraft} />
           <PermissionEditor draft={editDraft} onChange={updateEditDraft} />
         </UserProfileModal>

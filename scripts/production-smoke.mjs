@@ -55,6 +55,28 @@ await checkUrl("database status", `${apiBaseUrl}/api/database`, async (response)
   }
 });
 
+async function checkAnonymousDatabaseWriteBlocked() {
+  const response = await fetch(`${apiBaseUrl}/api/database`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": baseUrl,
+      "Referer": `${baseUrl}/`,
+      "X-Dispatcher-Request": "same-origin",
+      "User-Agent": "dispatcher-production-smoke/1.0",
+    },
+    body: JSON.stringify({ resource: "vehicles", action: "load", payload: null }),
+  });
+
+  if (response.status !== 401 && response.status !== 403) {
+    throw new Error(`anonymous database POST returned HTTP ${response.status}; expected 401 or 403`);
+  }
+
+  console.log("anonymous database POST blocked: OK");
+}
+
+await checkAnonymousDatabaseWriteBlocked();
+
 async function databasePost(label, resource, action, payload = null, validate) {
   const smokeAuthCookie = await getSmokeAuthCookie();
   if (!smokeAuthCookie) {

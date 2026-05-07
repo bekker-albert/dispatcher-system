@@ -1,9 +1,9 @@
 -- First database step for dispatcher-system PTO data.
 -- Run this in Supabase SQL Editor before saving PTO data from the app.
 --
--- Prototype access model:
--- This keeps browser access open with the public anon key so the app can work
--- without a login screen while admin/users are designed.
+-- Production safety:
+-- Anonymous read/write access is intentionally disabled. Supabase fallback is
+-- legacy-only and must use authenticated policies if it is ever enabled.
 
 create table if not exists public.pto_date_rows (
   table_type text not null check (table_type in ('plan', 'oper', 'survey')),
@@ -65,36 +65,36 @@ execute function public.set_updated_at();
 alter table public.pto_date_rows enable row level security;
 alter table public.pto_settings enable row level security;
 
-drop policy if exists "pto_date_rows anon read" on public.pto_date_rows;
-drop policy if exists "pto_date_rows anon write" on public.pto_date_rows;
 drop policy if exists "pto_date_rows authenticated read" on public.pto_date_rows;
 drop policy if exists "pto_date_rows authenticated write" on public.pto_date_rows;
-create policy "pto_date_rows anon read"
+drop policy if exists "pto_date_rows anon read" on public.pto_date_rows;
+drop policy if exists "pto_date_rows anon write" on public.pto_date_rows;
+create policy "pto_date_rows authenticated read"
 on public.pto_date_rows
 for select
-to anon
+to authenticated
 using (true);
 
-create policy "pto_date_rows anon write"
+create policy "pto_date_rows authenticated write"
 on public.pto_date_rows
 for all
-to anon
+to authenticated
 using (true)
 with check (true);
 
-drop policy if exists "pto_settings anon read" on public.pto_settings;
-drop policy if exists "pto_settings anon write" on public.pto_settings;
 drop policy if exists "pto_settings authenticated read" on public.pto_settings;
 drop policy if exists "pto_settings authenticated write" on public.pto_settings;
-create policy "pto_settings anon read"
+drop policy if exists "pto_settings anon read" on public.pto_settings;
+drop policy if exists "pto_settings anon write" on public.pto_settings;
+create policy "pto_settings authenticated read"
 on public.pto_settings
 for select
-to anon
+to authenticated
 using (true);
 
-create policy "pto_settings anon write"
+create policy "pto_settings authenticated write"
 on public.pto_settings
 for all
-to anon
+to authenticated
 using (true)
 with check (true);

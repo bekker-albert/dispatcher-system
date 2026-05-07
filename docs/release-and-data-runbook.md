@@ -8,10 +8,14 @@ not change business rules.
 - Production should use the server database path through `/api/database`.
 - Local development may use MySQL when `NEXT_PUBLIC_DATA_PROVIDER=mysql` and the
   MySQL variables are configured.
-- The legacy Supabase path is only a fallback when the public Supabase variables
-  are configured and MySQL is not forced.
+- The legacy Supabase path is blocked in production unless
+  `NEXT_PUBLIC_ALLOW_PRODUCTION_SUPABASE_FALLBACK=true` is set deliberately
+  after reviewing RLS policies. Production writes must use the server MySQL
+  path by default.
+- `AUTH_REQUIRED=false` is rejected in production runtime config.
 - Browser `localStorage` can contain old workstation-only data. It is not a
   deployment source of truth.
+- Local, CI, and production should run Node.js 24.
 
 ## Safe Release Checks
 
@@ -24,8 +28,9 @@ Before treating a deploy as successful:
   status is available.
 - Run `npm run smoke:production` after deploy, or manually confirm the site
   loads and `GET /api/database` returns the expected database status. The
-  scripted smoke stays read-only at the data level, but it currently uses a
-  `POST /api/database` load action for vehicles.
+  scripted smoke always checks that anonymous `POST /api/database` is blocked.
+  If smoke credentials are configured, it also uses an authenticated
+  read-only vehicle load action.
 - Confirm no local secret files were staged or printed.
 
 If GitHub Actions status is unavailable, use only read-only checks first: Git
@@ -77,6 +82,9 @@ source into the configured MySQL target. Treat it as a write operation.
 
 Before running it:
 
+- Run `npm run migrate:supabase-to-mysql -- --confirm` and add
+  `--allow-production` only when the release owner explicitly approved a
+  production or other non-local MySQL target.
 - Verify `.env.local` points to the intended source and target.
 - Make a MySQL backup.
 - Confirm the target is not production unless the release owner explicitly chose

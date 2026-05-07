@@ -17,6 +17,7 @@ import { createFleetVehicleListRows } from "../features/fleet/fleetVehicleModel"
 import {
   createFleetVehicleVirtualRows,
   fleetVehicleVirtualizationThreshold,
+  shouldDisableFleetVehicleVirtualizationForRows,
 } from "../features/fleet/fleetVehicleVirtualRows";
 import type { VehicleRow } from "../lib/domain/vehicles/types";
 
@@ -128,4 +129,16 @@ assert.ok(fleetVirtualRows.bottomSpacerHeight > 0);
 assert.equal(
   createFleetVehicleVirtualRows([1, 2, 3], { height: 120, scrollTop: 340 }, true).rows.length,
   3,
+);
+assert.equal(
+  shouldDisableFleetVehicleVirtualizationForRows([{ note: "short" }], (row) => [row.note]),
+  false,
+);
+assert.equal(
+  shouldDisableFleetVehicleVirtualizationForRows([{ note: "Long repair note ".repeat(5) }], (row) => [row.note]),
+  true,
+);
+assert.equal(
+  shouldDisableFleetVehicleVirtualizationForRows([{ note: "line 1\nline 2" }], (row) => [row.note]),
+  true,
 );

@@ -4,4 +4,5 @@ export { documentologDomainConnector } from "./documentolog-connector";
 export { knowledgeBaseDomainConnector } from "./knowledge-base-connector";
 export { mailDomainConnector } from "./mail-connector";
 export { notificationDomainConnector } from "./notification-connector";
+export { aiAssistantConnectorByKey, aiAssistantConnectorRegistry } from "./registry";
 export { whatsappDomainConnector } from "./whatsapp-connector";

@@ -19,6 +19,12 @@ http://localhost:3000
 
 ## Проверка перед сохранением
 
+Node.js policy:
+
+- Use Node.js 24 locally, in CI, and on production.
+- `.node-version` is the project marker.
+- GitHub Actions and the deploy script reject a production runtime outside Node 24.
+
 ```bash
 npm run verify
 ```
@@ -59,6 +65,12 @@ DATABASE_ALLOWED_ORIGINS=
 
 Таблицы создаются автоматически при первом обращении к базе, если пользователь MySQL имеет права внутри своей базы.
 
+Production must not use browser-side Supabase writes as a fallback. The legacy
+Supabase path is blocked in production unless
+`NEXT_PUBLIC_ALLOW_PRODUCTION_SUPABASE_FALLBACK=true` is set deliberately after
+reviewing RLS policies. Keep `AUTH_REQUIRED=true` in production; `false` is
+rejected by server runtime config.
+
 ## AI-ассистент
 
 Главная вкладка `AI-ассистент` подключена как отдельный feature-модуль.
@@ -73,6 +85,13 @@ DATABASE_ALLOWED_ORIGINS=
 
 Деплой идет через GitHub Actions после push в `main`.
 Полный release/data runbook хранится в `docs/release-and-data-runbook.md`: именно он описывает миграции, backup-checkpoint'ы и write-path меры перед `migrate:supabase-to-mysql`.
+Для самой миграции теперь требуется явное подтверждение:
+
+```bash
+npm run migrate:supabase-to-mysql -- --confirm
+```
+
+Флаг `--allow-production` допустим только для осознанного recovery/release-сценария с подтверждённой production или другой non-local MySQL-целью.
 
 На сервере workflow:
 
@@ -83,6 +102,10 @@ DATABASE_ALLOWED_ORIGINS=
 5. подменяет `.next` заранее собранным артефактом из GitHub Actions;
 6. перезапускает `pm2`-процесс `aam-dispatch`;
 7. запускает smoke-проверку сайта, статуса базы и загрузки техники без записи данных.
+
+The production smoke always checks that anonymous database POST requests are
+blocked. If `PRODUCTION_SMOKE_AUTH_LOGIN` and `PRODUCTION_SMOKE_AUTH_PASSWORD`
+are configured, it also logs in and performs the read-only vehicle load check.
 
 Required GitHub Actions secrets:
 

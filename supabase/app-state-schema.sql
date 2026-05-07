@@ -29,20 +29,20 @@ execute function public.set_updated_at();
 
 alter table public.app_state enable row level security;
 
-drop policy if exists "app_state anon read" on public.app_state;
-drop policy if exists "app_state anon write" on public.app_state;
 drop policy if exists "app_state authenticated read" on public.app_state;
 drop policy if exists "app_state authenticated write" on public.app_state;
+drop policy if exists "app_state anon read" on public.app_state;
+drop policy if exists "app_state anon write" on public.app_state;
 
-create policy "app_state anon read"
+create policy "app_state authenticated read"
 on public.app_state
 for select
-to anon
+to authenticated
 using (true);
 
-create policy "app_state anon write"
+create policy "app_state authenticated write"
 on public.app_state
 for all
-to anon
+to authenticated
 using (true)
 with check (true);

@@ -12,6 +12,17 @@ export type FleetVehicleVirtualRows<T> = {
 export const fleetVehicleVirtualRowHeight = 34;
 export const fleetVehicleVirtualOverscanRows = 10;
 export const fleetVehicleVirtualizationThreshold = 80;
+export const fleetVehicleVirtualVariableTextThreshold = 48;
+
+export function shouldDisableFleetVehicleVirtualizationForRows<T>(
+  rows: readonly T[],
+  getTextValues: (row: T) => readonly unknown[],
+) {
+  return rows.some((row) => getTextValues(row).some((value) => {
+    if (typeof value !== "string") return false;
+    return value.includes("\n") || value.length > fleetVehicleVirtualVariableTextThreshold;
+  }));
+}
 
 export function createFleetVehicleVirtualRows<T>(
   rows: T[],

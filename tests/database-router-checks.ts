@@ -144,9 +144,18 @@ assert.equal(
 assert.equal(isAllowedFor(adminEditor, "app-state", "load-bootstrap"), true);
 assert.equal(isAllowedFor(adminEditor, "app-state", "load-client-snapshots"), true);
 
-const unrestrictedLegacyUser = authUserWithPermissions({});
-assert.equal(isAllowedFor(unrestrictedLegacyUser, "vehicles", "replace"), true);
-assert.equal(isAllowedFor(unrestrictedLegacyUser, "settings", "save", { settings: { "unknown": true } }), true);
+const ordinaryUserWithoutPermissions = authUserWithPermissions({});
+assert.equal(isAllowedFor(ordinaryUserWithoutPermissions, "vehicles", "load"), false);
+assert.equal(isAllowedFor(ordinaryUserWithoutPermissions, "vehicles", "replace"), false);
+assert.equal(isAllowedFor(ordinaryUserWithoutPermissions, "settings", "save", { settings: { "unknown": true } }), false);
+
+const delegatedUserManager = { ...authUserBase, canManageUsers: true, tabPermissions: {} };
+assert.equal(isAllowedFor(delegatedUserManager, "app-state", "load-client-snapshots"), true);
+assert.equal(isAllowedFor(delegatedUserManager, "vehicles", "replace"), false);
+
+const superuser = { ...authUserBase, role: "dispatch-chief" as const, tabPermissions: {} };
+assert.equal(isAllowedFor(superuser, "vehicles", "replace"), true);
+assert.equal(isAllowedFor(superuser, "settings", "save", { settings: { "unknown": true } }), true);
 
 assert.deepEqual(getDatabaseAccessRequirement({ resource: "status", action: "status" }), {
   level: "authenticated",
@@ -403,6 +412,49 @@ assert.equal(errorResponse.headers.get("Access-Control-Allow-Origin"), origin);
 assert.equal(errorResponse.headers.get("Vary"), "Origin");
 assert.deepEqual(await responseJson(errorResponse), { error: "Database unavailable" });
 
+const rawDatabaseError = {
+  message: "Connection failed password=super-secret",
+  sqlMessage: "Access denied for user dispatcher_ad on database aam_dispatch",
+  details: "SELECT * FROM auth_users WHERE password = 'super-secret'",
+  hint: "check DB_PASSWORD",
+  query: "SELECT * FROM auth_users",
+  stack: "stack trace with host db.aam-dispatch.kz",
+  code: "ER_ACCESS_DENIED_ERROR",
+};
+const mutableProcessEnv = process.env as Record<string, string | undefined>;
+const previousNodeEnv = process.env.NODE_ENV;
+const previousConsoleError = console.error;
+const productionErrorLogs: unknown[][] = [];
+
+mutableProcessEnv.NODE_ENV = "production";
+console.error = (...args: unknown[]) => {
+  productionErrorLogs.push(args);
+};
+const productionErrorResponse = createDatabaseErrorResponse(rawDatabaseError, new Request("https://aam-dispatch.kz/api/database", {
+  method: "POST",
+  headers: { origin },
+}));
+restoreNodeEnv(previousNodeEnv);
+console.error = previousConsoleError;
+assert.equal(productionErrorResponse.status, 500);
+const productionErrorBody = await responseJson(productionErrorResponse);
+assert.deepEqual(productionErrorBody, { error: "Database operation failed" });
+assert.doesNotMatch(JSON.stringify(productionErrorBody), /sqlMessage|details|hint|query|stack|super-secret|dispatcher_ad|aam_dispatch/i);
+assert.equal(productionErrorLogs.length, 1);
+assert.doesNotMatch(JSON.stringify(productionErrorLogs), /super-secret|SELECT \*|DB_PASSWORD|dispatcher_ad|aam_dispatch/i);
+
+mutableProcessEnv.NODE_ENV = "development";
+const developmentErrorResponse = createDatabaseErrorResponse(rawDatabaseError, new Request("https://aam-dispatch.kz/api/database", {
+  method: "POST",
+  headers: { origin },
+}));
+restoreNodeEnv(previousNodeEnv);
+assert.equal(developmentErrorResponse.status, 500);
+const developmentErrorBody = await responseJson(developmentErrorResponse);
+assert.match(String(developmentErrorBody.error), /Connection failed password=\[redacted\]/);
+assert.match(String(developmentErrorBody.error), /ER_ACCESS_DENIED_ERROR/);
+assert.doesNotMatch(JSON.stringify(developmentErrorBody), /sqlMessage|details|hint|query|stack|super-secret|SELECT \*|DB_PASSWORD/i);
+
 const payloadErrorResponse = createDatabaseErrorResponse(
   new DatabasePayloadError("Некорректный запрос"),
   new Request("https://aam-dispatch.kz/api/database", {
@@ -412,3 +464,12 @@ const payloadErrorResponse = createDatabaseErrorResponse(
 );
 assert.equal(payloadErrorResponse.status, 400);
 assert.deepEqual(await responseJson(payloadErrorResponse), { error: "Некорректный запрос" });
+
+function restoreNodeEnv(value: string | undefined) {
+  if (value === undefined) {
+    delete mutableProcessEnv.NODE_ENV;
+    return;
+  }
+
+  mutableProcessEnv.NODE_ENV = value;
+}

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { defaultDatabaseCorsAllowedOrigins } from "../../database/api-url";
-import { errorToMessage } from "../../utils/normalizers";
+import { errorToMessage, isRecord } from "../../utils/normalizers";
 import { databaseConflictCode, isDatabaseConflictResponseError } from "./conflicts";
 import { isDatabasePayloadError } from "./validation";
+
+const productionDatabaseErrorMessage = "Database operation failed";
 
 function parseAllowedOrigins(value: string | undefined) {
   return (value ?? "")
@@ -41,8 +43,75 @@ export function json(data: unknown, status = 200, request?: Request) {
   return NextResponse.json({ data }, { status, headers: corsHeaders(request) });
 }
 
+function isProductionRuntime() {
+  return process.env.NODE_ENV === "production";
+}
+
+function redactSensitiveText(value: string) {
+  return value
+    .replace(/(password|passwd|pwd|secret|token|key)\s*[:=]\s*[^,\s;]+/gi, "$1=[redacted]")
+    .replace(/(mysql:\/\/[^:\s]+:)[^@\s]+(@)/gi, "$1[redacted]$2");
+}
+
+function getErrorCode(error: unknown) {
+  if (!isRecord(error)) return "";
+  const code = error.code;
+  return typeof code === "string" || typeof code === "number" ? String(code) : "";
+}
+
+function getSafeDiagnosticMessage(error: unknown) {
+  if (error instanceof Error) {
+    return redactSensitiveText(error.message || error.name || productionDatabaseErrorMessage);
+  }
+
+  if (typeof error === "string") return redactSensitiveText(error);
+  if (!isRecord(error)) return productionDatabaseErrorMessage;
+
+  const message = typeof error.message === "string" ? error.message : "";
+  const errorText = typeof error.error === "string" ? error.error : "";
+  const statusText = typeof error.statusText === "string" ? error.statusText : "";
+  const code = getErrorCode(error);
+  const readable = [message, errorText, statusText]
+    .map((part) => redactSensitiveText(part.trim()))
+    .filter(Boolean)
+    .join(" ");
+
+  if (readable && code) return `${readable} (code: ${code})`;
+  if (readable) return readable;
+  if (code) return `Database operation failed (code: ${code})`;
+
+  return productionDatabaseErrorMessage;
+}
+
+function getClientDatabaseErrorMessage(error: unknown) {
+  if (isDatabasePayloadError(error) || isDatabaseConflictResponseError(error)) {
+    return errorToMessage(error);
+  }
+
+  return isProductionRuntime() ? productionDatabaseErrorMessage : getSafeDiagnosticMessage(error);
+}
+
+function logDatabaseError(error: unknown) {
+  if (isDatabasePayloadError(error) || isDatabaseConflictResponseError(error)) return;
+  if (!isRecord(error) && !(error instanceof Error)) {
+    console.error("Database operation failed", { type: typeof error });
+    return;
+  }
+
+  const record = error as Record<string, unknown>;
+  console.error("Database operation failed", {
+    name: error instanceof Error ? error.name : typeof record.name === "string" ? record.name : "Error",
+    code: getErrorCode(error) || undefined,
+    errno: typeof record.errno === "number" ? record.errno : undefined,
+    sqlState: typeof record.sqlState === "string" ? record.sqlState : undefined,
+    status: typeof record.status === "number" ? record.status : undefined,
+  });
+}
+
 export function createDatabaseErrorResponse(error: unknown, request?: Request) {
-  const message = errorToMessage(error);
+  if (isProductionRuntime()) logDatabaseError(error);
+
+  const message = getClientDatabaseErrorMessage(error);
   const conflict = isDatabaseConflictResponseError(error);
   return NextResponse.json(
     conflict ? { error: message, code: databaseConflictCode } : { error: message },

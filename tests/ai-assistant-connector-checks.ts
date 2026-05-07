@@ -8,12 +8,9 @@ import { mailConnector } from "../features/ai-assistant/connectors/mailConnector
 import { pushConnector } from "../features/ai-assistant/connectors/pushConnector";
 import { whatsappConnector } from "../features/ai-assistant/connectors/whatsappConnector";
 import {
-  aiApiDomainConnector,
-  calendarDomainConnector,
+  aiAssistantConnectorByKey,
+  aiAssistantConnectorRegistry,
   documentologDomainConnector,
-  knowledgeBaseDomainConnector,
-  mailDomainConnector,
-  notificationDomainConnector,
   whatsappDomainConnector,
 } from "../lib/domain/ai-assistant/connectors";
 import { requiresAiAssistantApproval } from "../lib/domain/ai-assistant/approval-policy";
@@ -38,6 +35,13 @@ const draftInput = {
   body: "Проверить отклонение от плана",
   target: "Aksu",
 };
+
+assert.deepEqual(
+  aiAssistantConnectorRegistry.map((connector) => connector.key),
+  ["ai-api", "whatsapp", "mail", "calendar", "documentolog", "push", "knowledge-base"],
+);
+assert.equal(aiAssistantConnectorByKey.get("whatsapp"), whatsappDomainConnector);
+assert.equal(aiAssistantConnectorByKey.get("documentolog"), documentologDomainConnector);
 
 const aiDraft = await aiApiConnector.createDraft?.(dryRunContext, draftInput);
 assert.equal(aiDraft?.ok, true);
@@ -112,15 +116,7 @@ assert.equal(requiresAiAssistantApproval("ask-assistant", "low", "ai-api"), fals
 assert.equal(requiresAiAssistantApproval("draft", "low", "ai-api"), false);
 assert.equal(requiresAiAssistantApproval("draft", "critical", "ai-api"), true);
 
-for (const connector of [
-  aiApiDomainConnector,
-  whatsappDomainConnector,
-  mailDomainConnector,
-  calendarDomainConnector,
-  documentologDomainConnector,
-  notificationDomainConnector,
-  knowledgeBaseDomainConnector,
-]) {
+for (const connector of aiAssistantConnectorRegistry) {
   const draft = await connector.createDraft?.(dryRunContext, draftInput);
   assert.equal(draft?.ok, true);
   assert.equal(draft?.auditId, dryRunContext.correlationId);

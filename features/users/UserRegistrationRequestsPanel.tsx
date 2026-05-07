@@ -4,9 +4,9 @@ import { Check, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
-  aiAssistantSystemNotificationEventName,
-  type AiAssistantSystemNotificationDetail,
-} from "@/features/ai-assistant/lib/systemNotifications";
+  appSystemNotificationEventName,
+  type AppSystemNotificationDetail,
+} from "@/shared/notifications/appNotificationBus";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { AuthRegistrationRequest } from "@/lib/domain/auth/types";
 
@@ -87,17 +87,17 @@ export function UserRegistrationRequestsPanel({ addAdminLog, onApproved }: UserR
     void loadRequests();
 
     const handleNotification = (event: Event) => {
-      const detail = (event as CustomEvent<AiAssistantSystemNotificationDetail>).detail;
+      const detail = (event as CustomEvent<AppSystemNotificationDetail>).detail;
       if (!detail?.id) return;
       if (!getRegistrationRequestIdFromNotificationId(detail.id)) return;
 
       void loadRequests();
     };
 
-    window.addEventListener(aiAssistantSystemNotificationEventName, handleNotification);
+    window.addEventListener(appSystemNotificationEventName, handleNotification);
 
     return () => {
-      window.removeEventListener(aiAssistantSystemNotificationEventName, handleNotification);
+      window.removeEventListener(appSystemNotificationEventName, handleNotification);
     };
   }, [loadRequests]);
 

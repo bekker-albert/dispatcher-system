@@ -119,6 +119,9 @@ export function AiAssistantSection() {
       <div style={aiAssistantHeaderStyle}>
         <div>
           <h1 style={aiAssistantTitleStyle}>AI-ассистент</h1>
+          <div style={aiAssistantMutedTextStyle}>
+            Preview: AI data is session-only until backend persistence and real connectors are enabled.
+          </div>
         </div>
         <AiAssistantTabs activeTab={activeTab} onSelectTab={setActiveTab} />
       </div>

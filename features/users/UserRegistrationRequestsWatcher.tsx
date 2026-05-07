@@ -4,11 +4,11 @@ import { useEffect, useRef } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import {
-  aiAssistantSystemNotificationEventName,
-  aiAssistantSystemNotificationDecisionEventName,
-  type AiAssistantSystemNotificationDetail,
-  type AiAssistantSystemNotificationDecisionDetail,
-} from "@/features/ai-assistant/lib/systemNotifications";
+  appSystemNotificationDecisionEventName,
+  appSystemNotificationEventName,
+  type AppSystemNotificationDecisionDetail,
+  type AppSystemNotificationDetail,
+} from "@/shared/notifications/appNotificationBus";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { AuthRegistrationRequest } from "@/lib/domain/auth/types";
 import {
@@ -90,7 +90,7 @@ export function UserRegistrationRequestsWatcher({ addAdminLog }: UserRegistratio
       scheduleNextPoll();
     };
 
-    const decideFromNotification = async (detail: AiAssistantSystemNotificationDecisionDetail) => {
+    const decideFromNotification = async (detail: AppSystemNotificationDecisionDetail) => {
       const requestId = getRegistrationRequestIdFromNotificationId(detail.id);
       if (!requestId) return;
       if (detail.status === "rejected" && !window.confirm("Отклонить заявку на регистрацию?")) return;
@@ -124,13 +124,13 @@ export function UserRegistrationRequestsWatcher({ addAdminLog }: UserRegistratio
     };
 
     const handleNotificationDecision = (event: Event) => {
-      const detail = (event as CustomEvent<AiAssistantSystemNotificationDecisionDetail>).detail;
+      const detail = (event as CustomEvent<AppSystemNotificationDecisionDetail>).detail;
       if (!detail?.id) return;
       void decideFromNotification(detail);
     };
 
     const handleNotification = (event: Event) => {
-      const detail = (event as CustomEvent<AiAssistantSystemNotificationDetail>).detail;
+      const detail = (event as CustomEvent<AppSystemNotificationDetail>).detail;
       if (!detail?.id) return;
       if (!getRegistrationRequestIdFromNotificationId(detail.id)) return;
 
@@ -144,8 +144,8 @@ export function UserRegistrationRequestsWatcher({ addAdminLog }: UserRegistratio
     };
 
     window.addEventListener("focus", handleFocus);
-    window.addEventListener(aiAssistantSystemNotificationEventName, handleNotification);
-    window.addEventListener(aiAssistantSystemNotificationDecisionEventName, handleNotificationDecision);
+    window.addEventListener(appSystemNotificationEventName, handleNotification);
+    window.addEventListener(appSystemNotificationDecisionEventName, handleNotificationDecision);
 
     return () => {
       disposed = true;
@@ -153,8 +153,8 @@ export function UserRegistrationRequestsWatcher({ addAdminLog }: UserRegistratio
         window.clearTimeout(pollTimerId);
       }
       window.removeEventListener("focus", handleFocus);
-      window.removeEventListener(aiAssistantSystemNotificationEventName, handleNotification);
-      window.removeEventListener(aiAssistantSystemNotificationDecisionEventName, handleNotificationDecision);
+      window.removeEventListener(appSystemNotificationEventName, handleNotification);
+      window.removeEventListener(appSystemNotificationDecisionEventName, handleNotificationDecision);
     };
   }, [addAdminLog, user.canManageUsers]);
 

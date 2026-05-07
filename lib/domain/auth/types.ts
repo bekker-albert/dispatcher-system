@@ -101,17 +101,25 @@ export function hasConfiguredAuthTabPermissions(user: AuthUser) {
   return Object.keys(user.tabPermissions).length > 0;
 }
 
-export function canAuthUserViewTab(user: AuthUser, tabId: string) {
-  if (user.canManageUsers) return true;
-  if (!hasConfiguredAuthTabPermissions(user)) return true;
+export function isAuthUserSuperuser(user: AuthUser) {
+  return user.role === "dispatch-chief" || user.role === "admin";
+}
+
+export function getEffectiveAuthTabAccess(user: AuthUser, tabId: string): AuthTabAccess {
+  if (isAuthUserSuperuser(user)) return { view: true, edit: true };
+  if (tabId === "admin" && user.canManageUsers) return { view: true, edit: true };
 
   const access = user.tabPermissions[tabId];
-  return Boolean(access?.view || access?.edit);
+  return {
+    view: Boolean(access?.view || access?.edit),
+    edit: Boolean(access?.edit),
+  };
+}
+
+export function canAuthUserViewTab(user: AuthUser, tabId: string) {
+  return getEffectiveAuthTabAccess(user, tabId).view;
 }
 
 export function canAuthUserEditTab(user: AuthUser, tabId: string) {
-  if (user.canManageUsers) return true;
-  if (!hasConfiguredAuthTabPermissions(user)) return true;
-
-  return Boolean(user.tabPermissions[tabId]?.edit);
+  return getEffectiveAuthTabAccess(user, tabId).edit;
 }

@@ -180,6 +180,8 @@ assert.match(fleetVehiclesSectionSource, /dailyStates = \[\]/);
 assert.match(fleetVehiclesSectionSource, /createFleetVehicleListRows\(vehicleRows, \{ workDate, dailyStates \}\)/);
 assert.match(fleetVehiclesSectionSource, /driversExpanded/);
 assert.match(fleetVehiclesSectionSource, /createFleetVehicleVirtualRows/);
+assert.match(fleetVehiclesSectionSource, /shouldDisableFleetVehicleVirtualizationForRows/);
+assert.match(fleetVehiclesSectionSource, /hasVariableHeightRows/);
 assert.match(fleetVehiclesSectionSource, /isPreparingPrint/);
 assert.match(fleetVehiclesSectionSource, /afterprint/);
 assert.match(fleetVehiclesSectionSource, /window\.requestAnimationFrame\(\(\) => window\.print\(\)\)/);

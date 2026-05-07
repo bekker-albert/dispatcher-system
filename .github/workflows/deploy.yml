@@ -29,17 +29,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Check domain
-        run: npm run check:domain
-
-      - name: Check project health
-        run: npm run check:project
-
-      - name: Build
-        run: npm run build
+      - name: Release check
+        run: npm run release:check
 
       - name: Pack production build
         run: tar -czf "next-build-${GITHUB_SHA}.tar.gz" .next
@@ -76,7 +67,7 @@ jobs:
             export PM2_HOME="/var/www/dispatcher/data/.pm2"
             cd /var/www/dispatcher/data/www/aam-dispatch.kz
 
-            node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 20 || (major === 20 && minor < 9)) { throw new Error(`Node ${process.versions.node} is too old for Next.js 16`); }'
+            node -e 'const [major] = process.versions.node.split(".").map(Number); if (major !== 24) { throw new Error(`Node ${process.versions.node} does not match the dispatcher Node 24 production policy`); }'
 
             git fetch --prune origin main
             git cat-file -e "${DEPLOY_SHA}^{commit}"

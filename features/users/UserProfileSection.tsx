@@ -158,6 +158,7 @@ export function UserProfileSection({ addAdminLog = noopAddAdminLog, userCard }: 
             </>
           )}
         >
+          {message ? <div aria-live="polite" style={modalMessageStyle}>{message}</div> : null}
           <div style={editGridStyle}>
             <ProfileInputCell label="Фамилия" warning={getUserProfileFieldInputWarning("lastName", draft.lastName)}>
               <input required pattern={noDigitsInputPattern} title={noDigitsInputTitle} autoComplete="family-name" value={draft.lastName} onChange={(event) => setDraft((current) => ({ ...current, lastName: event.target.value }))} style={getProfileInputStyle(getUserProfileFieldInputWarning("lastName", draft.lastName))} />
@@ -435,4 +436,10 @@ const messageStyle: CSSProperties = {
   color: "#334155",
   fontSize: 13,
   marginTop: 10,
+};
+
+const modalMessageStyle: CSSProperties = {
+  color: "#334155",
+  fontSize: 13,
+  marginBottom: 12,
 };

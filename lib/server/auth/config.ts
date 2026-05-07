@@ -4,7 +4,15 @@ import { formatAuthDisplayName } from "../../domain/auth/types";
 export const authSessionCookieName = "aam_dispatch_session";
 export const initialAuthUserId = "initial-auth-user";
 
+function isProductionRuntime() {
+  return process.env.NODE_ENV === "production";
+}
+
 export function authRequired() {
+  if (isProductionRuntime() && process.env.AUTH_REQUIRED === "false") {
+    throw new Error("AUTH_REQUIRED=false is not allowed in production");
+  }
+
   return process.env.AUTH_REQUIRED !== "false";
 }
 

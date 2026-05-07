@@ -2,9 +2,9 @@
 -- Run this in Supabase SQL Editor after the basic project env variables are set.
 --
 -- Important:
--- The anon policies below are still a prototype access model. They make the
--- deployed app usable without login while the admin/user roles are being built.
--- Before production, replace them with authenticated role-based policies.
+-- Anonymous write policies are disabled. Production should use the MySQL
+-- server API path; this Supabase fallback is legacy-only and requires
+-- authenticated Supabase policies if it is ever enabled.
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -232,40 +232,56 @@ alter table public.audit_logs enable row level security;
 
 drop policy if exists "vehicles anon read" on public.vehicles;
 drop policy if exists "vehicles anon write" on public.vehicles;
-create policy "vehicles anon read" on public.vehicles for select to anon using (true);
-create policy "vehicles anon write" on public.vehicles for all to anon using (true) with check (true);
+drop policy if exists "vehicles authenticated read" on public.vehicles;
+drop policy if exists "vehicles authenticated write" on public.vehicles;
+create policy "vehicles authenticated read" on public.vehicles for select to authenticated using (true);
+create policy "vehicles authenticated write" on public.vehicles for all to authenticated using (true) with check (true);
 
 drop policy if exists "pto_rows anon read" on public.pto_rows;
 drop policy if exists "pto_rows anon write" on public.pto_rows;
-create policy "pto_rows anon read" on public.pto_rows for select to anon using (true);
-create policy "pto_rows anon write" on public.pto_rows for all to anon using (true) with check (true);
+drop policy if exists "pto_rows authenticated read" on public.pto_rows;
+drop policy if exists "pto_rows authenticated write" on public.pto_rows;
+create policy "pto_rows authenticated read" on public.pto_rows for select to authenticated using (true);
+create policy "pto_rows authenticated write" on public.pto_rows for all to authenticated using (true) with check (true);
 
 drop policy if exists "pto_day_values anon read" on public.pto_day_values;
 drop policy if exists "pto_day_values anon write" on public.pto_day_values;
-create policy "pto_day_values anon read" on public.pto_day_values for select to anon using (true);
-create policy "pto_day_values anon write" on public.pto_day_values for all to anon using (true) with check (true);
+drop policy if exists "pto_day_values authenticated read" on public.pto_day_values;
+drop policy if exists "pto_day_values authenticated write" on public.pto_day_values;
+create policy "pto_day_values authenticated read" on public.pto_day_values for select to authenticated using (true);
+create policy "pto_day_values authenticated write" on public.pto_day_values for all to authenticated using (true) with check (true);
 
 drop policy if exists "pto_bucket_rows anon read" on public.pto_bucket_rows;
 drop policy if exists "pto_bucket_rows anon write" on public.pto_bucket_rows;
-create policy "pto_bucket_rows anon read" on public.pto_bucket_rows for select to anon using (true);
-create policy "pto_bucket_rows anon write" on public.pto_bucket_rows for all to anon using (true) with check (true);
+drop policy if exists "pto_bucket_rows authenticated read" on public.pto_bucket_rows;
+drop policy if exists "pto_bucket_rows authenticated write" on public.pto_bucket_rows;
+create policy "pto_bucket_rows authenticated read" on public.pto_bucket_rows for select to authenticated using (true);
+create policy "pto_bucket_rows authenticated write" on public.pto_bucket_rows for all to authenticated using (true) with check (true);
 
 drop policy if exists "pto_bucket_values anon read" on public.pto_bucket_values;
 drop policy if exists "pto_bucket_values anon write" on public.pto_bucket_values;
-create policy "pto_bucket_values anon read" on public.pto_bucket_values for select to anon using (true);
-create policy "pto_bucket_values anon write" on public.pto_bucket_values for all to anon using (true) with check (true);
+drop policy if exists "pto_bucket_values authenticated read" on public.pto_bucket_values;
+drop policy if exists "pto_bucket_values authenticated write" on public.pto_bucket_values;
+create policy "pto_bucket_values authenticated read" on public.pto_bucket_values for select to authenticated using (true);
+create policy "pto_bucket_values authenticated write" on public.pto_bucket_values for all to authenticated using (true) with check (true);
 
 drop policy if exists "pto_settings anon read" on public.pto_settings;
 drop policy if exists "pto_settings anon write" on public.pto_settings;
-create policy "pto_settings anon read" on public.pto_settings for select to anon using (true);
-create policy "pto_settings anon write" on public.pto_settings for all to anon using (true) with check (true);
+drop policy if exists "pto_settings authenticated read" on public.pto_settings;
+drop policy if exists "pto_settings authenticated write" on public.pto_settings;
+create policy "pto_settings authenticated read" on public.pto_settings for select to authenticated using (true);
+create policy "pto_settings authenticated write" on public.pto_settings for all to authenticated using (true) with check (true);
 
 drop policy if exists "app_settings anon read" on public.app_settings;
 drop policy if exists "app_settings anon write" on public.app_settings;
-create policy "app_settings anon read" on public.app_settings for select to anon using (true);
-create policy "app_settings anon write" on public.app_settings for all to anon using (true) with check (true);
+drop policy if exists "app_settings authenticated read" on public.app_settings;
+drop policy if exists "app_settings authenticated write" on public.app_settings;
+create policy "app_settings authenticated read" on public.app_settings for select to authenticated using (true);
+create policy "app_settings authenticated write" on public.app_settings for all to authenticated using (true) with check (true);
 
 drop policy if exists "audit_logs anon read" on public.audit_logs;
 drop policy if exists "audit_logs anon write" on public.audit_logs;
-create policy "audit_logs anon read" on public.audit_logs for select to anon using (true);
-create policy "audit_logs anon write" on public.audit_logs for insert to anon with check (true);
+drop policy if exists "audit_logs authenticated read" on public.audit_logs;
+drop policy if exists "audit_logs authenticated write" on public.audit_logs;
+create policy "audit_logs authenticated read" on public.audit_logs for select to authenticated using (true);
+create policy "audit_logs authenticated write" on public.audit_logs for insert to authenticated with check (true);

@@ -27,7 +27,10 @@ import {
   toolbarActionsStyle,
   toolbarStyle,
 } from "@/features/fleet/fleetVehicleTableStyles";
-import { createFleetVehicleVirtualRows } from "@/features/fleet/fleetVehicleVirtualRows";
+import {
+  createFleetVehicleVirtualRows,
+  shouldDisableFleetVehicleVirtualizationForRows,
+} from "@/features/fleet/fleetVehicleVirtualRows";
 
 export type FleetVehiclesSectionProps = {
   vehicleRows: VehicleRow[];
@@ -50,9 +53,13 @@ export function FleetVehiclesSection({
     () => createFleetVehicleListRows(vehicleRows, { workDate, dailyStates }),
     [dailyStates, vehicleRows, workDate],
   );
+  const hasVariableHeightRows = useMemo(
+    () => shouldDisableFleetVehicleVirtualizationForRows(rows, getFleetVehicleVirtualRowTextValues),
+    [rows],
+  );
   const virtualRows = useMemo(
-    () => createFleetVehicleVirtualRows(rows, rowsViewport, !isPreparingPrint),
-    [isPreparingPrint, rows, rowsViewport],
+    () => createFleetVehicleVirtualRows(rows, rowsViewport, !isPreparingPrint && !hasVariableHeightRows),
+    [hasVariableHeightRows, isPreparingPrint, rows, rowsViewport],
   );
 
   const updateRowsViewport = useCallback(() => {
@@ -207,6 +214,25 @@ export function FleetVehiclesSection({
       </div>
     </div>
   );
+}
+
+function getFleetVehicleVirtualRowTextValues(row: FleetVehicleListRow) {
+  return [
+    row.area,
+    row.location,
+    row.equipmentType,
+    row.brand,
+    row.model,
+    row.plateNumber,
+    row.garageNumber,
+    row.firstWatchFirstShiftDriver,
+    row.firstWatchSecondShiftDriver,
+    row.secondWatchFirstShiftDriver,
+    row.secondWatchSecondShiftDriver,
+    row.status,
+    row.repairStartedAt,
+    row.note,
+  ];
 }
 
 function FleetVehicleTableRow({ row, driversExpanded }: { row: FleetVehicleListRow; driversExpanded: boolean }) {

@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { createAuthMutationRejectedResponse, isAuthMutationAllowed } from "@/lib/server/auth/request-guard";
 import { confirmPasswordReset } from "@/lib/server/auth/password-reset";
+import {
+  checkAuthActionRateLimit,
+  createAuthActionRateLimitKey,
+  recordAuthActionAttempt,
+} from "@/lib/server/auth/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +25,16 @@ export async function POST(request: Request) {
   if (!isAuthMutationAllowed(request)) return createAuthMutationRejectedResponse();
 
   const body = await request.json().catch(() => ({})) as PasswordResetConfirmBody;
+  const rateLimitKey = createAuthActionRateLimitKey(request, "password-reset-confirm", getString(body.login));
+  const rateLimit = checkAuthActionRateLimit(rateLimitKey);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Слишком много попыток. Повторите позже." },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+  recordAuthActionAttempt(rateLimitKey);
+
   try {
     await confirmPasswordReset({
       login: getString(body.login),
