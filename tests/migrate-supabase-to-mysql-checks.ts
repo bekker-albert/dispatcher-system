@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,6 +8,7 @@ const testDir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(testDir, "..");
 const jitiCliPath = resolve(root, "node_modules/jiti/lib/jiti-cli.mjs");
 const scriptPath = resolve(root, "scripts/migrate-supabase-to-mysql.ts");
+const scriptSource = readFileSync(scriptPath, "utf8");
 
 const helpRun = runMigrationCheck(["--help"]);
 assert.equal(helpRun.status, 0);
@@ -34,6 +36,8 @@ const productionTargetRun = runMigrationCheck(["--confirm"], {
 assert.equal(productionTargetRun.status, 1);
 assert.match(productionTargetRun.stderr, /without --allow-production/);
 assert.match(productionTargetRun.stderr, /db\.aam-dispatch\.kz:3306\/aam_dispatch/);
+assert.match(scriptSource, /async function requiredStep/);
+assert.doesNotMatch(scriptSource, /optionalStep/);
 
 console.log("Migration CLI checks passed");
 

@@ -85,6 +85,8 @@ Before running it:
 - Run `npm run migrate:supabase-to-mysql -- --confirm` and add
   `--allow-production` only when the release owner explicitly approved a
   production or other non-local MySQL target.
+- Treat any source-read error as a hard stop. Do not accept a partial copy as a
+  successful migration run.
 - Verify `.env.local` points to the intended source and target.
 - Make a MySQL backup.
 - Confirm the target is not production unless the release owner explicitly chose

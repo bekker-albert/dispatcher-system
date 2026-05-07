@@ -106,13 +106,11 @@ loadDotEnvLocal();
 enforceSafetyGuards(cliOptions);
 process.env.NEXT_PUBLIC_DATA_PROVIDER = "";
 
-async function optionalStep<T>(label: string, action: () => Promise<T>, fallback: T): Promise<T> {
+async function requiredStep<T>(label: string, action: () => Promise<T>): Promise<T> {
   try {
     return await action();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`${label}: skipped (${message})`);
-    return fallback;
+    throw new Error(`${label}: ${sanitizedErrorMessage(error)}`);
   }
 }
 
@@ -137,12 +135,12 @@ async function run() {
     import("../lib/server/mysql/app-state"),
   ]);
 
-  const vehicles = await optionalStep("vehicles", () => vehiclesSupabase.loadVehiclesFromSupabase(), null);
+  const vehicles = await requiredStep("vehicles", () => vehiclesSupabase.loadVehiclesFromSupabase());
   if (vehicles?.rows.length) {
     await vehiclesMysql.replaceVehiclesInMysql(vehicles.rows);
   }
 
-  const pto = await optionalStep("pto", () => ptoSupabase.loadPtoStateFromSupabase(), null);
+  const pto = await requiredStep("pto", () => ptoSupabase.loadPtoStateFromSupabase());
   if (pto) {
     await ptoMysql.savePtoStateToMysql(pto);
   }
@@ -159,19 +157,19 @@ async function run() {
     "topTabs",
     "subTabs",
   ];
-  const settings = await optionalStep("settings", () => settingsSupabase.loadAppSettingsFromSupabase(settingKeys), []);
+  const settings = await requiredStep("settings", () => settingsSupabase.loadAppSettingsFromSupabase(settingKeys));
   if (settings.length) {
     await settingsMysql.saveAppSettingsToMysql(
       Object.fromEntries(settings.map((setting) => [setting.key, setting.value])),
     );
   }
 
-  const appState = await optionalStep("app_state", () => appStateSupabase.loadAppStateFromSupabase(), null);
+  const appState = await requiredStep("app_state", () => appStateSupabase.loadAppStateFromSupabase());
   if (appState) {
     await appStateMysql.saveAppStateToMysql(appState.storage);
   }
 
-  const snapshots = await optionalStep("client_snapshots", () => appStateSupabase.loadClientAppSnapshotsFromSupabase(), []);
+  const snapshots = await requiredStep("client_snapshots", () => appStateSupabase.loadClientAppSnapshotsFromSupabase());
   for (const snapshot of snapshots) {
     await appStateMysql.saveClientAppSnapshotToMysql(snapshot.clientId, snapshot.storage, snapshot.meta);
   }
