@@ -3,6 +3,7 @@ import { clientSnapshotAutoMinIntervalMs, clientSnapshotSaveDelayMs, sharedAppSe
 import { cloneUndoSnapshot, type UndoSnapshot } from "../lib/domain/app/undo";
 import { adminLogLimit, normalizeAdminLogEntry } from "../lib/domain/admin/logs";
 import { adminSectionTabs, structureSectionTabs } from "../lib/domain/admin/navigation";
+import { defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea } from "../lib/domain/admin/area-schedule";
 import { clientSnapshotStorageSignature } from "../lib/storage/client-snapshot-signature";
 import { defaultDependencyLinks, defaultDependencyNodes, defaultOrgMembers, dependencyNodeLabel, dependencyStages, orgMemberLabel } from "../lib/domain/admin/structure";
 import { buildDispatchAiSuggestion, buildDispatchSummaryRowView, consolidateDispatchSummaryRows, createDispatchSummaryRow, normalizeDispatchSummaryRows } from "../lib/domain/dispatch/summary";
@@ -17,7 +18,16 @@ import { defaultPtoOperRows, defaultPtoPlanRows, defaultPtoSurveyRows, defaultRe
 import { createPtoPlanExportRows, createPtoPlanRowsFromImportTable, ensureImportedRowsInLinkedPtoTable, mergeImportedPtoPlanRows, ptoDateExportFileName, ptoDateTableMeta } from "../lib/domain/pto/excel";
 import { formatBucketNumber, formatPtoCellNumber, formatPtoFormulaNumber, parseDecimalInput, parseDecimalValue } from "../lib/domain/pto/formatting";
 import { defaultReportCustomers } from "../lib/domain/reports/defaults";
-import { formatDateInputValue, isStoredReportDateValue, resolveReportDateAreaContext } from "../features/reports/lib/reportDateSelection";
+import {
+  automaticReportDate,
+  hasClientReportDateOverride,
+  formatDateInputValue,
+  isStoredReportDateValue,
+  readClientReportDateSelection,
+  reportDateOverrideStorageKey,
+  resolveReportDateAreaContext,
+  writeClientReportDateOverride,
+} from "../features/reports/lib/reportDateSelection";
 import { defaultContractors, defaultFuelContractors, defaultFuelGeneral, defaultUserCard } from "../lib/domain/reference/defaults";
 import { createDefaultVehicles, createVehicleSeedVersion, defaultVehicleFallbackRows, defaultVehicleForm, normalizeVehicleRow } from "../lib/domain/vehicles/defaults";
 import { buildVehicleDisplayName, createVehicleExportRows, createVehiclesFromImportTable } from "../lib/domain/vehicles/import-export";
@@ -30,6 +40,54 @@ import { errorToMessage, mergeDefaultsById, normalizeDecimalRecord, normalizeNum
 import { cleanAreaName, normalizeLookupValue, uniqueSorted } from "../lib/utils/text";
 
 const nbsp = "\u00a0";
+
+function createMemoryStorage(): Storage {
+  const entries = new Map<string, string>();
+
+  return {
+    get length() {
+      return entries.size;
+    },
+    clear() {
+      entries.clear();
+    },
+    getItem(key: string) {
+      return entries.get(key) ?? null;
+    },
+    key(index: number) {
+      return Array.from(entries.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      entries.delete(key);
+    },
+    setItem(key: string, value: string) {
+      entries.set(key, value);
+    },
+  };
+}
+
+function withClientReportDateWindow(run: (storage: { localStorage: Storage; sessionStorage: Storage }) => void) {
+  const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const storage = {
+    localStorage: createMemoryStorage(),
+    sessionStorage: createMemoryStorage(),
+  };
+
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: storage,
+  });
+
+  try {
+    run(storage);
+  } finally {
+    if (originalWindowDescriptor) {
+      Object.defineProperty(globalThis, "window", originalWindowDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "window");
+    }
+  }
+}
 
 assert.equal(parseDecimalInput(" 1 234,56 "), 1234.56);
 assert.equal(parseUtilityDecimalInput("12,5"), 12.5);
@@ -60,6 +118,37 @@ assert.equal(formatDateInputValue(new Date(2026, 3, 5)), "2026-04-05");
 assert.equal(isStoredReportDateValue("2026-04-05"), true);
 assert.equal(isStoredReportDateValue("bad"), false);
 assert.equal(resolveReportDateAreaContext("pto", "vehicles", "Все участки", "Уч_Аксу"), "Аксу");
+assert.equal(automaticReportDate(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, new Date(2026, 4, 7, 22, 0)), "2026-05-06");
+withClientReportDateWindow(({ localStorage, sessionStorage }) => {
+  localStorage.setItem(reportDateOverrideStorageKey, "2026-04-01");
+
+  assert.equal(
+    readClientReportDateSelection(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, new Date(2026, 4, 7, 9, 0)),
+    "2026-05-06",
+  );
+  assert.equal(localStorage.getItem(reportDateOverrideStorageKey), null);
+
+  writeClientReportDateOverride(
+    "2026-04-20",
+    defaultAreaShiftCutoffs,
+    defaultAreaShiftScheduleArea,
+    new Date(2026, 4, 7, 9, 0),
+  );
+  assert.equal(sessionStorage.getItem(reportDateOverrideStorageKey), "2026-04-20");
+  assert.equal(
+    readClientReportDateSelection(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, new Date(2026, 4, 7, 22, 0)),
+    "2026-04-20",
+  );
+  assert.equal(
+    hasClientReportDateOverride(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, new Date(2026, 4, 7, 22, 0)),
+    true,
+  );
+  assert.equal(
+    readClientReportDateSelection(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, new Date(2026, 4, 8, 0, 1)),
+    "2026-05-07",
+  );
+  assert.equal(hasClientReportDateOverride(defaultAreaShiftCutoffs, defaultAreaShiftScheduleArea, new Date(2026, 4, 8, 0, 1)), false);
+});
 const undoSource: UndoSnapshot = {
   reportCustomers: [...defaultReportCustomers],
   reportAreaOrder: ["Аксу"],

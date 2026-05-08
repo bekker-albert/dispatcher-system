@@ -48,7 +48,7 @@ Optional smoke overrides:
 
 - `PRODUCTION_SMOKE_URL`
 - `PRODUCTION_SMOKE_API_URL`
-- `PRODUCTION_SMOKE_MIN_VEHICLE_ROWS`
+- `PRODUCTION_SMOKE_MIN_VEHICLE_ROWS` (defaults to `100`; lower it explicitly for smaller production datasets)
 - `PRODUCTION_SMOKE_AUTH_LOGIN`
 - `PRODUCTION_SMOKE_AUTH_PASSWORD`
 

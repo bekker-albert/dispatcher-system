@@ -1,14 +1,11 @@
 import type { AdminSection } from "../../../lib/domain/admin/navigation";
-import {
-  defaultAreaShiftScheduleArea,
-  resolveAutomaticWorkingDate,
-  type AreaShiftCutoffMap,
-} from "../../../lib/domain/admin/area-schedule";
+import { defaultAreaShiftScheduleArea, type AreaShiftCutoffMap } from "../../../lib/domain/admin/area-schedule";
 import { defaultReportDate } from "../../../lib/domain/pto/defaults";
 import type { TopTab } from "../../../lib/domain/navigation/tabs";
 import { cleanAreaName } from "../../../lib/utils/text";
 
 export const reportDateOverrideStorageKey = "dispatcher:report-date-override";
+export const reportDateOverrideAutomaticStorageKey = "dispatcher:report-date-override-automatic";
 
 export function formatDateInputValue(date: Date) {
   const year = date.getFullYear();
@@ -44,21 +41,77 @@ export function resolveReportDateAreaContext(
   return defaultAreaShiftScheduleArea;
 }
 
-export function automaticReportDate(areaShiftCutoffs: AreaShiftCutoffMap, area: string, now = new Date()) {
-  return formatDateInputValue(resolveAutomaticWorkingDate(areaShiftCutoffs, area, now));
+function previousCalendarDate(now = new Date()) {
+  const previousDate = new Date(now);
+  previousDate.setDate(previousDate.getDate() - 1);
+  return previousDate;
 }
 
-export function readClientReportDateSelection(areaShiftCutoffs: AreaShiftCutoffMap, area: string) {
+function getClientStorage(storageName: "localStorage" | "sessionStorage") {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window[storageName];
+  } catch {
+    return null;
+  }
+}
+
+function clearLegacyReportDateOverride() {
+  const localStorage = getClientStorage("localStorage");
+  localStorage?.removeItem(reportDateOverrideStorageKey);
+}
+
+export function clearClientReportDateOverride() {
+  const sessionStorage = getClientStorage("sessionStorage");
+  sessionStorage?.removeItem(reportDateOverrideStorageKey);
+  sessionStorage?.removeItem(reportDateOverrideAutomaticStorageKey);
+  clearLegacyReportDateOverride();
+}
+
+export function automaticReportDate(_areaShiftCutoffs: AreaShiftCutoffMap, _area: string, now = new Date()) {
+  return formatDateInputValue(previousCalendarDate(now));
+}
+
+export function readClientReportDateSelection(areaShiftCutoffs: AreaShiftCutoffMap, area: string, now = new Date()) {
   if (typeof window === "undefined") return defaultReportDate;
 
-  const storedOverride = window.localStorage.getItem(reportDateOverrideStorageKey);
-  return isStoredReportDateValue(storedOverride)
-    ? storedOverride
-    : automaticReportDate(areaShiftCutoffs, area);
+  clearLegacyReportDateOverride();
+
+  const nextAutomaticReportDate = automaticReportDate(areaShiftCutoffs, area, now);
+  const sessionStorage = getClientStorage("sessionStorage");
+  const storedOverride = sessionStorage?.getItem(reportDateOverrideStorageKey) ?? null;
+  const storedAutomaticReportDate = sessionStorage?.getItem(reportDateOverrideAutomaticStorageKey) ?? null;
+
+  if (isStoredReportDateValue(storedOverride) && storedAutomaticReportDate === nextAutomaticReportDate) {
+    return storedOverride;
+  }
+
+  clearClientReportDateOverride();
+  return nextAutomaticReportDate;
 }
 
-export function hasClientReportDateOverride() {
+export function hasClientReportDateOverride(areaShiftCutoffs?: AreaShiftCutoffMap, area?: string, now = new Date()) {
   if (typeof window === "undefined") return false;
 
-  return isStoredReportDateValue(window.localStorage.getItem(reportDateOverrideStorageKey));
+  const sessionStorage = getClientStorage("sessionStorage");
+  const storedOverride = sessionStorage?.getItem(reportDateOverrideStorageKey) ?? null;
+  if (!isStoredReportDateValue(storedOverride)) return false;
+
+  if (!areaShiftCutoffs || !area) return true;
+
+  const nextAutomaticReportDate = automaticReportDate(areaShiftCutoffs, area, now);
+  const storedAutomaticReportDate = sessionStorage?.getItem(reportDateOverrideAutomaticStorageKey) ?? null;
+  if (storedAutomaticReportDate === nextAutomaticReportDate) return true;
+
+  clearClientReportDateOverride();
+  return false;
+}
+
+export function writeClientReportDateOverride(value: string, areaShiftCutoffs: AreaShiftCutoffMap, area: string, now = new Date()) {
+  if (!isStoredReportDateValue(value)) return;
+
+  const sessionStorage = getClientStorage("sessionStorage");
+  sessionStorage?.setItem(reportDateOverrideStorageKey, value);
+  sessionStorage?.setItem(reportDateOverrideAutomaticStorageKey, automaticReportDate(areaShiftCutoffs, area, now));
 }
