@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, statSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   workspaceModuleCatalog,
@@ -50,6 +50,7 @@ function validateModuleCatalogSourcePaths(
 
       const normalizedSourcePath = sourcePath.replaceAll("\\", "/");
       const resolvedPath = resolve(repoRoot, normalizedSourcePath);
+      const relativeResolvedPath = relative(repoRoot, resolvedPath);
 
       if (isAbsolute(sourcePath)) {
         issues.push({ code: "source_path_absolute", moduleId: catalogItem.id, field, sourcePath });
@@ -63,7 +64,11 @@ function validateModuleCatalogSourcePaths(
         issues.push({ code: "source_path_backslash", moduleId: catalogItem.id, field, sourcePath });
       }
 
-      if (!resolvedPath.startsWith(`${repoRoot}\\`) && resolvedPath !== repoRoot) {
+      if (
+        relativeResolvedPath === ".."
+        || relativeResolvedPath.startsWith(`..${sep}`)
+        || isAbsolute(relativeResolvedPath)
+      ) {
         issues.push({ code: "source_path_outside_repo", moduleId: catalogItem.id, field, sourcePath });
       }
 
