@@ -400,7 +400,8 @@ const mergeBasePtoRow = normalizePtoPlanRow({
 assert.equal(createPtoPlanExportRows(importedPtoRows, "2026", "Все участки")[1][1], "Аксу");
 assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки")[0][0], "Заказчик");
 assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки")[1][0], "AAE");
-assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки", "oper")[0][1], "Вид работ");
+assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки", "oper")[0][1], "Местонахождение");
+assert.equal(createPtoPlanExportRows(importedPtoCustomerRows, "2026", "Все участки", "oper")[0][2], "Вид работ");
 assert.equal(mergeImportedPtoPlanRows([mergeBasePtoRow], importedPtoRows).length, 2);
 assert.equal(ensureImportedRowsInLinkedPtoTable([], importedPtoRows, "2026")[0].id, importedPtoRows[0].id);
 assert.equal(normalizePtoCustomerCode(" aae "), "AAE");
