@@ -136,7 +136,7 @@ assert.deepEqual(validateModuleCatalogSourcePaths([
     ...catalogBaseModule,
     id: "catalog-source-url",
     currentSource: "https://example.com/module.ts",
-    contractSource: "C:/outside/service-contracts.ts",
+    contractSource: "/outside/service-contracts.ts",
   },
   {
     ...catalogBaseModule,
