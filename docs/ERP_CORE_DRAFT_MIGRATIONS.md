@@ -1,54 +1,54 @@
-﻿# ERP core draft migrations
+# ERP core draft migrations
 
-Р”Р°С‚Р°: 2026-05-10
-РЎС‚Р°С‚СѓСЃ: draft/staged, РЅРµ РїСЂРёРјРµРЅСЏС‚СЊ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё
-РћР±Р»Р°СЃС‚СЊ: РїРѕРґРіРѕС‚РѕРІРєР° ERP-СЏРґСЂР° С‚РµС…РЅРёРєРё, СѓС‡Р°СЃС‚РєРѕРІ Рё РїСЂР°РІ
+Дата: 2026-05-10
+Статус: draft/staged, не применять автоматически
+Область: подготовка ERP-ядра техники, участков и прав
 
-## РџСЂРёРЅС†РёРїС‹
+## Принципы
 
-- Р­С‚РѕС‚ РґРѕРєСѓРјРµРЅС‚ РЅРµ СЏРІР»СЏРµС‚СЃСЏ runtime migration Рё РЅРµ РїРѕРґРєР»СЋС‡РµРЅ Рє `lib/server/mysql/schema-definitions.ts`.
-- РўРµРєСѓС‰Р°СЏ С‚Р°Р±Р»РёС†Р° `vehicles` РЅРµ СѓРґР°Р»СЏРµС‚СЃСЏ Рё РЅРµ РјРµРЅСЏРµС‚СЃСЏ СЂР°Р·СЂСѓС€РёС‚РµР»СЊРЅРѕ.
-- Backfill РЅРµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РІ СЌС‚РѕРј СЃРїСЂРёРЅС‚Рµ.
-- Р’СЃРµ СЃРІСЏР·Рё СЃРѕ СЃС‚Р°СЂРѕР№ РјРѕРґРµР»СЊСЋ РёРґСѓС‚ С‡РµСЂРµР· nullable legacy fields.
-- Р’СЃРµ production handlers РѕСЃС‚Р°СЋС‚СЃСЏ Р·Р° РµРґРёРЅС‹Рј `/api/database`; РЅРѕРІС‹Рµ `app/api/<module>` routes РЅРµ СЃРѕР·РґР°СЋС‚СЃСЏ.
-- Seed-РґР°РЅРЅС‹Рµ РЅРµ РґРѕР±Р°РІР»СЏСЋС‚СЃСЏ: СЃРїСЂР°РІРѕС‡РЅРёРєРё Р±СѓРґСѓС‚ Р·Р°РїРѕР»РЅСЏС‚СЊСЃСЏ РѕС‚РґРµР»СЊРЅС‹Рј reviewable seed/backfill С€Р°РіРѕРј.
+- Этот документ не является runtime migration и не подключен к `lib/server/mysql/schema-definitions.ts`.
+- Текущая таблица `vehicles` не удаляется и не меняется разрушительно.
+- Backfill не выполняется в этом спринте.
+- Все связи со старой моделью идут через nullable legacy fields.
+- Все production handlers остаются за единым `/api/database`; новые `app/api/<module>` routes не создаются.
+- Seed-данные не добавляются: справочники будут заполняться отдельным reviewable seed/backfill шагом.
 
-## РЎРїРёСЃРѕРє Р±СѓРґСѓС‰РёС… С‚Р°Р±Р»РёС†
+## Список будущих таблиц
 
-| РўР°Р±Р»РёС†Р° | РќР°Р·РЅР°С‡РµРЅРёРµ | РЎС‚Р°С‚СѓСЃ РїРµСЂРІРѕРіРѕ СЌС‚Р°РїР° |
+| Таблица | Назначение | Статус первого этапа |
 |---|---|---|
-| `sections` | РЎРїСЂР°РІРѕС‡РЅРёРє СѓС‡Р°СЃС‚РєРѕРІ | РќРѕРІР°СЏ master table |
-| `section_schedules` | Р“СЂР°С„РёРєРё СЃРјРµРЅ, cut-off time | РќРѕРІР°СЏ history/effective table |
-| `section_managers` | РћС‚РІРµС‚СЃС‚РІРµРЅРЅС‹Рµ РїРѕ СѓС‡Р°СЃС‚РєР°Рј | РќРѕРІР°СЏ link/history table |
-| `section_user_scope` | РћРїРµСЂР°С†РёРѕРЅРЅР°СЏ РѕР±Р»Р°СЃС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СѓС‡Р°СЃС‚РєР°Рј | РќРѕРІР°СЏ link/history table |
-| `vehicle_cards` | РќРѕСЂРјР°Р»РёР·РѕРІР°РЅРЅР°СЏ РєР°СЂС‚РѕС‡РєР° С‚РµС…РЅРёРєРё | РџР°СЂР°Р»Р»РµР»СЊРЅРѕ legacy `vehicles` |
-| `vehicle_status_history` | РСЃС‚РѕСЂРёСЏ СЃС‚Р°С‚СѓСЃРѕРІ С‚РµС…РЅРёРєРё | РќРѕРІР°СЏ event/history table |
-| `vehicle_section_history` | РСЃС‚РѕСЂРёСЏ Р·Р°РєСЂРµРїР»РµРЅРёСЏ С‚РµС…РЅРёРєРё Р·Р° СѓС‡Р°СЃС‚РєР°РјРё | РќРѕРІР°СЏ event/history table |
-| `vehicle_documents` | Р”РѕРєСѓРјРµРЅС‚С‹ С‚РµС…РЅРёРєРё | РќРѕРІР°СЏ document table |
-| `vehicle_contract_links` | РЎРІСЏР·Рё С‚РµС…РЅРёРєРё СЃ РєРѕРЅС‚СЂР°РіРµРЅС‚Р°РјРё/РґРѕРіРѕРІРѕСЂР°РјРё | Link table, РІРЅРµС€РЅРёРµ contracts РїРѕРєР° legacy/deferred |
-| `vehicle_gps_links` | РЎРІСЏР·Рё С‚РµС…РЅРёРєРё СЃ GPS/Wialon РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°РјРё | Link table, GPS РјРѕРґСѓР»СЊ РЅРµ Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ |
-| `erp_roles` | ERP-СЂРѕР»Рё | РќРѕРІР°СЏ master table |
-| `erp_user_roles` | РќР°Р·РЅР°С‡РµРЅРёСЏ СЂРѕР»РµР№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРј | Link/history table |
-| `erp_role_permissions` | РџСЂР°РІР° СЂРѕР»РµР№ РїРѕ module/action | Permission table |
-| `erp_user_permissions` | РРЅРґРёРІРёРґСѓР°Р»СЊРЅС‹Рµ allow/deny РёСЃРєР»СЋС‡РµРЅРёСЏ | Permission override table |
-| `erp_user_section_scope` | Authorization scope РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ СѓС‡Р°СЃС‚РєР°Рј | Link/history table |
-| `erp_access_audit` | Audit РёР·РјРµРЅРµРЅРёР№ РїСЂР°РІ | Audit table |
-| `vehicle_import_batches` | Batch metadata РґР»СЏ Р±СѓРґСѓС‰РёС… import/backfill | Control table |
+| `sections` | Справочник участков | Новая master table |
+| `section_schedules` | Графики смен, cut-off time | Новая history/effective table |
+| `section_managers` | Ответственные по участкам | Новая link/history table |
+| `section_user_scope` | Операционная область пользователя по участкам | Новая link/history table |
+| `vehicle_cards` | Нормализованная карточка техники | Параллельно legacy `vehicles` |
+| `vehicle_status_history` | История статусов техники | Новая event/history table |
+| `vehicle_section_history` | История закрепления техники за участками | Новая event/history table |
+| `vehicle_documents` | Документы техники | Новая document table |
+| `vehicle_contract_links` | Связи техники с контрагентами/договорами | Link table, внешние contracts пока legacy/deferred |
+| `vehicle_gps_links` | Связи техники с GPS/Wialon идентификаторами | Link table, GPS модуль не запускается |
+| `erp_roles` | ERP-роли | Новая master table |
+| `erp_user_roles` | Назначения ролей пользователям | Link/history table |
+| `erp_role_permissions` | Права ролей по module/action | Permission table |
+| `erp_user_permissions` | Индивидуальные allow/deny исключения | Permission override table |
+| `erp_user_section_scope` | Authorization scope пользователя по участкам | Link/history table |
+| `erp_access_audit` | Audit изменений прав | Audit table |
+| `vehicle_import_batches` | Batch metadata для будущих import/backfill | Control table |
 
-## Nullable РїРѕР»СЏ РїРµСЂРІРѕРіРѕ СЌС‚Р°РїР°
+## Nullable поля первого этапа
 
-РќР° РїРµСЂРІРѕРј СЌС‚Р°РїРµ nullable РѕСЃС‚Р°РІР»СЏСЋС‚СЃСЏ РїРѕР»СЏ, РєРѕС‚РѕСЂС‹Рµ РЅРµР»СЊР·СЏ РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕ Р·Р°РїРѕР»РЅРёС‚СЊ РёР· `vehicles.data` РёР»Рё `data/default-vehicles.json`:
+На первом этапе nullable оставляются поля, которые нельзя гарантированно заполнить из `vehicles.data` или `data/default-vehicles.json`:
 
 - `sections.parent_section_id`, `sections.site_name`;
 - `section_schedules.effective_to`;
-- РІСЃРµ `ended_at`;
+- все `ended_at`;
 - `vehicle_cards.vin`, `manufacture_year`, `owner_party_id`, `legacy_snapshot_hash`;
 - `vehicle_status_history.section_id`, `reason`, `source_module`, `source_entity_id`, `ended_at`;
 - `vehicle_section_history.ended_at`, `comment`;
 - `vehicle_documents.number`, `issued_at`, `expires_at`, `file_ref`;
 - `vehicle_contract_links.party_id`, `contract_id`, `rate_policy_id`;
 - `vehicle_gps_links.external_unit_id`, `terminal_id`;
-- `erp_*` РїРѕР»СЏ `ended_at`, `conditions_json`, `reason`, `section_id` С‚Р°Рј, РіРґРµ scope РјРѕР¶РµС‚ Р±С‹С‚СЊ РіР»РѕР±Р°Р»СЊРЅС‹Рј.
+- `erp_*` поля `ended_at`, `conditions_json`, `reason`, `section_id` там, где scope может быть глобальным.
 
 ## SQL draft
 
@@ -438,21 +438,21 @@ CREATE TABLE IF NOT EXISTS erp_access_audit (
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-## РРЅРґРµРєСЃС‹
+## Индексы
 
-РћР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ РёРЅРґРµРєСЃС‹ РїРµСЂРІРѕРіРѕ СЌС‚Р°РїР°:
+Обязательные индексы первого этапа:
 
 - `section_id`: `section_schedules`, `section_managers`, `section_user_scope`, `vehicle_status_history`, `vehicle_section_history`, `erp_user_roles`, `erp_user_permissions`, `erp_user_section_scope`, `erp_access_audit`.
 - `vehicle_id`: `vehicle_status_history`, `vehicle_section_history`, `vehicle_documents`, `vehicle_contract_links`, `vehicle_gps_links`.
 - `user_id`: `section_managers`, `section_user_scope`, `erp_user_roles`, `erp_user_permissions`, `erp_user_section_scope`.
 - `module/action`: `erp_role_permissions`, `erp_user_permissions`, `erp_access_audit`.
-- `started_at/ended_at`: РІСЃРµ history/link С‚Р°Р±Р»РёС†С‹.
+- `started_at/ended_at`: все history/link таблицы.
 - legacy: `vehicle_cards.legacy_vehicle_id`, `vehicle_cards.legacy_snapshot_hash`.
 - lookup: `plate_number`, `garage_number`, `vin`, `lifecycle_status`.
 
-## Р’РЅРµС€РЅРёРµ РєР»СЋС‡Рё
+## Внешние ключи
 
-РњРѕР¶РЅРѕ РІРєР»СЋС‡РёС‚СЊ СЃСЂР°Р·Сѓ РІ staging РїРѕСЃР»Рµ РїСЂРѕРІРµСЂРєРё РїРѕСЂСЏРґРєР° СЃРѕР·РґР°РЅРёСЏ:
+Можно включить сразу в staging после проверки порядка создания:
 
 - `sections.parent_section_id -> sections.section_id`;
 - `section_schedules.section_id -> sections.section_id`;
@@ -473,17 +473,17 @@ CREATE TABLE IF NOT EXISTS erp_access_audit (
 - `erp_user_section_scope.section_id -> sections.section_id`;
 - `erp_access_audit.section_id -> sections.section_id`.
 
-Р›СѓС‡С€Рµ РѕС‚Р»РѕР¶РёС‚СЊ РёР·-Р·Р° legacy compatibility:
+Лучше отложить из-за legacy compatibility:
 
-- `vehicle_cards.legacy_vehicle_id -> vehicles.vehicle_id`: legacy rows РјРѕРіСѓС‚ Р±С‹С‚СЊ РїРµСЂРµСЃРѕР·РґР°РЅС‹/Р·Р°РјРµРЅРµРЅС‹ С‚РµРєСѓС‰РёРј UI, Р° backfill РґРѕР»Р¶РµРЅ СЃРЅР°С‡Р°Р»Р° РґРѕРєР°Р·Р°С‚СЊ СЃС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ ids.
-- `*_user_id -> auth_users.user_id`: С‚РµРєСѓС‰РёР№ auth bootstrap Рё initial user РёРјРµСЋС‚ special id; РїРµСЂРµРґ FK РЅСѓР¶РЅР° РЅРѕСЂРјР°Р»РёР·Р°С†РёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№.
-- `vehicle_contract_links.party_id/contract_id`: РјРѕРґСѓР»СЊ РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРІ/РґРѕРіРѕРІРѕСЂРѕРІ РµС‰Рµ РЅРµ production.
-- `vehicle_gps_links.external_unit_id/terminal_id`: GPS/Wialon РЅРµ Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ РІ СЌС‚РѕРј СЃРїСЂРёРЅС‚Рµ.
-- `vehicle_cards.owner_party_id`: СЃРїСЂР°РІРѕС‡РЅРёРє РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРІ РµС‰Рµ РЅРµ СЃРѕР·РґР°РЅ.
+- `vehicle_cards.legacy_vehicle_id -> vehicles.vehicle_id`: legacy rows могут быть пересозданы/заменены текущим UI, а backfill должен сначала доказать стабильность ids.
+- `*_user_id -> auth_users.user_id`: текущий auth bootstrap и initial user имеют special id; перед FK нужна нормализация пользователей.
+- `vehicle_contract_links.party_id/contract_id`: модуль контрагентов/договоров еще не production.
+- `vehicle_gps_links.external_unit_id/terminal_id`: GPS/Wialon не запускается в этом спринте.
+- `vehicle_cards.owner_party_id`: справочник контрагентов еще не создан.
 
 ## Rollback section
 
-Rollback РєР°СЃР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РЅРѕРІС‹С… draft tables. РўРµРєСѓС‰СѓСЋ `vehicles` РЅРµ С‚СЂРѕРіР°С‚СЊ.
+Rollback касается только новых draft tables. Текущую `vehicles` не трогать.
 
 ```sql
 -- Rollback draft ERP core tables only.
@@ -507,13 +507,13 @@ DROP TABLE IF EXISTS section_schedules;
 DROP TABLE IF EXISTS sections;
 ```
 
-## Р РёСЃРєРё РјРёРіСЂР°С†РёРё
+## Риски миграции
 
-| Р РёСЃРє | Р’Р»РёСЏРЅРёРµ | РњРёС‚РёРіРёСЂРѕРІР°С‚СЊ |
+| Риск | Влияние | Митигировать |
 |---|---|---|
-| `vehicles.data` Рё seed РЅРµ РёРјРµСЋС‚ РїРѕР»РЅРѕРіРѕ `section_id` | РќРµР»СЊР·СЏ РєРѕСЂСЂРµРєС‚РЅРѕ Р·Р°РїРѕР»РЅРёС‚СЊ `vehicle_section_history` | РЎРЅР°С‡Р°Р»Р° СЃРѕР·РґР°С‚СЊ СЃРїСЂР°РІРѕС‡РЅРёРє СѓС‡Р°СЃС‚РєРѕРІ Рё mapping rules. |
-| VIN С‡Р°СЃС‚Рѕ РїСѓСЃС‚РѕР№ | РќРµР»СЊР·СЏ РґРµР»Р°С‚СЊ `vin` РѕР±СЏР·Р°С‚РµР»СЊРЅС‹Рј РёР»Рё СѓРЅРёРєР°Р»СЊРЅС‹Рј РЅР° РїРµСЂРІРѕРј СЌС‚Р°РїРµ | РћСЃС‚Р°РІРёС‚СЊ nullable, Р°РЅР°Р»РёР·РёСЂРѕРІР°С‚СЊ РїРѕР·Р¶Рµ. |
-| Р”СѓР±Р»Рё plate/garage РјРѕРіСѓС‚ Р±С‹С‚СЊ Р»РµРіРёС‚РёРјРЅС‹РјРё СЃР»СѓР¶РµР±РЅС‹РјРё Р·РЅР°С‡РµРЅРёСЏРјРё | РћС€РёР±РѕС‡РЅС‹Рµ unique constraints СЃР»РѕРјР°СЋС‚ import | РќР° РїРµСЂРІРѕРј СЌС‚Р°РїРµ С‚РѕР»СЊРєРѕ РЅРµСѓРЅРёРєР°Р»СЊРЅС‹Рµ РёРЅРґРµРєСЃС‹ Рё quality report. |
-| `owner/contractor` РїРѕРєР° СЃС‚СЂРѕРєРё | РќРµС‚ FK РЅР° РєРѕРЅС‚СЂР°РіРµРЅС‚РѕРІ | РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `legacy_owner_name` Рё `legacy_contractor_name`, party links РїРѕР·Р¶Рµ. |
-| Auth user ids С‡Р°СЃС‚РёС‡РЅРѕ special/bootstrap | FK РЅР° `auth_users` РјРѕР¶РµС‚ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°С‚СЊ РјРёРіСЂР°С†РёСЋ | Р’РєР»СЋС‡Р°С‚СЊ user FKs РїРѕСЃР»Рµ РЅРѕСЂРјР°Р»РёР·Р°С†РёРё auth СЏРґСЂР°. |
-| Runtime schema bootstrap РјРѕР¶РµС‚ СЃР»СѓС‡Р°Р№РЅРѕ РЅР°С‡Р°С‚СЊ СЃРѕР·РґР°РІР°С‚СЊ draft tables | РќР°СЂСѓС€РёС‚ staged-РїРѕРґС…РѕРґ | РќРµ РґРѕР±Р°РІР»СЏС‚СЊ СЌС‚Рё SQL РІ `schema-definitions.ts` РґРѕ РѕС‚РґРµР»СЊРЅРѕРіРѕ СЂРµС€РµРЅРёСЏ. |
+| `vehicles.data` и seed не имеют полного `section_id` | Нельзя корректно заполнить `vehicle_section_history` | Сначала создать справочник участков и mapping rules. |
+| VIN часто пустой | Нельзя делать `vin` обязательным или уникальным на первом этапе | Оставить nullable, анализировать позже. |
+| Дубли plate/garage могут быть легитимными служебными значениями | Ошибочные unique constraints сломают import | На первом этапе только неуникальные индексы и quality report. |
+| `owner/contractor` пока строки | Нет FK на контрагентов | Использовать `legacy_owner_name` и `legacy_contractor_name`, party links позже. |
+| Auth user ids частично special/bootstrap | FK на `auth_users` может заблокировать миграцию | Включать user FKs после нормализации auth ядра. |
+| Runtime schema bootstrap может случайно начать создавать draft tables | Нарушит staged-подход | Не добавлять эти SQL в `schema-definitions.ts` до отдельного решения. |
