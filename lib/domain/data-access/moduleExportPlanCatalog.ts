@@ -1,0 +1,162 @@
+import type { ModuleExportPlan } from "./moduleExportPlans";
+
+const defaultFormats: ModuleExportPlan["allowedFormats"] = ["xlsx", "pdf", "csv"];
+const defaultGrains: ModuleExportPlan["allowedGrains"] = ["shift", "day", "watch", "month", "year"];
+
+function createExportPlan(input: Omit<
+  ModuleExportPlan,
+  | "allowedFormats"
+  | "allowedGrains"
+  | "requiresServerSideFilters"
+  | "createsQueuedRequest"
+  | "storesFileByReference"
+  | "avoidsClientSideRecalculation"
+> & Partial<Pick<ModuleExportPlan, "allowedFormats" | "allowedGrains">>) {
+  return {
+    allowedFormats: defaultFormats,
+    allowedGrains: defaultGrains,
+    requiresServerSideFilters: true,
+    createsQueuedRequest: true,
+    storesFileByReference: true,
+    avoidsClientSideRecalculation: true,
+    ...input,
+  } satisfies ModuleExportPlan;
+}
+
+export const moduleExportPlans: ModuleExportPlan[] = [
+  createExportPlan({
+    moduleId: "mining-shift-reports",
+    workspaceId: "mining-dispatch",
+    resource: "dispatch",
+    databaseAction: "export-shift-report",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "dispatch_export_requests",
+    requiredFilters: ["date", "section_id", "shift", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "mining-operational-accounting",
+    workspaceId: "mining-dispatch",
+    resource: "dispatch",
+    databaseAction: "export-operational-accounting",
+    sourceKind: "prepared-aggregate",
+    exportRequestEntity: "dispatch_export_requests",
+    requiredFilters: ["date", "section_id", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "taxation-waybills",
+    workspaceId: "taxation",
+    resource: "taxation",
+    databaseAction: "export-waybills",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "taxation_export_requests",
+    requiredFilters: ["date", "section_id", "shift", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "taxation-fuel-periods",
+    workspaceId: "taxation",
+    resource: "taxation",
+    databaseAction: "export-fuel-period",
+    sourceKind: "prepared-aggregate",
+    exportRequestEntity: "taxation_export_requests",
+    allowedGrains: ["fuel_period", "month", "year"],
+    requiredFilters: ["section_id", "period_id", "status"],
+    maxDateRangeDays: 366,
+    maxRowsPerExport: 10000,
+  }),
+  createExportPlan({
+    moduleId: "smts-vehicle-cards",
+    workspaceId: "smts-gps",
+    resource: "smts",
+    databaseAction: "export-vehicle-cards",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "smts_export_requests",
+    requiredFilters: ["section_id", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "smts-fuel-drains",
+    workspaceId: "smts-gps",
+    resource: "smts",
+    databaseAction: "export-fuel-drain-events",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "smts_export_requests",
+    requiredFilters: ["date", "section_id", "vehicle_id", "status"],
+    maxDateRangeDays: 14,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "fleet-movements",
+    workspaceId: "fleet",
+    resource: "fleet",
+    databaseAction: "export-vehicle-movements",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "fleet_export_requests",
+    requiredFilters: ["date", "section_id", "vehicle_id", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "service-vehicle",
+    workspaceId: "fleet",
+    resource: "fleet",
+    databaseAction: "export-service-vehicle-records",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "fleet_export_requests",
+    requiredFilters: ["vehicle_id", "status"],
+    maxDateRangeDays: 366,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "common-overtime",
+    workspaceId: "common-processes",
+    resource: "common-processes",
+    databaseAction: "export-overtime-requests",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "common_process_export_requests",
+    requiredFilters: ["date", "section_id", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "common-business-trips",
+    workspaceId: "common-processes",
+    resource: "common-processes",
+    databaseAction: "export-business-trips",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "common_process_export_requests",
+    requiredFilters: ["date", "section_id", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 5000,
+  }),
+  createExportPlan({
+    moduleId: "prepared-reports",
+    workspaceId: "reports",
+    resource: "reports",
+    databaseAction: "create-report-export-request",
+    sourceKind: "prepared-aggregate",
+    exportRequestEntity: "report_export_requests",
+    allowedGrains: ["shift", "day", "watch", "fuel_period", "month", "year"],
+    requiredFilters: ["date", "section_id", "status"],
+    maxDateRangeDays: 31,
+    maxRowsPerExport: 10000,
+  }),
+  createExportPlan({
+    moduleId: "access-matrix",
+    workspaceId: "admin",
+    resource: "admin",
+    databaseAction: "export-access-grants",
+    sourceKind: "bounded-list-query",
+    exportRequestEntity: "admin_export_requests",
+    allowedFormats: ["csv", "xlsx"],
+    requiredFilters: ["section_id", "status"],
+    maxDateRangeDays: 366,
+    maxRowsPerExport: 5000,
+  }),
+];

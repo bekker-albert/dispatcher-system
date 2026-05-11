@@ -9,7 +9,9 @@ import {
 import type { ReportRow } from "@/lib/domain/reports/types";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
+import { createDispatchStructureOptionsFromPtoPlan } from "./dispatchStructureOptions";
 
 type UseDispatchSummaryViewModelOptions = {
   active: boolean;
@@ -20,6 +22,7 @@ type UseDispatchSummaryViewModelOptions = {
   vehicleRows: VehicleRow[];
   dispatchSummaryRows: DispatchSummaryRow[];
   reportBaseRows: ReportRow[];
+  ptoPlanRows: PtoPlanRow[];
 };
 
 export function useDispatchSummaryViewModel({
@@ -31,8 +34,13 @@ export function useDispatchSummaryViewModel({
   vehicleRows,
   dispatchSummaryRows,
   reportBaseRows,
+  ptoPlanRows,
 }: UseDispatchSummaryViewModelOptions) {
-  const normalizedDispatchSearch = useMemo(() => search.trim().toLowerCase(), [search]);
+  const currentDispatchShift = dispatchShiftFromTab(dispatchTab);
+  const isDailyDispatchShift = currentDispatchShift === "daily";
+  const normalizedDispatchSearch = useMemo(() => (
+    currentDispatchShift === "daily" ? search.trim().toLowerCase() : ""
+  ), [currentDispatchShift, search]);
   const vehicleSearchRecords = useMemo(() => (
     !active
       ? []
@@ -68,9 +76,6 @@ export function useDispatchSummaryViewModel({
       .map(({ vehicle }) => vehicle);
   }, [active, areaFilter, normalizedDispatchSearch, vehicleSearchRecords]);
 
-  const currentDispatchShift = dispatchShiftFromTab(dispatchTab);
-  const isDailyDispatchShift = currentDispatchShift === "daily";
-
   const dispatchAreaOptions = useMemo(() => [
     "Все участки",
     ...(active
@@ -101,10 +106,9 @@ export function useDispatchSummaryViewModel({
   ]), [active, dispatchSummaryRows, vehicleRows]);
 
   const dispatchWorkTypeOptions = useMemo(() => uniqueSorted([
-    ...(active ? vehicleRows.map((vehicle) => vehicle.workType) : []),
+    ...(active ? createDispatchStructureOptionsFromPtoPlan(ptoPlanRows, areaFilter) : []),
     ...(active ? dispatchSummaryRows.map((row) => row.workType) : []),
-    ...(active ? reportBaseRows.map((row) => row.name) : []),
-  ]), [active, dispatchSummaryRows, reportBaseRows, vehicleRows]);
+  ]), [active, areaFilter, dispatchSummaryRows, ptoPlanRows]);
 
   const dispatchExcavatorOptions = useMemo(() => uniqueSorted([
     ...(active ? vehicleRows.map((vehicle) => vehicle.excavator) : []),

@@ -26,6 +26,7 @@ export function createPtoPlanExportRows(rows: PtoPlanRow[], year: string, areaFi
   const headers = [
     ...(includeCustomerCode ? ["Заказчик"] : []),
     "Участок",
+    "Местонахождение",
     "Вид работ",
     "Ед.",
     `Остатки ${previousPtoYearLabel(year)}`,
@@ -40,6 +41,7 @@ export function createPtoPlanExportRows(rows: PtoPlanRow[], year: string, areaFi
     .map((row) => [
       ...(includeCustomerCode ? [normalizePtoCustomerCode(row.customerCode)] : []),
       cleanAreaName(row.area),
+      row.location,
       row.structure,
       normalizePtoUnit(row.unit),
       ptoPlanExportCell(ptoStoredCarryover(row, year)),
@@ -63,6 +65,7 @@ export function createPtoPlanExportColumns(year: string, table: PtoDateTableKey 
   const columns: XlsxColumnOption[] = [
     ...(includeCustomerCode ? [{ width: 10 }] : []),
     { width: 14 },
+    { width: 18 },
     { width: 42 },
     { width: 7 },
     { width: 15 },

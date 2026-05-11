@@ -1,6 +1,5 @@
 "use client";
 
-import { AppHeader } from "@/components/layout/AppHeader";
 import { AppPrimaryContent } from "@/features/app/AppPrimaryContent";
 import { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
 import { useAppNavigationControllers } from "@/features/app/useAppNavigationControllers";
@@ -8,6 +7,7 @@ import { AppPageShell } from "@/features/app/AppPageShell";
 import { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import { useAppScreenProps } from "@/features/app/useAppScreenProps";
 import { useAppStateBundle } from "@/features/app/useAppStateBundle";
+import { AppShell } from "@/features/app-shell/AppShell";
 import { AuthProvider } from "@/features/auth/AuthContext";
 import { AiAssistantProvider } from "@/features/ai-assistant/lib/useAiAssistantState";
 import { UserRegistrationRequestsWatcher } from "@/features/users/UserRegistrationRequestsWatcher";
@@ -55,8 +55,13 @@ export default function App({ initialAuthUser }: { initialAuthUser: AuthUser }) 
       >
         <UserRegistrationRequestsWatcher addAdminLog={appState.addAdminLog} />
         <AppPageShell saveStatus={saveStatus} onCloseSaveStatus={hideSaveStatus}>
-          <AppHeader {...appHeaderProps} />
-          <AppPrimaryContent {...primaryContentProps} />
+          <AppShell
+            appHeaderProps={appHeaderProps}
+            appState={appState}
+            databaseConfigured={databaseConfigured}
+          >
+            <AppPrimaryContent {...primaryContentProps} />
+          </AppShell>
         </AppPageShell>
       </AiAssistantProvider>
     </AuthProvider>

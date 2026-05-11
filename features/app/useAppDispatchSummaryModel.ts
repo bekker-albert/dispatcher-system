@@ -6,6 +6,7 @@ import { useDispatchSummaryEditor } from "@/features/dispatch/useDispatchSummary
 import { useDispatchSummaryViewModel } from "@/features/dispatch/useDispatchSummaryViewModel";
 import type { AdminLogInput } from "@/lib/domain/admin/logs";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
+import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { ReportRow } from "@/lib/domain/reports/types";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
@@ -20,6 +21,7 @@ type UseAppDispatchSummaryModelOptions = {
   vehicleRows: VehicleRow[];
   dispatchSummaryRows: DispatchSummaryRow[];
   reportBaseRows: ReportRow[];
+  ptoPlanRows: PtoPlanRow[];
   dispatchVehicleToAddId: string;
   setDispatchSummaryRows: Dispatch<SetStateAction<DispatchSummaryRow[]>>;
   setDispatchVehicleToAddId: Dispatch<SetStateAction<string>>;
@@ -35,6 +37,7 @@ export function useAppDispatchSummaryModel({
   vehicleRows,
   dispatchSummaryRows,
   reportBaseRows,
+  ptoPlanRows,
   dispatchVehicleToAddId,
   setDispatchSummaryRows,
   setDispatchVehicleToAddId,
@@ -49,6 +52,7 @@ export function useAppDispatchSummaryModel({
     vehicleRows,
     dispatchSummaryRows,
     reportBaseRows,
+    ptoPlanRows,
   });
 
   const dispatchEditor = useDispatchSummaryEditor({

@@ -16,7 +16,7 @@ type UseAppTabsStateOptions = {
 };
 
 export function useAppTabsState({ defaultSubTabs }: UseAppTabsStateOptions) {
-  const [topTab, setTopTab] = useState<TopTab>("reports");
+  const [topTab, setTopTab] = useState<TopTab>("home");
   const [topTabs, setTopTabs] = useState<TopTabDefinition[]>(defaultTopTabs);
   const [subTabs, setSubTabs] = useState<Record<EditableSubtabGroup, SubTabConfig[]>>(defaultSubTabs);
   const [customTabs, setCustomTabs] = useState<CustomTab[]>([]);

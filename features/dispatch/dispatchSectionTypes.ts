@@ -39,6 +39,8 @@ export type DispatchSectionProps = {
   onDispatchVehicleToAddIdChange: (value: string) => void;
   dispatchVehicleOptions: VehicleRow[];
   dispatchVehicleSelectOptions: DispatchVehicleSelectOption[];
+  onAddDispatchSummaryLink: () => void;
+  onAddDumpTruckToDispatchLink: (excavator: string, templateRow?: DispatchSummaryRow) => void;
   onAddSelectedDispatchVehicle: () => void;
   onAddFilteredVehiclesToDispatchSummary: () => void;
   dispatchAiSuggestion: string;
@@ -47,6 +49,8 @@ export type DispatchSectionProps = {
   onUpdateDispatchSummaryText: (rowId: string, field: DispatchSummaryTextField, value: string) => void;
   onUpdateDispatchSummaryNumber: (rowId: string, field: DispatchSummaryNumberField, value: string) => void;
   onDeleteDispatchSummaryRow: (rowId: string) => void;
+  onDeleteDispatchSummaryLink: (rowIds: string[], label: string) => void;
+  onDeleteCurrentDispatchShiftRows: () => void;
   dispatchLocationOptions: string[];
   dispatchWorkTypeOptions: string[];
   dispatchExcavatorOptions: string[];

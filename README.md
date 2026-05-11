@@ -4,18 +4,19 @@
 
 ## Локальный запуск
 
-```bash
+```powershell
 npm ci
-npm run dev
+$env:AUTH_REQUIRED='false'
+npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
 Открыть локально:
 
 ```text
-http://localhost:3000
+http://127.0.0.1:3000
 ```
 
-Для обычной работы на этом компьютере можно запускать `start-local-server.cmd`: он откроет уже запущенный локальный сервер или стартует свободный порт, начиная с `3011`.
+For normal local work on this workstation, run `start-local-server.cmd`. It opens the existing dispatcher dev server or starts the single Next.js dev server at `http://127.0.0.1:3000` with `AUTH_REQUIRED=false`. It must not start a second backend, run migrations, or use a separate workspace app.
 
 ## Проверка перед сохранением
 
@@ -101,11 +102,13 @@ npm run migrate:supabase-to-mysql -- --confirm
 4. устанавливает production-зависимости через `npm ci --omit=dev`;
 5. подменяет `.next` заранее собранным артефактом из GitHub Actions;
 6. перезапускает `pm2`-процесс `aam-dispatch`;
-7. запускает smoke-проверку сайта, статуса базы и загрузки техники без записи данных.
+7. Runs production smoke for the site, database status, anonymous write blocking, and a bounded planned action without broad data loading.
 
 The production smoke always checks that anonymous database POST requests are
 blocked. If `PRODUCTION_SMOKE_AUTH_LOGIN` and `PRODUCTION_SMOKE_AUTH_PASSWORD`
-are configured, it also logs in and performs the read-only vehicle load check.
+are configured, it also logs in and checks the bounded planned
+`taxation/list-waybills` action. The smoke check must not call legacy broad
+`load` actions such as `vehicles/load`.
 
 Required GitHub Actions secrets:
 
@@ -118,7 +121,7 @@ Optional smoke overrides:
 
 - `PRODUCTION_SMOKE_URL`
 - `PRODUCTION_SMOKE_API_URL`
-- `PRODUCTION_SMOKE_MIN_VEHICLE_ROWS` (defaults to `100`; set explicitly if production legitimately has fewer rows)
+- `PRODUCTION_SMOKE_TIMEOUT_MS` (defaults to `30000`)
 - `PRODUCTION_SMOKE_AUTH_LOGIN`
 - `PRODUCTION_SMOKE_AUTH_PASSWORD`
 

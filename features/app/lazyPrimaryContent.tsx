@@ -37,7 +37,23 @@ export const DispatchPrimaryContent = dynamic(
   () => import("./DispatchPrimaryContent").then((module) => module.DispatchPrimaryContent),
   {
     ssr: false,
-    loading: () => <PrimaryContentLoading label="Диспетчер" />,
+    loading: () => <PrimaryContentLoading label="Горная диспетчеризация" />,
+  },
+);
+
+export const WorkspaceOverviewPrimaryContent = dynamic(
+  () => import("../workspaces/WorkspaceOverviewSection").then((module) => module.WorkspaceOverviewSection),
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Главная" />,
+  },
+);
+
+export const CommonProcessesPrimaryContent = dynamic(
+  () => import("../workspaces/CommonProcessesSection").then((module) => module.CommonProcessesSection),
+  {
+    ssr: false,
+    loading: () => <PrimaryContentLoading label="Общие процессы" />,
   },
 );
 
@@ -61,7 +77,7 @@ export const FleetPrimaryContent = dynamic(
   () => import("./FleetPrimaryContent").then((module) => module.FleetPrimaryContent),
   {
     ssr: false,
-    loading: () => <PrimaryContentLoading label="Автопарк" />,
+    loading: () => <PrimaryContentLoading label="Техника" />,
   },
 );
 
@@ -77,7 +93,7 @@ export const FuelPrimaryContent = dynamic(
   () => import("../fuel/FuelSection").then((module) => module.FuelSection),
   {
     ssr: false,
-    loading: () => <PrimaryContentLoading label="ГСМ" />,
+    loading: () => <PrimaryContentLoading label="Таксировка" />,
   },
 );
 
@@ -85,7 +101,7 @@ export const SafetyPrimaryContent = dynamic(
   () => import("../safety-driving/SafetySection").then((module) => module.SafetySection),
   {
     ssr: false,
-    loading: () => <PrimaryContentLoading label="ТБ" />,
+    loading: () => <PrimaryContentLoading label="СМТС / GPS" />,
   },
 );
 

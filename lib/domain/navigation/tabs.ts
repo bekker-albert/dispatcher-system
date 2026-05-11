@@ -1,9 +1,11 @@
 import { isRecord, mergeDefaultsById } from "../../utils/normalizers";
 
 export type BaseTopTab =
+  | "home"
   | "reports"
   | "dispatch"
   | "fleet"
+  | "common"
   | "contractors"
   | "fuel"
   | "pto"
@@ -52,14 +54,16 @@ export const defaultCustomTabForm = {
 };
 
 export const defaultTopTabs: TopTabDefinition[] = [
-  { id: "reports", label: "Отчетность", visible: true },
-  { id: "dispatch", label: "Сводка", visible: true },
+  { id: "home", label: "Главная", visible: true, locked: true },
+  { id: "dispatch", label: "Горная диспетчеризация", visible: true },
+  { id: "fuel", label: "Таксировка", visible: true },
+  { id: "tb", label: "СМТС / GPS", visible: true },
   { id: "fleet", label: "Техника", visible: true },
+  { id: "common", label: "Общие процессы", visible: true },
+  { id: "reports", label: "Отчеты", visible: true },
+  { id: "admin", label: "Администрирование", visible: true, locked: true },
   { id: "contractors", label: "Подрядчики", visible: true },
-  { id: "fuel", label: "Топливо", visible: true },
   { id: "pto", label: "ПТО", visible: true },
-  { id: "tb", label: "ТБ", visible: true },
-  { id: "admin", label: "Админка", visible: true, locked: true },
   { id: "ai-assistant", label: "AI-ассистент", visible: true },
 ];
 
@@ -198,8 +202,13 @@ export function customTabKey(id: string): TopTab {
 
 export function compactTopTabLabel(tab: TopTabDefinition) {
   const labels: Partial<Record<BaseTopTab, Record<string, string>>> = {
-    reports: { "Отчетность": "Отчетность" },
+    home: { "Главная": "Главная" },
+    reports: { "Отчетность": "Отчетность", "Отчеты": "Отчеты" },
     dispatch: { "Диспетчерская сводка": "Сводка" },
+    common: { "Общие процессы": "Общие" },
+    fuel: { "Таксировка": "Таксировка" },
+    tb: { "СМТС / GPS": "СМТС" },
+    admin: { "Администрирование": "Админ" },
     contractors: { "Действующие подрядчики": "Подрядчики" },
     "ai-assistant": { "AI-ассистент": "AI" },
     user: { "Пользователь": "Профиль" },

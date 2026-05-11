@@ -22,6 +22,8 @@ type UseAppDispatchSectionPropsOptions = {
   setDispatchVehicleToAddId: Dispatch<SetStateAction<string>>;
   dispatchVehicleOptions: VehicleRow[];
   dispatchVehicleSelectOptions: DispatchVehicleSelectOption[];
+  addDispatchSummaryLink: () => void;
+  addDumpTruckToDispatchLink: DispatchSectionProps["onAddDumpTruckToDispatchLink"];
   addSelectedDispatchVehicle: () => void;
   addFilteredVehiclesToDispatchSummary: () => void;
   dispatchAiSuggestion: string;
@@ -30,6 +32,8 @@ type UseAppDispatchSectionPropsOptions = {
   updateDispatchSummaryText: DispatchSectionProps["onUpdateDispatchSummaryText"];
   updateDispatchSummaryNumber: DispatchSectionProps["onUpdateDispatchSummaryNumber"];
   deleteDispatchSummaryRow: DispatchSectionProps["onDeleteDispatchSummaryRow"];
+  deleteDispatchSummaryLink: DispatchSectionProps["onDeleteDispatchSummaryLink"];
+  deleteCurrentDispatchShiftRows: () => void;
   dispatchLocationOptions: string[];
   dispatchWorkTypeOptions: string[];
   dispatchExcavatorOptions: string[];
@@ -51,6 +55,8 @@ export function useAppDispatchSectionProps({
   setDispatchVehicleToAddId,
   dispatchVehicleOptions,
   dispatchVehicleSelectOptions,
+  addDispatchSummaryLink,
+  addDumpTruckToDispatchLink,
   addSelectedDispatchVehicle,
   addFilteredVehiclesToDispatchSummary,
   dispatchAiSuggestion,
@@ -59,6 +65,8 @@ export function useAppDispatchSectionProps({
   updateDispatchSummaryText,
   updateDispatchSummaryNumber,
   deleteDispatchSummaryRow,
+  deleteDispatchSummaryLink,
+  deleteCurrentDispatchShiftRows,
   dispatchLocationOptions,
   dispatchWorkTypeOptions,
   dispatchExcavatorOptions,
@@ -80,6 +88,8 @@ export function useAppDispatchSectionProps({
     onDispatchVehicleToAddIdChange: setDispatchVehicleToAddId,
     dispatchVehicleOptions,
     dispatchVehicleSelectOptions,
+    onAddDispatchSummaryLink: addDispatchSummaryLink,
+    onAddDumpTruckToDispatchLink: addDumpTruckToDispatchLink,
     onAddSelectedDispatchVehicle: addSelectedDispatchVehicle,
     onAddFilteredVehiclesToDispatchSummary: addFilteredVehiclesToDispatchSummary,
     dispatchAiSuggestion,
@@ -88,6 +98,8 @@ export function useAppDispatchSectionProps({
     onUpdateDispatchSummaryText: updateDispatchSummaryText,
     onUpdateDispatchSummaryNumber: updateDispatchSummaryNumber,
     onDeleteDispatchSummaryRow: deleteDispatchSummaryRow,
+    onDeleteDispatchSummaryLink: deleteDispatchSummaryLink,
+    onDeleteCurrentDispatchShiftRows: deleteCurrentDispatchShiftRows,
     dispatchLocationOptions,
     dispatchWorkTypeOptions,
     dispatchExcavatorOptions,

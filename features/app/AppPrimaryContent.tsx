@@ -4,6 +4,7 @@ import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTyp
 import {
   AdminPrimaryContent,
   AiAssistantPrimaryContent,
+  CommonProcessesPrimaryContent,
   ContractorsPrimaryContent,
   CustomTabPrimaryContent,
   DispatchPrimaryContent,
@@ -12,6 +13,7 @@ import {
   PtoPrimaryContent,
   ReportsPrimaryContent,
   SafetyPrimaryContent,
+  WorkspaceOverviewPrimaryContent,
 } from "@/features/app/lazyPrimaryContent";
 import { useAppSectionPreloader } from "@/features/app/useAppSectionPreloader";
 import { PtoDatabaseGate } from "@/features/pto/PtoDatabaseGate";
@@ -27,6 +29,7 @@ export function AppPrimaryContent({
   const {
     contractorTab,
     setContractorTab,
+    fleetTab,
     fuelTab,
     setFuelTab,
     tbTab,
@@ -40,7 +43,9 @@ export function AppPrimaryContent({
     renderedTopTab,
   } = models;
 
-  const shouldPreloadSections = appState.adminDataLoaded && (!databaseConfigured || ptoDatabaseReady);
+  const shouldPreloadSections = renderedTopTab !== "home"
+    && appState.adminDataLoaded
+    && (!databaseConfigured || ptoDatabaseReady);
   useAppSectionPreloader(shouldPreloadSections, {
     activeTab: renderedTopTab,
     includePto: !databaseConfigured || ptoDatabaseReady,
@@ -58,6 +63,8 @@ export function AppPrimaryContent({
 
   return (
     <>
+      {renderedTopTab === "home" && <WorkspaceOverviewPrimaryContent />}
+
       {renderedTopTab === "reports" && (
         <ReportsPrimaryContent appState={appState} models={models} runtime={runtime} />
       )}
@@ -71,9 +78,12 @@ export function AppPrimaryContent({
           appState={appState}
           models={models}
           mode="readonly"
+          fleetTab={fleetTab}
           runtime={runtime}
         />
       )}
+
+      {renderedTopTab === "common" && <CommonProcessesPrimaryContent />}
 
       {renderedTopTab === "contractors" && (
         <ContractorsPrimaryContent
@@ -101,7 +111,7 @@ export function AppPrimaryContent({
       )}
 
       {renderedTopTab === "tb" && (
-        <SafetyPrimaryContent tbTab={tbTab} subTabs={subTabs.tb} onSelectTab={setTbTab} />
+        <SafetyPrimaryContent tbTab={tbTab} subTabs={subTabs.tb} vehicleRows={appState.vehicleRows} onSelectTab={setTbTab} />
       )}
 
       {renderedTopTab === "ai-assistant" && <AiAssistantPrimaryContent />}

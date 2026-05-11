@@ -110,6 +110,15 @@ export function useClientSnapshotsPanel({ active, showSaveStatus }: ClientSnapsh
   }, [refreshClientSnapshots, saveClientSnapshotToDatabase]);
 
   const restoreClientSnapshot = useCallback((snapshot: DataClientSnapshot) => {
+    // Restoring a browser snapshot can trigger the existing recovery-save path,
+    // so require an explicit admin confirmation before local data is promoted.
+    const confirmed = window.confirm(
+      "\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c \u044d\u0442\u043e\u0442 browser snapshot? "
+        + "\u041f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 "
+        + "\u043c\u043e\u0433\u0443\u0442 \u0431\u044b\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b \u0432 \u0431\u0430\u0437\u0443.",
+    );
+    if (!confirmed) return;
+
     managedClientSnapshotStorageKeys.forEach((key) => {
       window.localStorage.removeItem(key);
     });

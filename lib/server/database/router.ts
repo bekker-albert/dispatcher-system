@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { databaseResourceHandlers } from "./handlers";
 import { authorizeDatabaseRequest } from "./authorization";
+import { tryHandleLiveModuleDatabaseAction } from "./module-live-handlers";
+import { createPlannedModuleDatabaseActionResponse } from "./planned-module-actions";
 import {
   corsHeaders,
   createDatabaseAuthRequiredResponse,
@@ -24,7 +26,22 @@ export { createDatabaseErrorResponse } from "./responses";
 
 type DatabaseResourceHandlers = Record<string, DatabaseResourceHandler>;
 
-const databaseWriteActionPrefixes = ["save", "delete", "update", "set", "clear", "replace"] as const;
+const databaseWriteActionPrefixes = [
+  "save",
+  "create",
+  "patch",
+  "transition",
+  "delete",
+  "update",
+  "set",
+  "clear",
+  "replace",
+  "admin",
+  "export",
+  "stage",
+  "import",
+  "validate",
+] as const;
 
 function getUrlOrigin(value: string | null) {
   if (!value) return undefined;
@@ -136,12 +153,17 @@ export async function routeDatabaseRequest(
     return createDatabaseWriteGuardResponse(request);
   }
 
+  const liveModuleResponse = await tryHandleLiveModuleDatabaseAction(body, request, jsonForRequest);
+  if (liveModuleResponse) return liveModuleResponse;
+
   const handler = resource ? handlers[resource] : undefined;
   const response = handler
     ? await handler({ action, payload, request, json: jsonForRequest })
     : undefined;
 
-  return response ?? createUnknownDatabaseActionResponse(request);
+  return response
+    ?? createPlannedModuleDatabaseActionResponse(body, request)
+    ?? createUnknownDatabaseActionResponse(request);
 }
 
 export function createDatabasePostHandler(handlers: DatabaseResourceHandlers = databaseResourceHandlers) {

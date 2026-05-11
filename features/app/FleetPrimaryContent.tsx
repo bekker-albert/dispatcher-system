@@ -3,15 +3,17 @@
 import { useEffect } from "react";
 
 import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTypes";
+import { FleetPlacementSection } from "@/features/fleet/FleetPlacementSection";
 import { FleetVehiclesSection } from "@/features/fleet/FleetVehiclesSection";
 import { resetVehicleInteractionState } from "@/shared/editable-grid/resetVehicleInteractionState";
 
 type FleetPrimaryContentProps = Pick<AppPrimaryContentProps, "appState"> &
   Partial<Pick<AppPrimaryContentProps, "models" | "runtime">> & {
+    fleetTab?: string;
     mode?: "readonly" | "admin";
   };
 
-export function FleetPrimaryContent({ appState, mode = "readonly" }: FleetPrimaryContentProps) {
+export function FleetPrimaryContent({ appState, fleetTab = "directory", mode = "readonly" }: FleetPrimaryContentProps) {
   const {
     setActiveVehicleCell,
     setAdminVehiclesEditing,
@@ -47,6 +49,10 @@ export function FleetPrimaryContent({ appState, mode = "readonly" }: FleetPrimar
     setVehicleSelectionAnchorCell,
     mode,
   ]);
+
+  if (fleetTab === "placement") {
+    return <FleetPlacementSection vehicleRows={appState.vehicleRows} workDate={appState.reportDate} />;
+  }
 
   return <FleetVehiclesSection vehicleRows={appState.vehicleRows} workDate={appState.reportDate} />;
 }

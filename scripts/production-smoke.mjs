@@ -6,20 +6,28 @@ const apiBaseUrl = (
   process.env.PRODUCTION_SMOKE_API_URL
   || defaultApiBaseUrl
 ).replace(/\/+$/, "");
-const minVehicleRowsRaw = process.env.PRODUCTION_SMOKE_MIN_VEHICLE_ROWS || "100";
-const minVehicleRows = Number(minVehicleRowsRaw);
+const timeoutMsRaw = process.env.PRODUCTION_SMOKE_TIMEOUT_MS || "30000";
+const timeoutMs = Number(timeoutMsRaw);
 const smokeAuthLogin = process.env.PRODUCTION_SMOKE_AUTH_LOGIN || "";
 const smokeAuthPassword = process.env.PRODUCTION_SMOKE_AUTH_PASSWORD || "";
+const siteOrigin = new URL(baseUrl).origin;
 
-if (!Number.isFinite(minVehicleRows) || minVehicleRows <= 0) {
-  throw new Error("PRODUCTION_SMOKE_MIN_VEHICLE_ROWS must be a positive number");
+if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+  throw new Error("PRODUCTION_SMOKE_TIMEOUT_MS must be a positive number");
 }
 
 console.log(`site url: ${baseUrl}`);
 console.log(`api url: ${apiBaseUrl}`);
 
+async function smokeFetch(url, init = {}) {
+  return await fetch(url, {
+    ...init,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
+
 async function checkUrl(label, url, validate) {
-  const response = await fetch(url, {
+  const response = await smokeFetch(url, {
     method: "GET",
     headers: {
       "User-Agent": "dispatcher-production-smoke/1.0",
@@ -56,16 +64,22 @@ await checkUrl("database status", `${apiBaseUrl}/api/database`, async (response)
 });
 
 async function checkAnonymousDatabaseWriteBlocked() {
-  const response = await fetch(`${apiBaseUrl}/api/database`, {
+  const response = await smokeFetch(`${apiBaseUrl}/api/database`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Origin": baseUrl,
-      "Referer": `${baseUrl}/`,
+      "Origin": siteOrigin,
+      "Referer": `${siteOrigin}/`,
       "X-Dispatcher-Request": "same-origin",
       "User-Agent": "dispatcher-production-smoke/1.0",
     },
-    body: JSON.stringify({ resource: "vehicles", action: "load", payload: null }),
+    body: JSON.stringify({
+      resource: "taxation",
+      action: "list-waybills",
+      payload: {
+        scope: { sectionId: "baktai" },
+      },
+    }),
   });
 
   if (response.status !== 401 && response.status !== 403) {
@@ -77,48 +91,62 @@ async function checkAnonymousDatabaseWriteBlocked() {
 
 await checkAnonymousDatabaseWriteBlocked();
 
-async function databasePost(label, resource, action, payload = null, validate) {
+async function checkAuthenticatedPlannedModuleAction() {
   const smokeAuthCookie = await getSmokeAuthCookie();
   if (!smokeAuthCookie) {
-    console.log(`${label}: SKIPPED (PRODUCTION_SMOKE_AUTH_LOGIN/PASSWORD are not set)`);
+    console.log("authenticated planned module action: SKIPPED (PRODUCTION_SMOKE_AUTH_LOGIN/PASSWORD are not set)");
     return;
   }
 
-  const response = await fetch(`${apiBaseUrl}/api/database`, {
+  const response = await smokeFetch(`${apiBaseUrl}/api/database`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Origin": baseUrl,
-      "Referer": `${baseUrl}/`,
+      "Origin": siteOrigin,
+      "Referer": `${siteOrigin}/`,
       "X-Dispatcher-Request": "same-origin",
       "User-Agent": "dispatcher-production-smoke/1.0",
       "Cookie": smokeAuthCookie,
     },
-    body: JSON.stringify({ resource, action, payload }),
+    body: JSON.stringify({
+      resource: "taxation",
+      action: "list-waybills",
+      payload: {
+        scope: { sectionId: "baktai" },
+      },
+    }),
   });
 
-  if (!response.ok) {
-    let summary = "";
-    const contentType = response.headers.get("content-type") || "";
-
-    if (contentType.includes("application/json")) {
-      try {
-        const body = await response.json();
-        const message = body?.error ?? body?.message ?? "";
-        if (typeof message === "string" && message.trim()) {
-          summary = `: ${message.trim()}`;
-        }
-      } catch {
-        summary = "";
-      }
-    }
-
-    throw new Error(`${label} returned HTTP ${response.status}${summary}`);
+  if (response.status !== 501) {
+    throw new Error(`authenticated planned module action returned HTTP ${response.status}; expected 501`);
   }
 
   const body = await response.json();
-  await validate(body?.data ?? body);
-  console.log(`${label}: OK`);
+  const payload = body?.data ?? body;
+
+  if (payload.code !== "planned_module_database_action") {
+    throw new Error("planned API response has unexpected code");
+  }
+  if (payload.endpoint !== "/api/database") {
+    throw new Error("planned API response must use the shared database route");
+  }
+  if (payload.routeKind !== "single-database-router") {
+    throw new Error("planned API response must stay on one router");
+  }
+  if (payload.liveHandler?.status !== "planned-only") {
+    throw new Error("planned API response must not be live");
+  }
+  if (payload.readQuery?.serverPaginated !== true) {
+    throw new Error("planned list action must require server pagination");
+  }
+  if (payload.readQuery?.noClientFullScan !== true) {
+    throw new Error("planned list action must forbid client full scans");
+  }
+  if (payload.readQuery?.maxPageSize > 100) {
+    throw new Error("planned list action max page size must stay bounded");
+  }
+
+  console.log("authenticated planned module action: OK");
 }
 
 let smokeAuthCookiePromise = null;
@@ -136,12 +164,12 @@ async function getSmokeAuthCookie() {
   if (!smokeAuthLogin || !smokeAuthPassword) return "";
 
   smokeAuthCookiePromise = smokeAuthCookiePromise ?? (async () => {
-    const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
+    const response = await smokeFetch(`${apiBaseUrl}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Origin": baseUrl,
-        "Referer": `${baseUrl}/`,
+        "Origin": siteOrigin,
+        "Referer": `${siteOrigin}/`,
         "X-Dispatcher-Request": "same-origin",
         "User-Agent": "dispatcher-production-smoke/1.0",
       },
@@ -165,9 +193,4 @@ async function getSmokeAuthCookie() {
   return await smokeAuthCookiePromise;
 }
 
-await databasePost("vehicles data", "vehicles", "load", null, async (data) => {
-  const rows = Array.isArray(data?.rows) ? data.rows : [];
-  if (rows.length < minVehicleRows) {
-    throw new Error(`vehicles data has only ${rows.length} rows; expected at least ${minVehicleRows}`);
-  }
-});
+await checkAuthenticatedPlannedModuleAction();

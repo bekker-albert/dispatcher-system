@@ -96,6 +96,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
 
   const columns = {
     area: findTableColumn(headers, ["Участок", "Участки"]),
+    location: findTableColumn(headers, ["Местонахождение", "Место", "Локация", "Объект"]),
     customerCode: includeCustomerCode ? findTableColumn(headers, ["Заказчик", "Сокр.", "Сокращение", "Код заказчика", "Код"]) : -1,
     structure: findTableColumn(headers, ["Вид работ", "Структура", "Работа"]),
     unit: findTableColumn(headers, ["Ед.", "Ед", "Ед. изм.", "Единица", "Единица измерения"]),
@@ -127,6 +128,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
 
       const area = normalizePtoPlanImportArea(rawArea || previousArea);
       const customerCode = includeCustomerCode ? normalizePtoCustomerCode(ptoPlanImportCell(row, columns.customerCode)) : "";
+      const location = ptoPlanImportCell(row, columns.location);
       const structure = ptoPlanImportCell(row, columns.structure);
       const unit = normalizePtoUnit(ptoPlanImportCell(row, columns.unit));
       if (!area && !structure) return null;
@@ -180,7 +182,7 @@ export function createPtoPlanRowsFromImportTable(tableRows: string[][], year: st
       return normalizePtoPlanRow({
         id: existing?.id ?? createId(),
         area,
-        location: existing?.location ?? "",
+        location: location || existing?.location || "",
         customerCode,
         structure,
         unit,

@@ -78,7 +78,7 @@ function isDatabaseUnavailableError(error: unknown) {
   if (["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST"].includes(code)) return true;
 
   const message = error instanceof Error ? error.message : "";
-  return /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|PROTOCOL_CONNECTION_LOST/i.test(message);
+  return /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|PROTOCOL_CONNECTION_LOST|MySQL is not configured/i.test(message);
 }
 
 function authenticateInitialAuthUser(login: string, password: string) {

@@ -14,6 +14,7 @@ const userProfileSource = readFileSync(resolve(root, "features/users/UserProfile
 const userManagementSource = readJoinedSources([
   resolve(root, "features/users/UserManagementPanel.tsx"),
   resolve(root, "features/users/UserManagementFields.tsx"),
+  resolve(root, "features/users/UserManagementTable.tsx"),
 ]);
 const authUsersRouteSource = readFileSync(resolve(root, "app/api/auth/users/route.ts"), "utf8");
 const navigationTabsSource = readFileSync(resolve(root, "lib/domain/navigation/tabs.ts"), "utf8");

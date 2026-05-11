@@ -12,6 +12,14 @@ import { parseDecimalInput } from "@/lib/utils/numbers";
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
+import {
+  dispatchRowExceedsHourLimit,
+  dispatchRowHasOperationalValues,
+  dispatchShiftHourLimit,
+  isDispatchHourField,
+  parseDispatchIntegerCell,
+} from "./dispatchHoursValidation";
+
 type AddAdminLog = (entry: AdminLogInput) => void;
 
 type UseDispatchSummaryEditorOptions = {
@@ -52,9 +60,13 @@ export function useDispatchSummaryEditor({
       section: "Диспетчерская сводка",
       details: vehicle
         ? `Добавлена техника в сводку: ${buildVehicleDisplayName(vehicle)}.`
-        : "Добавлена пустая строка сводки.",
+        : "Добавлена пустая строка звена сводки.",
     });
   }, [addAdminLog, currentDispatchShift, isDailyDispatchShift, reportDate, setDispatchSummaryRows, setDispatchVehicleToAddId]);
+
+  const addDispatchSummaryLink = useCallback(() => {
+    addDispatchSummaryRow();
+  }, [addDispatchSummaryRow]);
 
   const addSelectedDispatchVehicle = useCallback(() => {
     const selectedVehicleId = Number(dispatchVehicleToAddId);
@@ -84,10 +96,29 @@ export function useDispatchSummaryEditor({
     addAdminLog({
       action: "Добавление",
       section: "Диспетчерская сводка",
-      details: `Добавлены строки из списка техники: ${rowsToAdd.length}.`,
+      details: `Добавлены строки из расстановки техники: ${rowsToAdd.length}.`,
       rowsCount: rowsToAdd.length,
     });
   }, [addAdminLog, currentDispatchShift, currentDispatchSummaryRows, filteredDispatch, isDailyDispatchShift, reportDate, setDispatchSummaryRows]);
+
+  const addDumpTruckToDispatchLink = useCallback((excavator: string, templateRow?: DispatchSummaryRow) => {
+    if (isDailyDispatchShift) return;
+
+    const nextRow = {
+      ...createDispatchSummaryRow(undefined, reportDate, currentDispatchShift),
+      area: templateRow?.area ?? "",
+      location: templateRow?.location ?? "",
+      workType: templateRow?.workType ?? "",
+      excavator,
+    };
+
+    setDispatchSummaryRows((current) => [nextRow, ...current]);
+    addAdminLog({
+      action: "Добавление",
+      section: "Диспетчерская сводка",
+      details: `Добавлен самосвал в звено: ${excavator || "без привязки"}.`,
+    });
+  }, [addAdminLog, currentDispatchShift, isDailyDispatchShift, reportDate, setDispatchSummaryRows]);
 
   const updateDispatchSummaryText = useCallback((id: string, field: DispatchSummaryTextField, value: string) => {
     if (isDailyDispatchShift) return;
@@ -100,9 +131,27 @@ export function useDispatchSummaryEditor({
   const updateDispatchSummaryNumber = useCallback((id: string, field: DispatchSummaryNumberField, value: string) => {
     if (isDailyDispatchShift) return;
 
-    setDispatchSummaryRows((current) => current.map((row) => (
-      row.id === id ? { ...row, [field]: parseDecimalInput(value) ?? 0 } : row
-    )));
+    setDispatchSummaryRows((current) => current.map((row) => {
+      if (row.id !== id) return row;
+
+      if (isDispatchHourField(field) || field === "trips") {
+        const parsed = parseDispatchIntegerCell(value);
+        if (parsed === null) {
+          window.alert("Введите целое число не меньше 0.");
+          return row;
+        }
+
+        const nextRow = { ...row, [field]: parsed };
+        if (isDispatchHourField(field) && dispatchRowExceedsHourLimit(nextRow)) {
+          window.alert(`Сумма часов Аренда + Работа + Простой + Ремонт не должна превышать ${dispatchShiftHourLimit}.`);
+          return row;
+        }
+
+        return nextRow;
+      }
+
+      return { ...row, [field]: parseDecimalInput(value) ?? 0 };
+    }));
   }, [isDailyDispatchShift, setDispatchSummaryRows]);
 
   const updateDispatchSummaryVehicle = useCallback((id: string, vehicleIdValue: string) => {
@@ -140,7 +189,8 @@ export function useDispatchSummaryEditor({
 
     const row = dispatchSummaryRows.find((item) => item.id === id);
     const label = row?.vehicleName || row?.workType || "строку";
-    if (!window.confirm(`Удалить ${label} из сводки?`)) return;
+    const needsConfirm = row ? dispatchRowHasOperationalValues(row) : true;
+    if (needsConfirm && !window.confirm(`Удалить ${label} из сводки?`)) return;
 
     setDispatchSummaryRows((current) => current.filter((item) => item.id !== id));
     addAdminLog({
@@ -150,13 +200,49 @@ export function useDispatchSummaryEditor({
     });
   }, [addAdminLog, dispatchSummaryRows, isDailyDispatchShift, setDispatchSummaryRows]);
 
+  const deleteDispatchSummaryLink = useCallback((rowIds: string[], label: string) => {
+    if (isDailyDispatchShift || rowIds.length === 0) return;
+
+    const rowsToDelete = dispatchSummaryRows.filter((row) => rowIds.includes(row.id));
+    const needsConfirm = rowsToDelete.some(dispatchRowHasOperationalValues);
+    if (needsConfirm && !window.confirm(`Удалить звено "${label}" вместе со связанными самосвалами?`)) return;
+
+    setDispatchSummaryRows((current) => current.filter((row) => !rowIds.includes(row.id)));
+    addAdminLog({
+      action: "Удаление",
+      section: "Диспетчерская сводка",
+      details: `Удалено звено сводки: ${label}.`,
+      rowsCount: rowsToDelete.length,
+    });
+  }, [addAdminLog, dispatchSummaryRows, isDailyDispatchShift, setDispatchSummaryRows]);
+
+  const deleteCurrentDispatchShiftRows = useCallback(() => {
+    if (isDailyDispatchShift || currentDispatchSummaryRows.length === 0) return;
+
+    const needsConfirm = currentDispatchSummaryRows.some(dispatchRowHasOperationalValues);
+    if (needsConfirm && !window.confirm("Удалить все строки текущей смены?")) return;
+
+    const rowIds = new Set(currentDispatchSummaryRows.map((row) => row.id));
+    setDispatchSummaryRows((current) => current.filter((row) => !rowIds.has(row.id)));
+    addAdminLog({
+      action: "Удаление",
+      section: "Диспетчерская сводка",
+      details: `Удалены все строки смены ${currentDispatchShift} за ${reportDate}.`,
+      rowsCount: currentDispatchSummaryRows.length,
+    });
+  }, [addAdminLog, currentDispatchShift, currentDispatchSummaryRows, isDailyDispatchShift, reportDate, setDispatchSummaryRows]);
+
   return {
     addDispatchSummaryRow,
+    addDispatchSummaryLink,
+    addDumpTruckToDispatchLink,
     addSelectedDispatchVehicle,
     addFilteredVehiclesToDispatchSummary,
     updateDispatchSummaryText,
     updateDispatchSummaryNumber,
     updateDispatchSummaryVehicle,
     deleteDispatchSummaryRow,
+    deleteDispatchSummaryLink,
+    deleteCurrentDispatchShiftRows,
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
@@ -9,27 +9,21 @@ import {
   createDraftFromUser,
   createEmptyDraft,
   createPayload,
-  formatDateTime,
   hasUserDraftChanges,
   type UserEditDraft,
 } from "./UserManagementModel";
 import {
-  actionCellStyle,
   buttonStyle,
-  cellStyle,
-  dangerIconButtonStyle,
-  emptyStateCellStyle,
   iconButtonStyle,
   messageStyle,
   panelStyle,
   secondaryButtonStyle,
   statusBoxStyle,
-  tableStyle,
-  tableWrapStyle,
   toolbarStyle,
 } from "./UserManagementStyles";
 import { formatDisplayNameDescription, PermissionEditor, UserDraftFields } from "./UserManagementFields";
 import { UserProfileModal } from "./UserProfileModal";
+import { UserManagementTable } from "./UserManagementTable";
 import { validateRequiredUserProfileDraft } from "./UserProfileValidation";
 
 type UserListResponse = {
@@ -352,52 +346,13 @@ export function UserManagementPanel({ refreshToken = 0 }: UserManagementPanelPro
           </button>
         </div>
       ) : (
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={cellStyle}>Создан</th>
-                <th style={cellStyle}>Логин</th>
-                <th style={cellStyle}>Фамилия Имя Отчество</th>
-                <th style={cellStyle}>Почта</th>
-                <th style={cellStyle}>Статус</th>
-                <th style={actionCellStyle}>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length > 0 ? users.map((user) => (
-                <tr key={user.id}>
-                  <td style={cellStyle}>{formatDateTime(user.createdAt)}</td>
-                  <td style={cellStyle}>{user.login}</td>
-                  <td style={cellStyle}>{user.displayName}</td>
-                  <td style={cellStyle}>{user.email || "—"}</td>
-                  <td style={cellStyle}>{user.active ? "Активен" : "Заблокирован"}</td>
-                  <td style={actionCellStyle}>
-                    <button type="button" onClick={() => startEdit(user)} disabled={loading} style={iconButtonStyle} title="Редактировать">
-                      <Pencil size={15} aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void toggleActive(user)}
-                      disabled={loading}
-                      style={iconButtonStyle}
-                      title={user.active ? "Заблокировать" : "Разблокировать"}
-                    >
-                      <Ban size={15} aria-hidden />
-                    </button>
-                    <button type="button" onClick={() => void deleteUser(user)} disabled={loading} style={dangerIconButtonStyle} title="Удалить">
-                      <Trash2 size={15} aria-hidden />
-                    </button>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={6} style={emptyStateCellStyle}>Пользователи пока не добавлены.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <UserManagementTable
+          users={users}
+          loading={loading}
+          onEdit={startEdit}
+          onToggleActive={(user) => void toggleActive(user)}
+          onDelete={(user) => void deleteUser(user)}
+        />
       )}
 
       {creatingUser ? (

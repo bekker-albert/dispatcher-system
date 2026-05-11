@@ -14,6 +14,7 @@ type PtoDateEditableTextCellProps = {
   listId?: string;
   options?: string[];
   placeholder: string;
+  wrap?: boolean;
   onBeginDraft: () => void;
   onUpdateDraft: (value: string) => void;
   onCommitDraft: () => void;
@@ -28,12 +29,13 @@ export function PtoDateEditableTextCell({
   listId,
   options,
   placeholder,
+  wrap = false,
   onBeginDraft,
   onUpdateDraft,
   onCommitDraft,
   onCancelDraft,
 }: PtoDateEditableTextCellProps) {
-  if (!editing) return <PtoReadonlyTextCell value={value} />;
+  if (!editing) return <PtoReadonlyTextCell value={value} wrap={wrap} />;
 
   const handleBlur = (event: FocusEvent<HTMLInputElement>) => {
     if (event.currentTarget.dataset.skipPtoTextCommit === "true") {
@@ -71,7 +73,10 @@ export function PtoDateEditableTextCell({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        style={ptoPlanInputStyle}
+        style={{
+          ...ptoPlanInputStyle,
+          ...(wrap ? { whiteSpace: "normal", overflowWrap: "break-word" } : null),
+        }}
       />
       {listId && options ? (
         <datalist id={listId}>

@@ -134,7 +134,7 @@ const PtoDateReadonlyRow = memo(function PtoDateReadonlyRow({
       {showCustomerCode ? <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoCustomerCode(row.customerCode)} align="center" /></PtoPlanTd> : null}
       <PtoPlanTd><PtoReadonlyTextCell value={row.area} /></PtoPlanTd>
       {showLocation ? <PtoPlanTd><PtoReadonlyTextCell value={row.location} /></PtoPlanTd> : null}
-      <PtoPlanTd><PtoReadonlyTextCell value={row.structure} /></PtoPlanTd>
+      <PtoPlanTd><PtoReadonlyTextCell value={row.structure} wrap /></PtoPlanTd>
       <PtoPlanTd align="center"><PtoReadonlyTextCell value={normalizePtoUnit(row.unit)} align="center" /></PtoPlanTd>
       <PtoPlanTd align="center">
         <span

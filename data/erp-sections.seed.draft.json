@@ -1,0 +1,37 @@
+{
+  "status": "draft-manual-review",
+  "runtimeUsage": false,
+  "purpose": "Draft seed structure for future ERP sections. This file is not imported by runtime code and is not applied to the database.",
+  "sections": [
+    {
+      "section_code": "AKSU",
+      "section_name": "Аксу",
+      "short_name": "Аксу",
+      "customer": null,
+      "timezone": "Asia/Qyzylorda",
+      "active": true,
+      "day_shift_start": null,
+      "night_shift_start": null,
+      "cut_off_time": null,
+      "schedule_mode": null,
+      "source": "pto_candidate",
+      "requires_manual_review": true,
+      "notes": "Found as PTO/report candidate. Confirm code, customer, shift times, and cut-off before any real migration."
+    },
+    {
+      "section_code": "AKBAKAI",
+      "section_name": "Акбакай",
+      "short_name": "Акбакай",
+      "customer": null,
+      "timezone": "Asia/Qyzylorda",
+      "active": true,
+      "day_shift_start": null,
+      "night_shift_start": null,
+      "cut_off_time": null,
+      "schedule_mode": null,
+      "source": "pto_candidate",
+      "requires_manual_review": true,
+      "notes": "Found as PTO/report candidate. Confirm code, customer, shift times, and cut-off before any real migration."
+    }
+  ]
+}

@@ -69,6 +69,12 @@ function runtimeContextByTopTab(topTab: TopTab): Omit<AiAssistantRuntimeContext,
   }
 
   const contexts: Record<string, Omit<AiAssistantRuntimeContext, "detailLabel" | "workDate">> = {
+    home: {
+      sectionKey: "home",
+      sectionLabel: "Главная",
+      quickActions: ["Показать рабочие зоны", "Проверить незакрытые процессы", "Открыть план внедрения"],
+      suggestions: ["Покажи, какие зоны уже работают", "Подготовь следующий шаг внедрения", "Проверь риски производительности"],
+    },
     reports: {
       sectionKey: "reports",
       sectionLabel: "Отчетность",
@@ -110,6 +116,12 @@ function runtimeContextByTopTab(topTab: TopTab): Omit<AiAssistantRuntimeContext,
       sectionLabel: "ТБ",
       quickActions: ["Проверить нарушения", "Подготовить уведомление", "Создать задачу"],
       suggestions: ["Покажи рисковые события", "Собери замечания по вождению", "Подготовь сообщение ответственному"],
+    },
+    common: {
+      sectionKey: "common-processes",
+      sectionLabel: "Общие процессы",
+      quickActions: ["Создать задачу согласования", "Проверить командировки", "Показать журнал событий"],
+      suggestions: ["Покажи незакрытые согласования", "Подготовь список командировок", "Проверь документы без истории"],
     },
     "ai-assistant": {
       sectionKey: "ai-assistant",

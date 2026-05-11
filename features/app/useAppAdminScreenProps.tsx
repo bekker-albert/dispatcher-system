@@ -15,6 +15,7 @@ import type { useAppDerivedModels } from "@/features/app/useAppDerivedModels";
 import type { useAppRuntimeControllers } from "@/features/app/useAppRuntimeControllers";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import {
+  AdminAccessMatrixSection,
   AdminAiSection,
   AdminDatabaseSection,
   AdminLogsSection,
@@ -67,6 +68,7 @@ export function useAppAdminScreenProps({
         <AdminStructureSection {...adminStructureProps} />
       )}
       {adminSection === "ai" && <AdminAiSection />}
+      {adminSection === "access" && <AdminAccessMatrixSection />}
       {adminSection === "vehicles" && (
         <AdminVehiclesPrimaryContent appState={appState} models={models} runtime={runtime} />
       )}

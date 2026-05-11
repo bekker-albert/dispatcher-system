@@ -24,6 +24,10 @@ export const AdminAiSection = dynamic(() => import("../admin/ai/AdminAiSection")
   ssr: false,
 });
 
+export const AdminAccessMatrixSection = dynamic(() => import("../admin/access/AdminAccessMatrixSection").then((module) => module.AdminAccessMatrixSection), {
+  ssr: false,
+});
+
 export const DispatchSection = dynamic(() => import("../dispatch/DispatchSection"), {
   ssr: false,
 });

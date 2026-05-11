@@ -21,7 +21,7 @@ export function ReportAreaToolbar({
   onPrintReport,
 }: ReportAreaToolbarProps) {
   return (
-    <div className="report-screen-toolbar" style={reportAreaTabsToolbarStyle}>
+    <div className="report-screen-toolbar no-print" style={reportAreaTabsToolbarStyle}>
       <div style={reportAreaTabsListStyle}>
         {reportAreaTabs.map((area) => (
           <TopButton

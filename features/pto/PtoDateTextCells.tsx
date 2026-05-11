@@ -71,6 +71,7 @@ export function PtoDateTextCells({
           listId={structureListId}
           options={structureOptions}
           placeholder="Вид работ"
+          wrap
           onBeginDraft={() => beginPtoRowTextDraft(row, "structure")}
           onUpdateDraft={(value) => updatePtoRowTextDraft(row.id, "structure", value)}
           onCommitDraft={() => commitPtoRowTextDraft(setRows, row, "structure")}

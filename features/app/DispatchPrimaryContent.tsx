@@ -50,6 +50,7 @@ export function DispatchPrimaryContent({
     vehicleRows,
     dispatchSummaryRows,
     reportBaseRows: reportBaseRowsModel.reportBaseRows,
+    ptoPlanRows: models.deferredPtoPlanRows,
     dispatchVehicleToAddId,
     setDispatchSummaryRows,
     setDispatchVehicleToAddId,

@@ -49,7 +49,19 @@ export function useReportPrintLayoutController({
       layout: buildReportPrintLayout(),
       token: reportPrintLayoutToken,
     }));
-    window.requestAnimationFrame(onPrintReport);
+
+    const root = document.documentElement;
+    root.classList.add("report-print-mode");
+    const cleanupReportPrintMode = () => {
+      root.classList.remove("report-print-mode");
+      window.removeEventListener("afterprint", cleanupReportPrintMode);
+    };
+    window.addEventListener("afterprint", cleanupReportPrintMode);
+
+    window.requestAnimationFrame(() => {
+      onPrintReport();
+      window.setTimeout(cleanupReportPrintMode, 1500);
+    });
   }, [buildReportPrintLayout, onPrintReport, reportPrintLayoutToken]);
   const preparedReportPrintLayout = preparedReportPrintState?.token === reportPrintLayoutToken
     ? preparedReportPrintState.layout

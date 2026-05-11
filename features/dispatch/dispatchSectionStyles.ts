@@ -40,6 +40,89 @@ export const dispatchSummaryStatsStyle: CSSProperties = {
   marginBottom: 12,
 };
 
+export const dispatchInnerTabsStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#d8dee8",
+  borderRadius: 8,
+  background: "#f8fafc",
+  padding: 3,
+  marginBottom: 10,
+};
+
+export const dispatchInnerTabButtonStyle: CSSProperties = {
+  border: 0,
+  borderRadius: 6,
+  background: "transparent",
+  color: "#475569",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  padding: "7px 10px",
+};
+
+export const dispatchInnerTabActiveButtonStyle: CSSProperties = {
+  ...dispatchInnerTabButtonStyle,
+  background: "#ffffff",
+  color: "#0f4c81",
+  boxShadow: "0 1px 3px rgba(15, 23, 42, 0.08)",
+};
+
+export const dispatchPlanFactPanelStyle: CSSProperties = {
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#d8dee8",
+  borderRadius: 8,
+  background: "#ffffff",
+  marginBottom: 10,
+  overflow: "hidden",
+};
+
+export const dispatchPlanFactHeaderStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+  padding: "8px 10px",
+  borderBottom: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  color: "#0f172a",
+  fontSize: 12,
+  fontWeight: 800,
+};
+
+export const dispatchPlanFactTableStyle: CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
+  fontSize: 12,
+};
+
+export const dispatchPlanFactCellStyle: CSSProperties = {
+  borderTop: "1px solid #e2e8f0",
+  padding: "7px 8px",
+  textAlign: "right",
+  color: "#334155",
+};
+
+export const dispatchPlanFactStructureCellStyle: CSSProperties = {
+  ...dispatchPlanFactCellStyle,
+  textAlign: "left",
+  fontWeight: 700,
+  color: "#0f172a",
+};
+
+export const dispatchPlanFactEmptyStyle: CSSProperties = {
+  padding: "12px 10px",
+  color: "#64748b",
+  fontSize: 12,
+};
+
 export const dispatchSummaryStatCardStyle: CSSProperties = {
   borderWidth: 1,
   borderStyle: "solid",
@@ -62,7 +145,12 @@ export const dispatchSummaryToolbarStyle: CSSProperties = {
 
 export const dispatchSummaryToolbarDailyStyle: CSSProperties = {
   ...dispatchSummaryToolbarStyle,
-  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(260px, 1fr)",
+  gridTemplateColumns: "minmax(220px, 1fr) minmax(150px, 220px) minmax(220px, 1fr) minmax(260px, 1fr)",
+};
+
+export const dispatchSummaryToolbarCompactStyle: CSSProperties = {
+  ...dispatchSummaryToolbarStyle,
+  gridTemplateColumns: "minmax(150px, 220px) minmax(220px, 1fr) auto auto auto",
 };
 
 export const dispatchSummaryReadonlyNoteStyle: CSSProperties = {
@@ -134,7 +222,7 @@ export const dispatchSummaryTableScrollStyle: CSSProperties = {
 
 export const dispatchSummaryTableStyle: CSSProperties = {
   width: "max-content",
-  minWidth: 1700,
+  minWidth: 1290,
   borderCollapse: "collapse",
   tableLayout: "fixed",
   fontSize: 12,
@@ -186,6 +274,24 @@ export const dispatchSummaryActionTdStyle: CSSProperties = {
   verticalAlign: "middle",
   textAlign: "center",
   overflow: "visible",
+};
+
+export const dispatchSummaryGroupRowStyle: CSSProperties = {
+  background: "#eef6ff",
+};
+
+export const dispatchSummaryGroupCellStyle: CSSProperties = {
+  ...dispatchSummaryTdStyle,
+  color: "#0f4c81",
+  fontSize: 12,
+  fontWeight: 800,
+  padding: "6px 8px",
+};
+
+export const dispatchSummaryMutedTextStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 11,
+  lineHeight: 1.25,
 };
 
 export const dispatchSummaryInputStyle: CSSProperties = {

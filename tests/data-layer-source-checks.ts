@@ -8,6 +8,7 @@ const dataAppStateSource = readFileSync(resolve(testDir, "../lib/data/app-state.
 const dataPtoSource = readFileSync(resolve(testDir, "../lib/data/pto.ts"), "utf8");
 const dataSettingsSource = readFileSync(resolve(testDir, "../lib/data/settings.ts"), "utf8");
 const dataVehiclesSource = readFileSync(resolve(testDir, "../lib/data/vehicles.ts"), "utf8");
+const databaseQueryPolicySource = readFileSync(resolve(testDir, "../lib/server/database/query-policy.ts"), "utf8");
 const supabaseAppStateSource = readFileSync(resolve(testDir, "../lib/supabase/app-state.ts"), "utf8");
 const supabasePtoCommandsSource = readFileSync(resolve(testDir, "../lib/supabase/pto-commands.ts"), "utf8");
 const supabasePtoSnapshotLoadSource = readFileSync(resolve(testDir, "../lib/supabase/pto-snapshot-load.ts"), "utf8");
@@ -59,3 +60,9 @@ assert.doesNotMatch(dataVehiclesSource, /from ["']@\/lib\/supabase\/vehicles["']
 assert.match(dataVehiclesSource, /databaseRequest<DataVehiclesState \| null>\("vehicles", "load"\)/);
 assert.doesNotMatch(supabaseVehiclesSource, /databaseRequest/);
 assert.doesNotMatch(supabaseVehiclesSource, /serverDatabaseConfigured/);
+
+assert.match(databaseQueryPolicySource, /evaluateDatabaseListQueryPolicy/);
+assert.match(databaseQueryPolicySource, /assertDatabaseListQueryPolicy/);
+assert.match(databaseQueryPolicySource, /normalizeServerPageQueryDraft/);
+assert.match(databaseQueryPolicySource, /validateServerPageQueryPolicy/);
+assert.match(databaseQueryPolicySource, /DatabasePayloadError/);

@@ -20,10 +20,42 @@ export const reportPrintMediaDocumentCss = `  html,
     width: 100% !important;
   }
 
+  html.report-print-mode body *,
+  body:has(.report-print-area) * {
+    visibility: hidden !important;
+  }
+
+  html.report-print-mode .report-print-area,
+  html.report-print-mode .report-print-area *,
+  body:has(.report-print-area) .report-print-area,
+  body:has(.report-print-area) .report-print-area * {
+    visibility: visible !important;
+  }
+
+  html.report-print-mode .erp-shell,
+  html.report-print-mode .erp-main,
+  html.report-print-mode .erp-content,
+  body:has(.report-print-area) .erp-shell,
+  body:has(.report-print-area) .erp-main,
+  body:has(.report-print-area) .erp-content {
+    display: block !important;
+    gap: 0 !important;
+    grid-template-columns: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
   .app-print-header,
+  .erp-sidebar,
+  .erp-topbar,
+  .erp-mobile-backdrop,
+  .no-print,
   .report-screen-toolbar,
   .report-screen-title {
     display: none !important;
+    visibility: hidden !important;
   }`;
 
 export const reportPrintMediaAreaCss = `  .report-print-area,

@@ -1,0 +1,110 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const testDir = dirname(fileURLToPath(import.meta.url));
+const root = resolve(testDir, "..");
+
+function readSource(relativePath: string) {
+  return readFileSync(resolve(root, relativePath), "utf8");
+}
+
+const appPrimaryContentSource = readSource("features/app/AppPrimaryContent.tsx");
+const useAppSectionPreloaderSource = readSource("features/app/useAppSectionPreloader.ts");
+const workspaceOverviewSource = readSource("features/workspaces/WorkspaceOverviewSection.tsx");
+const appShellSource = readSource("features/app-shell/AppShell.tsx");
+const labelOverridesSource = readSource("features/app-shell/navigationLabelOverrides.ts");
+const labelHookSource = readSource("features/app-shell/useNavigationLabelOverrides.ts");
+const dispatchSectionSource = readSource("features/dispatch/DispatchSection.tsx");
+const dispatchToolbarSource = readSource("features/dispatch/DispatchSummaryToolbar.tsx");
+const dispatchTableSource = readSource("features/dispatch/DispatchSummaryTable.tsx");
+const dispatchRowSource = readSource("features/dispatch/DispatchSummaryTableRow.tsx");
+const dispatchPlanFactPanelSource = readSource("features/dispatch/DispatchPlanFactPanel.tsx");
+const dispatchHoursValidationSource = readSource("features/dispatch/dispatchHoursValidation.ts");
+const dispatchMaterialRulesSource = readSource("features/dispatch/dispatchMaterialRules.ts");
+const dispatchStructureOptionsSource = readSource("features/dispatch/dispatchStructureOptions.ts");
+const fleetPlacementSource = readSource("features/fleet/FleetPlacementSection.tsx");
+const safetySectionSource = readSource("features/safety-driving/SafetySection.tsx");
+const ptoDateTableTypesSource = readSource("lib/domain/pto/date-table-types.ts");
+const ptoDateTableModelSource = readSource("features/pto/ptoDateTableModel.ts");
+const ptoDateTextCellsSource = readSource("features/pto/PtoDateTextCells.tsx");
+const ptoDateTableCellsSource = readSource("features/pto/PtoDateTableCells.tsx");
+const ptoBodiesSource = readSource("features/pto/PtoBodiesSection.tsx");
+const ptoExcelImportSource = readSource("lib/domain/pto/excel-import.ts");
+const ptoExcelExportSource = readSource("lib/domain/pto/excel-export.ts");
+
+assert.match(useAppSectionPreloaderSource, /const primarySectionPreloaders: SectionPreloader\[\] = \[/);
+assert.doesNotMatch(useAppSectionPreloaderSource, /load:\s*\(\)\s*=>\s*import/);
+assert.match(workspaceOverviewSource, /useMemo\(\(\) => \{/);
+assert.match(appPrimaryContentSource, /renderedTopTab === "home"/);
+assert.match(appPrimaryContentSource, /renderedTopTab === "pto"/);
+assert.match(appPrimaryContentSource, /renderedTopTab === "reports"/);
+assert.match(appPrimaryContentSource, /\{renderedTopTab === "pto" && \(/);
+
+assert.match(appShellSource, /applyNavigationLabelOverrides/);
+assert.match(labelOverridesSource, /NavigationLabelOverrides = Record<string, string>/);
+assert.match(labelOverridesSource, /normalizeNavigationLabelOverride/);
+assert.match(labelHookSource, /localStorage/);
+assert.doesNotMatch(labelOverridesSource, /topTab\s*=|ptoTab\s*=|dispatchTab\s*=|adminSection\s*=/);
+
+assert.match(dispatchSectionSource, /DispatchDailyReportTabs/);
+assert.match(dispatchSectionSource, /dailyReportTab === "summary"/);
+assert.match(dispatchSectionSource, /DispatchPlanFactPanel/);
+assert.doesNotMatch(dispatchSectionSource, /Работа \/ ремонт \/ простой/);
+assert.match(dispatchToolbarSource, /dispatchSummaryToolbarCompactStyle/);
+assert.doesNotMatch(dispatchToolbarSource, /<Field label="Техника">/);
+assert.match(dispatchTableSource, /createDispatchSummaryGroups/);
+assert.match(dispatchTableSource, /Без привязки/);
+assert.match(dispatchTableSource, /\["Местонахождение", dispatchSummaryThStyle\]/);
+assert.match(dispatchTableSource, /\["Структура", dispatchSummaryThStyle\]/);
+assert.match(dispatchTableSource, /\["Вид техники", dispatchSummaryThStyle\]/);
+assert.match(dispatchTableSource, /\["Наименование техники", dispatchSummaryThStyle\]/);
+assert.match(dispatchTableSource, /\["№", dispatchSummaryThStyle\]/);
+assert.match(dispatchTableSource, /\["Материал", dispatchSummaryThStyle\]/);
+assert.match(dispatchTableSource, /\["Аренда", dispatchSummaryNumberThStyle\][\s\S]*\["Работа", dispatchSummaryNumberThStyle\][\s\S]*\["Простой", dispatchSummaryNumberThStyle\][\s\S]*\["Ремонт", dispatchSummaryNumberThStyle\]/);
+assert.doesNotMatch(dispatchTableSource, /\["Техника",/);
+assert.doesNotMatch(dispatchTableSource, /\["План",/);
+assert.doesNotMatch(dispatchTableSource, /\["Факт",/);
+assert.match(dispatchRowSource, /onUpdateDispatchSummaryVehicle/);
+assert.match(dispatchRowSource, /<select/);
+assert.match(dispatchRowSource, /vehicleNumber/);
+assert.match(dispatchMaterialRulesSource, /location = Местонахождение, material = Материал/);
+assert.match(dispatchMaterialRulesSource, /материал нельзя подставлять из location/);
+assert.doesNotMatch(dispatchRowSource, /value=\{row\.location\}[\s\S]*placeholder="Материал"/);
+assert.match(dispatchRowSource, /dispatchMaterialPlaceholder/);
+assert.match(dispatchRowSource, /Материал не равен местонахождению/);
+assert.match(dispatchStructureOptionsSource, /createDispatchStructureOptionsFromPtoPlan/);
+assert.match(dispatchStructureOptionsSource, /structure/);
+assert.match(dispatchHoursValidationSource, /dispatchShiftHourLimit = 11/);
+assert.match(dispatchHoursValidationSource, /parseDispatchIntegerCell/);
+assert.match(dispatchHoursValidationSource, /dispatchRowExceedsHourLimit/);
+assert.match(dispatchTableSource, /Добавить самосвал/);
+assert.match(dispatchTableSource, /Удалить звено/);
+assert.match(dispatchToolbarSource, /Добавить звено/);
+assert.match(dispatchToolbarSource, /Удалить все строки/);
+assert.match(dispatchPlanFactPanelSource, /План \/ факт по структурам/);
+assert.match(dispatchPlanFactPanelSource, /Объемы: участок \/ местонахождение \/ структура/);
+assert.match(dispatchPlanFactPanelSource, /Без местонахождения/);
+assert.match(dispatchSectionSource, /DispatchDailyReportTabs/);
+assert.match(dispatchSectionSource, /DispatchDailyVehicleSummary/);
+assert.match(dispatchSectionSource, /dailyReportTab === "summary"/);
+assert.match(dispatchSectionSource, /userAreas\.length === 1/);
+assert.match(dispatchSectionSource, /legacy UI layer/);
+assert.match(fleetPlacementSource, /Расстановка техники/);
+assert.match(fleetPlacementSource, /источник выбора техники для Горной сводки/);
+assert.match(safetySectionSource, /Участок[\s\S]*Вид техники[\s\S]*Марка[\s\S]*Модель[\s\S]*Гос\. номер[\s\S]*Гар\. номер[\s\S]*Статус[\s\S]*Терминал[\s\S]*ДУТ[\s\S]*Фары[\s\S]*Ремень[\s\S]*Экодрайвинг[\s\S]*Дата установки/);
+assert.doesNotMatch(safetySectionSource, /<SubTabs>|TopButton|tbTab === "driving"|tbTab === "contractors"/);
+assert.match(ptoBodiesSource, /Материал \+ Самосвал = расчетный объем кузова/);
+assert.match(ptoBodiesSource, /не хранится в карточке техники/);
+
+assert.match(ptoDateTableTypesSource, /area: 138,[\s\S]*location: 150,[\s\S]*structure: 250/);
+assert.match(ptoDateTableModelSource, /\{ key: "area"[\s\S]*\{ key: "location"[\s\S]*\{ key: "structure"/);
+assert.match(ptoDateTextCellsSource, /placeholder="Вид работ"[\s\S]*wrap/);
+assert.match(ptoDateTableCellsSource, /overflowWrap: "break-word"/);
+assert.match(ptoExcelImportSource, /location: findTableColumn\(headers, \["Местонахождение"/);
+assert.match(ptoExcelImportSource, /location: location \|\| existing\?\.location \|\| ""/);
+assert.match(ptoExcelExportSource, /"Участок",\s*"Местонахождение",\s*"Вид работ"/);
+assert.match(ptoExcelExportSource, /cleanAreaName\(row\.area\),\s*row\.location,\s*row\.structure/);
+
+console.log("Dispatch/PTO UI polish checks passed");

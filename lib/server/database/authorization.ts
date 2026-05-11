@@ -5,6 +5,10 @@ import {
 } from "../../domain/auth/types";
 import type { BaseTopTab } from "../../domain/navigation/tabs";
 import { adminStorageKeys } from "../../storage/keys";
+import {
+  authorizeModuleDatabaseRequestWithCurrentTabs,
+  type ModuleDatabaseAuthorizationDecision,
+} from "./module-authorization";
 import { isDatabaseStatusRequest } from "./status";
 
 type DatabaseAccessLevel = "authenticated" | "view" | "edit";
@@ -82,6 +86,24 @@ function tabRequirement(tabId: BaseTopTab, action?: string): DatabaseAccessRequi
   };
 }
 
+function moduleDecisionAccessLevel(decision: ModuleDatabaseAuthorizationDecision): DatabaseAccessLevel {
+  const capability = decision.context?.requirement.requiredCapability;
+
+  return capability === "edit"
+    || capability === "approve"
+    || capability === "delete"
+    || capability === "admin"
+    ? "edit"
+    : "view";
+}
+
+function moduleDecisionRequirement(decision: ModuleDatabaseAuthorizationDecision): DatabaseAccessRequirement {
+  return {
+    level: moduleDecisionAccessLevel(decision),
+    tabIds: decision.tabId ? [decision.tabId] : undefined,
+  };
+}
+
 export function getDatabaseAccessRequirement({
   resource,
   action,
@@ -125,6 +147,14 @@ export function authorizeDatabaseRequest(
   user: AuthUser,
   request: DatabaseAuthorizationRequest,
 ): DatabaseAuthorizationResult {
+  const moduleDecision = authorizeModuleDatabaseRequestWithCurrentTabs(user, request);
+  if (moduleDecision.appliesToModuleAction) {
+    return {
+      allowed: moduleDecision.allowed,
+      requirement: moduleDecisionRequirement(moduleDecision),
+    };
+  }
+
   const requirement = getDatabaseAccessRequirement(request);
   const tabIds = requirement.tabIds ?? [];
 

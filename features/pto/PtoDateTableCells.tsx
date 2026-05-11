@@ -25,6 +25,7 @@ type PtoPlanTdProps = {
 type PtoReadonlyTextCellProps = {
   value: string;
   align?: CSSProperties["textAlign"];
+  wrap?: boolean;
 };
 
 type PtoReadonlyNumberCellProps = {
@@ -70,9 +71,16 @@ export function PtoPlanTd({
   );
 }
 
-export function PtoReadonlyTextCell({ value, align = "left" }: PtoReadonlyTextCellProps) {
+export function PtoReadonlyTextCell({ value, align = "left", wrap = false }: PtoReadonlyTextCellProps) {
   return (
-    <div style={{ ...ptoReadonlyCellTextStyle, textAlign: align }} title={value || undefined}>
+    <div
+      style={{
+        ...ptoReadonlyCellTextStyle,
+        textAlign: align,
+        ...(wrap ? { whiteSpace: "normal", overflow: "visible", overflowWrap: "break-word", wordBreak: "normal" } : null),
+      }}
+      title={value || undefined}
+    >
       {value || ""}
     </div>
   );

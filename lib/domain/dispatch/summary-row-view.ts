@@ -9,7 +9,7 @@ export function buildDispatchSummaryRowView(row: DispatchSummaryRow): DispatchSu
     totalHours,
     productivity: dispatchProductivity(row),
     delta,
-    hoursOk: totalHours === 11,
+    hoursOk: totalHours <= 11,
     isBehindPlan: delta < 0,
   };
 }

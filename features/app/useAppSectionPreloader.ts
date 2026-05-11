@@ -27,7 +27,9 @@ function scheduleIdlePreload(callback: () => void) {
 const completedPreloaders = new Set<string>();
 
 const primarySectionPreloaders: SectionPreloader[] = [
-  { key: "dispatch", load: () => import("@/features/app/DispatchPrimaryContent") },
+  // Keep primary workspaces strictly on demand for now. The 2 GB RAM target and
+  // slow tab-switch reports showed that even a small idle preload can compete
+  // with the active screen in dev and on low-memory hosts.
 ];
 
 const ptoSectionPreloaders: SectionPreloader[] = [
