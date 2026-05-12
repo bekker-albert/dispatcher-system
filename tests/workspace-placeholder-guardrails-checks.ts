@@ -51,10 +51,11 @@ for (const path of lightPlaceholderFiles) {
 }
 
 const overviewSource = readRepoSource("features/workspaces/WorkspaceOverviewSection.tsx");
-assert.match(overviewSource, /createWorkspaceReadinessSummary/);
-assert.match(overviewSource, /createWorkspaceImplementationRoadmap/);
-assert.match(overviewSource, /createWorkspaceHandlerRolloutSummary/);
-assert.match(overviewSource, /createStage2FirstReadModelActivationSummary/);
+assert.doesNotMatch(overviewSource, /createWorkspaceReadinessSummary/);
+assert.doesNotMatch(overviewSource, /createWorkspaceImplementationRoadmap/);
+assert.doesNotMatch(overviewSource, /createWorkspaceHandlerRolloutSummary/);
+assert.doesNotMatch(overviewSource, /createStage2FirstReadModelActivationSummary/);
+assert.match(overviewSource, /workspace\.performanceRule/);
 assert.match(overviewSource, /appNavigationEventName/);
 assert.match(overviewSource, /window\.dispatchEvent/);
 assert.doesNotMatch(overviewSource, /createStage2FirstReadModelBatch/);
