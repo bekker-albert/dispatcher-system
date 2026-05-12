@@ -62,7 +62,8 @@ assert.doesNotMatch(overviewSource, /createStage2FirstReadModelBatch/);
 assert.doesNotMatch(overviewSource, /stage2ReadModelActivationChecklist/);
 
 const commonProcessesSource = readRepoSource("features/workspaces/CommonProcessesSection.tsx");
-assert.match(commonProcessesSource, /getWorkspaceById\("common-processes"\)/);
+assert.match(commonProcessesSource, /<SectionCard title=""/);
+assert.doesNotMatch(commonProcessesSource, /getWorkspaceById\("common-processes"\)/);
 assert.doesNotMatch(commonProcessesSource, /onClick=|onSubmit=|window\./);
 
 const adminAccessMatrixSource = readRepoSource("features/admin/access/AdminAccessMatrixSection.tsx");
