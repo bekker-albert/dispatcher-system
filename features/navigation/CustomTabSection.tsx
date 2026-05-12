@@ -9,7 +9,7 @@ type CustomTabSectionProps = {
 
 export function CustomTabSection({ tab }: CustomTabSectionProps) {
   return (
-    <SectionCard title={tab.title}>
+    <SectionCard title="">
       <div style={{ display: "grid", gap: 16 }}>
         {tab.description ? <div style={{ color: "#475569" }}>{tab.description}</div> : null}
         {tab.items.length > 0 ? (

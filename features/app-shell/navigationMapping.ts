@@ -1,5 +1,6 @@
 import { canAuthUserViewTab, type AuthUser } from "@/lib/domain/auth/types";
 import type { AdminSection } from "@/lib/domain/admin/navigation";
+import type { DispatchDailyReportTab } from "@/lib/domain/dispatch/summary";
 import { customTabKey, type CustomTab, type TopTab, type TopTabDefinition } from "@/lib/domain/navigation/tabs";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 
@@ -8,6 +9,7 @@ import type { NavigationGroup, NavigationItem, NavigationTarget } from "./naviga
 export type LegacyNavigationState = {
   topTab: TopTab;
   dispatchTab: string;
+  dispatchDailyReportTab: DispatchDailyReportTab;
   ptoTab: string;
   adminSection: AdminSection;
   fleetTab: string;
@@ -20,6 +22,7 @@ export type LegacyNavigationState = {
 export type LegacyNavigationActions = {
   onSelectTopTab: (tab: TopTab) => void;
   onSelectDispatchTab: (tab: string) => void;
+  onSelectDispatchDailyReportTab: (tab: DispatchDailyReportTab) => void;
   onSelectPtoTab: (tab: string) => void;
   onSelectAdminSection: (section: AdminSection) => void;
   onSelectFleetTab: (tab: string) => void;
@@ -144,6 +147,7 @@ export function isNavigationTargetActive(target: NavigationTarget | undefined, s
   if (!target) return false;
   if (target.topTab !== state.topTab) return false;
   if (target.dispatchTab && target.dispatchTab !== state.dispatchTab) return false;
+  if (target.dispatchDailyReportTab && target.dispatchDailyReportTab !== state.dispatchDailyReportTab) return false;
   if (target.ptoTab && target.ptoTab !== state.ptoTab) return false;
   if (target.adminSection && target.adminSection !== state.adminSection) return false;
   if (target.fleetTab && target.fleetTab !== state.fleetTab) return false;
@@ -168,6 +172,7 @@ export function selectNavigationTarget(target: NavigationTarget | undefined, act
   if (!target) return;
 
   if (target.dispatchTab) actions.onSelectDispatchTab(target.dispatchTab);
+  if (target.dispatchDailyReportTab) actions.onSelectDispatchDailyReportTab(target.dispatchDailyReportTab);
   if (target.ptoTab) actions.onSelectPtoTab(target.ptoTab);
   if (target.adminSection) actions.onSelectAdminSection(target.adminSection);
   if (target.fleetTab) actions.onSelectFleetTab(target.fleetTab);

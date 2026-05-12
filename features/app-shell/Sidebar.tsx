@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, PencilLine, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { Check, PencilLine, Plus, RotateCcw } from "lucide-react";
 import Image from "next/image";
 
 import { SidebarGroup } from "./SidebarGroup";
@@ -31,6 +32,7 @@ type SidebarProps = {
   onSetLabelOverride: (id: string, value: string, defaultLabel: string) => void;
   onResetLabelOverride: (id: string) => void;
   onResetAllLabelOverrides: () => void;
+  onAddCustomTab: (title: string) => void;
   onMoveNavigationItem: (parentId: string, draggedId: string, targetId: string, defaultIds: string[]) => void;
   onResetNavigationOrder: () => void;
   onCloseMobile: () => void;
@@ -52,12 +54,24 @@ export function Sidebar({
   onSetLabelOverride,
   onResetLabelOverride,
   onResetAllLabelOverrides,
+  onAddCustomTab,
   onMoveNavigationItem,
   onResetNavigationOrder,
   onCloseMobile,
 }: SidebarProps) {
+  const [newCustomTabTitle, setNewCustomTabTitle] = useState("");
+
   function handleSelectItem(item: NavigationItem) {
     selectNavigationItem(item, actions);
+    onCloseMobile();
+  }
+
+  function handleAddCustomTab() {
+    const title = newCustomTabTitle.trim().replace(/\s+/g, " ");
+    if (!title) return;
+
+    onAddCustomTab(title.slice(0, 48));
+    setNewCustomTabTitle("");
     onCloseMobile();
   }
 
@@ -98,6 +112,31 @@ export function Sidebar({
               <RotateCcw size={14} aria-hidden />
               <span>Сбросить</span>
             </button>
+          ) : null}
+          {!collapsed && labelEditing ? (
+            <form
+              className="erp-sidebar__add-tab"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleAddCustomTab();
+              }}
+            >
+              <input
+                aria-label="Название новой вкладки"
+                maxLength={48}
+                placeholder="Новая вкладка"
+                value={newCustomTabTitle}
+                onChange={(event) => setNewCustomTabTitle(event.target.value)}
+              />
+              <button
+                type="submit"
+                disabled={!newCustomTabTitle.trim()}
+                title="Добавить вкладку"
+              >
+                <Plus size={14} aria-hidden />
+                <span>Добавить</span>
+              </button>
+            </form>
           ) : null}
         </div>
       ) : null}

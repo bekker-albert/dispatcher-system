@@ -68,6 +68,7 @@ export function AppShell({
   const navigationState: LegacyNavigationState = {
     topTab: appHeaderProps.topTab,
     dispatchTab: appHeaderProps.dispatchTab,
+    dispatchDailyReportTab: appState.dispatchDailyReportTab,
     ptoTab: appHeaderProps.ptoTab,
     adminSection: appHeaderProps.adminSection,
     fleetTab: appState.fleetTab,
@@ -79,6 +80,7 @@ export function AppShell({
   const navigationActions: LegacyNavigationActions = {
     onSelectTopTab: appHeaderProps.onSelectTopTab,
     onSelectDispatchTab: appHeaderProps.onSelectDispatchTab,
+    onSelectDispatchDailyReportTab: appState.setDispatchDailyReportTab,
     onSelectPtoTab: appHeaderProps.onSelectPtoTab,
     onSelectAdminSection: appHeaderProps.onSelectAdminSection,
     onSelectFleetTab: appState.setFleetTab,
@@ -131,6 +133,7 @@ export function AppShell({
         onSetLabelOverride={labelOverrides.setLabelOverride}
         onResetLabelOverride={labelOverrides.resetLabelOverride}
         onResetAllLabelOverrides={labelOverrides.resetAllLabelOverrides}
+        onAddCustomTab={appState.addCustomTab}
         onMoveNavigationItem={orderOverrides.moveItem}
         onResetNavigationOrder={orderOverrides.resetAllOrderOverrides}
         onCloseMobile={sidebar.closeMobile}

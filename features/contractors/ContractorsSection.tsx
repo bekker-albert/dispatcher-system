@@ -24,7 +24,7 @@ export function ContractorsSection({ contractorTab, subTabs, onSelectTab }: Cont
         ))}
       </SubTabs>
 
-      <SectionCard title={`Действующий подрядчик: ${activeSubtab?.label ?? contractorTab}`}>
+      <SectionCard title="">
         {contractorTab.startsWith("custom:") ? (
           <div style={blockStyle}>{activeSubtab?.content || "В этой подвкладке пока нет информации."}</div>
         ) : (

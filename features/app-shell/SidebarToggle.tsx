@@ -19,7 +19,11 @@ export function SidebarToggle({ collapsed = false, floating = false, mobile = fa
       className={floating ? "erp-icon-button erp-sidebar__toggle" : "erp-icon-button"}
       aria-label={label}
       title={label}
-      onClick={onClick}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
     >
       <Icon size={18} strokeWidth={2} />
     </button>

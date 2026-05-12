@@ -1,4 +1,5 @@
 export type {
+  DispatchDailyReportTab,
   DispatchShift,
   DispatchSummaryNumberField,
   DispatchSummaryRow,

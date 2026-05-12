@@ -12,6 +12,7 @@ type UseAppDispatchSectionPropsOptions = {
   reportDate: string;
   isDailyDispatchShift: boolean;
   currentDispatchShift: "daily" | "night" | "day";
+  dailyReportTab: DispatchSectionProps["dailyReportTab"];
   dispatchSummaryTotals: DispatchTotals;
   search: string;
   setSearch: Dispatch<SetStateAction<string>>;
@@ -45,6 +46,7 @@ export function useAppDispatchSectionProps({
   reportDate,
   isDailyDispatchShift,
   currentDispatchShift,
+  dailyReportTab,
   dispatchSummaryTotals,
   search,
   setSearch,
@@ -71,13 +73,16 @@ export function useAppDispatchSectionProps({
   dispatchWorkTypeOptions,
   dispatchExcavatorOptions,
 }: UseAppDispatchSectionPropsOptions): DispatchSectionProps {
+  const dailyDispatchLabel = dailyReportTab === "summary" ? "Суточный отчет" : "Суточные объемы";
+
   return {
-    activeDispatchSubtabLabel: activeDispatchSubtab?.label ?? "Диспетчерская сводка",
+    activeDispatchSubtabLabel: dispatchTab === "daily" ? dailyDispatchLabel : activeDispatchSubtab?.label ?? "Диспетчерская сводка",
     dispatchTab,
     activeDispatchSubtabContent: activeDispatchSubtab?.content || "",
     reportDate,
     isDailyDispatchShift,
     currentDispatchShift,
+    dailyReportTab,
     dispatchSummaryTotals,
     search,
     onSearchChange: setSearch,

@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import { isAuthUserSuperuser } from "@/lib/domain/auth/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
 import { SectionCard } from "@/shared/ui/layout";
 import { blockStyle, dispatchSuggestionStyle } from "@/features/dispatch/dispatchSectionStyles";
-import { DispatchDailyReportTabs, type DispatchDailyReportTab } from "@/features/dispatch/DispatchDailyReportTabs";
 import { DispatchDailyVehicleSummary } from "@/features/dispatch/DispatchDailyVehicleSummary";
 import { DispatchPlanFactPanel } from "@/features/dispatch/DispatchPlanFactPanel";
 import { DispatchSummaryDatalists } from "@/features/dispatch/DispatchSummaryDatalists";
@@ -32,12 +31,12 @@ function resolveLegacyUserAreas(userText: string, options: string[]) {
 }
 
 export default function DispatchSection({
-  activeDispatchSubtabLabel,
   dispatchTab,
   activeDispatchSubtabContent,
   reportDate,
   isDailyDispatchShift,
   currentDispatchShift,
+  dailyReportTab,
   dispatchSummaryTotals,
   search,
   onSearchChange,
@@ -60,7 +59,6 @@ export default function DispatchSection({
   dispatchWorkTypeOptions,
   dispatchExcavatorOptions,
 }: DispatchSectionProps) {
-  const [dailyReportTab, setDailyReportTab] = useState<DispatchDailyReportTab>("volumes");
   const { user } = useAuth();
   const userAreaText = `${user.displayName} ${user.positionTitle} ${user.email} ${user.login}`;
   const userAreas = useMemo(() => (
@@ -105,7 +103,7 @@ export default function DispatchSection({
   );
 
   return (
-    <SectionCard title={activeDispatchSubtabLabel}>
+    <SectionCard title="">
       {dispatchTab.startsWith("custom:") ? (
         <div style={blockStyle}>{activeDispatchSubtabContent || "В этой подвкладке пока нет информации."}</div>
       ) : (
@@ -117,9 +115,7 @@ export default function DispatchSection({
             totals={dispatchSummaryTotals}
           />
 
-          {isDailyDispatchShift ? (
-            <DispatchDailyReportTabs activeTab={dailyReportTab} onSelectTab={setDailyReportTab} />
-          ) : planFactPanel}
+          {isDailyDispatchShift ? null : planFactPanel}
 
           <DispatchSummaryToolbar
             areaFilter={areaFilter}

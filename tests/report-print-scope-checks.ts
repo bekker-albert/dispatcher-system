@@ -18,7 +18,6 @@ const reportsSectionSource = readSource("features/reports/ReportsSection.tsx");
 const printControllerSource = readSource("features/reports/useReportPrintLayoutController.ts");
 
 assert.match(topBarSource, /className="erp-topbar no-print"/);
-assert.doesNotMatch(topBarSource, /erp-topbar__title/);
 assert.match(topBarSource, /<Breadcrumbs activeReportCustomerCode=\{activeReportCustomerCode\} trail=\{trail\} \/>/);
 
 assert.match(breadcrumbsSource, /const workspace = trail\.workspace/);
@@ -26,6 +25,9 @@ assert.doesNotMatch(breadcrumbsSource, /workspaceBreadcrumbLabels/);
 assert.doesNotMatch(breadcrumbsSource, /dispatch: "Горная"/);
 assert.doesNotMatch(breadcrumbsSource, /admin: "Админка"/);
 assert.match(breadcrumbsSource, /const leaf = trail\.child \?\? trail\.item/);
+assert.match(breadcrumbsSource, /const title = leafLabel \|\| workspace/);
+assert.match(breadcrumbsSource, /className="erp-topbar__title"/);
+assert.doesNotMatch(breadcrumbsSource, /contextParts|className="erp-topbar__subtitle"/);
 assert.match(breadcrumbsSource, /activeReportCustomerCode/);
 assert.doesNotMatch(breadcrumbsSource, /trail\.status/);
 assert.match(appShellSource, /activeReportCustomerCode/);

@@ -22,6 +22,8 @@ export type AppReportsScreenState = Pick<
 export type AppDispatchScreenState = Pick<
   AppStateBundle,
   | "dispatchTab"
+  | "dispatchDailyReportTab"
+  | "setDispatchDailyReportTab"
   | "reportDate"
   | "search"
   | "setSearch"

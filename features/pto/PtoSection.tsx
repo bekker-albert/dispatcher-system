@@ -56,7 +56,6 @@ const PtoPerformanceSection = dynamic(() => import("./PtoPerformanceSection"), {
 
 export default function PtoSection({
   ptoTab,
-  activePtoSubtabLabel,
   activePtoSubtabContent,
   isPtoDateTab,
   ptoAreaTabs,
@@ -88,11 +87,10 @@ export default function PtoSection({
   const bodiesHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "bodies");
   const performanceHeaderEditor = createPtoMatrixHeaderEditor(ptoMatrixHeaderEditor, "performance");
   const showStaticContent = !isPtoDataTableKey(ptoTab);
-  const sectionTitle = showStaticContent ? activePtoSubtabLabel || ptoTab : "";
 
   return (
     <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
-      <SectionCard title={sectionTitle} fill={isPtoDateTab}>
+      <SectionCard title="" fill={isPtoDateTab}>
         {showStaticContent ? <PtoStaticTabContent content={content} ptoTab={ptoTab} /> : null}
         {ptoTab === "buckets" && (
           <div style={ptoBucketsPanelStyle}>

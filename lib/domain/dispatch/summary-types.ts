@@ -1,5 +1,7 @@
 export type DispatchShift = "daily" | "night" | "day";
 
+export type DispatchDailyReportTab = "volumes" | "summary";
+
 export type DispatchSummaryRow = {
   id: string;
   date: string;

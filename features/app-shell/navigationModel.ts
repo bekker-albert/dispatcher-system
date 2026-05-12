@@ -1,4 +1,5 @@
 import type { AdminSection } from "@/lib/domain/admin/navigation";
+import type { DispatchDailyReportTab } from "@/lib/domain/dispatch/summary";
 import type { TopTab } from "@/lib/domain/navigation/tabs";
 
 export type NavigationStatus = "production" | "preview" | "planned";
@@ -6,6 +7,7 @@ export type NavigationStatus = "production" | "preview" | "planned";
 export type NavigationTarget = {
   topTab: TopTab;
   dispatchTab?: string;
+  dispatchDailyReportTab?: DispatchDailyReportTab;
   ptoTab?: string;
   adminSection?: AdminSection;
   fleetTab?: string;
@@ -49,7 +51,8 @@ export const erpNavigationModel: NavigationGroup[] = [
     icon: "radio-tower",
     defaultTarget: { topTab: "dispatch", dispatchTab: "daily" },
     items: [
-      { id: "dispatch-daily-report", label: "Суточный отчет", status: "preview", target: { topTab: "dispatch", dispatchTab: "daily" } },
+      { id: "dispatch-daily-volumes", label: "Суточные объемы", status: "preview", target: { topTab: "dispatch", dispatchTab: "daily", dispatchDailyReportTab: "volumes" } },
+      { id: "dispatch-daily-report", label: "Суточный отчет", status: "preview", target: { topTab: "dispatch", dispatchTab: "daily", dispatchDailyReportTab: "summary" } },
       { id: "dispatch-day", label: "День", status: "preview", target: { topTab: "dispatch", dispatchTab: "day" } },
       { id: "dispatch-night", label: "Ночь", status: "preview", target: { topTab: "dispatch", dispatchTab: "night" } },
     ],
@@ -63,17 +66,10 @@ export const erpNavigationModel: NavigationGroup[] = [
       { id: "pto-plan", label: "План", status: "production", target: { topTab: "pto", ptoTab: "plan" } },
       { id: "pto-oper", label: "Оперучет", status: "production", target: { topTab: "pto", ptoTab: "oper" } },
       { id: "pto-survey", label: "Замер", status: "production", target: { topTab: "pto", ptoTab: "survey" } },
-      {
-        id: "pto-volume-calc",
-        label: "Расчет объемов",
-        status: "production",
-        children: [
-          { id: "pto-cycle", label: "Цикл", status: "production", target: { topTab: "pto", ptoTab: "cycle" } },
-          { id: "pto-buckets", label: "Ковши", status: "production", target: { topTab: "pto", ptoTab: "buckets" } },
-          { id: "pto-bodies", label: "Кузова", status: "production", target: { topTab: "pto", ptoTab: "bodies" } },
-          { id: "pto-performance", label: "Производительность", status: "production", target: { topTab: "pto", ptoTab: "performance" } },
-        ],
-      },
+      { id: "pto-cycle", label: "Цикл", status: "production", target: { topTab: "pto", ptoTab: "cycle" } },
+      { id: "pto-buckets", label: "Ковши", status: "production", target: { topTab: "pto", ptoTab: "buckets" } },
+      { id: "pto-bodies", label: "Кузова", status: "production", target: { topTab: "pto", ptoTab: "bodies" } },
+      { id: "pto-volume-calc", label: "Расчет объемов", status: "production", target: { topTab: "pto", ptoTab: "performance" } },
     ],
   },
   {

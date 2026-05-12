@@ -28,6 +28,7 @@ export function useAppDispatchScreenProps({
     setAreaFilter,
     dispatchVehicleToAddId,
     setDispatchVehicleToAddId,
+    dispatchDailyReportTab,
   } = appState;
 
   const {
@@ -60,6 +61,7 @@ export function useAppDispatchScreenProps({
     reportDate,
     isDailyDispatchShift,
     currentDispatchShift,
+    dailyReportTab: dispatchDailyReportTab,
     dispatchSummaryTotals,
     search,
     setSearch,

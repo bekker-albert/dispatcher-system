@@ -77,42 +77,55 @@ export function SidebarGroup({
 
   return (
     <div className="erp-sidebar-group">
-      <button
-        type="button"
-        className="erp-sidebar-group__button"
-        data-active={active}
-        title={group.label}
-        onClick={() => {
-          if (editing) return;
-          if (collapsed) {
-            onSelectTarget(group.defaultTarget);
-            return;
-          }
-          if (!active && group.defaultTarget) {
-            onSelectTarget(group.defaultTarget);
-            setExpanded(true);
-            return;
-          }
-          toggleExpanded();
-        }}
-      >
-        <Icon size={18} strokeWidth={2} />
-        <span className="erp-sidebar-group__label">
-          {editing && !collapsed ? (
-            <InlineNavigationLabelInput
-              id={group.id}
-              label={group.label}
-              defaultLabel={defaultLabelById[group.id] ?? group.label}
-              hasOverride={Boolean(labelOverrides[group.id])}
-              onSetLabel={onSetLabelOverride}
-              onResetLabel={onResetLabelOverride}
-            />
-          ) : group.label}
-        </span>
-        <span className="erp-sidebar-group__chevron" aria-hidden="true">
+      <div className="erp-sidebar-group__header">
+        <button
+          type="button"
+          className="erp-sidebar-group__button"
+          data-active={active}
+          title={group.label}
+          onClick={() => {
+            if (editing) return;
+            if (collapsed) {
+              onSelectTarget(group.defaultTarget);
+              return;
+            }
+            if (!active && group.defaultTarget) {
+              onSelectTarget(group.defaultTarget);
+              setExpanded(true);
+              return;
+            }
+            toggleExpanded();
+          }}
+        >
+          <Icon size={18} strokeWidth={2} />
+          <span className="erp-sidebar-group__label">
+            {editing && !collapsed ? (
+              <InlineNavigationLabelInput
+                id={group.id}
+                label={group.label}
+                defaultLabel={defaultLabelById[group.id] ?? group.label}
+                hasOverride={Boolean(labelOverrides[group.id])}
+                onSetLabel={onSetLabelOverride}
+                onResetLabel={onResetLabelOverride}
+              />
+            ) : group.label}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="erp-sidebar-group__chevron"
+          data-active={active}
+          aria-label={`${expanded ? "Свернуть" : "Развернуть"} ${group.label}`}
+          title={`${expanded ? "Свернуть" : "Развернуть"} ${group.label}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (editing) return;
+            toggleExpanded();
+          }}
+        >
           {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </span>
-      </button>
+        </button>
+      </div>
       {!collapsed && expanded && (
         <div className="erp-sidebar-group__items">
           {group.items.map((item) => (

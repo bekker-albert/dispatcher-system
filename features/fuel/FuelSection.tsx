@@ -24,7 +24,7 @@ export function FuelSection({ fuelTab, subTabs, onSelectTab }: FuelSectionProps)
         ))}
       </SubTabs>
 
-      <SectionCard title={`Таксировка / топливо — ${activeSubtab?.label ?? fuelTab}`}>
+      <SectionCard title="">
         {fuelTab.startsWith("custom:") ? (
           <div style={blockStyle}>{activeSubtab?.content || "В этой подвкладке пока нет информации."}</div>
         ) : (

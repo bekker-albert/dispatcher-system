@@ -3,14 +3,11 @@
 import { ClipboardList, Clock, FileText, History, Plane, Workflow } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
-import { getWorkspaceById } from "@/lib/domain/workspaces/workspaces";
 import { SectionCard } from "@/shared/ui/layout";
-
-const commonWorkspace = getWorkspaceById("common-processes");
 
 export function CommonProcessesSection() {
   return (
-    <SectionCard title={commonWorkspace?.title ?? "Общие процессы"}>
+    <SectionCard title="">
       <div style={introStyle}>
         <div>
           <div style={eyebrowStyle}>Архитектурный каркас</div>

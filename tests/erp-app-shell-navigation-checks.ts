@@ -67,6 +67,7 @@ assert.ok(allItems.some((item) => item.status === "preview"));
 assert.ok(allItems.some((item) => item.status === "planned"));
 
 for (const id of [
+  "dispatch-daily-volumes",
   "dispatch-daily-report",
   "dispatch-day",
   "dispatch-night",
@@ -76,7 +77,6 @@ for (const id of [
   "pto-cycle",
   "pto-buckets",
   "pto-bodies",
-  "pto-performance",
   "fleet-directory",
   "fleet-placement",
   "admin-users",
@@ -84,6 +84,16 @@ for (const id of [
 ]) {
   assert.ok(allItems.some((item) => item.id === id), `${id} must stay in ERP navigation.`);
 }
+
+const dispatchGroup = erpNavigationModel.find((group) => group.id === "dispatch");
+assert.ok(dispatchGroup);
+assert.deepEqual(
+  dispatchGroup?.items.map((item) => item.id),
+  ["dispatch-daily-volumes", "dispatch-daily-report", "dispatch-day", "dispatch-night"],
+  "Горная must show Суточные объемы before Суточный отчет.",
+);
+assert.equal(allItems.find((item) => item.id === "dispatch-daily-volumes")?.target?.dispatchDailyReportTab, "volumes");
+assert.equal(allItems.find((item) => item.id === "dispatch-daily-report")?.target?.dispatchDailyReportTab, "summary");
 
 assert.equal(allItems.filter((item) => item.label === "Главная").length, 0, "Sidebar must not duplicate the Главная workspace as a visible child item.");
 
@@ -105,13 +115,22 @@ for (const removedId of [
 
 const ptoVolumeItem = allItems.find((item) => item.id === "pto-volume-calc");
 assert.ok(ptoVolumeItem);
-assert.equal(ptoVolumeItem?.target, undefined);
-assert.deepEqual(ptoVolumeItem?.children?.map((item) => item.id), [
+assert.equal(ptoVolumeItem?.target?.topTab, "pto");
+assert.equal(ptoVolumeItem?.target?.ptoTab, "performance");
+assert.equal(ptoVolumeItem?.children, undefined);
+
+const ptoGroup = erpNavigationModel.find((group) => group.id === "pto");
+assert.ok(ptoGroup);
+assert.deepEqual(ptoGroup?.items.map((item) => item.id), [
+  "pto-plan",
+  "pto-oper",
+  "pto-survey",
   "pto-cycle",
   "pto-buckets",
   "pto-bodies",
-  "pto-performance",
+  "pto-volume-calc",
 ]);
+assert.ok(!allItems.some((item) => item.id === "pto-performance"), "Производительность must be folded into Расчет объемов in the sidebar.");
 
 const reportsGroup = erpNavigationModel.find((group) => group.id === "reports");
 assert.ok(reportsGroup);
@@ -143,11 +162,18 @@ assert.match(appShellSource, /useNavigationLabelOverrides/);
 assert.match(appShellSource, /useNavigationOrderOverrides/);
 assert.match(appShellSource, /canEditNavigationLabels/);
 assert.match(appShellSource, /data-database-configured/);
+assert.match(appShellSource, /dispatchDailyReportTab/);
+assert.match(appShellSource, /onSelectDispatchDailyReportTab/);
+assert.match(appShellSource, /onAddCustomTab=\{appState\.addCustomTab\}/);
 assert.match(sidebarSource, /mining-logo\.png/);
 assert.match(sidebarSource, /AAM Dispatch/);
 assert.doesNotMatch(sidebarSource, /NavigationLabelEditor/);
 assert.match(sidebarSource, /Править меню/);
 assert.match(sidebarSource, /PencilLine/);
+assert.match(sidebarSource, /Plus/);
+assert.match(sidebarSource, /onAddCustomTab/);
+assert.match(sidebarSource, /handleAddCustomTab/);
+assert.match(sidebarSource, /placeholder="Новая вкладка"/);
 assert.match(sidebarSource, /onMoveNavigationItem/);
 assert.match(sidebarSource, /floating/);
 assert.match(sidebarSource, /SidebarGroup/);
@@ -155,7 +181,12 @@ assert.match(sidebarGroupSource, /isNavigationGroupActive/);
 assert.match(sidebarGroupSource, /InlineNavigationLabelInput/);
 assert.match(sidebarGroupSource, /useSidebarGroupExpansion/);
 assert.match(sidebarGroupSource, /toggleExpanded/);
+assert.match(sidebarGroupSource, /erp-sidebar-group__header/);
+assert.match(sidebarGroupSource, /event\.stopPropagation\(\)/);
+assert.match(sidebarGroupSource, /aria-label=\{\`\$\{expanded \? "Свернуть" : "Развернуть"\}/);
 assert.doesNotMatch(sidebarGroupSource, /expanded \|\| active/);
+assert.match(sidebarSource, /onToggleCollapsed/);
+assert.match(readSource("features/app-shell/SidebarToggle.tsx"), /event\.stopPropagation\(\)/);
 assert.match(sidebarItemSource, /data-disabled/);
 assert.match(sidebarItemSource, /aria-disabled/);
 assert.match(sidebarItemSource, /draggable=\{editing && !collapsed\}/);
@@ -171,6 +202,8 @@ assert.match(mappingSource, /onSelectPtoTab/);
 assert.match(mappingSource, /onSelectAdminSection/);
 assert.match(mappingSource, /onSelectFleetTab/);
 assert.match(mappingSource, /onSelectReportCustomer/);
+assert.match(mappingSource, /dispatchDailyReportTab/);
+assert.match(mappingSource, /onSelectDispatchDailyReportTab/);
 
 assert.match(sidebarStateSource, /localStorage/);
 assert.match(sidebarStateSource, /sidebarCollapsedPreferenceKey/);
@@ -191,6 +224,7 @@ assert.match(labelOverridesHookSource, /getNavigationLabelOverrideSnapshot/);
 assert.doesNotMatch(labelOverridesHookSource, /useState<NavigationLabelOverrides>\(\(\) => readNavigationLabelOverrides\(\)\)/);
 assert.match(sidebarItemSource, /maxLength=\{48\}/);
 assert.match(sidebarGroupSource, /maxLength=\{48\}/);
+assert.match(sidebarSource, /maxLength=\{48\}/);
 assert.match(orderOverridesSource, /navigationOrderOverrideStorageKey/);
 assert.match(orderOverridesSource, /moveNavigationItemWithinParent/);
 assert.match(orderOverridesHookSource, /localStorage/);

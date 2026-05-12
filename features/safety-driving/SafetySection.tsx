@@ -68,7 +68,7 @@ export function SafetySection({ vehicleRows }: SafetySectionProps) {
   const rows = vehicleRows.filter((vehicle) => vehicle.visible !== false);
 
   return (
-    <SectionCard title="GPS / ТБ">
+    <SectionCard title="">
       <div style={noteStyle}>
         Preview: GPS, Wialon и ДУТ объединены в рабочий блок мониторинга техники. Интеграция Wialon не запускается, preview-поля остаются пустыми до появления источника данных.
       </div>

@@ -5,8 +5,7 @@ import {
   dispatchInnerTabButtonStyle,
   dispatchInnerTabsStyle,
 } from "@/features/dispatch/dispatchSectionStyles";
-
-export type DispatchDailyReportTab = "volumes" | "summary";
+import type { DispatchDailyReportTab } from "@/lib/domain/dispatch/summary";
 
 type DispatchDailyReportTabsProps = {
   activeTab: DispatchDailyReportTab;

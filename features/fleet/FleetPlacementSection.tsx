@@ -70,7 +70,7 @@ export function FleetPlacementSection({ vehicleRows, workDate }: FleetPlacementS
   const rows = vehicleRows.filter((vehicle) => vehicle.visible !== false);
 
   return (
-    <SectionCard title="Расстановка техники">
+    <SectionCard title="">
       <div style={noteStyle}>
         Draft UI: расстановка техники показывает фактическое пребывание из текущего справочника. Это источник выбора техники для Горной сводки, но не новый backend workflow.
       </div>

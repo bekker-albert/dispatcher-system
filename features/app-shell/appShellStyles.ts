@@ -40,6 +40,7 @@ export const appShellCss = `
 .erp-sidebar__inline-editor {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 8px;
   border-bottom: 1px solid #e2e8f0;
@@ -76,6 +77,47 @@ export const appShellCss = `
   margin-left: auto;
   color: #64748b;
   flex: 0 0 auto;
+}
+
+.erp-sidebar__add-tab {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.erp-sidebar__add-tab input {
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 12px;
+  min-height: 28px;
+  padding: 4px 7px;
+}
+
+.erp-sidebar__add-tab button {
+  min-height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 7px;
+}
+
+.erp-sidebar__add-tab button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
 }
 
 .erp-sidebar-inline-label {
@@ -167,8 +209,15 @@ export const appShellCss = `
   margin-bottom: 6px;
 }
 
+.erp-sidebar-group__header {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
 .erp-sidebar-group__button,
-.erp-sidebar-item {
+.erp-sidebar-item,
+.erp-sidebar-group__chevron {
   width: 100%;
   min-height: 34px;
   border: 0;
@@ -186,20 +235,28 @@ export const appShellCss = `
 }
 
 .erp-sidebar-group__button {
+  flex: 1 1 auto;
   font-weight: 750;
 }
 
 .erp-sidebar-group__chevron {
-  flex: 0 0 auto;
-  display: inline-flex;
+  width: 30px;
+  flex: 0 0 30px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  padding-inline: 0;
+  border-radius: 7px;
 }
 
 .erp-sidebar-group__button:hover,
+.erp-sidebar-group__chevron:hover,
 .erp-sidebar-item:hover {
   background: #f1f5f9;
 }
 
 .erp-sidebar-group__button[data-active="true"],
+.erp-sidebar-group__chevron[data-active="true"],
 .erp-sidebar-item[data-active="true"] {
   background: #e8f1ff;
   color: #0f4c81;
@@ -321,19 +378,21 @@ export const appShellCss = `
   flex: 1 1 auto;
 }
 
-.erp-topbar__subtitle {
+.erp-topbar__heading {
   min-width: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.erp-topbar__title {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
-  font-weight: 750;
-  line-height: 1.2;
-  color: #334155;
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.15;
+  color: #0f172a;
 }
 
 .erp-topbar__right {

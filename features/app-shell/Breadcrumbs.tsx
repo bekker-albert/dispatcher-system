@@ -22,16 +22,11 @@ export function Breadcrumbs({ activeReportCustomerCode, trail }: BreadcrumbsProp
   const leafLabel = trail.workspaceId === "reports" && leaf && reportCustomerCode && !leaf.includes(reportCustomerCode)
     ? `${leaf} ${reportCustomerCode}`
     : leaf;
-  const parts = leafLabel && leafLabel !== workspace ? [workspace, leafLabel] : [workspace];
+  const title = leafLabel || workspace;
 
   return (
-    <nav className="erp-topbar__subtitle" aria-label="Breadcrumbs">
-      {parts.map((part, index) => (
-        <span key={`${part}-${index}`}>
-          {index > 0 && " / "}
-          {part}
-        </span>
-      ))}
-    </nav>
+    <div className="erp-topbar__heading">
+      <div className="erp-topbar__title" title={title}>{title}</div>
+    </div>
   );
 }

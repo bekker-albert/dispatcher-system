@@ -54,7 +54,7 @@ export function WorkspaceOverviewSection() {
   }, []);
 
   return (
-    <SectionCard title="Главная">
+    <SectionCard title="">
       <div style={heroStyle}>
         <div>
           <div style={eyebrowStyle}>AA Mining Dispatch Service</div>

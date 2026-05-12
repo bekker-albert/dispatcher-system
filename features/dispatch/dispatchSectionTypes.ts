@@ -1,4 +1,5 @@
 import type {
+  DispatchDailyReportTab,
   DispatchSummaryNumberField,
   DispatchSummaryRow,
   DispatchSummaryTextField,
@@ -29,6 +30,7 @@ export type DispatchSectionProps = {
   reportDate: string;
   isDailyDispatchShift: boolean;
   currentDispatchShift: "daily" | "night" | "day";
+  dailyReportTab: DispatchDailyReportTab;
   dispatchSummaryTotals: DispatchTotals;
   search: string;
   onSearchChange: (value: string) => void;
