@@ -105,7 +105,7 @@ assert.match(vehicleTablePrimaryContentSource, /const canManageVehicles = true/)
 assert.match(vehicleTablePrimaryContentSource, /canManageVehicles,/);
 assert.match(fleetPrimaryContentSource, /fleetTab === "placement"/);
 assert.match(fleetPrimaryContentSource, /<FleetVehiclesSection vehicleRows=\{appState\.vehicleRows\} workDate=\{appState\.reportDate\} \/>/);
-assert.match(fleetPlacementSource, /Расстановка техники/);
+assert.match(fleetPlacementSource, /<SectionCard title=""/);
 assert.match(fleetPlacementSource, /source.*Горной сводки|источник выбора техники для Горной сводки/);
 assert.match(fleetPrimaryContentSource, /resetVehicleInteractionState/);
 assert.doesNotMatch(fleetPrimaryContentSource, /AdminVehiclesSection|useAppAdminVehiclesScreenProps|useAppVehicleControllers/);
