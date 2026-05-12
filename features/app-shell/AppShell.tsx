@@ -111,6 +111,7 @@ export function AppShell({
     <div
       className="erp-shell"
       data-collapsed={sidebar.collapsed}
+      data-database-configured={databaseConfigured ? "true" : "false"}
       data-mobile-open={sidebar.mobileOpen}
     >
       <style>{appShellCss}</style>
@@ -145,7 +146,6 @@ export function AppShell({
           activeReportCustomerCode={activeReportCustomerCode}
           trail={trail}
           reportDate={appHeaderProps.reportDate}
-          databaseConfigured={databaseConfigured}
           onOpenMobileMenu={sidebar.openMobile}
           onSelectReportDate={appHeaderProps.onSelectReportDate}
           onOpenProfile={() => {

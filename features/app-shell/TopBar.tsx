@@ -10,7 +10,6 @@ type TopBarProps = {
   activeReportCustomerCode?: string;
   trail: NavigationTrail;
   reportDate: string;
-  databaseConfigured: boolean;
   onOpenMobileMenu: () => void;
   onSelectReportDate: (date: string) => void;
   onOpenProfile: () => void;
@@ -20,7 +19,6 @@ export function TopBar({
   activeReportCustomerCode,
   trail,
   reportDate,
-  databaseConfigured,
   onOpenMobileMenu,
   onSelectReportDate,
   onOpenProfile,
@@ -32,9 +30,6 @@ export function TopBar({
         <Breadcrumbs activeReportCustomerCode={activeReportCustomerCode} trail={trail} />
       </div>
       <div className="erp-topbar__right">
-        <div className="erp-topbar__status">
-          {databaseConfigured ? "База: production source" : "База: fallback/local"}
-        </div>
         <label className="erp-topbar__date">
           <span>Дата</span>
           <input

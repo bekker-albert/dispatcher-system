@@ -1,5 +1,7 @@
 "use client";
 
+import { Clock3, Eye } from "lucide-react";
+
 import type { NavigationItem } from "./navigationModel";
 import type { NavigationLabelOverrides } from "./navigationLabelOverrides";
 import type { NavigationOrderOverrides } from "./navigationOrderOverrides";
@@ -22,9 +24,19 @@ type SidebarItemProps = {
 };
 
 function statusLabel(status: NavigationItem["status"]) {
-  if (status === "preview") return "preview";
-  if (status === "planned") return "planned";
+  if (status === "preview") return "Preview";
+  if (status === "planned") return "Planned";
   return "";
+}
+
+function StatusIcon({ status }: { status: Exclude<NavigationItem["status"], "production"> }) {
+  const label = statusLabel(status);
+
+  return (
+    <span className="erp-sidebar-item__badge" data-status={status} title={label} aria-label={label}>
+      {status === "preview" ? <Eye size={12} aria-hidden /> : <Clock3 size={12} aria-hidden />}
+    </span>
+  );
 }
 
 export function SidebarItem({
@@ -93,11 +105,7 @@ export function SidebarItem({
           />
         ) : item.label}
       </span>
-      {item.status !== "production" && (
-        <span className="erp-sidebar-item__badge" data-status={item.status}>
-          {statusLabel(item.status)}
-        </span>
-      )}
+      {item.status !== "production" ? <StatusIcon status={item.status} /> : null}
     </button>
   );
 }

@@ -28,7 +28,13 @@ export const appShellCss = `
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px;
+}
+
+.erp-sidebar,
+.erp-sidebar * {
+  min-width: 0;
 }
 
 .erp-sidebar__inline-editor {
@@ -41,6 +47,10 @@ export const appShellCss = `
 
 .erp-sidebar__inline-editor-button,
 .erp-sidebar__inline-editor-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid #d8dee8;
   border-radius: 7px;
   background: #ffffff;
@@ -53,6 +63,10 @@ export const appShellCss = `
   padding: 4px 8px;
 }
 
+.erp-sidebar__inline-editor-button {
+  flex: 1 1 auto;
+}
+
 .erp-sidebar__inline-editor-button[aria-pressed="true"] {
   background: #e8f1ff;
   color: #0f4c81;
@@ -61,6 +75,7 @@ export const appShellCss = `
 .erp-sidebar__inline-editor-reset {
   margin-left: auto;
   color: #64748b;
+  flex: 0 0 auto;
 }
 
 .erp-sidebar-inline-label {
@@ -167,10 +182,16 @@ export const appShellCss = `
   font: inherit;
   font-size: 13px;
   text-align: left;
+  overflow: hidden;
 }
 
 .erp-sidebar-group__button {
   font-weight: 750;
+}
+
+.erp-sidebar-group__chevron {
+  flex: 0 0 auto;
+  display: inline-flex;
 }
 
 .erp-sidebar-group__button:hover,
@@ -199,18 +220,22 @@ export const appShellCss = `
 
 .erp-sidebar-item__label,
 .erp-sidebar-group__label {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .erp-sidebar-item__badge {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: inline-grid;
+  place-items: center;
   margin-left: auto;
   border-radius: 999px;
-  padding: 1px 5px;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
+  padding: 0;
   background: #f1f5f9;
   color: #64748b;
 }
@@ -229,6 +254,7 @@ export const appShellCss = `
   display: grid;
   gap: 2px;
   padding: 2px 0 4px 18px;
+  overflow: hidden;
 }
 
 .erp-sidebar-group__items .erp-sidebar-group__items {
@@ -257,6 +283,7 @@ export const appShellCss = `
 
 .erp-shell[data-collapsed="true"] .erp-sidebar__inline-editor-button {
   width: 34px;
+  flex: 0 0 34px;
   padding-inline: 0;
 }
 
@@ -291,14 +318,18 @@ export const appShellCss = `
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1 1 auto;
 }
 
 .erp-topbar__subtitle {
   min-width: 0;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 750;
   line-height: 1.2;
@@ -306,14 +337,14 @@ export const appShellCss = `
 }
 
 .erp-topbar__right {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
-.erp-topbar__status,
 .erp-topbar__date {
   border: 1px solid #d8dee8;
   border-radius: 7px;
@@ -338,14 +369,14 @@ export const appShellCss = `
 }
 
 .erp-topbar .app-auth-session {
-  flex: 0 1 auto;
+  flex: 0 1 320px;
   width: auto !important;
-  max-width: 220px;
+  min-width: 170px;
+  max-width: min(360px, 34vw);
 }
 
 .erp-topbar .app-auth-session > button {
-  width: auto !important;
-  max-width: 220px;
+  width: 100% !important;
   min-height: 30px;
   padding: 4px 8px !important;
 }
@@ -435,6 +466,12 @@ export const appShellCss = `
   .erp-topbar__right {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .erp-topbar .app-auth-session {
+    flex: 1 1 180px;
+    max-width: 100%;
   }
 }
 

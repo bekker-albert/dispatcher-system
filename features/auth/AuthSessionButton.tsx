@@ -14,6 +14,7 @@ const wrapperStyle: CSSProperties = {
   position: "relative",
   display: "flex",
   justifyContent: "flex-end",
+  minWidth: 0,
   width: "100%",
 };
 
@@ -21,7 +22,7 @@ const triggerStyle: CSSProperties = {
   width: "100%",
   display: "inline-flex",
   alignItems: "center",
-  justifyContent: "center",
+  justifyContent: "flex-start",
   gap: 6,
   border: "1px solid #dbe3ec",
   borderRadius: 8,
@@ -33,6 +34,8 @@ const triggerStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
   boxSizing: "border-box",
+  minWidth: 0,
+  maxWidth: "100%",
 };
 
 const userNameStyle: CSSProperties = {
@@ -165,7 +168,7 @@ export function AuthSessionButton({ onOpenProfile }: AuthSessionButtonProps) {
         type="button"
         onClick={() => setOpen((current) => !current)}
         style={triggerStyle}
-        title="Профиль"
+        title={user.displayName}
         aria-label="Профиль пользователя"
         aria-expanded={open}
       >

@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, PencilLine, RotateCcw } from "lucide-react";
 import Image from "next/image";
 
 import { SidebarGroup } from "./SidebarGroup";
@@ -79,20 +80,23 @@ export function Sidebar({
             className="erp-sidebar__inline-editor-button"
             aria-pressed={labelEditing}
             onClick={onToggleLabelEditing}
-            title={labelEditing ? "Завершить редактирование меню" : "Редактировать названия и порядок меню"}
+            title={labelEditing ? "Завершить редактирование меню" : "Править меню"}
           >
-            {collapsed ? "✎" : labelEditing ? "Готово" : "Править меню"}
+            {labelEditing ? <Check size={15} aria-hidden /> : <PencilLine size={15} aria-hidden />}
+            {!collapsed ? <span>{labelEditing ? "Готово" : "Править меню"}</span> : null}
           </button>
           {!collapsed && labelEditing ? (
             <button
               type="button"
               className="erp-sidebar__inline-editor-reset"
+              title="Сбросить названия и порядок"
               onClick={() => {
                 onResetAllLabelOverrides();
                 onResetNavigationOrder();
               }}
             >
-              Сбросить
+              <RotateCcw size={14} aria-hidden />
+              <span>Сбросить</span>
             </button>
           ) : null}
         </div>

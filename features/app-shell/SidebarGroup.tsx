@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   BarChart3,
   Bot,
@@ -26,6 +25,7 @@ import type { NavigationGroup, NavigationItem, NavigationTarget } from "./naviga
 import type { NavigationLabelOverrides } from "./navigationLabelOverrides";
 import type { NavigationOrderOverrides } from "./navigationOrderOverrides";
 import { SidebarItem } from "./SidebarItem";
+import { useSidebarGroupExpansion } from "./useSidebarGroupExpansion";
 
 type SidebarGroupProps = {
   group: NavigationGroup;
@@ -72,8 +72,7 @@ export function SidebarGroup({
   onSelectTarget,
 }: SidebarGroupProps) {
   const active = isNavigationGroupActive(group, state);
-  const [expanded, setExpanded] = useState(active);
-  const visibleExpanded = expanded || active;
+  const { expanded, setExpanded, toggleExpanded } = useSidebarGroupExpansion(group.id, active);
   const Icon = iconMap[group.icon] ?? LayoutDashboard;
 
   return (
@@ -89,8 +88,12 @@ export function SidebarGroup({
             onSelectTarget(group.defaultTarget);
             return;
           }
-          if (group.defaultTarget) onSelectTarget(group.defaultTarget);
-          setExpanded((current) => !current);
+          if (!active && group.defaultTarget) {
+            onSelectTarget(group.defaultTarget);
+            setExpanded(true);
+            return;
+          }
+          toggleExpanded();
         }}
       >
         <Icon size={18} strokeWidth={2} />
@@ -107,10 +110,10 @@ export function SidebarGroup({
           ) : group.label}
         </span>
         <span className="erp-sidebar-group__chevron" aria-hidden="true">
-          {visibleExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </span>
       </button>
-      {!collapsed && visibleExpanded && (
+      {!collapsed && expanded && (
         <div className="erp-sidebar-group__items">
           {group.items.map((item) => (
             <div key={item.id}>
