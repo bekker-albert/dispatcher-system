@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import {
   moveNavigationItemWithinParent,
@@ -9,9 +9,30 @@ import {
   type NavigationOrderOverrides,
 } from "./navigationOrderOverrides";
 
+const navigationOrderOverrideChangeEventName = "aam.dispatch.navigationOrder.changed";
+
+function getNavigationOrderOverrideSnapshot() {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(navigationOrderOverrideStorageKey) ?? "";
+}
+
+function subscribeNavigationOrderOverrides(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === navigationOrderOverrideStorageKey) callback();
+  };
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(navigationOrderOverrideChangeEventName, callback);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(navigationOrderOverrideChangeEventName, callback);
+  };
+}
+
 function readNavigationOrderOverrides() {
-  if (typeof window === "undefined") return {};
-  return parseNavigationOrderOverrides(window.localStorage.getItem(navigationOrderOverrideStorageKey));
+  return parseNavigationOrderOverrides(getNavigationOrderOverrideSnapshot());
 }
 
 function writeNavigationOrderOverrides(overrides: NavigationOrderOverrides) {
@@ -19,10 +40,12 @@ function writeNavigationOrderOverrides(overrides: NavigationOrderOverrides) {
 
   if (Object.keys(overrides).length === 0) {
     window.localStorage.removeItem(navigationOrderOverrideStorageKey);
+    window.dispatchEvent(new Event(navigationOrderOverrideChangeEventName));
     return;
   }
 
   window.localStorage.setItem(navigationOrderOverrideStorageKey, JSON.stringify(overrides));
+  window.dispatchEvent(new Event(navigationOrderOverrideChangeEventName));
 }
 
 function orderMatchesDefault(nextIds: string[], defaultIds: string[]) {
@@ -30,36 +53,35 @@ function orderMatchesDefault(nextIds: string[], defaultIds: string[]) {
 }
 
 export function useNavigationOrderOverrides() {
-  const [overrides, setOverrides] = useState<NavigationOrderOverrides>(() => readNavigationOrderOverrides());
+  const snapshot = useSyncExternalStore(
+    subscribeNavigationOrderOverrides,
+    getNavigationOrderOverrideSnapshot,
+    () => "",
+  );
+  const overrides = useMemo(() => parseNavigationOrderOverrides(snapshot), [snapshot]);
 
   const moveItem = useCallback((parentId: string, draggedId: string, targetId: string, defaultIds: string[]) => {
-    setOverrides((current) => {
-      const baseIds = current[parentId] ?? defaultIds;
-      const nextIds = moveNavigationItemWithinParent(baseIds, draggedId, targetId);
-      const next = { ...current };
+    const current = readNavigationOrderOverrides();
+    const baseIds = current[parentId] ?? defaultIds;
+    const nextIds = moveNavigationItemWithinParent(baseIds, draggedId, targetId);
+    const next = { ...current };
 
-      if (orderMatchesDefault(nextIds, defaultIds)) {
-        delete next[parentId];
-      } else {
-        next[parentId] = nextIds;
-      }
+    if (orderMatchesDefault(nextIds, defaultIds)) {
+      delete next[parentId];
+    } else {
+      next[parentId] = nextIds;
+    }
 
-      writeNavigationOrderOverrides(next);
-      return next;
-    });
+    writeNavigationOrderOverrides(next);
   }, []);
 
   const resetParentOrder = useCallback((parentId: string) => {
-    setOverrides((current) => {
-      const next = { ...current };
-      delete next[parentId];
-      writeNavigationOrderOverrides(next);
-      return next;
-    });
+    const next = { ...readNavigationOrderOverrides() };
+    delete next[parentId];
+    writeNavigationOrderOverrides(next);
   }, []);
 
   const resetAllOrderOverrides = useCallback(() => {
-    setOverrides({});
     writeNavigationOrderOverrides({});
   }, []);
 

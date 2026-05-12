@@ -73,8 +73,11 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(useAppSectionPreloaderSource, /@\/features\/pto\/PtoSection|@\/features\/reports|@\/features\/fuel|@\/features\/fleet/);
 
-assert.match(workspaceOverviewSource, /createWorkspaceHandlerRolloutSummary/);
-assert.match(workspaceOverviewSource, /createStage2FirstReadModelActivationSummary/);
+assert.doesNotMatch(workspaceOverviewSource, /createWorkspaceReadinessSummary/);
+assert.doesNotMatch(workspaceOverviewSource, /createWorkspaceHandlerRolloutSummary/);
+assert.doesNotMatch(workspaceOverviewSource, /createWorkspaceImplementationRoadmap/);
+assert.doesNotMatch(workspaceOverviewSource, /createStage2FirstReadModelActivationSummary/);
+assert.match(workspaceOverviewSource, /workspace\.performanceRule/);
 assert.doesNotMatch(workspaceOverviewSource, /@\/lib\/data|databaseRequest|fetch\(/);
 assert.match(adminNavigationSource, /value: "database"/);
 
