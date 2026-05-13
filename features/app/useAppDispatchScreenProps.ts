@@ -39,6 +39,7 @@ export function useAppDispatchScreenProps({
     dispatchVehicleSelectOptions,
     dispatchLocationOptions,
     dispatchWorkTypeOptions,
+    dispatchPtoPlanRows,
     dispatchExcavatorOptions,
     filteredDispatchSummaryRows,
     dispatchSummaryTotals,
@@ -86,6 +87,7 @@ export function useAppDispatchScreenProps({
     deleteCurrentDispatchShiftRows,
     dispatchLocationOptions,
     dispatchWorkTypeOptions,
+    dispatchPtoPlanRows,
     dispatchExcavatorOptions,
   });
 }

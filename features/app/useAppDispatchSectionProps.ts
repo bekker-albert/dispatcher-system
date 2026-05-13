@@ -37,6 +37,7 @@ type UseAppDispatchSectionPropsOptions = {
   deleteCurrentDispatchShiftRows: () => void;
   dispatchLocationOptions: string[];
   dispatchWorkTypeOptions: string[];
+  dispatchPtoPlanRows: DispatchSectionProps["dispatchPtoPlanRows"];
   dispatchExcavatorOptions: string[];
 };
 
@@ -71,6 +72,7 @@ export function useAppDispatchSectionProps({
   deleteCurrentDispatchShiftRows,
   dispatchLocationOptions,
   dispatchWorkTypeOptions,
+  dispatchPtoPlanRows,
   dispatchExcavatorOptions,
 }: UseAppDispatchSectionPropsOptions): DispatchSectionProps {
   const dailyDispatchLabel = dailyReportTab === "summary" ? "Суточный отчет" : "Суточные объемы";
@@ -107,6 +109,7 @@ export function useAppDispatchSectionProps({
     onDeleteCurrentDispatchShiftRows: deleteCurrentDispatchShiftRows,
     dispatchLocationOptions,
     dispatchWorkTypeOptions,
+    dispatchPtoPlanRows,
     dispatchExcavatorOptions,
   };
 }

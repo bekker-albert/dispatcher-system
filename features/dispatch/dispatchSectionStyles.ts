@@ -210,14 +210,16 @@ export const dispatchSuggestionStyle: CSSProperties = {
 };
 
 export const dispatchSummaryTableScrollStyle: CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 420,
+  height: "calc(100dvh - 335px)",
+  maxHeight: "none",
   overflow: "auto",
   borderWidth: 1,
   borderStyle: "solid",
   borderColor: "#e2e8f0",
   borderRadius: 8,
   background: "#ffffff",
-  maxHeight: "calc(100dvh - 430px)",
-  minHeight: 260,
 };
 
 export const dispatchSummaryTableStyle: CSSProperties = {
@@ -276,6 +278,13 @@ export const dispatchSummaryActionTdStyle: CSSProperties = {
   overflow: "visible",
 };
 
+export const dispatchSummaryActionGroupStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 4,
+};
+
 export const dispatchSummaryGroupRowStyle: CSSProperties = {
   background: "#eef6ff",
 };
@@ -286,6 +295,32 @@ export const dispatchSummaryGroupCellStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
   padding: "6px 8px",
+};
+
+export const dispatchSummaryLoaderRowStyle: CSSProperties = {
+  background: "#ffffff",
+};
+
+export const dispatchSummaryTruckRowStyle: CSSProperties = {
+  background: "#f8fafc",
+};
+
+export const dispatchSummaryTruckCellStyle: CSSProperties = {
+  borderLeftWidth: 3,
+  borderLeftStyle: "solid",
+  borderLeftColor: "#93c5fd",
+};
+
+export const dispatchSummaryTruckLinkCellStyle: CSSProperties = {
+  ...dispatchSummaryTdStyle,
+  borderLeftWidth: 3,
+  borderLeftStyle: "solid",
+  borderLeftColor: "#93c5fd",
+  color: "#1d4ed8",
+  fontSize: 18,
+  fontWeight: 800,
+  textAlign: "center",
+  verticalAlign: "middle",
 };
 
 export const dispatchSummaryMutedTextStyle: CSSProperties = {
@@ -309,6 +344,16 @@ export const dispatchSummaryInputStyle: CSSProperties = {
   lineHeight: 1.25,
   outline: "none",
   padding: "5px 6px",
+};
+
+export const dispatchSummaryVehicleButtonStyle: CSSProperties = {
+  ...dispatchSummaryInputStyle,
+  display: "block",
+  cursor: "pointer",
+  overflow: "hidden",
+  textAlign: "left",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 };
 
 export const dispatchSummaryNumberInputStyle: CSSProperties = {

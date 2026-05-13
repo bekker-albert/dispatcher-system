@@ -22,10 +22,17 @@ import {
 
 type AddAdminLog = (entry: AdminLogInput) => void;
 
+const allAreasLabel = "Все участки";
+
+function resolveNewDispatchRowArea(areaFilter: string) {
+  return areaFilter.trim() && areaFilter !== allAreasLabel ? areaFilter : "";
+}
+
 type UseDispatchSummaryEditorOptions = {
   isDailyDispatchShift: boolean;
   reportDate: string;
   currentDispatchShift: DispatchShift;
+  areaFilter: string;
   dispatchSummaryRows: DispatchSummaryRow[];
   currentDispatchSummaryRows: DispatchSummaryRow[];
   filteredDispatch: VehicleRow[];
@@ -40,6 +47,7 @@ export function useDispatchSummaryEditor({
   isDailyDispatchShift,
   reportDate,
   currentDispatchShift,
+  areaFilter,
   dispatchSummaryRows,
   currentDispatchSummaryRows,
   filteredDispatch,
@@ -52,7 +60,10 @@ export function useDispatchSummaryEditor({
   const addDispatchSummaryRow = useCallback((vehicle?: VehicleRow) => {
     if (isDailyDispatchShift) return;
 
-    const nextRow = createDispatchSummaryRow(vehicle, reportDate, currentDispatchShift);
+    const nextRow = {
+      ...createDispatchSummaryRow(vehicle, reportDate, currentDispatchShift),
+      area: vehicle?.area || resolveNewDispatchRowArea(areaFilter),
+    };
     setDispatchSummaryRows((current) => [nextRow, ...current]);
     setDispatchVehicleToAddId("");
     addAdminLog({
@@ -62,7 +73,7 @@ export function useDispatchSummaryEditor({
         ? `Добавлена техника в сводку: ${buildVehicleDisplayName(vehicle)}.`
         : "Добавлена пустая строка звена сводки.",
     });
-  }, [addAdminLog, currentDispatchShift, isDailyDispatchShift, reportDate, setDispatchSummaryRows, setDispatchVehicleToAddId]);
+  }, [addAdminLog, areaFilter, currentDispatchShift, isDailyDispatchShift, reportDate, setDispatchSummaryRows, setDispatchVehicleToAddId]);
 
   const addDispatchSummaryLink = useCallback(() => {
     addDispatchSummaryRow();
@@ -106,7 +117,7 @@ export function useDispatchSummaryEditor({
 
     const nextRow = {
       ...createDispatchSummaryRow(undefined, reportDate, currentDispatchShift),
-      area: templateRow?.area ?? "",
+      area: templateRow?.area || resolveNewDispatchRowArea(areaFilter),
       location: templateRow?.location ?? "",
       workType: templateRow?.workType ?? "",
       excavator,
@@ -118,7 +129,7 @@ export function useDispatchSummaryEditor({
       section: "Диспетчерская сводка",
       details: `Добавлен самосвал в звено: ${excavator || "без привязки"}.`,
     });
-  }, [addAdminLog, currentDispatchShift, isDailyDispatchShift, reportDate, setDispatchSummaryRows]);
+  }, [addAdminLog, areaFilter, currentDispatchShift, isDailyDispatchShift, reportDate, setDispatchSummaryRows]);
 
   const updateDispatchSummaryText = useCallback((id: string, field: DispatchSummaryTextField, value: string) => {
     if (isDailyDispatchShift) return;

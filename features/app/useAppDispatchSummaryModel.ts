@@ -59,6 +59,7 @@ export function useAppDispatchSummaryModel({
     isDailyDispatchShift: dispatchViewModel.isDailyDispatchShift,
     reportDate,
     currentDispatchShift: dispatchViewModel.currentDispatchShift,
+    areaFilter,
     dispatchSummaryRows,
     currentDispatchSummaryRows: dispatchViewModel.currentDispatchSummaryRows,
     filteredDispatch: dispatchViewModel.filteredDispatch,

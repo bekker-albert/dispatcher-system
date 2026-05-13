@@ -53,10 +53,10 @@ export default function DispatchSection({
   onUpdateDispatchSummaryText,
   onUpdateDispatchSummaryNumber,
   onDeleteDispatchSummaryRow,
-  onDeleteDispatchSummaryLink,
   onDeleteCurrentDispatchShiftRows,
   dispatchLocationOptions,
   dispatchWorkTypeOptions,
+  dispatchPtoPlanRows,
   dispatchExcavatorOptions,
 }: DispatchSectionProps) {
   const { user } = useAuth();
@@ -72,6 +72,9 @@ export default function DispatchSection({
     if (userAreas.length === 1) return userAreas;
     return [allAreasLabel, ...userAreas];
   }, [dispatchAreaOptions, user, userAreas]);
+  const dispatchRowAreaOptions = useMemo(() => (
+    accessibleAreaOptions.filter((area) => normalizeLookupValue(area) !== normalizeLookupValue(allAreasLabel))
+  ), [accessibleAreaOptions]);
   const sectionScopeMessage = useMemo(() => {
     if (isAuthUserSuperuser(user) || user.canManageUsers) return "";
     if (userAreas.length === 1) return `Участок выбран из legacy-доступов пользователя: ${userAreas[0]}.`;
@@ -91,11 +94,12 @@ export default function DispatchSection({
       isDailyDispatchShift={isDailyDispatchShift}
       rows={filteredDispatchSummaryRows}
       vehicles={dispatchVehicleOptions}
+      areaOptions={dispatchRowAreaOptions}
       locationOptions={dispatchLocationOptions}
       structureOptions={dispatchWorkTypeOptions}
+      ptoPlanRows={dispatchPtoPlanRows}
       onAddDumpTruckToDispatchLink={onAddDumpTruckToDispatchLink}
       onDeleteDispatchSummaryRow={onDeleteDispatchSummaryRow}
-      onDeleteDispatchSummaryLink={onDeleteDispatchSummaryLink}
       onUpdateDispatchSummaryVehicle={onUpdateDispatchSummaryVehicle}
       onUpdateDispatchSummaryNumber={onUpdateDispatchSummaryNumber}
       onUpdateDispatchSummaryText={onUpdateDispatchSummaryText}
@@ -103,7 +107,7 @@ export default function DispatchSection({
   );
 
   return (
-    <SectionCard title="">
+    <SectionCard title="" fill>
       {dispatchTab.startsWith("custom:") ? (
         <div style={blockStyle}>{activeDispatchSubtabContent || "В этой подвкладке пока нет информации."}</div>
       ) : (

@@ -352,6 +352,8 @@ export const appShellCss = `
 
 .erp-main {
   min-width: 0;
+  min-height: 0;
+  height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -442,6 +444,15 @@ export const appShellCss = `
 
 .erp-content {
   min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-content > * {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .erp-icon-button {

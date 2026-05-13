@@ -83,17 +83,17 @@ export function useAppPtoSectionProps({
   const renderPlanTable = (): ReactNode => renderPtoDateTable(
     ptoPlanRows,
     setPtoPlanRows,
-    { showLocation: false, editableMonthTotal: true },
+    { showLocation: true, editableMonthTotal: true },
   );
   const renderOperTable = (): ReactNode => renderPtoDateTable(
     ptoOperRows,
     setPtoOperRows,
-    { showLocation: false, editableMonthTotal: false },
+    { showLocation: true, editableMonthTotal: false },
   );
   const renderSurveyTable = (): ReactNode => renderPtoDateTable(
     ptoSurveyRows,
     setPtoSurveyRows,
-    { showLocation: false, editableMonthTotal: false },
+    { showLocation: true, editableMonthTotal: false },
   );
 
   return {

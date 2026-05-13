@@ -11,7 +11,10 @@ import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { normalizeLookupValue, uniqueSorted } from "@/lib/utils/text";
-import { createDispatchStructureOptionsFromPtoPlan } from "./dispatchStructureOptions";
+import {
+  createDispatchLocationOptionsFromPtoPlan,
+  createDispatchStructureOptionsFromPtoPlan,
+} from "./dispatchStructureOptions";
 
 type UseDispatchSummaryViewModelOptions = {
   active: boolean;
@@ -101,9 +104,9 @@ export function useDispatchSummaryViewModel({
   ), [sortedVehicleSearchRecords]);
 
   const dispatchLocationOptions = useMemo(() => uniqueSorted([
-    ...(active ? vehicleRows.map((vehicle) => vehicle.location) : []),
+    ...(active ? createDispatchLocationOptionsFromPtoPlan(ptoPlanRows, areaFilter) : []),
     ...(active ? dispatchSummaryRows.map((row) => row.location) : []),
-  ]), [active, dispatchSummaryRows, vehicleRows]);
+  ]), [active, areaFilter, dispatchSummaryRows, ptoPlanRows]);
 
   const dispatchWorkTypeOptions = useMemo(() => uniqueSorted([
     ...(active ? createDispatchStructureOptionsFromPtoPlan(ptoPlanRows, areaFilter) : []),
@@ -176,6 +179,7 @@ export function useDispatchSummaryViewModel({
     dispatchVehicleSelectOptions,
     dispatchLocationOptions,
     dispatchWorkTypeOptions,
+    dispatchPtoPlanRows: active ? ptoPlanRows : [],
     dispatchExcavatorOptions,
     currentDispatchSummaryRows,
     filteredDispatchSummaryRows,

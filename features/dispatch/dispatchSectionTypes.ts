@@ -4,6 +4,7 @@ import type {
   DispatchSummaryRow,
   DispatchSummaryTextField,
 } from "@/lib/domain/dispatch/summary";
+import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
 export type DispatchTotals = {
@@ -55,5 +56,6 @@ export type DispatchSectionProps = {
   onDeleteCurrentDispatchShiftRows: () => void;
   dispatchLocationOptions: string[];
   dispatchWorkTypeOptions: string[];
+  dispatchPtoPlanRows: PtoPlanRow[];
   dispatchExcavatorOptions: string[];
 };

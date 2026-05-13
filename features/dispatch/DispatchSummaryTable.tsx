@@ -1,30 +1,35 @@
+import { useMemo } from "react";
+
 import {
   type DispatchSummaryNumberField,
   type DispatchSummaryRow,
   type DispatchSummaryTextField,
 } from "@/lib/domain/dispatch/summary";
+import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import {
   dispatchSummaryEmptyStyle,
-  dispatchSummaryGroupCellStyle,
-  dispatchSummaryGroupRowStyle,
   dispatchSummaryNumberThStyle,
-  dispatchSummarySecondaryButtonStyle,
   dispatchSummaryTableScrollStyle,
   dispatchSummaryTableStyle,
   dispatchSummaryThStyle,
 } from "@/features/dispatch/dispatchSectionStyles";
+import {
+  createDispatchStructureOptionIndex,
+  type DispatchStructureOptionIndex,
+} from "@/features/dispatch/dispatchStructureOptions";
 import { DispatchSummaryTableRow } from "@/features/dispatch/DispatchSummaryTableRow";
 
 type DispatchSummaryTableProps = {
   isDailyDispatchShift: boolean;
   rows: DispatchSummaryRow[];
   vehicles: VehicleRow[];
+  areaOptions: string[];
   locationOptions: string[];
   structureOptions: string[];
+  ptoPlanRows: PtoPlanRow[];
   onAddDumpTruckToDispatchLink: (excavator: string, templateRow?: DispatchSummaryRow) => void;
   onDeleteDispatchSummaryRow: (rowId: string) => void;
-  onDeleteDispatchSummaryLink: (rowIds: string[], label: string) => void;
   onUpdateDispatchSummaryVehicle: (rowId: string, vehicleId: string) => void;
   onUpdateDispatchSummaryNumber: (rowId: string, field: DispatchSummaryNumberField, value: string) => void;
   onUpdateDispatchSummaryText: (rowId: string, field: DispatchSummaryTextField, value: string) => void;
@@ -33,6 +38,7 @@ type DispatchSummaryTableProps = {
 type DispatchSummaryGroup = {
   id: string;
   label: string;
+  area: string;
   location: string;
   structure: string;
   loadingRows: DispatchSummaryRow[];
@@ -41,10 +47,10 @@ type DispatchSummaryGroup = {
 };
 
 const dispatchSummaryColumns = [
+  140,
   150,
   220,
-  120,
-  220,
+  280,
   90,
   160,
   76,
@@ -53,13 +59,13 @@ const dispatchSummaryColumns = [
   76,
   70,
   82,
-  42,
+  68,
 ];
 
 const dispatchSummaryHeaders = [
+  ["Участок", dispatchSummaryThStyle],
   ["Местонахождение", dispatchSummaryThStyle],
   ["Структура", dispatchSummaryThStyle],
-  ["Вид техники", dispatchSummaryThStyle],
   ["Наименование техники", dispatchSummaryThStyle],
   ["№", dispatchSummaryThStyle],
   ["Материал", dispatchSummaryThStyle],
@@ -101,14 +107,6 @@ function isLoadingEquipment(vehicle: VehicleRow | undefined, row: DispatchSummar
   return /экскават|погруз|loader|shovel|фронтал/.test(text);
 }
 
-function groupLocation(group: DispatchSummaryGroup) {
-  return group.loadingRows[0]?.location || group.truckRows[0]?.location || group.unassignedRows[0]?.location || "";
-}
-
-function groupStructure(group: DispatchSummaryGroup) {
-  return group.loadingRows[0]?.workType || group.truckRows[0]?.workType || group.unassignedRows[0]?.workType || "";
-}
-
 function createDispatchSummaryGroups(
   rows: DispatchSummaryRow[],
   vehicleById: Map<number, VehicleRow>,
@@ -126,6 +124,7 @@ function createDispatchSummaryGroups(
       const group = loaderGroups.get(groupKey) ?? {
         id: groupKey,
         label,
+        area: row.area,
         location: row.location,
         structure: row.workType,
         loadingRows: [],
@@ -134,6 +133,7 @@ function createDispatchSummaryGroups(
       };
 
       group.loadingRows.push(row);
+      group.area ||= row.area;
       group.location ||= row.location;
       group.structure ||= row.workType;
       keys.forEach((key) => loaderGroups.set(key, group));
@@ -162,6 +162,7 @@ function createDispatchSummaryGroups(
     const fallbackGroup = fallbackGroups.get(key) ?? {
       id: `excavator:${key || row.id}`,
       label: row.excavator || "Без привязки",
+      area: row.area,
       location: row.location,
       structure: row.workType,
       loadingRows: [],
@@ -169,6 +170,7 @@ function createDispatchSummaryGroups(
       unassignedRows: [],
     };
     fallbackGroup.truckRows.push(row);
+    fallbackGroup.area ||= row.area;
     fallbackGroup.location ||= row.location;
     fallbackGroup.structure ||= row.workType;
     fallbackGroups.set(key, fallbackGroup);
@@ -182,6 +184,7 @@ function createDispatchSummaryGroups(
     groups.push({
       id: "unassigned",
       label: "Без привязки",
+      area: unassignedRows[0]?.area ?? "",
       location: unassignedRows[0]?.location ?? "",
       structure: unassignedRows[0]?.workType ?? "",
       loadingRows: [],
@@ -197,17 +200,21 @@ export function DispatchSummaryTable({
   isDailyDispatchShift,
   rows,
   vehicles,
+  areaOptions,
   locationOptions,
   structureOptions,
+  ptoPlanRows,
   onAddDumpTruckToDispatchLink,
   onDeleteDispatchSummaryRow,
-  onDeleteDispatchSummaryLink,
   onUpdateDispatchSummaryVehicle,
   onUpdateDispatchSummaryNumber,
   onUpdateDispatchSummaryText,
 }: DispatchSummaryTableProps) {
-  const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
-  const groups = createDispatchSummaryGroups(rows, vehicleById);
+  const vehicleById = useMemo(() => new Map(vehicles.map((vehicle) => [vehicle.id, vehicle])), [vehicles]);
+  const ptoPlanIndex = useMemo(() => (
+    ptoPlanRows.length > 0 ? createDispatchStructureOptionIndex(ptoPlanRows) : null
+  ), [ptoPlanRows]);
+  const groups = useMemo(() => createDispatchSummaryGroups(rows, vehicleById), [rows, vehicleById]);
 
   return (
     <div style={dispatchSummaryTableScrollStyle}>
@@ -232,11 +239,12 @@ export function DispatchSummaryTable({
               isDailyDispatchShift={isDailyDispatchShift}
               vehicleById={vehicleById}
               vehicles={vehicles}
+              areaOptions={areaOptions}
               locationOptions={locationOptions}
               structureOptions={structureOptions}
+              ptoPlanIndex={ptoPlanIndex}
               onAddDumpTruckToDispatchLink={onAddDumpTruckToDispatchLink}
               onDeleteDispatchSummaryRow={onDeleteDispatchSummaryRow}
-              onDeleteDispatchSummaryLink={onDeleteDispatchSummaryLink}
               onUpdateDispatchSummaryVehicle={onUpdateDispatchSummaryVehicle}
               onUpdateDispatchSummaryNumber={onUpdateDispatchSummaryNumber}
               onUpdateDispatchSummaryText={onUpdateDispatchSummaryText}
@@ -262,11 +270,12 @@ function DispatchSummaryTableGroupRows({
   isDailyDispatchShift,
   vehicleById,
   vehicles,
+  areaOptions,
   locationOptions,
   structureOptions,
+  ptoPlanIndex,
   onAddDumpTruckToDispatchLink,
   onDeleteDispatchSummaryRow,
-  onDeleteDispatchSummaryLink,
   onUpdateDispatchSummaryVehicle,
   onUpdateDispatchSummaryNumber,
   onUpdateDispatchSummaryText,
@@ -275,60 +284,37 @@ function DispatchSummaryTableGroupRows({
   isDailyDispatchShift: boolean;
   vehicleById: Map<number, VehicleRow>;
   vehicles: VehicleRow[];
+  areaOptions: string[];
   locationOptions: string[];
   structureOptions: string[];
+  ptoPlanIndex: DispatchStructureOptionIndex | null;
   onAddDumpTruckToDispatchLink: (excavator: string, templateRow?: DispatchSummaryRow) => void;
   onDeleteDispatchSummaryRow: (rowId: string) => void;
-  onDeleteDispatchSummaryLink: (rowIds: string[], label: string) => void;
   onUpdateDispatchSummaryVehicle: (rowId: string, vehicleId: string) => void;
   onUpdateDispatchSummaryNumber: (rowId: string, field: DispatchSummaryNumberField, value: string) => void;
   onUpdateDispatchSummaryText: (rowId: string, field: DispatchSummaryTextField, value: string) => void;
 }) {
   const rows = [
-    ...group.loadingRows.map((row) => ({ row, child: false })),
-    ...group.truckRows.map((row) => ({ row, child: true })),
-    ...group.unassignedRows.map((row) => ({ row, child: false })),
+    ...group.loadingRows.map((row) => ({ row, role: "loading" as const })),
+    ...group.truckRows.map((row) => ({ row, role: "truck" as const })),
+    ...group.unassignedRows.map((row) => ({ row, role: "unassigned" as const })),
   ];
-  const rowIds = rows.map(({ row }) => row.id);
-  const location = groupLocation(group) || "Без местонахождения";
-  const structure = groupStructure(group) || "Без структуры";
-  const templateRow = rows[0]?.row;
 
   return (
     <>
-      <tr style={dispatchSummaryGroupRowStyle}>
-        <td colSpan={13} style={dispatchSummaryGroupCellStyle}>
-          <span>Звено: {location} / {structure} / {group.label}</span>
-          {!isDailyDispatchShift ? (
-            <span style={{ float: "right", display: "inline-flex", gap: 6 }}>
-              <button
-                type="button"
-                style={{ ...dispatchSummarySecondaryButtonStyle, padding: "5px 8px" }}
-                onClick={() => onAddDumpTruckToDispatchLink(group.label, templateRow)}
-              >
-                Добавить самосвал
-              </button>
-              <button
-                type="button"
-                style={{ ...dispatchSummarySecondaryButtonStyle, padding: "5px 8px" }}
-                onClick={() => onDeleteDispatchSummaryLink(rowIds, group.label)}
-              >
-                Удалить звено
-              </button>
-            </span>
-          ) : null}
-        </td>
-      </tr>
-      {rows.map(({ row, child }) => (
+      {rows.map(({ row, role }) => (
         <DispatchSummaryTableRow
           key={row.id}
           row={row}
           isReadOnly={isDailyDispatchShift}
-          isChildRow={child}
+          rowRole={role}
           vehicle={row.vehicleId ? vehicleById.get(row.vehicleId) : undefined}
           vehicles={vehicles}
+          areaOptions={areaOptions}
           locationOptions={locationOptions}
           structureOptions={structureOptions}
+          ptoPlanIndex={ptoPlanIndex}
+          onAddDumpTruckToCurrentLink={role === "loading" ? () => onAddDumpTruckToDispatchLink(group.label, row) : undefined}
           onUpdateDispatchSummaryText={onUpdateDispatchSummaryText}
           onUpdateDispatchSummaryNumber={onUpdateDispatchSummaryNumber}
           onUpdateDispatchSummaryVehicle={onUpdateDispatchSummaryVehicle}
