@@ -65,6 +65,8 @@ jobs:
             set -euo pipefail
             export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
             export PM2_HOME="/var/www/dispatcher/data/.pm2"
+            export NODE_OPTIONS="--max-old-space-size=1024"
+            export NEXT_TELEMETRY_DISABLED="1"
             cd /var/www/dispatcher/data/www/aam-dispatch.kz
 
             node -e 'const [major] = process.versions.node.split(".").map(Number); if (major !== 24) { throw new Error(`Node ${process.versions.node} does not match the dispatcher Node 24 production policy`); }'

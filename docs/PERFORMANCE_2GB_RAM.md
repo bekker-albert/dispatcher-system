@@ -2,6 +2,8 @@
 
 Next build worker budget: `next.config.ts` keeps the modular monolith inside the 2 GB RAM target with `experimental.cpus=2`, `memoryBasedWorkersCount=true`, `parallelServerBuildTraces=false`, `turbopackMemoryLimit` below total server RAM, and `webpackMemoryOptimizations=true`. Do not raise these limits until `npm run build` is checked on the target server.
 
+Runtime memory budget: local helper startup and production PM2 reload set `NODE_OPTIONS=--max-old-space-size=1024` so the Next.js process cannot grow its V8 old heap past the 1 GB runtime budget. This is intentionally lower than the total server RAM because the OS, MySQL client buffers, native Next.js memory, PM2, and SSH/deploy work also need headroom on a 2-4 GB machine.
+
 ## Runtime process guardrail
 
 Do not add child_process, worker_threads, cluster, Web Workers, or resident polling loops to app/module runtime code. AI and workspace work must stay manual, event-driven, or scheduled queued work with bounded context. `tests/runtime-process-guardrails-checks.ts` scans app, feature, shared, domain, and server runtime folders for process/worker primitives, and it separately blocks resident intervals in AI/workspace/server database code.

@@ -14,6 +14,8 @@ const readme = readFileSync(resolve(root, "README.md"), "utf8");
 
 assert.match(startScript, /set "PREFERRED_PORT=3000"/);
 assert.match(startScript, /set "AUTH_REQUIRED=false"/);
+assert.match(startScript, /set "NODE_OPTIONS=--max-old-space-size=1024"/);
+assert.match(startScript, /set "NEXT_TELEMETRY_DISABLED=1"/);
 assert.match(startScript, /http:\/\/127\.0\.0\.1:%PORT%/);
 assert.match(startScript, /--hostname 127\.0\.0\.1 --port %PORT%/);
 assert.match(startScript, /npm\.cmd run dev --/);

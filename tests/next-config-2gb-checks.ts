@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const testDir = dirname(fileURLToPath(import.meta.url));
 const nextConfigSource = readFileSync(resolve(testDir, "../next.config.ts"), "utf8");
 const performanceDoc = readFileSync(resolve(testDir, "../docs/PERFORMANCE_2GB_RAM.md"), "utf8");
+const localStartScript = readFileSync(resolve(testDir, "../start-local-server.cmd"), "utf8");
+const deployWorkflow = readFileSync(resolve(testDir, "../.github/workflows/deploy.yml"), "utf8");
 
 assert.match(nextConfigSource, /const twoGbServerMemoryBudgetBytes = 1536 \* 1024 \* 1024;/);
 assert.match(nextConfigSource, /cpus: 2,/);
@@ -22,5 +24,8 @@ assert.match(performanceDoc, /memoryBasedWorkersCount/);
 assert.match(performanceDoc, /parallelServerBuildTraces=false/);
 assert.match(performanceDoc, /turbopackMemoryLimit/);
 assert.match(performanceDoc, /webpackMemoryOptimizations/);
+assert.match(performanceDoc, /NODE_OPTIONS=--max-old-space-size=1024/);
+assert.match(localStartScript, /NODE_OPTIONS=--max-old-space-size=1024/);
+assert.match(deployWorkflow, /export NODE_OPTIONS="--max-old-space-size=1024"/);
 
 console.log("Next 2 GB config checks passed");

@@ -6,6 +6,8 @@ cd /d "%~dp0"
 set "PROJECT_DIR=%cd%"
 set "PREFERRED_PORT=3000"
 set "AUTH_REQUIRED=false"
+set "NODE_OPTIONS=--max-old-space-size=1024"
+set "NEXT_TELEMETRY_DISABLED=1"
 
 for /f "tokens=1,2 delims=:" %%A in ('
   powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$projectDir = '%PROJECT_DIR%'; $escapedProjectDir = [Regex]::Escape($projectDir); $listener = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Sort-Object LocalPort | Where-Object { $process = Get-CimInstance Win32_Process -Filter ('ProcessId = ' + $_.OwningProcess) -ErrorAction SilentlyContinue; $commandLine = if ($process) { $process.CommandLine } else { '' }; $commandLine -and $commandLine -match $escapedProjectDir } | Select-Object -First 1; if ($listener) { Write-Output ('OPEN:' + $listener.LocalPort); exit 0 }; $port = %PREFERRED_PORT%; while (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue) { $port++ }; Write-Output ('START:' + $port)"
