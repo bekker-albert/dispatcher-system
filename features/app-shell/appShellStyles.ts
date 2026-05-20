@@ -1,9 +1,10 @@
 export const appShellCss = `
 .erp-shell {
-  min-height: calc(100vh - 48px);
+  height: calc(100vh - 48px);
   display: grid;
   grid-template-columns: 252px minmax(0, 1fr);
   gap: 16px;
+  overflow: hidden;
 }
 
 .erp-shell[data-collapsed="true"] {
@@ -11,9 +12,13 @@ export const appShellCss = `
 }
 
 .erp-sidebar {
-  position: sticky;
+  position: fixed;
+  z-index: 30;
   top: 24px;
-  height: calc(100vh - 48px);
+  bottom: 24px;
+  left: 24px;
+  width: 252px;
+  height: auto;
   border: 1px solid #d8dee8;
   border-radius: 8px;
   background: #ffffff;
@@ -328,6 +333,10 @@ export const appShellCss = `
   display: none;
 }
 
+.erp-shell[data-collapsed="true"] .erp-sidebar {
+  width: 70px;
+}
+
 .erp-shell[data-collapsed="true"] .erp-sidebar__brand {
   justify-content: center;
   padding-inline: 6px;
@@ -351,15 +360,20 @@ export const appShellCss = `
 }
 
 .erp-main {
+  grid-column: 2;
   min-width: 0;
   min-height: 0;
   height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow: hidden;
 }
 
 .erp-topbar {
+  position: relative;
+  z-index: 20;
+  flex: 0 0 auto;
   min-height: 48px;
   border: 1px solid #d8dee8;
   border-radius: 8px;
@@ -448,6 +462,8 @@ export const appShellCss = `
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .erp-content > * {
