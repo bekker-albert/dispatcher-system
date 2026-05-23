@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createFleetVehicleExportRows } from "../features/fleet/fleetVehicleExcelExport";
 import { createFleetVehicleListRows, deriveFleetVehicleStatus } from "../features/fleet/fleetVehicleModel";
 import type { VehicleRow } from "../lib/domain/vehicles/types";
 import { resetVehicleInteractionState } from "../shared/editable-grid/resetVehicleInteractionState";
@@ -22,10 +23,12 @@ const adminVehiclesSectionSource = readFileSync(resolve(testDir, "../features/ad
 const adminVehiclesToolbarSource = readFileSync(resolve(testDir, "../features/admin/vehicles/AdminVehiclesToolbar.tsx"), "utf8");
 const fleetVehiclesSectionSource = [
   readFileSync(resolve(testDir, "../features/fleet/FleetVehiclesSection.tsx"), "utf8"),
+  readFileSync(resolve(testDir, "../features/fleet/fleetVehicleColumnControls.tsx"), "utf8"),
   readFileSync(resolve(testDir, "../features/fleet/fleetVehicleTableStyles.ts"), "utf8"),
   readFileSync(resolve(testDir, "../features/fleet/fleetVehicleVirtualRows.ts"), "utf8"),
 ].join("\n");
 const fleetVehicleModelSource = readFileSync(resolve(testDir, "../features/fleet/fleetVehicleModel.ts"), "utf8");
+const fleetVehicleExcelExportSource = readFileSync(resolve(testDir, "../features/fleet/fleetVehicleExcelExport.ts"), "utf8");
 const fleetDailyStateSource = readFileSync(resolve(testDir, "../lib/domain/fleet/daily-state.ts"), "utf8");
 
 function collectProductionSources(dir: string, sources: string[] = []) {
@@ -59,12 +62,13 @@ const baseFleetVehicle = {
   garageNumber: "55",
   vehicleType: "Транспорт",
   equipmentType: "Самосвал",
-  manufactureYear: "",
+  fuelCardNumber: "FC-1",
+  manufactureYear: "2020",
   fuelNormWinter: 0,
   fuelNormSummer: 0,
   fuelCalcType: "" as VehicleRow["fuelCalcType"],
-  vin: "",
-  owner: "",
+  vin: "VIN123",
+  owner: "AA Mining",
   area: "Аксу",
   location: "Карьер",
   workType: "",
@@ -90,7 +94,37 @@ const fleetListRows = createFleetVehicleListRows([
 assert.deepEqual(fleetListRows.map((row) => row.id), [1, 3]);
 assert.deepEqual(fleetListRows.map((row) => row.index), [1, 2]);
 assert.equal(fleetListRows[0].equipmentType, "Самосвал");
+assert.equal(fleetListRows[0].vehicleType, "Транспорт");
+assert.equal(fleetListRows[0].fuelCardNumber, "FC-1");
+assert.equal(fleetListRows[0].manufactureYear, "2020");
+assert.equal(fleetListRows[0].vin, "VIN123");
+assert.equal(fleetListRows[0].owner, "AA Mining");
 assert.equal(fleetListRows[1].status, "В ремонте");
+
+const fleetListRowsWithDrivers = createFleetVehicleListRows([baseFleetVehicle], {
+  workDate: "2026-05-20",
+  dailyStates: [{
+    vehicleId: 1,
+    workDate: "2026-05-20",
+    status: "В работе",
+    repairStartedAt: "",
+    repairReason: "",
+    note: "",
+    driverAssignments: {
+      watch1Shift1: { driverId: "driver-1", driverName: "Иванов И.И." },
+      watch2Shift2: { driverId: "driver-4", driverName: "Петров П.П." },
+    },
+  }],
+});
+const fleetExportRows = createFleetVehicleExportRows(fleetListRowsWithDrivers);
+assert.deepEqual(fleetExportRows[0].slice(11, 15), [
+  "1 вахта / 1 смена",
+  "1 вахта / 2 смена",
+  "2 вахта / 1 смена",
+  "2 вахта / 2 смена",
+]);
+assert.equal(fleetExportRows[1][11], "Иванов И.И.");
+assert.equal(fleetExportRows[1][14], "Петров П.П.");
 
 assert.match(lazyPrimaryContentSource, /import\("\.\/FleetPrimaryContent"\)/);
 assert.match(vehicleTablePrimaryContentSource, /return <AdminVehiclesSection \{\.\.\.adminVehiclesProps\} \/>;/);
@@ -104,11 +138,15 @@ assert.match(vehicleTablePrimaryContentSource, /mode:\s*"readonly"\s*\|\s*"admin
 assert.match(vehicleTablePrimaryContentSource, /const canManageVehicles = true/);
 assert.match(vehicleTablePrimaryContentSource, /canManageVehicles,/);
 assert.match(fleetPrimaryContentSource, /fleetTab === "placement"/);
-assert.match(fleetPrimaryContentSource, /<FleetVehiclesSection vehicleRows=\{appState\.vehicleRows\} workDate=\{appState\.reportDate\} \/>/);
+assert.match(fleetPrimaryContentSource, /useAppVehicleControllers/);
+assert.match(fleetPrimaryContentSource, /useAppAdminVehiclesScreenProps/);
+assert.match(fleetPrimaryContentSource, /AdminVehiclesSection/);
+assert.match(fleetPrimaryContentSource, /exportFleetVehiclesToExcel/);
+assert.match(fleetPrimaryContentSource, /<FleetVehiclesSection[\s\S]*filterControls=\{adminVehiclesProps\}[\s\S]*vehicleRows=\{models\.filteredVehicleRows\}[\s\S]*workDate=\{appState\.reportDate\}[\s\S]*onExportVehiclesToExcel=\{exportFleetVehiclesToExcel\}/);
 assert.match(fleetPlacementSource, /<SectionCard title=""/);
-assert.match(fleetPlacementSource, /source.*Горной сводки|источник выбора техники для Горной сводки/);
+assert.match(fleetPlacementSource, /source|источник выбора техники/);
 assert.match(fleetPrimaryContentSource, /resetVehicleInteractionState/);
-assert.doesNotMatch(fleetPrimaryContentSource, /AdminVehiclesSection|useAppAdminVehiclesScreenProps|useAppVehicleControllers/);
+assert.match(fleetPrimaryContentSource, /showEditableDirectory/);
 assert.match(appPrimaryContentSource, /<FleetPrimaryContent[\s\S]*mode="readonly"/);
 assert.match(resetVehicleInteractionStateSource, /setAdminVehiclesEditing/);
 assert.match(resetVehicleInteractionStateSource, /setPendingVehicleFocus/);
@@ -176,11 +214,31 @@ assert.match(adminVehiclesSectionSource, /canManageVehicles\?: boolean/);
 assert.match(adminVehiclesSectionSource, /canManageVehicles = false/);
 assert.match(adminVehiclesSectionSource, /<AdminVehiclesToolbar[\s\S]*canManageVehicles=\{canManageVehicles\}/);
 assert.match(adminVehiclesToolbarSource, /canManageVehicles: boolean/);
-assert.match(adminVehiclesToolbarSource, /\{canManageVehicles \? \([\s\S]*onStartEditing[\s\S]*onAddVehicleRow[\s\S]*onOpenVehicleImportFilePicker[\s\S]*\) : null\}/);
+assert.match(adminVehiclesToolbarSource, /\{canManageVehicles \? \([\s\S]*onStartEditing[\s\S]*onAddVehicleRow[\s\S]*\) : null\}/);
+assert.match(adminVehiclesToolbarSource, /\{!adminVehiclesEditing \? \([\s\S]*onExportVehiclesToExcel[\s\S]*\) : null\}/);
+assert.doesNotMatch(adminVehiclesToolbarSource, /RotateCcw/);
 assert.match(adminVehiclesToolbarSource, /\{canManageVehicles \? \([\s\S]*<input[\s\S]*onImportVehiclesFromExcel[\s\S]*\) : null\}/);
-assert.match(fleetVehiclesSectionSource, /Закрепление водителей за техникой/);
-assert.match(fleetVehiclesSectionSource, /Дата выхода в ремонт/);
-assert.match(fleetVehiclesSectionSource, /Примечание/);
+assert.match(fleetVehiclesSectionSource, /firstWatchFirstShiftDriver[\s\S]*secondWatchSecondShiftDriver/);
+assert.match(fleetVehiclesSectionSource, /filterKey="vehicleType"[\s\S]*filterKey="equipmentType"[\s\S]*filterKey="brand"/);
+assert.doesNotMatch(fleetVehiclesSectionSource, /filterKey="area"|filterKey="location"/);
+assert.match(fleetVehiclesSectionSource, /AdminVehicleFilterHeader/);
+assert.match(fleetVehiclesSectionSource, /filterControls\?: FleetVehicleFilterControls/);
+assert.match(fleetVehiclesSectionSource, /filterKey="manufactureYear"/);
+assert.match(fleetVehiclesSectionSource, /filterKey="vin"/);
+assert.match(fleetVehiclesSectionSource, /filterKey="owner"/);
+assert.match(fleetVehiclesSectionSource, /filterKey="fuelCardNumber"/);
+assert.match(fleetVehiclesSectionSource, /collapsibleFleetVehicleColumns[\s\S]*fuelCardNumber[\s\S]*manufactureYear[\s\S]*vin[\s\S]*owner/);
+assert.match(fleetVehiclesSectionSource, /fuelCardNumber: true[\s\S]*manufactureYear: true[\s\S]*vin: true[\s\S]*owner: true/);
+assert.match(fleetVehiclesSectionSource, /columnToggleButtonActiveStyle/);
+assert.match(fleetVehiclesSectionSource, /toggleColumnCollapsed/);
+assert.match(fleetVehiclesSectionSource, /activeVehicleFilterCount/);
+assert.match(fleetVehiclesSectionSource, /onClearAllVehicleFilters/);
+assert.match(fleetVehiclesSectionSource, /height: "calc\(100vh - 150px\)"/);
+assert.match(fleetVehiclesSectionSource, /flex: "1 1 auto"[\s\S]*overflow: "hidden"/);
+assert.match(fleetVehiclesSectionSource, /onOpenVehicleImportFilePicker/);
+assert.match(fleetVehiclesSectionSource, /onExportVehiclesToExcel\?: \(rows: FleetVehicleListRow\[\]\) => void \| Promise<void>/);
+assert.match(fleetVehiclesSectionSource, /onStartEditing/);
+assert.match(fleetVehiclesSectionSource, /<Pencil size=\{16\} aria-hidden \/>[\s\S]*<Printer size=\{16\} aria-hidden \/>/);
 assert.match(fleetVehiclesSectionSource, /dailyStates = \[\]/);
 assert.match(fleetVehiclesSectionSource, /createFleetVehicleListRows\(vehicleRows, \{ workDate, dailyStates \}\)/);
 assert.match(fleetVehiclesSectionSource, /driversExpanded/);
@@ -190,15 +248,17 @@ assert.match(fleetVehiclesSectionSource, /hasVariableHeightRows/);
 assert.match(fleetVehiclesSectionSource, /isPreparingPrint/);
 assert.match(fleetVehiclesSectionSource, /afterprint/);
 assert.match(fleetVehiclesSectionSource, /window\.requestAnimationFrame\(\(\) => window\.print\(\)\)/);
-assert.match(fleetVehiclesSectionSource, /IconButton label="Печать списка техники: A3, альбомная ориентация"/);
-assert.match(fleetVehiclesSectionSource, /<Printer size=\{16\} aria-hidden \/>/);
 assert.match(fleetVehiclesSectionSource, /className="fleet-print-toolbar"/);
 assert.match(fleetVehiclesSectionSource, /@media print/);
 assert.match(fleetVehiclesSectionSource, /size: A3 landscape/);
 assert.match(fleetVehiclesSectionSource, /\.fleet-print-toolbar[\s\S]*display: none !important/);
 assert.match(fleetVehiclesSectionSource, /display: table-header-group !important/);
 assert.match(fleetVehiclesSectionSource, /break-inside: avoid !important/);
-assert.doesNotMatch(fleetVehiclesSectionSource, /Год выпуска|VIN|Собственник|manufactureYear|owner|vin/);
+assert.match(fleetVehiclesSectionSource, /row\.fuelCardNumber[\s\S]*row\.manufactureYear[\s\S]*row\.vin[\s\S]*row\.owner/);
+assert.match(fleetVehicleExcelExportSource, /createFleetVehicleExportRows/);
+assert.match(fleetVehicleExcelExportSource, /firstWatchFirstShiftDriver[\s\S]*secondWatchSecondShiftDriver/);
+assert.doesNotMatch(fleetVehicleExcelExportSource, /row\.status|row\.repairStartedAt|row\.note/);
+assert.match(adminVehiclesSectionSource, /vehicleFilterColumns=\{vehicleFilterColumns\}/);
 assert.match(fleetVehicleModelSource, /deriveFleetVehicleStatus/);
 assert.match(fleetVehicleModelSource, /resolveFleetDailyState/);
 assert.match(fleetDailyStateSource, /vehicle\.repair > 0[\s\S]*"В ремонте"/);

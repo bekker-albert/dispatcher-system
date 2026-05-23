@@ -1,4 +1,4 @@
-import { Check, Download, Pencil, Plus, RotateCcw } from "lucide-react";
+import { Check, Download, Pencil, Plus } from "lucide-react";
 import type { CSSProperties, ChangeEvent, RefObject } from "react";
 import { IconButton } from "@/shared/ui/buttons";
 
@@ -49,20 +49,17 @@ export function AdminVehiclesToolbar({
               {adminVehiclesEditing ? <Check size={16} aria-hidden /> : <Pencil size={16} aria-hidden />}
             </IconButton>
             {adminVehiclesEditing ? (
-              <>
                 <IconButton label="Добавить технику" onClick={onAddVehicleRow}>
                   <Plus size={16} aria-hidden />
                 </IconButton>
-                <IconButton label="Загрузить список из Excel" onClick={onOpenVehicleImportFilePicker}>
-                  <RotateCcw size={16} aria-hidden />
-                </IconButton>
-              </>
             ) : null}
           </>
         ) : null}
-        <IconButton label="Выгрузить список техники в Excel" onClick={onExportVehiclesToExcel}>
-          <Download size={16} aria-hidden />
-        </IconButton>
+        {!adminVehiclesEditing ? (
+          <IconButton label="Выгрузить список техники в Excel" onClick={onExportVehiclesToExcel}>
+            <Download size={16} aria-hidden />
+          </IconButton>
+        ) : null}
         {canManageVehicles ? (
           <input
             ref={vehicleImportInputRef}

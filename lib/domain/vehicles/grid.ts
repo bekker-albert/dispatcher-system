@@ -12,6 +12,7 @@ export type VehicleFilterKey =
   | "model"
   | "plateNumber"
   | "garageNumber"
+  | "fuelCardNumber"
   | "manufactureYear"
   | "vin"
   | "owner";
@@ -31,6 +32,7 @@ export type VehicleInlineField =
   | "model"
   | "plateNumber"
   | "garageNumber"
+  | "fuelCardNumber"
   | "manufactureYear"
   | "vin"
   | "owner";
@@ -42,6 +44,7 @@ export const vehicleInlineFields: VehicleInlineField[] = [
   "model",
   "plateNumber",
   "garageNumber",
+  "fuelCardNumber",
   "manufactureYear",
   "vin",
   "owner",
@@ -51,12 +54,13 @@ export const vehicleAutocompleteFilterKeys: VehicleFilterKey[] = ["vehicleType",
 
 export const vehicleFilterColumnConfigs: VehicleFilterColumnConfig[] = [
   { key: "visible", label: "Показ", getValue: (vehicle) => (vehicle.visible === false ? "Скрыта" : "Показана") },
-  { key: "vehicleType", label: "Категория техники", getValue: (vehicle) => vehicle.vehicleType },
-  { key: "equipmentType", label: "Тип техники", getValue: (vehicle) => vehicle.equipmentType },
+  { key: "vehicleType", label: "Вид техники", getValue: (vehicle) => vehicle.vehicleType },
+  { key: "equipmentType", label: "Наименование техники", getValue: (vehicle) => vehicle.equipmentType },
   { key: "brand", label: "Марка", getValue: (vehicle) => vehicle.brand },
   { key: "model", label: "Модель", getValue: (vehicle) => vehicle.model },
   { key: "plateNumber", label: "Госномер", getValue: (vehicle) => vehicle.plateNumber },
   { key: "garageNumber", label: "Гарномер", getValue: (vehicle) => vehicle.garageNumber },
+  { key: "fuelCardNumber", label: "№ топл.карты", getValue: (vehicle) => vehicle.fuelCardNumber ?? "" },
   { key: "manufactureYear", label: "Год выпуска", getValue: (vehicle) => vehicle.manufactureYear },
   { key: "vin", label: "VIN", getValue: (vehicle) => vehicle.vin },
   { key: "owner", label: "Собственник", getValue: (vehicle) => vehicle.owner },

@@ -3,10 +3,13 @@ import type { CSSProperties } from "react";
 import type { FleetVehicleStatus } from "@/features/fleet/fleetVehicleModel";
 
 export const sectionStyle: CSSProperties = {
-  minHeight: 0,
+  flex: "1 1 auto",
+  height: "calc(100vh - 150px)",
+  minHeight: 420,
   display: "flex",
   flexDirection: "column",
   gap: 10,
+  overflow: "hidden",
 };
 
 export const toolbarStyle: CSSProperties = {
@@ -44,11 +47,12 @@ export const driverToggleStyle: CSSProperties = {
 };
 
 export const tableScrollStyle: CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 0,
   overflow: "auto",
   borderStyle: "solid",
   borderWidth: 1,
   borderColor: "#0f172a",
-  maxHeight: "calc(100vh - 174px)",
 };
 
 export const tableStyle: CSSProperties = {
@@ -160,8 +164,11 @@ export const fleetPrintCss = `@media print {
   }
 
   .fleet-print-table {
-    font-size: 8pt !important;
+    border-collapse: collapse !important;
+    font-size: 7pt !important;
+    table-layout: fixed !important;
     width: 100% !important;
+    max-width: 100% !important;
   }
 
   .fleet-print-table th {
@@ -181,7 +188,10 @@ export const fleetPrintCss = `@media print {
   .fleet-print-table th,
   .fleet-print-table td {
     border-color: #64748b !important;
-    padding: 3px 4px !important;
+    box-sizing: border-box !important;
+    overflow-wrap: anywhere !important;
+    padding: 2px 3px !important;
     line-height: 1.1 !important;
+    white-space: normal !important;
   }
 }`;

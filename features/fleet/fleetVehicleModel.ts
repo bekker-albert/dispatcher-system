@@ -12,13 +12,16 @@ export type FleetVehicleStatus = FleetOperationalStatus;
 export type FleetVehicleListRow = {
   id: number;
   index: number;
-  area: string;
-  location: string;
+  vehicleType: string;
   equipmentType: string;
   brand: string;
   model: string;
   plateNumber: string;
   garageNumber: string;
+  fuelCardNumber: string;
+  manufactureYear: string;
+  vin: string;
+  owner: string;
   firstWatchFirstShiftDriver: string;
   firstWatchSecondShiftDriver: string;
   secondWatchFirstShiftDriver: string;
@@ -53,13 +56,16 @@ export function createFleetVehicleListRows(
       return {
         id: vehicle.id,
         index: index + 1,
-        area: vehicle.area,
-        location: vehicle.location,
+        vehicleType: vehicle.vehicleType,
         equipmentType: vehicle.equipmentType,
         brand: vehicle.brand,
         model: vehicle.model,
         plateNumber: vehicle.plateNumber,
         garageNumber: vehicle.garageNumber,
+        fuelCardNumber: vehicle.fuelCardNumber ?? "",
+        manufactureYear: vehicle.manufactureYear,
+        vin: vehicle.vin,
+        owner: vehicle.owner,
         firstWatchFirstShiftDriver: driverAssignmentName(dailyState?.driverAssignments.watch1Shift1),
         firstWatchSecondShiftDriver: driverAssignmentName(dailyState?.driverAssignments.watch1Shift2),
         secondWatchFirstShiftDriver: driverAssignmentName(dailyState?.driverAssignments.watch2Shift1),

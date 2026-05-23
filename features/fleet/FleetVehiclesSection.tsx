@@ -1,12 +1,20 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import { Download, Pencil, Printer, Upload } from "lucide-react";
+import type { ChangeEvent, RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import type { FleetDailyState } from "@/lib/domain/fleet/daily-state";
 import { IconButton } from "@/shared/ui/buttons";
+import {
+  collapsibleFleetVehicleColumns,
+  FilterableFleetVehicleTh,
+  FleetVehicleColumnToggleButtons,
+  type CollapsibleFleetVehicleColumnKey,
+  type FleetVehicleFilterControls,
+} from "@/features/fleet/fleetVehicleColumnControls";
 import {
   createFleetVehicleListRows,
   type FleetVehicleListRow,
@@ -17,7 +25,6 @@ import {
   fleetPrintCss,
   sectionStyle,
   spacerCellStyle,
-  statusBadgeStyle,
   summaryStyle,
   tableScrollStyle,
   tableStyle,
@@ -36,26 +43,52 @@ export type FleetVehiclesSectionProps = {
   vehicleRows: VehicleRow[];
   workDate: string;
   dailyStates?: readonly FleetDailyState[];
+  filterControls?: FleetVehicleFilterControls;
+  canManageVehicles?: boolean;
+  vehicleImportInputRef?: RefObject<HTMLInputElement | null>;
+  onStartEditing?: () => void;
+  onOpenVehicleImportFilePicker?: () => void;
+  onExportVehiclesToExcel?: (rows: FleetVehicleListRow[]) => void | Promise<void>;
+  onImportVehiclesFromExcel?: (event: ChangeEvent<HTMLInputElement>) => void;
 };
 
 export function FleetVehiclesSection({
   vehicleRows,
   workDate,
   dailyStates = [],
+  filterControls,
+  canManageVehicles = false,
+  vehicleImportInputRef,
+  onStartEditing,
+  onOpenVehicleImportFilePicker,
+  onExportVehiclesToExcel,
+  onImportVehiclesFromExcel,
 }: FleetVehiclesSectionProps) {
   const [driversExpanded, setDriversExpanded] = useState(false);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<CollapsibleFleetVehicleColumnKey, boolean>>({
+    fuelCardNumber: true,
+    manufactureYear: true,
+    vin: true,
+    owner: true,
+  });
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const viewportFrameRef = useRef<number | null>(null);
   const [rowsViewport, setRowsViewport] = useState({ height: 520, scrollTop: 0 });
-  const visibleColumnCount = driversExpanded ? 15 : 11;
+  const visibleOptionalColumnCount = collapsibleFleetVehicleColumns.filter(({ key }) => !collapsedColumns[key]).length;
+  const visibleColumnCount = 7 + visibleOptionalColumnCount + (driversExpanded ? 4 : 0);
+  const activeFilterCount = filterControls?.activeVehicleFilterCount ?? 0;
+  const rowTextValueResolver = useCallback(
+    (row: FleetVehicleListRow) => getFleetVehicleVirtualRowTextValues(row, collapsedColumns),
+    [collapsedColumns],
+  );
   const rows = useMemo(
     () => createFleetVehicleListRows(vehicleRows, { workDate, dailyStates }),
     [dailyStates, vehicleRows, workDate],
   );
   const hasVariableHeightRows = useMemo(
-    () => shouldDisableFleetVehicleVirtualizationForRows(rows, getFleetVehicleVirtualRowTextValues),
-    [rows],
+    () => shouldDisableFleetVehicleVirtualizationForRows(rows, rowTextValueResolver),
+    [rows, rowTextValueResolver],
   );
   const virtualRows = useMemo(
     () => createFleetVehicleVirtualRows(rows, rowsViewport, !isPreparingPrint && !hasVariableHeightRows),
@@ -112,6 +145,15 @@ export function FleetVehiclesSection({
     setIsPreparingPrint(true);
     window.requestAnimationFrame(() => window.print());
   }, []);
+  const exportFleetVehiclesToExcel = useCallback(() => {
+    void onExportVehiclesToExcel?.(rows);
+  }, [onExportVehiclesToExcel, rows]);
+  const toggleColumnCollapsed = useCallback((key: CollapsibleFleetVehicleColumnKey) => {
+    setCollapsedColumns((current) => ({ ...current, [key]: !current[key] }));
+  }, []);
+  const clearAllFilters = useCallback(() => {
+    filterControls?.onClearAllVehicleFilters();
+  }, [filterControls]);
 
   return (
     <div className="fleet-print-area" style={sectionStyle}>
@@ -127,6 +169,44 @@ export function FleetVehiclesSection({
           >
             {driversExpanded ? "Скрыть водителей" : "Показать водителей"}
           </button>
+          <FleetVehicleColumnToggleButtons collapsedColumns={collapsedColumns} onToggleColumn={toggleColumnCollapsed} />
+          <button
+            disabled={!activeFilterCount}
+            onClick={clearAllFilters}
+            style={{
+              ...driverToggleStyle,
+              opacity: activeFilterCount ? 1 : 0.55,
+              cursor: activeFilterCount ? "pointer" : "not-allowed",
+            }}
+            title={activeFilterCount ? "Снять все фильтры справочника техники" : "Фильтры не применены"}
+            type="button"
+          >
+            {activeFilterCount ? `Снять все фильтры (${activeFilterCount})` : "Снять все фильтры"}
+          </button>
+          {canManageVehicles && onOpenVehicleImportFilePicker && onImportVehiclesFromExcel ? (
+            <>
+              <IconButton label="Загрузить справочник техники из Excel" onClick={onOpenVehicleImportFilePicker}>
+                <Upload size={16} aria-hidden />
+              </IconButton>
+              <input
+                ref={vehicleImportInputRef}
+                accept=".xlsx,.csv"
+                onChange={onImportVehiclesFromExcel}
+                style={{ display: "none" }}
+                type="file"
+              />
+            </>
+          ) : null}
+          {onExportVehiclesToExcel ? (
+            <IconButton label="Выгрузить справочник техники в Excel" onClick={exportFleetVehiclesToExcel}>
+              <Download size={16} aria-hidden />
+            </IconButton>
+          ) : null}
+          {canManageVehicles && onStartEditing ? (
+            <IconButton label="Редактировать справочник техники" onClick={onStartEditing}>
+              <Pencil size={16} aria-hidden />
+            </IconButton>
+          ) : null}
           <IconButton label="Печать списка техники: A3, альбомная ориентация" onClick={printFleetVehicles}>
             <Printer size={16} aria-hidden />
           </IconButton>
@@ -142,13 +222,16 @@ export function FleetVehiclesSection({
         <table className="fleet-print-table" style={tableStyle}>
           <colgroup>
             <col style={{ width: 46 }} />
-            <col style={{ minWidth: 118 }} />
-            <col style={{ minWidth: 150 }} />
+            <col style={{ minWidth: 132 }} />
             <col style={{ minWidth: 150 }} />
             <col style={{ minWidth: 112 }} />
             <col style={{ minWidth: 112 }} />
             <col style={{ minWidth: 112 }} />
             <col style={{ minWidth: 94 }} />
+            {!collapsedColumns.fuelCardNumber ? <col style={{ minWidth: 116 }} /> : null}
+            {!collapsedColumns.manufactureYear ? <col style={{ minWidth: 96 }} /> : null}
+            {!collapsedColumns.vin ? <col style={{ minWidth: 150 }} /> : null}
+            {!collapsedColumns.owner ? <col style={{ minWidth: 170 }} /> : null}
             {driversExpanded ? (
               <>
                 <col style={{ minWidth: 150 }} />
@@ -157,24 +240,29 @@ export function FleetVehiclesSection({
                 <col style={{ minWidth: 150 }} />
               </>
             ) : null}
-            <col style={{ minWidth: 106 }} />
-            <col style={{ minWidth: 132 }} />
-            <col style={{ minWidth: 180 }} />
           </colgroup>
           <thead>
             <tr>
               <Th rowSpan={driversExpanded ? 2 : 1}>№</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Участок</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Местонахождение</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Наименование техники</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Марка</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Модель</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Гос. номер</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Гар. номер</Th>
-              {driversExpanded ? <Th colSpan={4}>Закрепление водителей за техникой</Th> : null}
-              <Th rowSpan={driversExpanded ? 2 : 1}>Статус</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Дата выхода в ремонт</Th>
-              <Th rowSpan={driversExpanded ? 2 : 1}>Примечание</Th>
+              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="vehicleType" rowSpan={driversExpanded ? 2 : 1}>Вид техники</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="equipmentType" rowSpan={driversExpanded ? 2 : 1}>Наименование техники</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="brand" rowSpan={driversExpanded ? 2 : 1}>Марка</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="model" rowSpan={driversExpanded ? 2 : 1}>Модель</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="plateNumber" rowSpan={driversExpanded ? 2 : 1}>Гос. номер</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="garageNumber" rowSpan={driversExpanded ? 2 : 1}>Гар. номер</FilterableFleetVehicleTh>
+              {!collapsedColumns.fuelCardNumber ? (
+                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="fuelCardNumber" rowSpan={driversExpanded ? 2 : 1}>№ топл.карты</FilterableFleetVehicleTh>
+              ) : null}
+              {!collapsedColumns.manufactureYear ? (
+                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="manufactureYear" rowSpan={driversExpanded ? 2 : 1}>Год выпуска</FilterableFleetVehicleTh>
+              ) : null}
+              {!collapsedColumns.vin ? (
+                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="vin" rowSpan={driversExpanded ? 2 : 1}>VIN</FilterableFleetVehicleTh>
+              ) : null}
+              {!collapsedColumns.owner ? (
+                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="owner" rowSpan={driversExpanded ? 2 : 1}>Собственник</FilterableFleetVehicleTh>
+              ) : null}
+            {driversExpanded ? <Th colSpan={4}>Закрепление водителей за техникой</Th> : null}
             </tr>
             {driversExpanded ? (
               <tr>
@@ -200,7 +288,12 @@ export function FleetVehiclesSection({
                   </tr>
                 ) : null}
                 {virtualRows.rows.map((row) => (
-                  <FleetVehicleTableRow key={row.id} row={row} driversExpanded={driversExpanded} />
+                  <FleetVehicleTableRow
+                    key={row.id}
+                    collapsedColumns={collapsedColumns}
+                    row={row}
+                    driversExpanded={driversExpanded}
+                  />
                 ))}
                 {virtualRows.bottomSpacerHeight > 0 ? (
                   <tr aria-hidden>
@@ -216,36 +309,50 @@ export function FleetVehiclesSection({
   );
 }
 
-function getFleetVehicleVirtualRowTextValues(row: FleetVehicleListRow) {
+function getFleetVehicleVirtualRowTextValues(
+  row: FleetVehicleListRow,
+  collapsedColumns: Record<CollapsibleFleetVehicleColumnKey, boolean>,
+) {
   return [
-    row.area,
-    row.location,
+    row.vehicleType,
     row.equipmentType,
     row.brand,
     row.model,
     row.plateNumber,
     row.garageNumber,
+    collapsedColumns.fuelCardNumber ? "" : row.fuelCardNumber,
+    collapsedColumns.manufactureYear ? "" : row.manufactureYear,
+    collapsedColumns.vin ? "" : row.vin,
+    collapsedColumns.owner ? "" : row.owner,
     row.firstWatchFirstShiftDriver,
     row.firstWatchSecondShiftDriver,
     row.secondWatchFirstShiftDriver,
     row.secondWatchSecondShiftDriver,
-    row.status,
-    row.repairStartedAt,
-    row.note,
   ];
 }
 
-function FleetVehicleTableRow({ row, driversExpanded }: { row: FleetVehicleListRow; driversExpanded: boolean }) {
+function FleetVehicleTableRow({
+  collapsedColumns,
+  row,
+  driversExpanded,
+}: {
+  collapsedColumns: Record<CollapsibleFleetVehicleColumnKey, boolean>;
+  row: FleetVehicleListRow;
+  driversExpanded: boolean;
+}) {
   return (
     <tr>
       <Td center>{row.index}</Td>
-      <Td>{row.area}</Td>
-      <Td>{row.location}</Td>
+      <Td>{row.vehicleType}</Td>
       <Td>{row.equipmentType}</Td>
       <Td>{row.brand}</Td>
       <Td>{row.model}</Td>
       <Td>{row.plateNumber}</Td>
       <Td>{row.garageNumber}</Td>
+      {!collapsedColumns.fuelCardNumber ? <Td>{row.fuelCardNumber}</Td> : null}
+      {!collapsedColumns.manufactureYear ? <Td center>{row.manufactureYear}</Td> : null}
+      {!collapsedColumns.vin ? <Td>{row.vin}</Td> : null}
+      {!collapsedColumns.owner ? <Td>{row.owner}</Td> : null}
       {driversExpanded ? (
         <>
           <Td>{row.firstWatchFirstShiftDriver}</Td>
@@ -254,11 +361,6 @@ function FleetVehicleTableRow({ row, driversExpanded }: { row: FleetVehicleListR
           <Td>{row.secondWatchSecondShiftDriver}</Td>
         </>
       ) : null}
-      <Td center>
-        <span style={statusBadgeStyle(row.status)}>{row.status}</span>
-      </Td>
-      <Td center>{row.repairStartedAt}</Td>
-      <Td>{row.note}</Td>
     </tr>
   );
 }

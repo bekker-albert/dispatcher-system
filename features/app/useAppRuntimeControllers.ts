@@ -60,6 +60,8 @@ export function useAppRuntimeControllers({
     topTab,
     ptoDateEditing,
     adminSection,
+    fleetTab,
+    adminVehiclesEditing,
   } = appState;
 
   const {
@@ -110,11 +112,13 @@ export function useAppRuntimeControllers({
   });
 
   const tableResizeActive = (topTab === "pto" && ptoDateEditing) || topTab === "reports";
+  const vehicleSelectionActive = (topTab === "admin" && adminSection === "vehicles")
+    || (topTab === "fleet" && fleetTab === "directory" && adminVehiclesEditing);
 
   const tableInteractionEffects = useAppTableInteractionEffects({
     resizeActive: tableResizeActive,
     ptoSelectionActive: topTab === "pto" && ptoDateEditing,
-    vehicleSelectionActive: topTab === "admin" && adminSection === "vehicles",
+    vehicleSelectionActive,
     ptoRowHeights,
     setPtoColumnWidths,
     setPtoRowHeights,

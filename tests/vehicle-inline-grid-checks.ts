@@ -53,6 +53,7 @@ assert.deepEqual(createVehicleGridKeys(rows)[0], [
   "1:model",
   "1:plateNumber",
   "1:garageNumber",
+  "1:fuelCardNumber",
   "1:manufactureYear",
   "1:vin",
   "1:owner",
@@ -66,6 +67,15 @@ assert.deepEqual(vehicleCellRangeKeys(
   "1:brand",
   "2:equipmentType",
   "2:brand",
+]);
+assert.deepEqual(vehicleCellRangeKeys(
+  rows,
+  { id: 1, field: "vehicleType" },
+  { id: 1, field: "brand" },
+), [
+  "1:vehicleType",
+  "1:equipmentType",
+  "1:brand",
 ]);
 assert.deepEqual(vehicleCellRangeKeys(
   rows,
@@ -154,6 +164,7 @@ const vehicleRows = [
     model: "A7",
     plateNumber: "123",
     garageNumber: "55",
+    fuelCardNumber: "FC-1",
     manufactureYear: "2022",
     fuelNormWinter: 0,
     fuelNormSummer: 0,

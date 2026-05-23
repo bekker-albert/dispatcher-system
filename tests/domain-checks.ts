@@ -343,25 +343,29 @@ assert.equal(loadingEquipmentLabel({ brand: "Komatsu", model: "PC1250", name: ""
 assert.equal(defaultVehicleFallbackRows.length, 5);
 assert.equal(createDefaultVehicles([])[0].name, defaultVehicleFallbackRows[0].name);
 assert.equal(normalizeVehicleRow({ ...defaultVehicleForm, brand: "Toyota", model: "Hilux", garageNumber: "P1", plateNumber: "A1", equipmentType: "" }).equipmentType, "");
-assert.deepEqual(vehicleInlineFields.slice(0, 3), ["vehicleType", "equipmentType", "brand"]);
+assert.deepEqual(vehicleInlineFields.slice(0, 5), ["vehicleType", "equipmentType", "brand", "model", "plateNumber"]);
 assert.equal(adminVehicleFallbackPreviewRows >= adminVehicleMinPreviewRows, true);
 assert.equal(adminVehicleViewportBottomReserve > 0, true);
 assert.equal(vehicleAutocompleteFilterKeys.includes("owner"), true);
+assert.equal(vehicleFilterColumnConfigs.find((column) => column.key === "fuelCardNumber")?.label, "№ топл.карты");
 assert.equal(vehicleFilterColumnConfigs.find((column) => column.key === "manufactureYear")?.label, "Год выпуска");
 assert.equal(vehicleInlineFieldDomKey(7, "brand"), "7:brand");
 assert.deepEqual(parseVehicleInlineFieldDomKey("7:brand"), { vehicleId: 7, field: "brand" });
 assert.equal(parseVehicleInlineFieldDomKey("bad:brand"), null);
 assert.equal(vehicleFieldIsNumeric("manufactureYear"), true);
 const importedVehicles = createVehiclesFromImportTable([
-  ["Показ", "Категория техники", "Тип техники", "Марка", "Модель", "Госномер", "Гарномер", "Год выпуска", "VIN", "Собственник"],
-  ["Скрыта", "Транспортировочная", "Самосвал", "Howo", "371", "915FZ02", "P129", "2020", "VIN-1", "AA Mining"],
+  ["Показ", "Вид техники", "Наименование техники", "Марка", "Модель", "Госномер", "Гарномер", "№ топл.карты", "Год выпуска", "VIN", "Собственник"],
+  ["Скрыта", "Транспортировочная", "Самосвал", "Howo", "371", "915FZ02", "P129", "FC-1", "2020", "VIN-1", "AA Mining"],
 ], defaultVehicle);
 
 assert.equal(importedVehicles.length, 1);
 assert.equal(importedVehicles[0].visible, false);
+assert.equal(importedVehicles[0].area, "");
+assert.equal(importedVehicles[0].location, "");
+assert.equal(importedVehicles[0].fuelCardNumber, "FC-1");
 assert.equal(importedVehicles[0].fuelCalcType, "Пробег");
 assert.equal(buildVehicleDisplayName(importedVehicles[0]), "Howo 371 - P129(915FZ02)");
-assert.deepEqual(createVehicleExportRows(importedVehicles)[1].slice(0, 3), ["Скрыта", "Транспортировочная", "Самосвал"]);
+assert.deepEqual(createVehicleExportRows(importedVehicles)[1].slice(0, 5), ["Скрыта", "Транспортировочная", "Самосвал", "Howo", "371"]);
 assert.deepEqual(createVehicleFilterOptions(importedVehicles, { getValue: (vehicle) => vehicle.owner }), ["AA Mining"]);
 assert.deepEqual(mergeVehicleFilterOptions(["AA Mining"], [""]), ["", "AA Mining"]);
 assert.deepEqual(

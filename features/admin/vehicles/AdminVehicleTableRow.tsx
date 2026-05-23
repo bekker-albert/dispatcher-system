@@ -62,7 +62,7 @@ function EditableVehicleCell({
       list={list}
       numeric={numeric}
       type={numeric ? "number" : "text"}
-      value={vehicle[field]}
+      value={vehicle[field] ?? ""}
       onChange={(value) => onVehicleCellChange(vehicle.id, field, value)}
     />
   );
@@ -164,6 +164,16 @@ function AdminVehicleTableRowComponent({
           <EditableVehicleCell
             vehicle={vehicle}
             field="garageNumber"
+            onVehicleCellChange={onVehicleCellChange}
+            vehicleCellInputProps={vehicleCellInputProps}
+          />
+        </VehicleCell>
+      </td>
+      <td style={adminVehicleTdStyle}>
+        <VehicleCell adminVehiclesEditing={adminVehiclesEditing} value={vehicle.fuelCardNumber ?? ""}>
+          <EditableVehicleCell
+            vehicle={vehicle}
+            field="fuelCardNumber"
             onVehicleCellChange={onVehicleCellChange}
             vehicleCellInputProps={vehicleCellInputProps}
           />

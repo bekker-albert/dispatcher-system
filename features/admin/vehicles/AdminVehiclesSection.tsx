@@ -147,7 +147,11 @@ const adminVehiclePanelStyle: CSSProperties = {
   border: "1px solid #e2e8f0",
   borderRadius: 16,
   background: "#f8fafc",
+  display: "flex",
+  flexDirection: "column",
+  minHeight: "calc(100vh - 150px)",
   marginBottom: 16,
+  overflow: "hidden",
   padding: 10,
 };
 
