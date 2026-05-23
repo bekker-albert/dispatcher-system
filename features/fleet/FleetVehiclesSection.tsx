@@ -75,12 +75,21 @@ export function FleetVehiclesSection({
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const viewportFrameRef = useRef<number | null>(null);
   const [rowsViewport, setRowsViewport] = useState({ height: 520, scrollTop: 0 });
-  const visibleOptionalColumnCount = collapsibleFleetVehicleColumns.filter(({ key }) => !collapsedColumns[key]).length;
-  const visibleColumnCount = 7 + visibleOptionalColumnCount + (driversExpanded ? 4 : 0);
+  const printExpandedColumns = useMemo<Record<CollapsibleFleetVehicleColumnKey, boolean>>(() => ({
+    fuelCardNumber: false,
+    manufactureYear: false,
+    vin: false,
+    owner: false,
+  }), []);
+  const displayedCollapsedColumns = isPreparingPrint ? printExpandedColumns : collapsedColumns;
+  const displayedDriversExpanded = isPreparingPrint || driversExpanded;
+  const displayedFilterControls = isPreparingPrint ? undefined : filterControls;
+  const visibleOptionalColumnCount = collapsibleFleetVehicleColumns.filter(({ key }) => !displayedCollapsedColumns[key]).length;
+  const visibleColumnCount = 7 + visibleOptionalColumnCount + (displayedDriversExpanded ? 4 : 0);
   const activeFilterCount = filterControls?.activeVehicleFilterCount ?? 0;
   const rowTextValueResolver = useCallback(
-    (row: FleetVehicleListRow) => getFleetVehicleVirtualRowTextValues(row, collapsedColumns),
-    [collapsedColumns],
+    (row: FleetVehicleListRow) => getFleetVehicleVirtualRowTextValues(row, displayedCollapsedColumns),
+    [displayedCollapsedColumns],
   );
   const rows = useMemo(
     () => createFleetVehicleListRows(vehicleRows, { workDate, dailyStates }),
@@ -135,15 +144,21 @@ export function FleetVehiclesSection({
   }, [driversExpanded, rows.length, updateRowsViewport]);
 
   useEffect(() => {
-    const finishPrint = () => setIsPreparingPrint(false);
+    const finishPrint = () => {
+      document.documentElement.classList.remove("fleet-print-mode");
+      setIsPreparingPrint(false);
+    };
     window.addEventListener("afterprint", finishPrint);
 
     return () => window.removeEventListener("afterprint", finishPrint);
   }, []);
 
   const printFleetVehicles = useCallback(() => {
+    document.documentElement.classList.add("fleet-print-mode");
     setIsPreparingPrint(true);
-    window.requestAnimationFrame(() => window.print());
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.print());
+    });
   }, []);
   const exportFleetVehiclesToExcel = useCallback(() => {
     void onExportVehiclesToExcel?.(rows);
@@ -165,7 +180,7 @@ export function FleetVehiclesSection({
             type="button"
             onClick={() => setDriversExpanded((current) => !current)}
             style={driverToggleStyle}
-            aria-expanded={driversExpanded}
+            aria-expanded={displayedDriversExpanded}
           >
             {driversExpanded ? "Скрыть водителей" : "Показать водителей"}
           </button>
@@ -228,11 +243,11 @@ export function FleetVehiclesSection({
             <col style={{ minWidth: 112 }} />
             <col style={{ minWidth: 112 }} />
             <col style={{ minWidth: 94 }} />
-            {!collapsedColumns.fuelCardNumber ? <col style={{ minWidth: 116 }} /> : null}
-            {!collapsedColumns.manufactureYear ? <col style={{ minWidth: 96 }} /> : null}
-            {!collapsedColumns.vin ? <col style={{ minWidth: 150 }} /> : null}
-            {!collapsedColumns.owner ? <col style={{ minWidth: 170 }} /> : null}
-            {driversExpanded ? (
+            {!displayedCollapsedColumns.fuelCardNumber ? <col style={{ minWidth: 116 }} /> : null}
+            {!displayedCollapsedColumns.manufactureYear ? <col style={{ minWidth: 96 }} /> : null}
+            {!displayedCollapsedColumns.vin ? <col style={{ minWidth: 150 }} /> : null}
+            {!displayedCollapsedColumns.owner ? <col style={{ minWidth: 170 }} /> : null}
+            {displayedDriversExpanded ? (
               <>
                 <col style={{ minWidth: 150 }} />
                 <col style={{ minWidth: 150 }} />
@@ -243,28 +258,28 @@ export function FleetVehiclesSection({
           </colgroup>
           <thead>
             <tr>
-              <Th rowSpan={driversExpanded ? 2 : 1}>№</Th>
-              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="vehicleType" rowSpan={driversExpanded ? 2 : 1}>Вид техники</FilterableFleetVehicleTh>
-              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="equipmentType" rowSpan={driversExpanded ? 2 : 1}>Наименование техники</FilterableFleetVehicleTh>
-              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="brand" rowSpan={driversExpanded ? 2 : 1}>Марка</FilterableFleetVehicleTh>
-              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="model" rowSpan={driversExpanded ? 2 : 1}>Модель</FilterableFleetVehicleTh>
-              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="plateNumber" rowSpan={driversExpanded ? 2 : 1}>Гос. номер</FilterableFleetVehicleTh>
-              <FilterableFleetVehicleTh filterControls={filterControls} filterKey="garageNumber" rowSpan={driversExpanded ? 2 : 1}>Гар. номер</FilterableFleetVehicleTh>
-              {!collapsedColumns.fuelCardNumber ? (
-                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="fuelCardNumber" rowSpan={driversExpanded ? 2 : 1}>№ топл.карты</FilterableFleetVehicleTh>
+              <Th rowSpan={displayedDriversExpanded ? 2 : 1}>№</Th>
+              <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="vehicleType" rowSpan={displayedDriversExpanded ? 2 : 1}>Вид техники</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="equipmentType" rowSpan={displayedDriversExpanded ? 2 : 1}>Наименование техники</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="brand" rowSpan={displayedDriversExpanded ? 2 : 1}>Марка</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="model" rowSpan={displayedDriversExpanded ? 2 : 1}>Модель</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="plateNumber" rowSpan={displayedDriversExpanded ? 2 : 1}>Гос. номер</FilterableFleetVehicleTh>
+              <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="garageNumber" rowSpan={displayedDriversExpanded ? 2 : 1}>Гар. номер</FilterableFleetVehicleTh>
+              {!displayedCollapsedColumns.fuelCardNumber ? (
+                <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="fuelCardNumber" rowSpan={displayedDriversExpanded ? 2 : 1}>№ топл.карты</FilterableFleetVehicleTh>
               ) : null}
-              {!collapsedColumns.manufactureYear ? (
-                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="manufactureYear" rowSpan={driversExpanded ? 2 : 1}>Год выпуска</FilterableFleetVehicleTh>
+              {!displayedCollapsedColumns.manufactureYear ? (
+                <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="manufactureYear" rowSpan={displayedDriversExpanded ? 2 : 1}>Год выпуска</FilterableFleetVehicleTh>
               ) : null}
-              {!collapsedColumns.vin ? (
-                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="vin" rowSpan={driversExpanded ? 2 : 1}>VIN</FilterableFleetVehicleTh>
+              {!displayedCollapsedColumns.vin ? (
+                <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="vin" rowSpan={displayedDriversExpanded ? 2 : 1}>VIN</FilterableFleetVehicleTh>
               ) : null}
-              {!collapsedColumns.owner ? (
-                <FilterableFleetVehicleTh filterControls={filterControls} filterKey="owner" rowSpan={driversExpanded ? 2 : 1}>Собственник</FilterableFleetVehicleTh>
+              {!displayedCollapsedColumns.owner ? (
+                <FilterableFleetVehicleTh filterControls={displayedFilterControls} filterKey="owner" rowSpan={displayedDriversExpanded ? 2 : 1}>Собственник</FilterableFleetVehicleTh>
               ) : null}
-            {driversExpanded ? <Th colSpan={4}>Закрепление водителей за техникой</Th> : null}
+            {displayedDriversExpanded ? <Th colSpan={4}>Закрепление водителей за техникой</Th> : null}
             </tr>
-            {driversExpanded ? (
+            {displayedDriversExpanded ? (
               <tr>
                 <Th>1 вахта / 1 смена</Th>
                 <Th>1 вахта / 2 смена</Th>
@@ -290,9 +305,9 @@ export function FleetVehiclesSection({
                 {virtualRows.rows.map((row) => (
                   <FleetVehicleTableRow
                     key={row.id}
-                    collapsedColumns={collapsedColumns}
+                    collapsedColumns={displayedCollapsedColumns}
                     row={row}
-                    driversExpanded={driversExpanded}
+                    driversExpanded={displayedDriversExpanded}
                   />
                 ))}
                 {virtualRows.bottomSpacerHeight > 0 ? (

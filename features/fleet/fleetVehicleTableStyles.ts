@@ -138,7 +138,72 @@ export function statusBadgeStyle(status: FleetVehicleStatus): CSSProperties {
 export const fleetPrintCss = `@media print {
   @page {
     size: A3 landscape;
-    margin: 5mm;
+    margin: 0.5cm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    height: auto !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .app-print-root,
+  .app-print-shell {
+    background: #ffffff !important;
+    height: auto !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  html.fleet-print-mode body *,
+  body:has(.fleet-print-area) * {
+    visibility: hidden !important;
+  }
+
+  html.fleet-print-mode .fleet-print-area,
+  html.fleet-print-mode .fleet-print-area *,
+  body:has(.fleet-print-area) .fleet-print-area,
+  body:has(.fleet-print-area) .fleet-print-area * {
+    visibility: visible !important;
+  }
+
+  html.fleet-print-mode .erp-shell,
+  html.fleet-print-mode .erp-main,
+  html.fleet-print-mode .erp-content,
+  body:has(.fleet-print-area) .erp-shell,
+  body:has(.fleet-print-area) .erp-main,
+  body:has(.fleet-print-area) .erp-content {
+    display: block !important;
+    gap: 0 !important;
+    grid-column: auto !important;
+    grid-template-columns: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    position: static !important;
+    width: 100% !important;
+  }
+
+  .app-print-header,
+  .app-save-status,
+  .ai-floating-dock,
+  .erp-sidebar,
+  .erp-sidebar__toggle,
+  .erp-topbar,
+  .erp-mobile-backdrop,
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
   }
 
   .fleet-print-area,
@@ -154,13 +219,25 @@ export const fleetPrintCss = `@media print {
   .fleet-print-area {
     display: block !important;
     gap: 0 !important;
+    height: auto !important;
+    inset: auto !important;
+    margin: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    position: static !important;
   }
 
   .fleet-print-table-scroll {
     border-color: #0f172a !important;
     max-height: none !important;
     overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   .fleet-print-table {
@@ -168,7 +245,9 @@ export const fleetPrintCss = `@media print {
     font-size: 7pt !important;
     table-layout: fixed !important;
     width: 100% !important;
+    min-width: 0 !important;
     max-width: 100% !important;
+    page-break-inside: auto !important;
   }
 
   .fleet-print-table th {
