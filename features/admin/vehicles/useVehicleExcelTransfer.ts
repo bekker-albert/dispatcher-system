@@ -25,6 +25,7 @@ type UseVehicleExcelTransferOptions = {
   databaseConfigured: boolean;
   databaseLoadedRef: RefObject<boolean>;
   databaseSaveSnapshotRef: RefObject<string>;
+  databaseAutoSaveBlockedSnapshotRef: RefObject<string>;
   setVehicleRows: Dispatch<SetStateAction<VehicleRow[]>>;
   setVehicleFilters: Dispatch<SetStateAction<VehicleFilters>>;
   setVehicleFilterDrafts: Dispatch<SetStateAction<VehicleFilters>>;
@@ -40,6 +41,7 @@ export function useVehicleExcelTransfer({
   databaseConfigured,
   databaseLoadedRef,
   databaseSaveSnapshotRef,
+  databaseAutoSaveBlockedSnapshotRef,
   setVehicleRows,
   setVehicleFilters,
   setVehicleFilterDrafts,
@@ -67,29 +69,42 @@ export function useVehicleExcelTransfer({
 
       if (!window.confirm(`Заменить текущий список техники данными из файла? Будет загружено строк: ${importedVehicles.length}.`)) return;
 
+      const importedVehiclesSnapshot = JSON.stringify(importedVehicles);
+      const importedAt = new Date().toISOString();
+      const shouldSaveManualReplaceToDatabase = databaseConfigured && databaseLoadedRef.current;
+
+      if (shouldSaveManualReplaceToDatabase) {
+        databaseAutoSaveBlockedSnapshotRef.current = importedVehiclesSnapshot;
+      }
+
       pushVehicleUndoSnapshot();
       setVehicleRows(importedVehicles);
       setVehicleFilters({});
       setVehicleFilterDrafts({});
       setOpenVehicleFilter(null);
-      const importedVehiclesSnapshot = JSON.stringify(importedVehicles);
-      const importedAt = new Date().toISOString();
 
       window.localStorage.setItem(adminStorageKeys.vehicles, importedVehiclesSnapshot);
       window.localStorage.setItem(adminStorageKeys.vehiclesLocalUpdatedAt, importedAt);
       window.localStorage.setItem(adminStorageKeys.vehiclesSeedVersion, `import:${file.name}:${importedVehicles.length}`);
-      if (databaseConfigured && databaseLoadedRef.current) {
+      if (shouldSaveManualReplaceToDatabase) {
         const expectedSnapshot = parseExpectedVehicleSnapshot(databaseSaveSnapshotRef.current);
 
         showSaveStatus("saving", "Сохраняю загруженную технику...");
         void import("@/lib/data/vehicles")
-          .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles, { expectedSnapshot }))
+          .then(({ replaceVehiclesInDatabase }) => replaceVehiclesInDatabase(importedVehicles, {
+            expectedSnapshot,
+            manualReplaceConfirmed: true,
+          }))
           .then(() => {
             databaseSaveSnapshotRef.current = importedVehiclesSnapshot;
+            if (databaseAutoSaveBlockedSnapshotRef.current === importedVehiclesSnapshot) {
+              databaseAutoSaveBlockedSnapshotRef.current = "";
+            }
             showSaveStatus("saved", "Загруженная техника сохранена.");
           })
           .catch((error) => {
             console.warn("Database vehicles import save failed:", error);
+            databaseAutoSaveBlockedSnapshotRef.current = importedVehiclesSnapshot;
             showSaveStatus("error", `Загруженная техника не сохранена: ${errorToMessage(error)}`);
           });
       }
@@ -106,6 +121,7 @@ export function useVehicleExcelTransfer({
   }, [
     addAdminLog,
     databaseConfigured,
+    databaseAutoSaveBlockedSnapshotRef,
     databaseLoadedRef,
     databaseSaveSnapshotRef,
     pushVehicleUndoSnapshot,

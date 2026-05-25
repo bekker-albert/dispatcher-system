@@ -28,6 +28,7 @@ type UseAppVehicleEditingOptions = {
   vehicleImportInputRef: RefObject<HTMLInputElement | null>;
   vehiclesDatabaseLoadedRef: RefObject<boolean>;
   vehiclesDatabaseSaveSnapshotRef: RefObject<string>;
+  vehiclesDatabaseAutoSaveBlockedSnapshotRef: RefObject<string>;
   databaseConfigured: boolean;
   activeVehicleCell: string | null;
   selectedVehicleCellKeys: string[];
@@ -64,6 +65,7 @@ export function useAppVehicleEditing({
   vehicleImportInputRef,
   vehiclesDatabaseLoadedRef,
   vehiclesDatabaseSaveSnapshotRef,
+  vehiclesDatabaseAutoSaveBlockedSnapshotRef,
   databaseConfigured,
   activeVehicleCell,
   selectedVehicleCellKeys,
@@ -168,6 +170,7 @@ export function useAppVehicleEditing({
     databaseConfigured,
     databaseLoadedRef: vehiclesDatabaseLoadedRef,
     databaseSaveSnapshotRef: vehiclesDatabaseSaveSnapshotRef,
+    databaseAutoSaveBlockedSnapshotRef: vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     setVehicleRows,
     setVehicleFilters,
     setVehicleFilterDrafts,

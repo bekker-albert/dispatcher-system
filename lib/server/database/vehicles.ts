@@ -46,6 +46,7 @@ export const handleVehiclesDatabaseAction: DatabaseResourceHandler = async ({
   if (action === "replace") {
     await vehicles.replaceVehiclesInMysql(vehicleRowsFromPayload(record.rows), {
       expectedSnapshot: expectedVehicleSnapshotFromPayload(record.expectedSnapshot),
+      manualReplaceConfirmed: record.manualReplaceConfirmed === true,
     });
     return json({ ok: true });
   }

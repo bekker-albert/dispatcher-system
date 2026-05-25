@@ -12,7 +12,9 @@ export type VehicleSnapshotWriteOptions = {
   expectedSnapshot?: VehicleRow[] | null;
 };
 
-export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
+export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions & {
+  manualReplaceConfirmed?: boolean;
+};
 
 async function loadSupabaseVehiclesAdapter() {
   return import("@/lib/supabase/vehicles");
@@ -54,6 +56,7 @@ export function replaceVehiclesInDatabase(rows: VehicleRow[], options?: VehicleS
     return databaseRequest("vehicles", "replace", {
       rows,
       expectedSnapshot: options?.expectedSnapshot,
+      manualReplaceConfirmed: options?.manualReplaceConfirmed,
     });
   }
 

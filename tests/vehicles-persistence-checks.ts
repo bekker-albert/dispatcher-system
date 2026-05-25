@@ -44,11 +44,12 @@ const mysqlReplaceSource = exportedFunctionSource(mysqlVehiclesSource, "replaceV
 assert.match(mysqlReplaceSource, /dbTransaction/);
 assert.match(mysqlReplaceSource, /loadVehiclesFromMysqlWithExecutor\(execute,\s*true\)/);
 assert.match(mysqlReplaceSource, /assertMysqlVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot,\s*execute,\s*currentRows\)/);
-assert.match(mysqlReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\(rows,\s*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows\)/);
+assert.match(mysqlReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\([\s\S]*rows,[\s\S]*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows,[\s\S]*options\.manualReplaceConfirmed === true,[\s\S]*\)/);
 assert.match(mysqlReplaceSource, /upsertVehiclesToMysql\(rows,\s*execute\)/);
 assert.match(mysqlReplaceSource, /deleteVehiclesMissingFromMysqlSnapshot\(rows,\s*execute\)/);
 assert.match(mysqlVehiclesSource, /function assertNoUnexpectedLargeVehicleSnapshotShrink/);
 assert.match(mysqlVehiclesSource, /isUnexpectedLargeVehicleSnapshotShrink\(rows,\s*baselineRows\)/);
+assert.match(mysqlVehiclesSource, /manualReplaceConfirmed = false/);
 assert.match(mysqlVehiclesSource, /vehicleSnapshotKey\(currentRows\) !== vehicleSnapshotKey\(expectedSnapshot\)/);
 assert.match(mysqlVehiclesSource, /FOR UPDATE/);
 
@@ -61,11 +62,12 @@ assert.equal(supabaseVehiclesSource.includes('.not("vehicle_id", "in", `(${vehic
 
 const supabaseReplaceSource = exportedFunctionSource(supabaseVehiclesSource, "replaceVehiclesInSupabase");
 assert.match(supabaseReplaceSource, /assertSupabaseVehiclesMatchExpectedSnapshot\(options\.expectedSnapshot,\s*currentRows\)/);
-assert.match(supabaseReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\(rows,\s*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows\)/);
+assert.match(supabaseReplaceSource, /assertNoUnexpectedLargeVehicleSnapshotShrink\([\s\S]*rows,[\s\S]*Array\.isArray\(options\.expectedSnapshot\) \? options\.expectedSnapshot : currentRows,[\s\S]*options\.manualReplaceConfirmed === true,[\s\S]*\)/);
 assert.match(
   supabaseReplaceSource,
   /await upsertVehiclesToSupabase\(client,\s*records\);[\s\S]*await deleteVehiclesMissingFromSupabaseSnapshot\(client,\s*vehicleIds\);/,
 );
+assert.match(supabaseReplaceSource, /options\.manualReplaceConfirmed === true/);
 assert.equal(supabaseReplaceSource.includes('.gte("vehicle_id", 0)'), false);
 
 assert.match(dataVehiclesSource, /saveVehiclesToDatabase\(rows: VehicleRow\[], options\?: VehicleSnapshotWriteOptions\)/);
@@ -77,11 +79,13 @@ assert.doesNotMatch(dataVehiclesSource, /allowLargeSnapshotShrink/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "save", \{[\s\S]*rows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*\}\)/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "savePatch", \{[\s\S]*patchRows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*\}\)/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "replace", \{[\s\S]*rows,[\s\S]*expectedSnapshot: options\?\.expectedSnapshot,[\s\S]*\}\)/);
+assert.match(dataVehiclesSource, /manualReplaceConfirmed: options\?\.manualReplaceConfirmed/);
 assert.match(dataVehiclesSource, /databaseRequest\("vehicles", "delete", \{ id \}\)/);
 assert.match(dataVehiclesSource, /import\("@\/lib\/supabase\/vehicles"\)/);
 assert.doesNotMatch(supabaseVehiclesSource, /databaseRequest/);
 assert.doesNotMatch(supabaseVehiclesSource, /serverDatabaseConfigured/);
 assert.match(databaseVehiclesSource, /function expectedVehicleSnapshotFromPayload/);
+assert.match(databaseVehiclesSource, /manualReplaceConfirmed: record\.manualReplaceConfirmed === true/);
 assert.doesNotMatch(databaseVehiclesSource, /allowLargeSnapshotShrink/);
 assert.doesNotMatch(mysqlVehiclesSource, /allowLargeSnapshotShrink/);
 assert.doesNotMatch(supabaseVehiclesSource, /allowLargeSnapshotShrink/);

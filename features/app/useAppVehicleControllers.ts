@@ -50,6 +50,7 @@ export function useAppVehicleControllers({
     vehicleRowsRef,
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
+    vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     addAdminLog,
     showSaveStatus,
   } = appState;
@@ -70,6 +71,7 @@ export function useAppVehicleControllers({
     vehicleImportInputRef,
     vehiclesDatabaseLoadedRef,
     vehiclesDatabaseSaveSnapshotRef,
+    vehiclesDatabaseAutoSaveBlockedSnapshotRef,
     databaseConfigured: active && databaseConfigured,
     activeVehicleCell,
     selectedVehicleCellKeys,

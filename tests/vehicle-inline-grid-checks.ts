@@ -249,6 +249,8 @@ assert.equal(adminStorageKeys.vehiclesLocalUpdatedAt, "dispatcher:vehicles-local
 assert.match(useVehicleExcelTransferSource, /const importedVehiclesSnapshot = JSON\.stringify\(importedVehicles\);/);
 assert.match(useVehicleExcelTransferSource, /const importedAt = new Date\(\)\.toISOString\(\);/);
 assert.match(useVehicleExcelTransferSource, /window\.localStorage\.setItem\(adminStorageKeys\.vehiclesLocalUpdatedAt, importedAt\);/);
+assert.match(useVehicleExcelTransferSource, /databaseAutoSaveBlockedSnapshotRef\.current = importedVehiclesSnapshot;/);
+assert.match(useVehicleExcelTransferSource, /manualReplaceConfirmed: true/);
 assert.match(useVehicleExcelTransferSource, /databaseSaveSnapshotRef\.current = importedVehiclesSnapshot;/);
 assert.equal(resolveInitialVehicleRowsSource({
   savedVehicles: [],

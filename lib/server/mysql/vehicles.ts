@@ -15,7 +15,9 @@ export type VehicleSnapshotWriteOptions = {
   expectedSnapshot?: VehicleRow[] | null;
 };
 
-export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions;
+export type VehicleSnapshotReplaceOptions = VehicleSnapshotWriteOptions & {
+  manualReplaceConfirmed?: boolean;
+};
 
 type VehicleRecord = RowDataPacket & {
   vehicle_id: number | string;
@@ -147,7 +149,9 @@ function createVehiclesShrinkGuardError() {
 function assertNoUnexpectedLargeVehicleSnapshotShrink(
   rows: VehicleRow[],
   baselineRows: VehicleRow[],
+  manualReplaceConfirmed = false,
 ) {
+  if (manualReplaceConfirmed) return;
   if (!isUnexpectedLargeVehicleSnapshotShrink(rows, baselineRows)) return;
 
   throw createVehiclesShrinkGuardError();
@@ -213,7 +217,11 @@ export async function replaceVehiclesInMysql(rows: VehicleRow[], options: Vehicl
     const currentRows = current?.rows ?? [];
 
     await assertMysqlVehiclesMatchExpectedSnapshot(options.expectedSnapshot, execute, currentRows);
-    assertNoUnexpectedLargeVehicleSnapshotShrink(rows, Array.isArray(options.expectedSnapshot) ? options.expectedSnapshot : currentRows);
+    assertNoUnexpectedLargeVehicleSnapshotShrink(
+      rows,
+      Array.isArray(options.expectedSnapshot) ? options.expectedSnapshot : currentRows,
+      options.manualReplaceConfirmed === true,
+    );
     await upsertVehiclesToMysql(rows, execute);
     await deleteVehiclesMissingFromMysqlSnapshot(rows, execute);
   });
