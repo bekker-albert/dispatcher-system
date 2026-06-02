@@ -44,6 +44,21 @@ type WialonSyncLog = {
   createdAt: string;
 };
 
+type DiagnosticStatus = "Норма" | "Предупреждение" | "Ошибка" | "Нет данных";
+
+type DiagnosticRow = {
+  id: number;
+  unitName: string;
+  mapping: string;
+  engineHours: string;
+  mileage: string;
+  fuel: string;
+  sensors: string;
+  status: DiagnosticStatus;
+  problem: string;
+  recommendation: string;
+};
+
 type AdminWialonSectionProps = {
   vehicleRows: VehicleRow[];
 };
@@ -118,6 +133,61 @@ function logTypeText(syncType: string) {
   return names[syncType] ?? syncType;
 }
 
+function hoursSince(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return (Date.now() - date.getTime()) / 1000 / 60 / 60;
+}
+
+function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
+  const problems: string[] = [];
+  const recommendations: string[] = [];
+  let status: DiagnosticStatus = "Норма";
+  const syncAgeHours = hoursSince(unit.syncedAt);
+
+  if (unit.vehicleId === null) {
+    status = "Ошибка";
+    problems.push("объект Wialon не сопоставлен с техникой сайта");
+    recommendations.push("сопоставить по гаражному номеру или выбрать технику вручную");
+  }
+
+  if (!unit.syncedAt) {
+    status = "Нет данных";
+    problems.push("нет даты загрузки объекта из Wialon");
+    recommendations.push("нажать “Загрузить технику”");
+  } else if (syncAgeHours !== null && syncAgeHours > 24) {
+    status = status === "Ошибка" ? "Ошибка" : "Предупреждение";
+    problems.push("список Wialon не обновлялся больше суток");
+    recommendations.push("обновить список техники из Wialon");
+  }
+
+  if (!unit.uniqueId) {
+    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
+    problems.push("нет UID терминала");
+    recommendations.push("проверить карточку объекта Wialon и терминал GPS");
+  }
+
+  if (unit.hidden) {
+    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
+    problems.push("объект скрыт на сайте");
+    recommendations.push("оставить скрытым только лишнюю, тестовую или снятую технику");
+  }
+
+  return {
+    id: unit.id,
+    unitName: unit.name,
+    mapping: unit.vehicleId === null ? "Нет привязки" : "Привязана",
+    engineHours: unit.vehicleId === null ? "Не проверяется" : "Нужен источник моточасов",
+    mileage: unit.vehicleId === null ? "Не проверяется" : "Нужен источник пробега",
+    fuel: unit.vehicleId === null ? "Не проверяется" : "Нужен ДУТ/CAN",
+    sensors: [unit.uniqueId ? "UID есть" : "Нет UID", unit.phone ? "SIM есть" : "SIM не указана"].join(" / "),
+    status,
+    problem: problems.length ? problems.join("; ") : "критичных проблем по связке Wialon не найдено",
+    recommendation: recommendations.length ? Array.from(new Set(recommendations)).join("; ") : "после подключения моточасов, пробега и топлива включить сверку с нормами и сводкой",
+  };
+}
+
 export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   const [units, setUnits] = useState<WialonAdminUnit[]>([]);
   const [logs, setLogs] = useState<WialonSyncLog[]>([]);
@@ -126,6 +196,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   const [loading, setLoading] = useState(false);
   const [showUnits, setShowUnits] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(true);
   const [filter, setFilter] = useState<"all" | "mapped" | "unmapped" | "hidden">("all");
   const [page, setPage] = useState(1);
   const [dirtyIds, setDirtyIds] = useState<Set<number>>(() => new Set());
@@ -172,6 +243,11 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   const mappedCount = units.filter((unit) => unit.vehicleId !== null).length;
   const hiddenCount = units.filter((unit) => unit.hidden).length;
   const unmappedCount = units.length - mappedCount;
+  const diagnostics = useMemo(() => units.map(buildDiagnosticRow), [units]);
+  const diagnosticsToReview = diagnostics.filter((row) => row.status !== "Норма");
+  const diagnosticErrors = diagnostics.filter((row) => row.status === "Ошибка" || row.status === "Нет данных").length;
+  const diagnosticWarnings = diagnostics.filter((row) => row.status === "Предупреждение").length;
+  const diagnosticRows = diagnosticsToReview.length ? diagnosticsToReview.slice(0, 50) : diagnostics.slice(0, 50);
 
   const filteredUnits = useMemo(() => {
     const result = units.filter((unit) => {
@@ -415,11 +491,62 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
           <button onClick={() => setShowLogs((value) => !value)} style={buttonStyle} type="button">
             {showLogs ? "Скрыть технический журнал" : "Показать технический журнал"}
           </button>
+          <button onClick={() => setShowDiagnostics((value) => !value)} style={buttonStyle} type="button">
+            {showDiagnostics ? "Скрыть диагностику данных" : "Показать диагностику данных"}
+          </button>
         </div>
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Несохраненных изменений: {dirtyIds.size}
         </div>
       </div>
+
+      {showDiagnostics ? (
+        <div style={tableWrapStyle}>
+          <div style={{ ...statusCardStyle, marginBottom: 10 }}>
+            <div style={labelStyle}>Диагностика качества данных Wialon / GPS / ДУТ / CAN</div>
+            <div style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>
+              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас проверяется связка Wialon с техникой сайта, UID/SIM и актуальность загрузки. Следующий этап — моточасы, пробег, топливо, ДУТ/CAN и сверка со сводкой.
+            </div>
+          </div>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Объект Wialon</th>
+                <th style={thStyle}>Связка</th>
+                <th style={thStyle}>Моточасы</th>
+                <th style={thStyle}>Пробег</th>
+                <th style={thStyle}>Топливо</th>
+                <th style={thStyle}>Датчики</th>
+                <th style={thStyle}>Статус</th>
+                <th style={thStyle}>Проблема</th>
+                <th style={thStyle}>Рекомендация</th>
+              </tr>
+            </thead>
+            <tbody>
+              {diagnosticRows.map((row) => (
+                <tr key={row.id}>
+                  <td style={tdStyle}>{row.unitName}</td>
+                  <td style={tdStyle}>{row.mapping}</td>
+                  <td style={tdStyle}>{row.engineHours}</td>
+                  <td style={tdStyle}>{row.mileage}</td>
+                  <td style={tdStyle}>{row.fuel}</td>
+                  <td style={tdStyle}>{row.sensors}</td>
+                  <td style={tdStyle}>{row.status}</td>
+                  <td style={tdStyle}>{row.problem}</td>
+                  <td style={tdStyle}>{row.recommendation}</td>
+                </tr>
+              ))}
+              {diagnosticRows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
+                    Нет данных для диагностики. Сначала загрузите технику из Wialon.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
 
       {showUnits ? (
         <>
