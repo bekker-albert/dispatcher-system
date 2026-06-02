@@ -48,6 +48,8 @@ type AdminWialonSectionProps = {
   vehicleRows: VehicleRow[];
 };
 
+const PAGE_SIZE = 50;
+
 function vehicleLabel(vehicle: VehicleRow) {
   return [
     vehicle.id,
@@ -59,10 +61,61 @@ function vehicleLabel(vehicle: VehicleRow) {
   ].map((part) => String(part ?? "").trim()).filter(Boolean).join(" / ");
 }
 
+function normalizeGarage(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s_\-\/\\]+/g, "")
+    .replace(/[^0-9A-ZА-ЯЁ]/g, "");
+}
+
+function garageKeysFromWialonName(name: string) {
+  const keys = new Set<string>();
+  const trimmed = name.trim();
+  const withoutBrackets = trimmed.replace(/^\[|\]$/g, "");
+  const withoutPrefix = withoutBrackets.replace(/^\([^)]*\)/, "");
+  const beforeComment = withoutPrefix.split("(")[0]?.trim() ?? withoutPrefix;
+  const firstToken = beforeComment.split(/\s+/)[0] ?? beforeComment;
+
+  for (const value of [trimmed, withoutBrackets, withoutPrefix, beforeComment, firstToken]) {
+    const normalized = normalizeGarage(value);
+    if (normalized) keys.add(normalized);
+  }
+
+  return Array.from(keys);
+}
+
+function displayGarageFromWialonName(name: string) {
+  return garageKeysFromWialonName(name)[0] ?? name;
+}
+
 function formatDate(value: string | null) {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("ru-RU");
+}
+
+function statusText(status: "unknown" | "ok" | "error") {
+  if (status === "ok") return "Успешно";
+  if (status === "error") return "Ошибка";
+  return "Не проверено";
+}
+
+function logStatusText(status: string) {
+  if (status === "success") return "Успешно";
+  if (status === "error") return "Ошибка";
+  return status;
+}
+
+function logTypeText(syncType: string) {
+  const names: Record<string, string> = {
+    "check-connection": "Проверка подключения",
+    "unit-sync": "Загрузка техники",
+    "unit-mapping": "Сопоставление",
+    "position-sync": "Координаты",
+  };
+
+  return names[syncType] ?? syncType;
 }
 
 export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
@@ -71,12 +124,58 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   const [status, setStatus] = useState<"unknown" | "ok" | "error">("unknown");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showUnits, setShowUnits] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [filter, setFilter] = useState<"all" | "mapped" | "unmapped" | "hidden">("all");
+  const [page, setPage] = useState(1);
+  const [dirtyIds, setDirtyIds] = useState<Set<number>>(() => new Set());
+
   const vehicleOptions = useMemo(
     () => vehicleRows.filter((vehicle) => vehicle.visible !== false),
     [vehicleRows],
   );
 
+  const vehicleByGarage = useMemo(() => {
+    const map = new Map<string, VehicleRow>();
+    const duplicates = new Set<string>();
+
+    for (const vehicle of vehicleOptions) {
+      const key = normalizeGarage(vehicle.garageNumber);
+      if (!key) continue;
+      if (map.has(key)) {
+        duplicates.add(key);
+        continue;
+      }
+      map.set(key, vehicle);
+    }
+
+    for (const key of duplicates) {
+      map.delete(key);
+    }
+
+    return map;
+  }, [vehicleOptions]);
+
   const latestLog = logs[0] ?? null;
+  const persistedStatus = latestLog?.status === "success" ? "ok" : latestLog?.status === "error" ? "error" : "unknown";
+  const displayStatus = status === "unknown" ? persistedStatus : status;
+  const mappedCount = units.filter((unit) => unit.vehicleId !== null).length;
+  const hiddenCount = units.filter((unit) => unit.hidden).length;
+  const unmappedCount = units.length - mappedCount;
+
+  const filteredUnits = useMemo(() => {
+    const result = units.filter((unit) => {
+      if (filter === "mapped") return unit.vehicleId !== null;
+      if (filter === "unmapped") return unit.vehicleId === null;
+      if (filter === "hidden") return unit.hidden;
+      return true;
+    });
+
+    return result;
+  }, [filter, units]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUnits.length / PAGE_SIZE));
+  const pageUnits = filteredUnits.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const loadStoredSnapshot = async () => {
     const response = await fetch("/api/wialon/units?source=database", {
@@ -95,6 +194,10 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       setMessage(error instanceof Error ? error.message : "Wialon snapshot load failed");
     });
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, showUnits]);
 
   const runAction = async (action: () => Promise<void>) => {
     setLoading(true);
@@ -118,7 +221,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
 
     setLogs(body.logs ?? []);
     setStatus("ok");
-    setMessage(`Подключение работает. Объектов Wialon: ${body.unitsCount ?? 0}.`);
+    setMessage(`Подключение работает. Объектов Wialon по API: ${body.unitsCount ?? 0}.`);
   });
 
   const syncUnits = () => runAction(async () => {
@@ -136,7 +239,9 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     setUnits(body.units ?? []);
     await loadStoredSnapshot();
     setStatus("ok");
-    setMessage(`Техника Wialon загружена: ${(body.units ?? []).length}.`);
+    setShowUnits(true);
+    setDirtyIds(new Set());
+    setMessage(`Техника Wialon загружена: ${(body.units ?? []).length}. Если в интерфейсе Wialon видно меньше, значит в Wialon включены фильтры или часть объектов скрыта/служебная.`);
   });
 
   const syncPositions = () => runAction(async () => {
@@ -157,6 +262,10 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   });
 
   const saveMappings = () => runAction(async () => {
+    const changedUnits = dirtyIds.size
+      ? units.filter((unit) => dirtyIds.has(unit.id))
+      : units;
+
     const response = await fetch("/api/wialon/sync/units", {
       method: "POST",
       headers: {
@@ -165,7 +274,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       },
       body: JSON.stringify({
         mappingsOnly: true,
-        mappings: units.map((unit) => ({
+        mappings: changedUnits.map((unit) => ({
           wialonUnitId: unit.id,
           vehicleId: unit.vehicleId,
           hidden: unit.hidden,
@@ -178,19 +287,63 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     setUnits(body.units ?? []);
     await loadStoredSnapshot();
     setStatus("ok");
-    setMessage("Сопоставления Wialon сохранены.");
+    setDirtyIds(new Set());
+    setMessage(`Сопоставления Wialon сохранены: ${changedUnits.length}.`);
   });
+
+  const markDirty = (id: number) => {
+    setDirtyIds((current) => {
+      const next = new Set(current);
+      next.add(id);
+      return next;
+    });
+  };
 
   const updateUnitMapping = (id: number, vehicleId: number | null) => {
     setUnits((current) => current.map((unit) => (
       unit.id === id ? { ...unit, vehicleId } : unit
     )));
+    markDirty(id);
   };
 
   const updateUnitHidden = (id: number, hidden: boolean) => {
     setUnits((current) => current.map((unit) => (
       unit.id === id ? { ...unit, hidden } : unit
     )));
+    markDirty(id);
+  };
+
+  const autoMatchByGarage = () => {
+    let matched = 0;
+    const changedIds = new Set<number>();
+
+    setUnits((current) => current.map((unit) => {
+      if (unit.vehicleId !== null) return unit;
+
+      const match = garageKeysFromWialonName(unit.name)
+        .map((key) => vehicleByGarage.get(key))
+        .find(Boolean);
+
+      if (!match) return unit;
+
+      matched += 1;
+      changedIds.add(unit.id);
+      return { ...unit, vehicleId: match.id };
+    }));
+
+    setDirtyIds((current) => {
+      const next = new Set(current);
+      for (const id of changedIds) next.add(id);
+      return next;
+    });
+
+    setShowUnits(true);
+    setFilter("unmapped");
+    setMessage(
+      matched
+        ? `Автосопоставлено по гаражному номеру: ${matched}. Нажми “Сохранить сопоставления”, чтобы записать изменения в базу.`
+        : "Совпадения по гаражному номеру не найдены.",
+    );
   };
 
   return (
@@ -198,12 +351,15 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       <div style={headerStyle}>
         <div>
           <h2 style={titleStyle}>Wialon Local</h2>
-          <div style={subtitleStyle}>Backend-only интеграция с Wialon Local. Токен и сессия не передаются во frontend.</div>
+          <div style={subtitleStyle}>
+            Подключение работает только через backend. При открытии вкладки Wialon не опрашивается — показываются сохраненные данные сайта.
+          </div>
         </div>
         <div style={actionsStyle}>
           <button disabled={loading} onClick={checkConnection} style={buttonStyle} type="button">Проверить подключение</button>
           <button disabled={loading} onClick={syncUnits} style={primaryButtonStyle} type="button">Загрузить технику</button>
-          <button disabled={loading || units.length === 0} onClick={saveMappings} style={buttonStyle} type="button">Сохранить сопоставления</button>
+          <button disabled={loading || units.length === 0} onClick={autoMatchByGarage} style={buttonStyle} type="button">Автосопоставить по гаражному №</button>
+          <button disabled={loading || dirtyIds.size === 0} onClick={saveMappings} style={buttonStyle} type="button">Сохранить сопоставления</button>
           <button disabled={loading || units.length === 0} onClick={syncPositions} style={buttonStyle} type="button">Обновить координаты</button>
         </div>
       </div>
@@ -211,11 +367,23 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       <div style={statusGridStyle}>
         <div style={statusCardStyle}>
           <div style={labelStyle}>Статус подключения</div>
-          <div style={valueStyle}>{status === "ok" ? "Успешно" : status === "error" ? "Ошибка" : "Не проверено"}</div>
+          <div style={valueStyle}>{statusText(displayStatus)}</div>
         </div>
         <div style={statusCardStyle}>
-          <div style={labelStyle}>Объекты Wialon</div>
+          <div style={labelStyle}>Объекты Wialon в базе сайта</div>
           <div style={valueStyle}>{units.length}</div>
+        </div>
+        <div style={statusCardStyle}>
+          <div style={labelStyle}>Сопоставлено</div>
+          <div style={valueStyle}>{mappedCount}</div>
+        </div>
+        <div style={statusCardStyle}>
+          <div style={labelStyle}>Не сопоставлено</div>
+          <div style={valueStyle}>{unmappedCount}</div>
+        </div>
+        <div style={statusCardStyle}>
+          <div style={labelStyle}>Скрыто</div>
+          <div style={valueStyle}>{hiddenCount}</div>
         </div>
         <div style={statusCardStyle}>
           <div style={labelStyle}>Последняя синхронизация</div>
@@ -223,88 +391,131 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
         </div>
       </div>
 
-      {message ? <div style={status === "error" ? errorStyle : statusCardStyle}>{message}</div> : null}
+      {message ? <div style={displayStatus === "error" ? errorStyle : statusCardStyle}>{message}</div> : null}
 
-      <div style={tableWrapStyle}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Wialon ID</th>
-              <th style={thStyle}>Объект</th>
-              <th style={thStyle}>UID</th>
-              <th style={thStyle}>Техника сайта</th>
-              <th style={thStyle}>Скрыть</th>
-              <th style={thStyle}>Синхронизация</th>
-            </tr>
-          </thead>
-          <tbody>
-            {units.map((unit) => (
-              <tr key={unit.id}>
-                <td style={tdStyle}>{unit.id}</td>
-                <td style={tdStyle}>{unit.name}</td>
-                <td style={tdStyle}>{unit.uniqueId}</td>
-                <td style={tdStyle}>
-                  <select
-                    style={selectStyle}
-                    value={unit.vehicleId ?? ""}
-                    onChange={(event) => updateUnitMapping(unit.id, event.target.value ? Number(event.target.value) : null)}
-                  >
-                    <option value="">Не сопоставлено</option>
-                    {vehicleOptions.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>
-                    ))}
-                  </select>
-                </td>
-                <td style={tdStyle}>
-                  <input
-                    checked={unit.hidden}
-                    onChange={(event) => updateUnitHidden(unit.id, event.target.checked)}
-                    type="checkbox"
-                  />
-                </td>
-                <td style={tdStyle}>{formatDate(unit.syncedAt)}</td>
-              </tr>
-            ))}
-            {units.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                  Объекты Wialon еще не загружены.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+      <div style={{ ...statusCardStyle, display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <button onClick={() => setShowUnits((value) => !value)} style={buttonStyle} type="button">
+            {showUnits ? "Скрыть таблицу техники" : `Показать таблицу техники (${units.length})`}
+          </button>
+          <button onClick={() => setShowLogs((value) => !value)} style={buttonStyle} type="button">
+            {showLogs ? "Скрыть технический журнал" : "Показать технический журнал"}
+          </button>
+        </div>
+        <div style={{ color: "#64748b", fontSize: 13 }}>
+          Несохраненных изменений: {dirtyIds.size}
+        </div>
       </div>
 
-      <div style={tableWrapStyle}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Время</th>
-              <th style={thStyle}>Тип</th>
-              <th style={thStyle}>Статус</th>
-              <th style={thStyle}>Сообщение</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log) => (
-              <tr key={log.id}>
-                <td style={tdStyle}>{formatDate(log.createdAt)}</td>
-                <td style={tdStyle}>{log.syncType}</td>
-                <td style={tdStyle}>{log.status}</td>
-                <td style={tdStyle}>{log.message}</td>
-              </tr>
-            ))}
-            {logs.length === 0 ? (
+      {showUnits ? (
+        <>
+          <div style={{ ...statusCardStyle, display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <button onClick={() => setFilter("all")} style={filter === "all" ? primaryButtonStyle : buttonStyle} type="button">Все</button>
+            <button onClick={() => setFilter("unmapped")} style={filter === "unmapped" ? primaryButtonStyle : buttonStyle} type="button">Не сопоставлено</button>
+            <button onClick={() => setFilter("mapped")} style={filter === "mapped" ? primaryButtonStyle : buttonStyle} type="button">Сопоставлено</button>
+            <button onClick={() => setFilter("hidden")} style={filter === "hidden" ? primaryButtonStyle : buttonStyle} type="button">Скрытые</button>
+          </div>
+
+          <div style={tableWrapStyle}>
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Wialon ID</th>
+                  <th style={thStyle}>Гаражный № Wialon</th>
+                  <th style={thStyle}>Объект Wialon</th>
+                  <th style={thStyle}>Техника сайта</th>
+                  <th style={thStyle}>Скрыть</th>
+                  <th style={thStyle}>Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageUnits.map((unit) => (
+                  <tr key={unit.id}>
+                    <td style={tdStyle}>{unit.id}</td>
+                    <td style={tdStyle}>{displayGarageFromWialonName(unit.name)}</td>
+                    <td style={tdStyle}>{unit.name}</td>
+                    <td style={tdStyle}>
+                      <select
+                        style={selectStyle}
+                        value={unit.vehicleId ?? ""}
+                        onChange={(event) => updateUnitMapping(unit.id, event.target.value ? Number(event.target.value) : null)}
+                      >
+                        <option value="">Не сопоставлено</option>
+                        {vehicleOptions.map((vehicle) => (
+                          <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={tdStyle}>
+                      <input
+                        checked={unit.hidden}
+                        onChange={(event) => updateUnitHidden(unit.id, event.target.checked)}
+                        type="checkbox"
+                      />
+                    </td>
+                    <td style={tdStyle}>
+                      {dirtyIds.has(unit.id)
+                        ? "Не сохранено"
+                        : unit.hidden
+                          ? "Скрыто"
+                          : unit.vehicleId
+                            ? "Сопоставлено"
+                            : "Не сопоставлено"}
+                    </td>
+                  </tr>
+                ))}
+                {filteredUnits.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
+                      Объекты Wialon по выбранному фильтру не найдены.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ ...statusCardStyle, display: "flex", gap: 8, justifyContent: "space-between" }}>
+            <button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} style={buttonStyle} type="button">Назад</button>
+            <div style={{ color: "#475569", fontSize: 13 }}>
+              Страница {page} из {totalPages}. Показано {pageUnits.length} из {filteredUnits.length}.
+            </div>
+            <button disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} style={buttonStyle} type="button">Вперед</button>
+          </div>
+        </>
+      ) : null}
+
+      {showLogs ? (
+        <div style={tableWrapStyle}>
+          <table style={tableStyle}>
+            <thead>
               <tr>
-                <td colSpan={4} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                  Журнал Wialon пока пуст.
-                </td>
+                <th style={thStyle}>Время</th>
+                <th style={thStyle}>Тип</th>
+                <th style={thStyle}>Статус</th>
+                <th style={thStyle}>Сообщение</th>
               </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr key={log.id}>
+                  <td style={tdStyle}>{formatDate(log.createdAt)}</td>
+                  <td style={tdStyle}>{logTypeText(log.syncType)}</td>
+                  <td style={tdStyle}>{logStatusText(log.status)}</td>
+                  <td style={tdStyle}>{log.message}</td>
+                </tr>
+              ))}
+              {logs.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
+                    Журнал Wialon пока пуст.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </div>
   );
 }
