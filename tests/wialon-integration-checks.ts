@@ -44,6 +44,9 @@ assert.match(wialonServiceSource, /logWialonSync/);
 assert.match(wialonMysqlSource, /wialon_units/);
 assert.match(wialonMysqlSource, /wialon_positions/);
 assert.match(wialonMysqlSource, /wialon_sync_logs/);
+assert.doesNotMatch(wialonMysqlSource, /const syncedAt = new Date\(\)\.toISOString\(\)/);
+assert.match(wialonMysqlSource, /VALUES \(\?, \?, \?, \?, \?, CURRENT_TIMESTAMP\(3\)\)/);
+assert.match(wialonMysqlSource, /synced_at = CURRENT_TIMESTAMP\(3\)/);
 assert.match(wialonGuardSource, /canManageUsers/);
 
 for (const tableName of ["wialon_units", "wialon_positions", "wialon_sync_logs"]) {
