@@ -2,7 +2,7 @@ import { createWialonApiError, WialonApiError } from "./errors";
 import type { WialonPosition, WialonUnit } from "./types";
 
 const wialonHost = "https://wialon.fleetbook.kz/wialon/ajax.html";
-const wialonUnitFlags = 1025;
+const wialonUnitFlags = 1281;
 
 type WialonLoginResponse = {
   eid?: string;
