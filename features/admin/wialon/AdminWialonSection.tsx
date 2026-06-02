@@ -156,6 +156,16 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     return map;
   }, [vehicleOptions]);
 
+  const assignedVehicleIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const unit of units) {
+      if (unit.vehicleId !== null) {
+        ids.add(unit.vehicleId);
+      }
+    }
+    return ids;
+  }, [units]);
+
   const latestLog = logs[0] ?? null;
   const persistedStatus = latestLog?.status === "success" ? "ok" : latestLog?.status === "error" ? "error" : "unknown";
   const displayStatus = status === "unknown" ? persistedStatus : status;
@@ -176,6 +186,10 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
 
   const totalPages = Math.max(1, Math.ceil(filteredUnits.length / PAGE_SIZE));
   const pageUnits = filteredUnits.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const getSelectableVehicles = (unit: WialonAdminUnit) => (
+    vehicleOptions.filter((vehicle) => vehicle.id === unit.vehicleId || !assignedVehicleIds.has(vehicle.id))
+  );
 
   const loadStoredSnapshot = async () => {
     const response = await fetch("/api/wialon/units?source=database", {
@@ -441,7 +455,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
                         onChange={(event) => updateUnitMapping(unit.id, event.target.value ? Number(event.target.value) : null)}
                       >
                         <option value="">Не сопоставлено</option>
-                        {vehicleOptions.map((vehicle) => (
+                        {getSelectableVehicles(unit).map((vehicle) => (
                           <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>
                         ))}
                       </select>
