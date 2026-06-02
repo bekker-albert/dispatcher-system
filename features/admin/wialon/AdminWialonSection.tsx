@@ -140,6 +140,14 @@ function hoursSince(value: string | null) {
   return (Date.now() - date.getTime()) / 1000 / 60 / 60;
 }
 
+function sensorText(unit: WialonAdminUnit) {
+  if (unit.uniqueId || unit.phone) {
+    return [unit.uniqueId ? "UID есть" : "UID не отдается API", unit.phone ? "SIM есть" : "SIM не отдается API"].join(" / ");
+  }
+
+  return "UID/SIM не отдаются API";
+}
+
 function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
   const problems: string[] = [];
   const recommendations: string[] = [];
@@ -162,10 +170,8 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
     recommendations.push("обновить список техники из Wialon");
   }
 
-  if (!unit.uniqueId) {
-    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
-    problems.push("UID не получен из API");
-    recommendations.push("проверить поле уникального ID в Wialon API");
+  if (!unit.uniqueId && !unit.phone) {
+    recommendations.push("UID/SIM Wialon API не отдает; для контроля IMEI/SIM использовать карточку техники или ручные поля");
   }
 
   if (unit.hidden) {
@@ -181,10 +187,12 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
     engineHours: unit.vehicleId === null ? "Не проверяется" : "Нужен источник моточасов",
     mileage: unit.vehicleId === null ? "Не проверяется" : "Нужен источник пробега",
     fuel: unit.vehicleId === null ? "Не проверяется" : "Нужен ДУТ/CAN",
-    sensors: [unit.uniqueId ? "UID есть" : "UID не получен", unit.phone ? "SIM есть" : "SIM не указана"].join(" / "),
+    sensors: sensorText(unit),
     status,
     problem: problems.length ? problems.join("; ") : "критичных проблем по связке Wialon не найдено",
-    recommendation: recommendations.length ? Array.from(new Set(recommendations)).join("; ") : "после подключения моточасов, пробега и топлива включить сверку с нормами и сводкой",
+    recommendation: recommendations.length
+      ? Array.from(new Set(recommendations)).join("; ")
+      : "после подключения моточасов, пробега и топлива включить сверку с нормами и сводкой",
   };
 }
 
@@ -505,7 +513,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
           <div style={{ ...statusCardStyle, marginBottom: 10 }}>
             <div style={labelStyle}>Диагностика качества данных Wialon / GPS / ДУТ / CAN</div>
             <div style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>
-              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас проверяется связка Wialon с техникой сайта, UID/SIM и актуальность загрузки. Следующий этап — моточасы, пробег, топливо, ДУТ/CAN и сверка со сводкой.
+              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас проверяется связка Wialon с техникой сайта и актуальность загрузки. UID/SIM являются справочными полями: если API их не отдает, это не считается неисправностью техники.
             </div>
           </div>
           <table style={tableStyle}>
