@@ -110,16 +110,15 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   };
 
   const checkConnection = () => runAction(async () => {
-    const response = await fetch("/api/wialon/units", {
+    const response = await fetch("/api/wialon/units?source=check", {
       headers: { "X-Dispatcher-Request": "same-origin" },
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error ?? "Wialon connection failed");
 
-    setUnits(body.units ?? []);
     setLogs(body.logs ?? []);
     setStatus("ok");
-    setMessage(`Подключение работает. Объектов Wialon: ${(body.units ?? []).length}.`);
+    setMessage(`\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442. \u041e\u0431\u044a\u0435\u043a\u0442\u043e\u0432 Wialon: ${body.unitsCount ?? 0}.`);
   });
 
   const syncUnits = () => runAction(async () => {
@@ -137,7 +136,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     setUnits(body.units ?? []);
     await loadStoredSnapshot();
     setStatus("ok");
-    setMessage(`Техника Wialon загружена: ${(body.units ?? []).length}.`);
+    setMessage(`\u0422\u0435\u0445\u043d\u0438\u043a\u0430 Wialon \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u0430: ${(body.units ?? []).length}.`);
   });
 
   const syncPositions = () => runAction(async () => {
@@ -154,7 +153,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
 
     await loadStoredSnapshot();
     setStatus("ok");
-    setMessage(`Координаты обновлены: ${body.result?.insertedPositionsCount ?? 0}.`);
+    setMessage(`\u041a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u044b \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u044b: ${body.result?.insertedPositionsCount ?? 0}.`);
   });
 
   const saveMappings = () => runAction(async () => {
@@ -179,7 +178,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     setUnits(body.units ?? []);
     await loadStoredSnapshot();
     setStatus("ok");
-    setMessage("Сопоставления Wialon сохранены.");
+    setMessage("\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u0438\u044f Wialon \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b.");
   });
 
   const updateUnitMapping = (id: number, vehicleId: number | null) => {
@@ -199,28 +198,28 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       <div style={headerStyle}>
         <div>
           <h2 style={titleStyle}>Wialon Local</h2>
-          <div style={subtitleStyle}>Backend-only интеграция с Wialon Local. Токен и сессия не передаются во frontend.</div>
+          <div style={subtitleStyle}>Backend-only \u0438\u043d\u0442\u0435\u0433\u0440\u0430\u0446\u0438\u044f \u0441 Wialon Local. \u0422\u043e\u043a\u0435\u043d \u0438 \u0441\u0435\u0441\u0441\u0438\u044f \u043d\u0435 \u043f\u0435\u0440\u0435\u0434\u0430\u044e\u0442\u0441\u044f \u0432\u043e frontend.</div>
         </div>
         <div style={actionsStyle}>
-          <button disabled={loading} onClick={checkConnection} style={buttonStyle} type="button">Проверить подключение</button>
-          <button disabled={loading} onClick={syncUnits} style={primaryButtonStyle} type="button">Загрузить технику</button>
-          <button disabled={loading || units.length === 0} onClick={saveMappings} style={buttonStyle} type="button">Сохранить сопоставления</button>
-          <button disabled={loading || units.length === 0} onClick={syncPositions} style={buttonStyle} type="button">Обновить координаты</button>
+          <button disabled={loading} onClick={checkConnection} style={buttonStyle} type="button">\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435</button>
+          <button disabled={loading} onClick={syncUnits} style={primaryButtonStyle} type="button">\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0442\u0435\u0445\u043d\u0438\u043a\u0443</button>
+          <button disabled={loading || units.length === 0} onClick={saveMappings} style={buttonStyle} type="button">\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0441\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u0438\u044f</button>
+          <button disabled={loading || units.length === 0} onClick={syncPositions} style={buttonStyle} type="button">\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u043a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u044b</button>
         </div>
       </div>
 
       <div style={statusGridStyle}>
         <div style={statusCardStyle}>
-          <div style={labelStyle}>Статус подключения</div>
-          <div style={valueStyle}>{status === "ok" ? "Подключено" : status === "error" ? "Ошибка" : "Не проверено"}</div>
+          <div style={labelStyle}>\u0421\u0442\u0430\u0442\u0443\u0441 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f</div>
+          <div style={valueStyle}>{status === "ok" ? "\u041f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u043e" : status === "error" ? "\u041e\u0448\u0438\u0431\u043a\u0430" : "\u041d\u0435 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043e"}</div>
         </div>
         <div style={statusCardStyle}>
-          <div style={labelStyle}>Объекты Wialon</div>
+          <div style={labelStyle}>\u041e\u0431\u044a\u0435\u043a\u0442\u044b Wialon</div>
           <div style={valueStyle}>{units.length}</div>
         </div>
         <div style={statusCardStyle}>
-          <div style={labelStyle}>Последняя синхронизация</div>
-          <div style={valueStyle}>{formatDate(latestLog?.finishedAt ?? latestLog?.createdAt ?? null) || "Нет данных"}</div>
+          <div style={labelStyle}>\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u044f\u044f \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044f</div>
+          <div style={valueStyle}>{formatDate(latestLog?.finishedAt ?? latestLog?.createdAt ?? null) || "\u041d\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445"}</div>
         </div>
       </div>
 
@@ -231,11 +230,11 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
           <thead>
             <tr>
               <th style={thStyle}>Wialon ID</th>
-              <th style={thStyle}>Объект</th>
+              <th style={thStyle}>\u041e\u0431\u044a\u0435\u043a\u0442</th>
               <th style={thStyle}>UID</th>
-              <th style={thStyle}>Техника сайта</th>
-              <th style={thStyle}>Скрыть</th>
-              <th style={thStyle}>Синхронизация</th>
+              <th style={thStyle}>\u0422\u0435\u0445\u043d\u0438\u043a\u0430 \u0441\u0430\u0439\u0442\u0430</th>
+              <th style={thStyle}>\u0421\u043a\u0440\u044b\u0442\u044c</th>
+              <th style={thStyle}>\u0421\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044f</th>
             </tr>
           </thead>
           <tbody>
@@ -250,7 +249,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
                     value={unit.vehicleId ?? ""}
                     onChange={(event) => updateUnitMapping(unit.id, event.target.value ? Number(event.target.value) : null)}
                   >
-                    <option value="">Не сопоставлено</option>
+                    <option value="">\u041d\u0435 \u0441\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u043e</option>
                     {vehicleOptions.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>{vehicleLabel(vehicle)}</option>
                     ))}
@@ -269,7 +268,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
             {units.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                  Объекты Wialon еще не загружены.
+                  \u041e\u0431\u044a\u0435\u043a\u0442\u044b Wialon \u0435\u0449\u0435 \u043d\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u044b.
                 </td>
               </tr>
             ) : null}
@@ -281,10 +280,10 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={thStyle}>Время</th>
-              <th style={thStyle}>Тип</th>
-              <th style={thStyle}>Статус</th>
-              <th style={thStyle}>Сообщение</th>
+              <th style={thStyle}>\u0412\u0440\u0435\u043c\u044f</th>
+              <th style={thStyle}>\u0422\u0438\u043f</th>
+              <th style={thStyle}>\u0421\u0442\u0430\u0442\u0443\u0441</th>
+              <th style={thStyle}>\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435</th>
             </tr>
           </thead>
           <tbody>
@@ -299,7 +298,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
             {logs.length === 0 ? (
               <tr>
                 <td colSpan={4} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                  Журнал Wialon пока пуст.
+                  \u0416\u0443\u0440\u043d\u0430\u043b Wialon \u043f\u043e\u043a\u0430 \u043f\u0443\u0441\u0442.
                 </td>
               </tr>
             ) : null}
