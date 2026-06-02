@@ -97,13 +97,13 @@ export async function upsertWialonUnits(units: WialonUnit[]) {
       await execute(
         `INSERT INTO wialon_units
           (wialon_unit_id, name, unique_id, phone, raw, synced_at)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3))
+        VALUES (?, ?, ?, ?, ?, NOW())
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           unique_id = VALUES(unique_id),
           phone = VALUES(phone),
           raw = VALUES(raw),
-          synced_at = CURRENT_TIMESTAMP(3),
+          synced_at = NOW(),
           updated_at = CURRENT_TIMESTAMP(3)`,
         [unit.id, unit.name, unit.uniqueId || null, unit.phone || null, unit.raw],
       );
