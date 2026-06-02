@@ -97,7 +97,7 @@ export async function syncWialonUnits(mappings: WialonUnitMappingInput[] = [], m
 
   try {
     const storedUnits = mappingsOnly
-      ? await applyWialonUnitMappings(mappings)
+      ? await listStoredWialonUnits()
       : await upsertWialonUnits(await searchWialonUnits());
     const result = mappings.length ? await applyWialonUnitMappings(mappings) : storedUnits;
 
