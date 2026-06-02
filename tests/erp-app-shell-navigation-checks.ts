@@ -81,6 +81,7 @@ for (const id of [
   "fleet-placement",
   "admin-users",
   "admin-database",
+  "admin-wialon",
 ]) {
   assert.ok(allItems.some((item) => item.id === id), `${id} must stay in ERP navigation.`);
 }
@@ -146,6 +147,12 @@ assert.equal(adminDatabaseItem?.status, "production");
 assert.equal(adminDatabaseItem?.target?.topTab, "admin");
 assert.equal(adminDatabaseItem?.target?.adminSection, "database");
 assert.match(adminNavigationSource, /value: "database"/);
+
+const adminWialonItem = allItems.find((item) => item.id === "admin-wialon");
+assert.equal(adminWialonItem?.status, "preview");
+assert.equal(adminWialonItem?.target?.topTab, "admin");
+assert.equal(adminWialonItem?.target?.adminSection, "wialon");
+assert.match(adminNavigationSource, /value: "wialon"/);
 
 for (const item of allItems.filter((candidate) => candidate.status === "planned")) {
   assert.notEqual(item.status, "production");
@@ -270,9 +277,9 @@ for (const stateName of [
 
 const routeFiles = walkRouteFiles(resolve(root, "app", "api")).map(toRepoPath).sort();
 assert.deepEqual(
-  routeFiles.filter((routePath) => !routePath.startsWith("app/api/auth/") && routePath !== "app/api/database/route.ts"),
+  routeFiles.filter((routePath) => !routePath.startsWith("app/api/auth/") && !routePath.startsWith("app/api/wialon/") && routePath !== "app/api/database/route.ts"),
   [],
-  "ERP shell sprint must not create app/api/<module> routes.",
+  "ERP shell sprint must not create app/api/<module> routes except the explicit Wialon backend integration.",
 );
 
 assert.ok(existsSync(resolve(root, "features", "app-shell", "navigationModel.ts")));

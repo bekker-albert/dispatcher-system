@@ -21,6 +21,7 @@ import {
   AdminLogsSection,
   AdminNavigationSection,
   AdminStructureSection,
+  AdminWialonSection,
 } from "@/features/app/lazySections";
 import { UserProfileSection } from "@/features/users/UserProfileSection";
 import { defaultUserCard } from "@/lib/domain/reference/defaults";
@@ -73,6 +74,7 @@ export function useAppAdminScreenProps({
         <AdminVehiclesPrimaryContent appState={appState} models={models} runtime={runtime} />
       )}
       {adminSection === "database" && <AdminDatabaseSection {...adminDatabaseProps} />}
+      {adminSection === "wialon" && <AdminWialonSection vehicleRows={appState.vehicleRows} />}
       {adminSection === "logs" && (
         <AdminLogsSection {...adminLogsProps} />
       )}

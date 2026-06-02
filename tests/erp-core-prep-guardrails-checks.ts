@@ -82,7 +82,7 @@ for (const stateName of forbiddenBundleStateNames) {
   );
 }
 
-const allowedTopLevelApiFolders = new Set(["auth", "database"]);
+const allowedTopLevelApiFolders = new Set(["auth", "database", "wialon"]);
 const topLevelApiFolders = readdirSync(appApiRoot)
   .filter((entryName) => statSync(join(appApiRoot, entryName)).isDirectory())
   .sort();
@@ -94,9 +94,9 @@ assert.deepEqual(
 
 const routeFiles = walkRouteFiles(appApiRoot).map(toRepoPath).sort();
 assert.deepEqual(
-  routeFiles.filter((routePath) => !routePath.startsWith("app/api/auth/") && routePath !== "app/api/database/route.ts"),
+  routeFiles.filter((routePath) => !routePath.startsWith("app/api/auth/") && !routePath.startsWith("app/api/wialon/") && routePath !== "app/api/database/route.ts"),
   [],
-  "Only auth routes and the shared app/api/database/route.ts are allowed.",
+  "Only auth routes, the shared app/api/database/route.ts, and explicit Wialon backend integration routes are allowed.",
 );
 
 assert.match(schemaDefinitionsSource, /CREATE TABLE IF NOT EXISTS vehicles/);
@@ -135,6 +135,7 @@ assert.doesNotMatch(draftMigrationsDoc, /DROP TABLE IF EXISTS vehicles\b/i);
 assert.doesNotMatch(schemaDefinitionsSource, /ERP core draft migration/);
 
 assert.match(adminNavigationSource, /value: "database"/);
+assert.match(adminNavigationSource, /value: "wialon"/);
 
 assert.ok(existsSync(resolve(root, "scripts/analyze-vehicle-core-migration.mjs")));
 assert.match(analyzerSource, /SELECT[\s\S]*FROM vehicles/i);

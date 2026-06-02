@@ -160,6 +160,15 @@ export const erpNavigationModel: NavigationGroup[] = [
       { id: "admin-sections", label: "Участки", status: "planned", target: { topTab: "admin", adminSection: "structure" } },
       { id: "admin-directories", label: "Справочники", status: "preview", target: { topTab: "admin", adminSection: "structure" } },
       { id: "admin-database", label: "База данных", status: "production", target: { topTab: "admin", adminSection: "database" } },
+      {
+        id: "admin-integrations",
+        label: "Интеграции",
+        status: "preview",
+        target: { topTab: "admin", adminSection: "wialon" },
+        children: [
+          { id: "admin-wialon", label: "Wialon Local", status: "preview", target: { topTab: "admin", adminSection: "wialon" } },
+        ],
+      },
       { id: "admin-logs", label: "Журнал", status: "production", target: { topTab: "admin", adminSection: "logs" } },
       { id: "admin-settings", label: "Настройки", status: "preview", target: { topTab: "admin", adminSection: "navigation" } },
     ],

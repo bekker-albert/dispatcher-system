@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createAuthMutationRejectedResponse, isAuthMutationAllowed } from "@/lib/server/auth/request-guard";
 import { getAuthSessionFromRequest } from "@/lib/server/auth/session";
 import { decideRegistrationRequest, listRegistrationRequests } from "@/lib/server/auth/registration";
+import { mysqlConfigured } from "@/lib/server/mysql/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,10 @@ export async function GET(request: Request) {
   const session = await getAuthSessionFromRequest(request);
   if (!session || !requireUserManager(session)) {
     return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
+  }
+
+  if (!mysqlConfigured()) {
+    return NextResponse.json({ requests: [] });
   }
 
   return NextResponse.json({ requests: await listRegistrationRequests({ status: "pending" }) });

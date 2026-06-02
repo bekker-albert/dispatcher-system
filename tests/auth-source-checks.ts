@@ -185,6 +185,8 @@ assert.match(authSchemaSource, /authExecute/);
 assert.match(authSources, /createRegistrationRequest/);
 assert.match(authSources, /decideRegistrationRequest/);
 assert.match(authSources, /listRegistrationRequests\(\{ status: "pending" \}\)/);
+assert.match(authSources, /mysqlConfigured\(\)/);
+assert.match(authSources, /return NextResponse\.json\(\{ requests: \[\] \}\)/);
 assert.match(authSources, /WHERE status = \?/);
 assert.match(authSources, /processedRegistrationRequestLogRetentionDays = 45/);
 assert.match(authSources, /DELETE FROM auth_registration_requests/);

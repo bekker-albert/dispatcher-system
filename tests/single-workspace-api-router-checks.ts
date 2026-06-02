@@ -9,7 +9,7 @@ const appApiRoot = resolve(root, "app", "api");
 const databaseRoutePath = resolve(appApiRoot, "database", "route.ts");
 const workspacesDoc = readFileSync(resolve(root, "docs", "WORKSPACES_ARCHITECTURE.md"), "utf8");
 
-const allowedTopLevelApiFolders = new Set(["auth", "database"]);
+const allowedTopLevelApiFolders = new Set(["auth", "database", "wialon"]);
 const forbiddenWorkspaceApiSegments = new Set([
   "ai-assistant",
   "admin",
@@ -60,6 +60,7 @@ const routeFiles = walkRouteFiles(appApiRoot).map(toRepoPath).sort();
 const workspaceRouteViolations = routeFiles.filter((routePath) => {
   const [, , firstSegment] = routePath.split("/");
   if (firstSegment === "auth") return false;
+  if (firstSegment === "wialon") return false;
   if (routePath === "app/api/database/route.ts") return false;
   return true;
 });
@@ -73,6 +74,7 @@ assert.deepEqual(
 const forbiddenSegmentRouteViolations = routeFiles.filter((routePath) => {
   const routeSegments = routePath.split("/").slice(2, -1);
   if (routeSegments[0] === "auth") return false;
+  if (routeSegments[0] === "wialon") return false;
   return routeSegments.some((segment) => forbiddenWorkspaceApiSegments.has(segment));
 });
 

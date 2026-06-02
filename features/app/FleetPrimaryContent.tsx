@@ -78,7 +78,13 @@ export function FleetPrimaryContent({ appState, models, runtime, fleetTab = "dir
   ]);
 
   if (fleetTab === "placement") {
-    return <FleetPlacementSection vehicleRows={appState.vehicleRows} workDate={appState.reportDate} />;
+    return (
+      <FleetPlacementSection
+        vehicleRows={models.filteredVehicleRows}
+        ptoPlanRows={appState.ptoPlanRows}
+        workDate={appState.reportDate}
+      />
+    );
   }
 
   if (showEditableDirectory) {

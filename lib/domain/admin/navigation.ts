@@ -1,6 +1,6 @@
 export type StructureSection = "scheme" | "elements" | "links" | "roles" | "schedule";
 
-export type AdminSection = "navigation" | "structure" | "ai" | "access" | "vehicles" | "reports" | "users" | "logs" | "database";
+export type AdminSection = "navigation" | "structure" | "ai" | "access" | "vehicles" | "reports" | "users" | "logs" | "database" | "wialon";
 
 export type AdminReportCustomerSettingsTab = "order" | "display" | "rename" | "summary";
 
@@ -14,6 +14,7 @@ export const adminSectionTabs: Array<{ value: AdminSection; label: string }> = [
   { value: "users", label: "Профиль" },
   { value: "logs", label: "Логи" },
   { value: "database", label: "База" },
+  { value: "wialon", label: "Wialon" },
 ];
 
 export const structureSectionTabs: Array<{ value: StructureSection; label: string }> = [

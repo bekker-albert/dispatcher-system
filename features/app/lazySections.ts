@@ -28,6 +28,10 @@ export const AdminAccessMatrixSection = dynamic(() => import("../admin/access/Ad
   ssr: false,
 });
 
+export const AdminWialonSection = dynamic(() => import("../admin/wialon/AdminWialonSection").then((module) => module.AdminWialonSection), {
+  ssr: false,
+});
+
 export const DispatchSection = dynamic(() => import("../dispatch/DispatchSection"), {
   ssr: false,
 });

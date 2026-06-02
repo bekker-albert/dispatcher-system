@@ -135,6 +135,56 @@ export const schemaStatements = [
     PRIMARY KEY (id),
     KEY audit_logs_created_idx (created_at)
   ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS wialon_units (
+    wialon_unit_id BIGINT NOT NULL,
+    vehicle_id BIGINT NULL,
+    name VARCHAR(255) NOT NULL,
+    unique_id VARCHAR(255) NULL,
+    phone VARCHAR(255) NULL,
+    raw JSON NULL,
+    hidden TINYINT(1) NOT NULL DEFAULT 0,
+    synced_at TIMESTAMP(3) NULL,
+    created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (wialon_unit_id),
+    KEY wialon_units_vehicle_idx (vehicle_id),
+    KEY wialon_units_hidden_idx (hidden),
+    KEY wialon_units_synced_idx (synced_at),
+    KEY wialon_units_updated_idx (updated_at)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS wialon_positions (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    wialon_unit_id BIGINT NOT NULL,
+    latitude DECIMAL(12, 8) NULL,
+    longitude DECIMAL(12, 8) NULL,
+    speed DECIMAL(12, 3) NULL,
+    course DECIMAL(12, 3) NULL,
+    altitude DECIMAL(12, 3) NULL,
+    position_time DATETIME(3) NULL,
+    raw JSON NULL,
+    created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    KEY wialon_positions_unit_idx (wialon_unit_id),
+    KEY wialon_positions_time_idx (position_time),
+    KEY wialon_positions_unit_time_idx (wialon_unit_id, position_time)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS wialon_sync_logs (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    sync_type VARCHAR(64) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    message TEXT NULL,
+    details JSON NULL,
+    started_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    finished_at TIMESTAMP(3) NULL,
+    created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    KEY wialon_sync_logs_type_idx (sync_type),
+    KEY wialon_sync_logs_status_idx (status),
+    KEY wialon_sync_logs_created_idx (created_at)
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 ];
 
 export const schemaMigrations: MysqlSchemaMigration[] = [
