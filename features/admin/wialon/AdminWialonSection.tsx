@@ -164,8 +164,8 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
 
   if (!unit.uniqueId) {
     status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
-    problems.push("нет UID терминала");
-    recommendations.push("проверить карточку объекта Wialon и терминал GPS");
+    problems.push("UID не получен из API");
+    recommendations.push("проверить поле уникального ID в Wialon API");
   }
 
   if (unit.hidden) {
@@ -181,7 +181,7 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
     engineHours: unit.vehicleId === null ? "Не проверяется" : "Нужен источник моточасов",
     mileage: unit.vehicleId === null ? "Не проверяется" : "Нужен источник пробега",
     fuel: unit.vehicleId === null ? "Не проверяется" : "Нужен ДУТ/CAN",
-    sensors: [unit.uniqueId ? "UID есть" : "Нет UID", unit.phone ? "SIM есть" : "SIM не указана"].join(" / "),
+    sensors: [unit.uniqueId ? "UID есть" : "UID не получен", unit.phone ? "SIM есть" : "SIM не указана"].join(" / "),
     status,
     problem: problems.length ? problems.join("; ") : "критичных проблем по связке Wialon не найдено",
     recommendation: recommendations.length ? Array.from(new Set(recommendations)).join("; ") : "после подключения моточасов, пробега и топлива включить сверку с нормами и сводкой",
