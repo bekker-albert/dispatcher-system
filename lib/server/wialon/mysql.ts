@@ -92,22 +92,20 @@ export async function getStoredWialonUnit(id: number) {
 }
 
 export async function upsertWialonUnits(units: WialonUnit[]) {
-  const syncedAt = new Date().toISOString();
-
   await dbTransaction(async (execute) => {
     for (const unit of units) {
       await execute(
         `INSERT INTO wialon_units
           (wialon_unit_id, name, unique_id, phone, raw, synced_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3))
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           unique_id = VALUES(unique_id),
           phone = VALUES(phone),
           raw = VALUES(raw),
-          synced_at = VALUES(synced_at),
+          synced_at = CURRENT_TIMESTAMP(3),
           updated_at = CURRENT_TIMESTAMP(3)`,
-        [unit.id, unit.name, unit.uniqueId || null, unit.phone || null, unit.raw, syncedAt],
+        [unit.id, unit.name, unit.uniqueId || null, unit.phone || null, unit.raw],
       );
     }
   });
