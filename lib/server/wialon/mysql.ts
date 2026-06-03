@@ -1,7 +1,7 @@
 import type { RowDataPacket } from "mysql2/promise";
 
 import { dbExecute, dbRows, dbTransaction, type DbExecutor } from "@/lib/server/mysql/pool";
-import type { StoredWialonUnit, WialonPosition, WialonSyncLog, WialonUnit, WialonUnitMappingInput } from "./types";
+import type { StoredWialonUnit, WialonPosition, WialonSyncLog, WialonTelemetry, WialonUnit, WialonUnitMappingInput } from "./types";
 
 type WialonUnitRow = RowDataPacket & {
   wialon_unit_id: number;
@@ -45,16 +45,93 @@ function parseJsonField(value: unknown) {
   return value;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && Number.isFinite(Number(value))) return Number(value);
+  return null;
+}
+
+function asBoolean(value: unknown) {
+  const numberValue = asNumber(value);
+  if (numberValue !== null) return numberValue > 0;
+  if (typeof value === "boolean") return value;
+  return null;
+}
+
+function unixTimeToIso(value: unknown) {
+  const seconds = asNumber(value);
+  return seconds === null ? null : new Date(seconds * 1000).toISOString();
+}
+
+function paramValue(params: Record<string, unknown>, key: string) {
+  const param = asRecord(params[key]);
+  return Object.prototype.hasOwnProperty.call(param, "v") ? param.v : undefined;
+}
+
+function firstNumber(...values: unknown[]) {
+  for (const value of values) {
+    const numberValue = asNumber(value);
+    if (numberValue !== null) return numberValue;
+  }
+  return null;
+}
+
+function normalizeStoredPosition(unitRaw: Record<string, unknown>): WialonPosition | null {
+  const position = asRecord(unitRaw.pos);
+  if (!Object.keys(position).length) return null;
+
+  return {
+    latitude: asNumber(position.y),
+    longitude: asNumber(position.x),
+    speed: asNumber(position.s),
+    course: asNumber(position.c),
+    altitude: asNumber(position.z),
+    time: unixTimeToIso(position.t),
+    raw: position,
+  };
+}
+
+function normalizeStoredTelemetry(unitRaw: Record<string, unknown>, position: WialonPosition | null): WialonTelemetry {
+  const lastMessage = asRecord(unitRaw.lmsg);
+  const lastMessagePosition = asRecord(lastMessage.pos);
+  const lastMessageParams = asRecord(lastMessage.p);
+  const params = asRecord(unitRaw.prms);
+
+  return {
+    lastSignalAt: unixTimeToIso(lastMessage.t ?? position?.time),
+    latitude: firstNumber(position?.latitude, lastMessagePosition.y),
+    longitude: firstNumber(position?.longitude, lastMessagePosition.x),
+    speed: firstNumber(position?.speed, lastMessagePosition.s, lastMessageParams.can_speed, paramValue(params, "can_speed")),
+    satellites: firstNumber(position?.raw.sc, lastMessagePosition.sc, lastMessageParams.sats, paramValue(params, "sats")),
+    mileage: firstNumber(lastMessageParams.mileage, paramValue(params, "mileage"), unitRaw.cnm, unitRaw.cnm_km),
+    canMileage: firstNumber(lastMessageParams.can_mileage, paramValue(params, "can_mileage")),
+    engineHours: firstNumber(lastMessageParams.engine_hours, paramValue(params, "engine_hours"), unitRaw.cneh),
+    engineOn: asBoolean(lastMessageParams["engine operation"] ?? paramValue(params, "engine operation") ?? paramValue(params, "in1")),
+    engineRpm: firstNumber(lastMessageParams.engine_rpm, paramValue(params, "engine_rpm")),
+    fuelLevel: firstNumber(lastMessageParams.can_fuel_vlm, lastMessageParams["fuel level"], paramValue(params, "can_fuel_vlm"), paramValue(params, "fuel level")),
+    externalVoltage: firstNumber(lastMessageParams.pwr_ext, lastMessageParams.voltage, paramValue(params, "pwr_ext"), paramValue(params, "voltage")),
+    internalVoltage: firstNumber(lastMessageParams.pwr_int, paramValue(params, "pwr_int")),
+    gsmLevel: firstNumber(lastMessageParams.gsm, paramValue(params, "gsm")),
+    validNavigation: asBoolean(lastMessageParams.valid_nav ?? paramValue(params, "valid_nav")),
+  };
+}
+
 function toStoredWialonUnit(row: WialonUnitRow): StoredWialonUnit {
   const raw = parseJsonField(row.raw);
   const unitRaw = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  const position = normalizeStoredPosition(unitRaw);
 
   return {
     id: Number(row.wialon_unit_id),
     name: row.name,
     uniqueId: row.unique_id ?? "",
     phone: row.phone ?? "",
-    position: null,
+    position,
+    telemetry: normalizeStoredTelemetry(unitRaw, position),
     raw: unitRaw,
     vehicleId: row.vehicle_id,
     hidden: Boolean(row.hidden),
