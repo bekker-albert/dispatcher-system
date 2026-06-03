@@ -1,6 +1,25 @@
 import type { CSSProperties } from "react";
 
-export const adminVehicleColumnWidths = [46, 145, 190, 100, 120, 112, 96, 116, 96, 170, 180, 34];
+export const adminVehicleColumnWidths = [
+  46,
+  145,
+  190,
+  100,
+  120,
+  112,
+  96,
+  116,
+  80,
+  80,
+  80,
+  130,
+  130,
+  120,
+  96,
+  170,
+  180,
+  34,
+];
 export const adminVehicleVirtualRowHeight = 30;
 export const adminVehicleVirtualOverscanRows = 8;
 export const adminVehicleVirtualizationThreshold = 80;
@@ -16,7 +35,7 @@ export const adminVehicleTableScrollStyle: CSSProperties = {
 
 export const adminVehicleTableStyle: CSSProperties = {
   width: "100%",
-  minWidth: 1575,
+  minWidth: 2125,
   borderCollapse: "collapse",
   tableLayout: "fixed",
   fontSize: 12,
