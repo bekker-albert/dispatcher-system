@@ -1,3 +1,5 @@
+export type WialonTelemetryTrust = "trusted" | "diagnostic" | "not-configured";
+
 export type WialonTelemetry = {
   lastSignalAt: string | null;
   latitude: number | null;
@@ -5,12 +7,21 @@ export type WialonTelemetry = {
   speed: number | null;
   satellites: number | null;
   mileage: number | null;
+  mileageSource: string | null;
+  mileageTrust: WialonTelemetryTrust;
   canMileage: number | null;
+  canMileageSource: string | null;
+  canMileageTrust: WialonTelemetryTrust;
   engineHours: number | null;
+  engineHoursSource: string | null;
+  engineHoursTrust: WialonTelemetryTrust;
   engineOn: boolean | null;
   engineRpm: number | null;
   fuelLevel: number | null;
   fuelLevelSource: string | null;
+  fuelLevelTrust: WialonTelemetryTrust;
+  rawFuelLevel: number | null;
+  rawFuelLevelSource: string | null;
   externalVoltage: number | null;
   internalVoltage: number | null;
   gsmLevel: number | null;
