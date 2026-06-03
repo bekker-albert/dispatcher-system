@@ -20,6 +20,8 @@ export type WialonTelemetry = {
   fuelLevel: number | null;
   fuelLevelSource: string | null;
   fuelLevelTrust: WialonTelemetryTrust;
+  canFuelLevel: number | null;
+  canFuelLevelSource: string | null;
   rawFuelLevel: number | null;
   rawFuelLevelSource: string | null;
   externalVoltage: number | null;
