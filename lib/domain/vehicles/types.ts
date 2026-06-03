@@ -9,6 +9,12 @@ export type VehicleRow = {
   equipmentType: string;
   manufactureYear: string;
   fuelCardNumber?: string;
+  gpsInstalled?: string;
+  dutInstalled?: string;
+  canInstalled?: string;
+  mainMileageSource?: string;
+  mainFuelSource?: string;
+  mainEngineHoursSource?: string;
   fuelNormWinter: number;
   fuelNormSummer: number;
   fuelCalcType: "Моточасы" | "Пробег";
