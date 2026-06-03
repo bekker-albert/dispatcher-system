@@ -1,8 +1,8 @@
 import { createWialonApiError, WialonApiError } from "./errors";
-import type { WialonPosition, WialonUnit } from "./types";
+import type { WialonPosition, WialonTelemetry, WialonUnit } from "./types";
 
 const wialonHost = "https://wialon.fleetbook.kz/wialon/ajax.html";
-const wialonUnitFlags = 1281;
+const wialonUnitFlags = 4194303;
 
 type WialonLoginResponse = {
   eid?: string;
@@ -39,6 +39,13 @@ function asNumber(value: unknown) {
   return null;
 }
 
+function asBoolean(value: unknown) {
+  const numberValue = asNumber(value);
+  if (numberValue !== null) return numberValue > 0;
+  if (typeof value === "boolean") return value;
+  return null;
+}
+
 function asString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -46,6 +53,19 @@ function asString(value: unknown) {
 function unixTimeToIso(value: unknown) {
   const seconds = asNumber(value);
   return seconds === null ? null : new Date(seconds * 1000).toISOString();
+}
+
+function paramValue(params: Record<string, unknown>, key: string) {
+  const param = asRecord(params[key]);
+  return Object.prototype.hasOwnProperty.call(param, "v") ? param.v : undefined;
+}
+
+function firstNumber(...values: unknown[]) {
+  for (const value of values) {
+    const numberValue = asNumber(value);
+    if (numberValue !== null) return numberValue;
+  }
+  return null;
 }
 
 function normalizeWialonPosition(rawPosition: unknown): WialonPosition | null {
@@ -63,6 +83,31 @@ function normalizeWialonPosition(rawPosition: unknown): WialonPosition | null {
   };
 }
 
+function normalizeWialonTelemetry(unit: Record<string, unknown>, position: WialonPosition | null): WialonTelemetry {
+  const lastMessage = asRecord(unit.lmsg);
+  const lastMessagePosition = asRecord(lastMessage.pos);
+  const lastMessageParams = asRecord(lastMessage.p);
+  const params = asRecord(unit.prms);
+
+  return {
+    lastSignalAt: unixTimeToIso(lastMessage.t ?? position?.time),
+    latitude: firstNumber(position?.latitude, lastMessagePosition.y),
+    longitude: firstNumber(position?.longitude, lastMessagePosition.x),
+    speed: firstNumber(position?.speed, lastMessagePosition.s, lastMessageParams.can_speed, paramValue(params, "can_speed")),
+    satellites: firstNumber(position?.raw.sc, lastMessagePosition.sc, lastMessageParams.sats, paramValue(params, "sats")),
+    mileage: firstNumber(lastMessageParams.mileage, paramValue(params, "mileage"), unit.cnm, unit.cnm_km),
+    canMileage: firstNumber(lastMessageParams.can_mileage, paramValue(params, "can_mileage")),
+    engineHours: firstNumber(lastMessageParams.engine_hours, paramValue(params, "engine_hours"), unit.cneh),
+    engineOn: asBoolean(lastMessageParams["engine operation"] ?? paramValue(params, "engine operation") ?? paramValue(params, "in1")),
+    engineRpm: firstNumber(lastMessageParams.engine_rpm, paramValue(params, "engine_rpm")),
+    fuelLevel: firstNumber(lastMessageParams.can_fuel_vlm, lastMessageParams["fuel level"], paramValue(params, "can_fuel_vlm"), paramValue(params, "fuel level")),
+    externalVoltage: firstNumber(lastMessageParams.pwr_ext, lastMessageParams.voltage, paramValue(params, "pwr_ext"), paramValue(params, "voltage")),
+    internalVoltage: firstNumber(lastMessageParams.pwr_int, paramValue(params, "pwr_int")),
+    gsmLevel: firstNumber(lastMessageParams.gsm, paramValue(params, "gsm")),
+    validNavigation: asBoolean(lastMessageParams.valid_nav ?? paramValue(params, "valid_nav")),
+  };
+}
+
 function normalizeWialonUnit(rawUnit: unknown): WialonUnit {
   const unit = asRecord(rawUnit);
   const id = asNumber(unit.id);
@@ -71,13 +116,15 @@ function normalizeWialonUnit(rawUnit: unknown): WialonUnit {
   }
 
   const uniqueId = asString(unit.uid || unit.hw || unit.ph);
+  const position = normalizeWialonPosition(unit.pos);
 
   return {
     id,
     name: asString(unit.nm),
     uniqueId,
     phone: asString(unit.ph),
-    position: normalizeWialonPosition(unit.pos),
+    position,
+    telemetry: normalizeWialonTelemetry(unit, position),
     raw: unit,
   };
 }
