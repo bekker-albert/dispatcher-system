@@ -1,9 +1,28 @@
+export type WialonTelemetry = {
+  lastSignalAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  speed: number | null;
+  satellites: number | null;
+  mileage: number | null;
+  canMileage: number | null;
+  engineHours: number | null;
+  engineOn: boolean | null;
+  engineRpm: number | null;
+  fuelLevel: number | null;
+  externalVoltage: number | null;
+  internalVoltage: number | null;
+  gsmLevel: number | null;
+  validNavigation: boolean | null;
+};
+
 export type WialonUnit = {
   id: number;
   name: string;
   uniqueId: string;
   phone: string;
   position: WialonPosition | null;
+  telemetry: WialonTelemetry;
   raw: Record<string, unknown>;
 };
 
