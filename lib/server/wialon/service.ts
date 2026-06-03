@@ -10,7 +10,7 @@ import {
   listWialonSyncLogs,
   upsertWialonUnits,
 } from "./mysql";
-import type { WialonUnitMappingInput } from "./types";
+import type { WialonUnit, WialonUnitMappingInput } from "./types";
 
 function startedAtNow() {
   return new Date().toISOString();
@@ -130,30 +130,64 @@ export async function syncWialonUnits(mappings: WialonUnitMappingInput[] = [], m
 
 export async function syncWialonPositions() {
   const startedAt = startedAtNow();
+  const storedUnits = await listVisibleStoredWialonUnits();
+  const units: WialonUnit[] = [];
+  const failedUnits: Array<{ id: number; name: string; error: string; details: unknown }> = [];
+  const unitsWithoutPosition: Array<{ id: number; name: string; reason: string }> = [];
+
+  for (const storedUnit of storedUnits) {
+    try {
+      const liveUnit = await searchWialonUnit(storedUnit.id);
+      units.push(liveUnit);
+
+      if (!liveUnit.position) {
+        unitsWithoutPosition.push({
+          id: storedUnit.id,
+          name: storedUnit.name,
+          reason: "Wialon returned the unit without coordinates",
+        });
+      }
+    } catch (error) {
+      const formatted = formatWialonError(error);
+      failedUnits.push({
+        id: storedUnit.id,
+        name: storedUnit.name,
+        error: formatted.error,
+        details: formatted,
+      });
+    }
+  }
 
   try {
-    const storedUnits = await listVisibleStoredWialonUnits();
-    const units = [];
-
-    for (const unit of storedUnits) {
-      units.push(await searchWialonUnit(unit.id));
-    }
-
     const inserted = await insertWialonPositions(units);
+    const hasProblems = failedUnits.length > 0 || unitsWithoutPosition.length > 0;
+
     await logWialonSync({
       syncType: "position-sync",
-      status: "success",
-      message: `Wialon positions synced: ${inserted}.`,
+      status: failedUnits.length > 0 ? "error" : "success",
+      message: hasProblems
+        ? `Wialon positions synced: ${inserted}. Failed units: ${failedUnits.length}. Units without coordinates: ${unitsWithoutPosition.length}.`
+        : `Wialon positions synced: ${inserted}.`,
       startedAt,
       details: {
         requestedUnitsCount: storedUnits.length,
+        fetchedUnitsCount: units.length,
         insertedPositionsCount: inserted,
+        failedUnitsCount: failedUnits.length,
+        unitsWithoutPositionCount: unitsWithoutPosition.length,
+        failedUnits,
+        unitsWithoutPosition,
       },
     });
 
     return {
       requestedUnitsCount: storedUnits.length,
+      fetchedUnitsCount: units.length,
       insertedPositionsCount: inserted,
+      failedUnitsCount: failedUnits.length,
+      unitsWithoutPositionCount: unitsWithoutPosition.length,
+      failedUnits,
+      unitsWithoutPosition,
     };
   } catch (error) {
     const formatted = formatWialonError(error);
@@ -162,7 +196,15 @@ export async function syncWialonPositions() {
       status: "error",
       message: formatted.error,
       startedAt,
-      details: formatted,
+      details: {
+        ...formatted,
+        requestedUnitsCount: storedUnits.length,
+        fetchedUnitsCount: units.length,
+        failedUnitsCount: failedUnits.length,
+        unitsWithoutPositionCount: unitsWithoutPosition.length,
+        failedUnits,
+        unitsWithoutPosition,
+      },
     });
     throw error;
   }
