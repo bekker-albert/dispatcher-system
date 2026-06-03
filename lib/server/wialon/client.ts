@@ -4,6 +4,31 @@ import type { WialonPosition, WialonTelemetry, WialonUnit } from "./types";
 const wialonHost = "https://wialon.fleetbook.kz/wialon/ajax.html";
 const wialonUnitFlags = 4194303;
 
+const fuelParameterKeys = [
+  "can_fuel_vlm",
+  "fuel level",
+  "fuel_level",
+  "fuel_lvl",
+  "fuel",
+  "fuel1",
+  "fuel_1",
+  "fuel_l",
+  "fuel_liters",
+  "fuel_litres",
+  "can_fuel_level",
+  "can_fuel_liters",
+  "can_fuel_litres",
+  "can_fuel",
+  "lls",
+  "lls1",
+  "dut",
+  "dut1",
+  "ДУТ",
+  "ДУТ1",
+  "топливо",
+  "уровень топлива",
+];
+
 type WialonLoginResponse = {
   eid?: string;
   error?: number;
@@ -68,6 +93,36 @@ function firstNumber(...values: unknown[]) {
   return null;
 }
 
+function findParamNumber(params: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const direct = asNumber(params[key]);
+    if (direct !== null) return { value: direct, source: key };
+
+    const nested = asNumber(paramValue(params, key));
+    if (nested !== null) return { value: nested, source: key };
+  }
+
+  const normalizedKeys = new Set(keys.map((key) => key.trim().toLowerCase()));
+  for (const [key, rawValue] of Object.entries(params)) {
+    const normalizedKey = key.trim().toLowerCase();
+    const looksLikeFuel = normalizedKeys.has(normalizedKey)
+      || normalizedKey.includes("fuel")
+      || normalizedKey.includes("топл")
+      || normalizedKey.includes("дут")
+      || normalizedKey.includes("lls");
+
+    if (!looksLikeFuel) continue;
+
+    const direct = asNumber(rawValue);
+    if (direct !== null) return { value: direct, source: key };
+
+    const nested = asNumber(paramValue(params, key));
+    if (nested !== null) return { value: nested, source: key };
+  }
+
+  return { value: null, source: null };
+}
+
 function normalizeWialonPosition(rawPosition: unknown): WialonPosition | null {
   const position = asRecord(rawPosition);
   if (!Object.keys(position).length) return null;
@@ -88,6 +143,14 @@ function normalizeWialonTelemetry(unit: Record<string, unknown>, position: Wialo
   const lastMessagePosition = asRecord(lastMessage.pos);
   const lastMessageParams = asRecord(lastMessage.p);
   const params = asRecord(unit.prms);
+  const fuelFromLastMessage = findParamNumber(lastMessageParams, fuelParameterKeys);
+  const fuelFromParams = findParamNumber(params, fuelParameterKeys);
+  const fuelLevel = firstNumber(fuelFromLastMessage.value, fuelFromParams.value);
+  const fuelLevelSource = fuelFromLastMessage.value !== null
+    ? `last message: ${fuelFromLastMessage.source}`
+    : fuelFromParams.value !== null
+      ? `unit parameter: ${fuelFromParams.source}`
+      : null;
 
   return {
     lastSignalAt: unixTimeToIso(lastMessage.t ?? position?.time),
@@ -100,7 +163,8 @@ function normalizeWialonTelemetry(unit: Record<string, unknown>, position: Wialo
     engineHours: firstNumber(lastMessageParams.engine_hours, paramValue(params, "engine_hours"), unit.cneh),
     engineOn: asBoolean(lastMessageParams["engine operation"] ?? paramValue(params, "engine operation") ?? paramValue(params, "in1")),
     engineRpm: firstNumber(lastMessageParams.engine_rpm, paramValue(params, "engine_rpm")),
-    fuelLevel: firstNumber(lastMessageParams.can_fuel_vlm, lastMessageParams["fuel level"], paramValue(params, "can_fuel_vlm"), paramValue(params, "fuel level")),
+    fuelLevel,
+    fuelLevelSource,
     externalVoltage: firstNumber(lastMessageParams.pwr_ext, lastMessageParams.voltage, paramValue(params, "pwr_ext"), paramValue(params, "voltage")),
     internalVoltage: firstNumber(lastMessageParams.pwr_int, paramValue(params, "pwr_int")),
     gsmLevel: firstNumber(lastMessageParams.gsm, paramValue(params, "gsm")),
