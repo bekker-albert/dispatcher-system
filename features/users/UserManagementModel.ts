@@ -27,6 +27,21 @@ export const manageableTabs = defaultTopTabs.map((tab) => ({
   label: compactTopTabLabel(tab),
 }));
 
+export function createDefaultTabPermissions(access: "view" | "edit" = "edit"): AuthTabPermissions {
+  return manageableTabs.reduce<AuthTabPermissions>((permissions, tab) => {
+    if (tab.id === "admin") {
+      permissions[tab.id] = { view: false, edit: false };
+      return permissions;
+    }
+
+    permissions[tab.id] = {
+      view: true,
+      edit: access === "edit",
+    };
+    return permissions;
+  }, {});
+}
+
 export function createEmptyDraft(): UserEditDraft {
   return {
     login: "",
@@ -40,7 +55,7 @@ export function createEmptyDraft(): UserEditDraft {
     role: "dispatcher",
     canManageUsers: false,
     active: true,
-    tabPermissions: {},
+    tabPermissions: createDefaultTabPermissions("edit"),
   };
 }
 
