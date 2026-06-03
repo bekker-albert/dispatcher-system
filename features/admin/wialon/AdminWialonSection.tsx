@@ -23,6 +23,8 @@ import {
   valueStyle,
 } from "./AdminWialonStyles";
 
+type TelemetryTrust = "trusted" | "diagnostic" | "not-configured";
+
 type WialonTelemetry = {
   lastSignalAt: string | null;
   latitude: number | null;
@@ -30,12 +32,21 @@ type WialonTelemetry = {
   speed: number | null;
   satellites: number | null;
   mileage: number | null;
+  mileageSource?: string | null;
+  mileageTrust?: TelemetryTrust;
   canMileage: number | null;
+  canMileageSource?: string | null;
+  canMileageTrust?: TelemetryTrust;
   engineHours: number | null;
+  engineHoursSource?: string | null;
+  engineHoursTrust?: TelemetryTrust;
   engineOn: boolean | null;
   engineRpm: number | null;
   fuelLevel: number | null;
   fuelLevelSource?: string | null;
+  fuelLevelTrust?: TelemetryTrust;
+  rawFuelLevel?: number | null;
+  rawFuelLevelSource?: string | null;
   externalVoltage: number | null;
   internalVoltage: number | null;
   gsmLevel: number | null;
@@ -70,6 +81,7 @@ type DiagnosticRow = {
   id: number;
   unitName: string;
   mapping: string;
+  equipment: string;
   gps: string;
   engineHours: string;
   mileage: string;
@@ -108,6 +120,26 @@ function normalizeGarage(value: unknown) {
     .toUpperCase()
     .replace(/[\s_\-\/\\]+/g, "")
     .replace(/[^0-9A-ZА-ЯЁ]/g, "");
+}
+
+function normalizeFlag(value: unknown) {
+  return String(value ?? "").trim().toLowerCase().replace(/[^a-zа-яё0-9]+/g, "");
+}
+
+function flagIsYes(value: unknown) {
+  const normalized = normalizeFlag(value);
+  return ["да", "yes", "true", "1", "есть", "установлен", "установлено"].some((token) => normalized.includes(token));
+}
+
+function flagIsNo(value: unknown) {
+  const normalized = normalizeFlag(value);
+  return ["нет", "no", "false", "0", "неустановлен", "неустановлено", "отсутствует"].some((token) => normalized.includes(token));
+}
+
+function equipmentStatus(value: unknown) {
+  if (flagIsYes(value)) return "есть";
+  if (flagIsNo(value)) return "нет";
+  return "не указано";
 }
 
 function garageKeysFromWialonName(name: string) {
@@ -182,6 +214,23 @@ function maxStatus(current: DiagnosticStatus, next: DiagnosticStatus): Diagnosti
   return order[next] > order[current] ? next : current;
 }
 
+function trustLabel(trust?: TelemetryTrust | null) {
+  if (trust === "trusted") return "достоверно";
+  if (trust === "diagnostic") return "только диагностика";
+  return "не настроено";
+}
+
+function equipmentText(vehicle: VehicleRow | null) {
+  if (!vehicle) return "нет карточки техники";
+  return [
+    `GPS: ${equipmentStatus(vehicle.gpsInstalled)}`,
+    `ДУТ: ${equipmentStatus(vehicle.dutInstalled)}`,
+    `CAN: ${equipmentStatus(vehicle.canInstalled)}`,
+    vehicle.mainMileageSource ? `пробег: ${vehicle.mainMileageSource}` : "пробег: не указан",
+    vehicle.mainFuelSource ? `топливо: ${vehicle.mainFuelSource}` : "топливо: не указан",
+  ].join(" / ");
+}
+
 function sensorText(unit: WialonAdminUnit) {
   const telemetry = unit.telemetry;
   const parts = [
@@ -204,34 +253,47 @@ function gpsText(unit: WialonAdminUnit) {
   return `${formatDate(telemetry.lastSignalAt)} / ${speed} / ${satellites}`;
 }
 
-function engineHoursText(unit: WialonAdminUnit) {
+function engineHoursText(unit: WialonAdminUnit, vehicle: VehicleRow | null) {
   const telemetry = unit.telemetry;
   if (typeof telemetry?.engineHours !== "number") return unit.vehicleId === null ? "Не проверяется" : "нет моточасов";
 
   const engineState = telemetry.engineOn === true ? "двигатель вкл" : telemetry.engineOn === false ? "двигатель выкл" : "двигатель н/д";
+  const source = vehicle?.mainEngineHoursSource ? ` / источник: ${vehicle.mainEngineHoursSource}` : "";
   const rpm = typeof telemetry.engineRpm === "number" ? ` / ${formatNumber(telemetry.engineRpm, 0)} об/мин` : "";
-  return `${formatNumber(telemetry.engineHours, 2)} мч / ${engineState}${rpm}`;
+  return `${formatNumber(telemetry.engineHours, 2)} мч / ${trustLabel(telemetry.engineHoursTrust)}${source} / ${engineState}${rpm}`;
 }
 
-function mileageText(unit: WialonAdminUnit) {
+function mileageText(unit: WialonAdminUnit, vehicle: VehicleRow | null) {
   const telemetry = unit.telemetry;
   const values = [];
   if (typeof telemetry?.mileage === "number") values.push(`GPS ${formatNumber(telemetry.mileage, 1)} км`);
-  if (typeof telemetry?.canMileage === "number") values.push(`CAN ${formatNumber(telemetry.canMileage, 1)} км`);
+  if (typeof telemetry?.canMileage === "number") {
+    const canTrust = vehicle && flagIsYes(vehicle.canInstalled) ? "достоверно по карточке" : "только диагностика, CAN не подтвержден";
+    values.push(`CAN ${formatNumber(telemetry.canMileage, 1)} км (${canTrust})`);
+  }
   if (!values.length) return unit.vehicleId === null ? "Не проверяется" : "нет пробега";
   return values.join(" / ");
 }
 
-function fuelText(unit: WialonAdminUnit) {
+function fuelText(unit: WialonAdminUnit, vehicle: VehicleRow | null) {
   const telemetry = unit.telemetry;
-  if (typeof telemetry?.fuelLevel !== "number") return unit.vehicleId === null ? "Не проверяется" : "нет топлива";
+  const voltage = typeof telemetry?.externalVoltage === "number" ? ` / питание ${formatNumber(telemetry.externalVoltage, 2)} В` : "";
 
-  const source = telemetry.fuelLevelSource ? ` / ${telemetry.fuelLevelSource}` : "";
-  const voltage = typeof telemetry.externalVoltage === "number" ? ` / ${formatNumber(telemetry.externalVoltage, 2)} В` : "";
-  return `${formatNumber(telemetry.fuelLevel, 1)} л${source}${voltage}`;
+  if (typeof telemetry?.fuelLevel === "number") {
+    const source = telemetry.fuelLevelSource ? ` / ${telemetry.fuelLevelSource}` : "";
+    return `Wialon ${formatNumber(telemetry.fuelLevel, 1)} л (${trustLabel(telemetry.fuelLevelTrust)})${source}${voltage}`;
+  }
+
+  if (typeof telemetry?.rawFuelLevel === "number") {
+    const source = telemetry.rawFuelLevelSource ? ` / ${telemetry.rawFuelLevelSource}` : "";
+    const dut = vehicle && flagIsYes(vehicle.dutInstalled) ? "ДУТ есть" : "ДУТ не подтвержден";
+    return `учетного топлива нет / сырой ДУТ ${formatNumber(telemetry.rawFuelLevel, 1)} (${dut}, только диагностика)${source}${voltage}`;
+  }
+
+  return unit.vehicleId === null ? "Не проверяется" : `нет топлива${voltage}`;
 }
 
-function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
+function buildDiagnosticRow(unit: WialonAdminUnit, vehicle: VehicleRow | null): DiagnosticRow {
   const problems: string[] = [];
   const recommendations: string[] = [];
   let status: DiagnosticStatus = "Норма";
@@ -239,11 +301,19 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
   const telemetry = unit.telemetry;
   const signalAgeHours = hoursSince(telemetry?.lastSignalAt ?? null);
   const isMapped = unit.vehicleId !== null;
+  const canConfirmed = Boolean(vehicle && flagIsYes(vehicle.canInstalled));
+  const dutConfirmed = Boolean(vehicle && flagIsYes(vehicle.dutInstalled));
 
   if (!isMapped) {
     status = maxStatus(status, "Ошибка");
     problems.push("объект Wialon не сопоставлен с техникой сайта");
     recommendations.push("сопоставить по гаражному номеру или выбрать технику вручную");
+  }
+
+  if (isMapped && !vehicle) {
+    status = maxStatus(status, "Ошибка");
+    problems.push("сопоставленная техника не найдена в справочнике");
+    recommendations.push("проверить карточку техники и сопоставление Wialon");
   }
 
   if (!unit.syncedAt) {
@@ -279,40 +349,40 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
   if (isMapped && typeof telemetry?.engineHours !== "number") {
     status = maxStatus(status, "Предупреждение");
     problems.push("моточасы не получены из Wialon");
-    recommendations.push("проверить параметр engine_hours и настройки моточасов в Wialon");
-  }
-
-  if (isMapped && telemetry?.engineOn === true && typeof telemetry.engineHours !== "number") {
-    status = maxStatus(status, "Ошибка");
-    problems.push("двигатель включен, но моточасы не передаются");
-    recommendations.push("проверить подключение зажигания/CAN и источник моточасов");
-  }
-
-  if (isMapped && telemetry?.engineOn === false && typeof telemetry.engineRpm === "number" && telemetry.engineRpm > 0) {
-    status = maxStatus(status, "Предупреждение");
-    problems.push("обороты двигателя есть, но зажигание показывает выключено");
-    recommendations.push("проверить настройку датчика зажигания и CAN-параметры");
+    recommendations.push("проверить источник моточасов в карточке техники и настройки Wialon");
   }
 
   if (isMapped && typeof telemetry?.mileage !== "number" && typeof telemetry?.canMileage !== "number") {
     status = maxStatus(status, "Предупреждение");
-    problems.push("пробег не получен из Wialon/CAN");
-    recommendations.push("проверить датчик пробега, CAN и счетчик пробега в Wialon");
+    problems.push("пробег не получен из Wialon");
+    recommendations.push("проверить датчик пробега и счетчик пробега в Wialon");
   }
 
-  if (typeof telemetry?.mileage === "number" && typeof telemetry.canMileage === "number") {
+  if (typeof telemetry?.canMileage === "number" && !canConfirmed) {
+    status = maxStatus(status, "Предупреждение");
+    problems.push("Wialon отдает CAN-похожий пробег, но CAN в карточке техники не подтвержден");
+    recommendations.push("не использовать CAN как учетный источник; проверить шаблон/датчики объекта Wialon или заполнить CAN в карточке техники");
+  }
+
+  if (canConfirmed && typeof telemetry?.mileage === "number" && typeof telemetry.canMileage === "number") {
     const mileageDiff = Math.abs(telemetry.mileage - telemetry.canMileage);
     if (mileageDiff > MILEAGE_DIFF_WARNING_KM) {
       status = maxStatus(status, "Предупреждение");
-      problems.push(`GPS-пробег и CAN-пробег отличаются на ${formatNumber(mileageDiff, 1)} км`);
+      problems.push(`GPS-пробег и подтвержденный CAN-пробег отличаются на ${formatNumber(mileageDiff, 1)} км`);
       recommendations.push("проверить, какой пробег брать как основной: GPS, CAN или одометр Wialon");
     }
   }
 
   if (isMapped && typeof telemetry?.fuelLevel !== "number") {
-    status = maxStatus(status, "Предупреждение");
-    problems.push("уровень топлива не получен");
-    recommendations.push("проверить ДУТ/CAN-параметр топлива и настройки датчика в Wialon");
+    if (typeof telemetry?.rawFuelLevel === "number") {
+      status = maxStatus(status, "Предупреждение");
+      problems.push("есть сырой ДУТ, но нет тарированного топлива Wialon для учета");
+      recommendations.push("настроить датчик уровня топлива Wialon и брать значение после тарировки; raw использовать только для диагностики");
+    } else if (dutConfirmed) {
+      status = maxStatus(status, "Предупреждение");
+      problems.push("ДУТ указан в карточке техники, но Wialon не отдает учетное топливо");
+      recommendations.push("проверить датчик уровня топлива и тарировочную таблицу Wialon");
+    }
   } else if (typeof telemetry?.fuelLevel === "number" && telemetry.fuelLevel < LOW_FUEL_WARNING_LITERS) {
     status = maxStatus(status, "Предупреждение");
     problems.push(`низкий остаток топлива: ${formatNumber(telemetry.fuelLevel, 1)} л`);
@@ -339,16 +409,17 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
     id: unit.id,
     unitName: unit.name,
     mapping: isMapped ? "Привязана" : "Нет привязки",
+    equipment: equipmentText(vehicle),
     gps: gpsText(unit),
-    engineHours: engineHoursText(unit),
-    mileage: mileageText(unit),
-    fuel: fuelText(unit),
+    engineHours: engineHoursText(unit, vehicle),
+    mileage: mileageText(unit, vehicle),
+    fuel: fuelText(unit, vehicle),
     sensors: sensorText(unit),
     status,
     problem: problems.length ? problems.join("; ") : "критичных проблем по связке Wialon не найдено",
     recommendation: recommendations.length
       ? Array.from(new Set(recommendations)).join("; ")
-      : "следующий этап — сверить моточасы, пробег и топливо со сводкой и нормами",
+      : "данные разделены: учетные значения отдельно, raw-параметры только для диагностики",
   };
 }
 
@@ -371,6 +442,12 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     [vehicleRows],
   );
 
+  const vehicleById = useMemo(() => {
+    const map = new Map<number, VehicleRow>();
+    for (const vehicle of vehicleOptions) map.set(vehicle.id, vehicle);
+    return map;
+  }, [vehicleOptions]);
+
   const vehicleByGarage = useMemo(() => {
     const map = new Map<string, VehicleRow>();
     const duplicates = new Set<string>();
@@ -385,19 +462,14 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       map.set(key, vehicle);
     }
 
-    for (const key of duplicates) {
-      map.delete(key);
-    }
-
+    for (const key of duplicates) map.delete(key);
     return map;
   }, [vehicleOptions]);
 
   const assignedVehicleIds = useMemo(() => {
     const ids = new Set<number>();
     for (const unit of units) {
-      if (unit.vehicleId !== null) {
-        ids.add(unit.vehicleId);
-      }
+      if (unit.vehicleId !== null) ids.add(unit.vehicleId);
     }
     return ids;
   }, [units]);
@@ -408,23 +480,23 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   const mappedCount = units.filter((unit) => unit.vehicleId !== null).length;
   const hiddenCount = units.filter((unit) => unit.hidden).length;
   const unmappedCount = units.length - mappedCount;
-  const withFuelCount = units.filter((unit) => typeof unit.telemetry?.fuelLevel === "number").length;
-  const diagnostics = useMemo(() => units.map(buildDiagnosticRow), [units]);
+  const withTrustedFuelCount = units.filter((unit) => typeof unit.telemetry?.fuelLevel === "number").length;
+  const withRawFuelCount = units.filter((unit) => typeof unit.telemetry?.rawFuelLevel === "number").length;
+  const diagnostics = useMemo(
+    () => units.map((unit) => buildDiagnosticRow(unit, unit.vehicleId === null ? null : vehicleById.get(unit.vehicleId) ?? null)),
+    [units, vehicleById],
+  );
   const diagnosticsToReview = diagnostics.filter((row) => row.status !== "Норма");
   const diagnosticErrors = diagnostics.filter((row) => row.status === "Ошибка" || row.status === "Нет данных").length;
   const diagnosticWarnings = diagnostics.filter((row) => row.status === "Предупреждение").length;
   const diagnosticRows = (diagnosticView === "all" ? diagnostics : diagnosticsToReview).slice(0, 100);
 
-  const filteredUnits = useMemo(() => {
-    const result = units.filter((unit) => {
-      if (filter === "mapped") return unit.vehicleId !== null;
-      if (filter === "unmapped") return unit.vehicleId === null;
-      if (filter === "hidden") return unit.hidden;
-      return true;
-    });
-
-    return result;
-  }, [filter, units]);
+  const filteredUnits = useMemo(() => units.filter((unit) => {
+    if (filter === "mapped") return unit.vehicleId !== null;
+    if (filter === "unmapped") return unit.vehicleId === null;
+    if (filter === "hidden") return unit.hidden;
+    return true;
+  }), [filter, units]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUnits.length / PAGE_SIZE));
   const pageUnits = filteredUnits.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -497,7 +569,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     setStatus("ok");
     setShowUnits(true);
     setDirtyIds(new Set());
-    setMessage(`Техника Wialon загружена: ${(body.units ?? []).length}. Если в интерфейсе Wialon видно меньше, значит в Wialon включены фильтры или часть объектов скрыта/служебная.`);
+    setMessage(`Техника Wialon загружена: ${(body.units ?? []).length}. Raw ДУТ показан только в диагностике; учетное топливо будет после подключения датчиков Wialon с тарировкой.`);
   });
 
   const syncPositions = () => runAction(async () => {
@@ -518,9 +590,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   });
 
   const saveMappings = () => runAction(async () => {
-    const changedUnits = dirtyIds.size
-      ? units.filter((unit) => dirtyIds.has(unit.id))
-      : units;
+    const changedUnits = dirtyIds.size ? units.filter((unit) => dirtyIds.has(unit.id)) : units;
 
     const response = await fetch("/api/wialon/sync/units", {
       method: "POST",
@@ -556,16 +626,12 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   };
 
   const updateUnitMapping = (id: number, vehicleId: number | null) => {
-    setUnits((current) => current.map((unit) => (
-      unit.id === id ? { ...unit, vehicleId } : unit
-    )));
+    setUnits((current) => current.map((unit) => (unit.id === id ? { ...unit, vehicleId } : unit)));
     markDirty(id);
   };
 
   const updateUnitHidden = (id: number, hidden: boolean) => {
-    setUnits((current) => current.map((unit) => (
-      unit.id === id ? { ...unit, hidden } : unit
-    )));
+    setUnits((current) => current.map((unit) => (unit.id === id ? { ...unit, hidden } : unit)));
     markDirty(id);
   };
 
@@ -575,13 +641,8 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
 
     setUnits((current) => current.map((unit) => {
       if (unit.vehicleId !== null) return unit;
-
-      const match = garageKeysFromWialonName(unit.name)
-        .map((key) => vehicleByGarage.get(key))
-        .find(Boolean);
-
+      const match = garageKeysFromWialonName(unit.name).map((key) => vehicleByGarage.get(key)).find(Boolean);
       if (!match) return unit;
-
       matched += 1;
       changedIds.add(unit.id);
       return { ...unit, vehicleId: match.id };
@@ -606,9 +667,9 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
     <div style={sectionStyle}>
       <div style={headerStyle}>
         <div>
-          <h2 style={titleStyle}>Wialon Local</h2>
+          <h2 style={titleStyle}>GPS / Wialon Local</h2>
           <div style={subtitleStyle}>
-            Подключение работает только через backend. При открытии вкладки Wialon не опрашивается — показываются сохраненные данные сайта.
+            Один компактный центр: привязка Wialon, GPS, комплектация техники, достоверные значения и raw-диагностика без дублей.
           </div>
         </div>
         <div style={actionsStyle}>
@@ -621,69 +682,43 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       </div>
 
       <div style={statusGridStyle}>
-        <div style={statusCardStyle}>
-          <div style={labelStyle}>Статус подключения</div>
-          <div style={valueStyle}>{statusText(displayStatus)}</div>
-        </div>
-        <div style={statusCardStyle}>
-          <div style={labelStyle}>Объекты Wialon в базе сайта</div>
-          <div style={valueStyle}>{units.length}</div>
-        </div>
-        <div style={statusCardStyle}>
-          <div style={labelStyle}>Сопоставлено</div>
-          <div style={valueStyle}>{mappedCount}</div>
-        </div>
-        <div style={statusCardStyle}>
-          <div style={labelStyle}>Не сопоставлено</div>
-          <div style={valueStyle}>{unmappedCount}</div>
-        </div>
-        <div style={statusCardStyle}>
-          <div style={labelStyle}>С топливом</div>
-          <div style={valueStyle}>{withFuelCount}</div>
-        </div>
-        <div style={statusCardStyle}>
-          <div style={labelStyle}>Скрыто</div>
-          <div style={valueStyle}>{hiddenCount}</div>
-        </div>
-        <div style={statusCardStyle}>
-          <div style={labelStyle}>Последняя синхронизация</div>
-          <div style={valueStyle}>{formatDate(latestLog?.finishedAt ?? latestLog?.createdAt ?? null) || "Нет данных"}</div>
-        </div>
+        <div style={statusCardStyle}><div style={labelStyle}>Статус подключения</div><div style={valueStyle}>{statusText(displayStatus)}</div></div>
+        <div style={statusCardStyle}><div style={labelStyle}>Объекты Wialon</div><div style={valueStyle}>{units.length}</div></div>
+        <div style={statusCardStyle}><div style={labelStyle}>Сопоставлено</div><div style={valueStyle}>{mappedCount}</div></div>
+        <div style={statusCardStyle}><div style={labelStyle}>Не сопоставлено</div><div style={valueStyle}>{unmappedCount}</div></div>
+        <div style={statusCardStyle}><div style={labelStyle}>Учетное топливо</div><div style={valueStyle}>{withTrustedFuelCount}</div></div>
+        <div style={statusCardStyle}><div style={labelStyle}>Raw ДУТ</div><div style={valueStyle}>{withRawFuelCount}</div></div>
+        <div style={statusCardStyle}><div style={labelStyle}>Скрыто</div><div style={valueStyle}>{hiddenCount}</div></div>
+        <div style={statusCardStyle}><div style={labelStyle}>Последняя синхронизация</div><div style={valueStyle}>{formatDate(latestLog?.finishedAt ?? latestLog?.createdAt ?? null) || "Нет данных"}</div></div>
       </div>
 
       {message ? <div style={displayStatus === "error" ? errorStyle : statusCardStyle}>{message}</div> : null}
 
       <div style={{ ...statusCardStyle, display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <button onClick={() => setShowDiagnostics((value) => !value)} style={buttonStyle} type="button">
+            {showDiagnostics ? "Скрыть диагностику" : "Показать диагностику"}
+          </button>
           <button onClick={() => setShowUnits((value) => !value)} style={buttonStyle} type="button">
-            {showUnits ? "Скрыть таблицу техники" : `Показать таблицу техники (${units.length})`}
+            {showUnits ? "Скрыть привязку" : `Показать привязку (${units.length})`}
           </button>
           <button onClick={() => setShowLogs((value) => !value)} style={buttonStyle} type="button">
-            {showLogs ? "Скрыть технический журнал" : "Показать технический журнал"}
-          </button>
-          <button onClick={() => setShowDiagnostics((value) => !value)} style={buttonStyle} type="button">
-            {showDiagnostics ? "Скрыть диагностику данных" : "Показать диагностику данных"}
+            {showLogs ? "Скрыть журнал" : "Показать журнал"}
           </button>
         </div>
-        <div style={{ color: "#64748b", fontSize: 13 }}>
-          Несохраненных изменений: {dirtyIds.size}
-        </div>
+        <div style={{ color: "#64748b", fontSize: 13 }}>Несохраненных изменений: {dirtyIds.size}</div>
       </div>
 
       {showDiagnostics ? (
         <div style={tableWrapStyle}>
           <div style={{ ...statusCardStyle, marginBottom: 10 }}>
-            <div style={labelStyle}>Диагностика качества данных Wialon / GPS / ДУТ / CAN</div>
+            <div style={labelStyle}>Качество данных: справочник техники → Wialon → учет</div>
             <div style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>
-              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. С топливом: {withFuelCount} из {units.length}. Сейчас система проверяет GPS-сигнал, навигацию, моточасы, пробег GPS/CAN, топливо и питание терминала.
+              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Учетное топливо: {withTrustedFuelCount}. Raw ДУТ: {withRawFuelCount}. CAN используется только если подтвержден в карточке техники.
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <button onClick={() => setDiagnosticView("problems")} style={diagnosticView === "problems" ? primaryButtonStyle : buttonStyle} type="button">
-                Проблемные ({diagnosticsToReview.length})
-              </button>
-              <button onClick={() => setDiagnosticView("all")} style={diagnosticView === "all" ? primaryButtonStyle : buttonStyle} type="button">
-                Вся техника ({diagnostics.length})
-              </button>
+              <button onClick={() => setDiagnosticView("problems")} style={diagnosticView === "problems" ? primaryButtonStyle : buttonStyle} type="button">Проблемные ({diagnosticsToReview.length})</button>
+              <button onClick={() => setDiagnosticView("all")} style={diagnosticView === "all" ? primaryButtonStyle : buttonStyle} type="button">Вся техника ({diagnostics.length})</button>
             </div>
           </div>
           <table style={tableStyle}>
@@ -691,6 +726,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
               <tr>
                 <th style={thStyle}>Объект Wialon</th>
                 <th style={thStyle}>Связка</th>
+                <th style={thStyle}>Комплектация</th>
                 <th style={thStyle}>GPS</th>
                 <th style={thStyle}>Моточасы</th>
                 <th style={thStyle}>Пробег</th>
@@ -706,6 +742,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.unitName}</td>
                   <td style={tdStyle}>{row.mapping}</td>
+                  <td style={tdStyle}>{row.equipment}</td>
                   <td style={tdStyle}>{row.gps}</td>
                   <td style={tdStyle}>{row.engineHours}</td>
                   <td style={tdStyle}>{row.mileage}</td>
@@ -718,10 +755,8 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
               ))}
               {diagnosticRows.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                    {diagnosticView === "problems" && diagnostics.length
-                      ? "Проблемных строк нет. Нажмите “Вся техника”, чтобы посмотреть все объекты."
-                      : "Нет данных для диагностики. Сначала загрузите технику из Wialon."}
+                  <td colSpan={11} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
+                    {diagnosticView === "problems" && diagnostics.length ? "Проблемных строк нет. Нажмите “Вся техника”." : "Нет данных для диагностики. Сначала загрузите технику из Wialon."}
                   </td>
                 </tr>
               ) : null}
@@ -770,29 +805,13 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
                       </select>
                     </td>
                     <td style={tdStyle}>
-                      <input
-                        checked={unit.hidden}
-                        onChange={(event) => updateUnitHidden(unit.id, event.target.checked)}
-                        type="checkbox"
-                      />
+                      <input checked={unit.hidden} onChange={(event) => updateUnitHidden(unit.id, event.target.checked)} type="checkbox" />
                     </td>
-                    <td style={tdStyle}>
-                      {dirtyIds.has(unit.id)
-                        ? "Не сохранено"
-                        : unit.hidden
-                          ? "Скрыто"
-                          : unit.vehicleId
-                            ? "Сопоставлено"
-                            : "Не сопоставлено"}
-                    </td>
+                    <td style={tdStyle}>{dirtyIds.has(unit.id) ? "Не сохранено" : unit.hidden ? "Скрыто" : unit.vehicleId ? "Сопоставлено" : "Не сопоставлено"}</td>
                   </tr>
                 ))}
                 {filteredUnits.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                      Объекты Wialon по выбранному фильтру не найдены.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={6} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>Объекты Wialon по выбранному фильтру не найдены.</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -800,9 +819,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
 
           <div style={{ ...statusCardStyle, display: "flex", gap: 8, justifyContent: "space-between" }}>
             <button disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} style={buttonStyle} type="button">Назад</button>
-            <div style={{ color: "#475569", fontSize: 13 }}>
-              Страница {page} из {totalPages}. Показано {pageUnits.length} из {filteredUnits.length}.
-            </div>
+            <div style={{ color: "#475569", fontSize: 13 }}>Страница {page} из {totalPages}. Показано {pageUnits.length} из {filteredUnits.length}.</div>
             <button disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} style={buttonStyle} type="button">Вперед</button>
           </div>
         </>
@@ -811,30 +828,12 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
       {showLogs ? (
         <div style={tableWrapStyle}>
           <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Время</th>
-                <th style={thStyle}>Тип</th>
-                <th style={thStyle}>Статус</th>
-                <th style={thStyle}>Сообщение</th>
-              </tr>
-            </thead>
+            <thead><tr><th style={thStyle}>Время</th><th style={thStyle}>Тип</th><th style={thStyle}>Статус</th><th style={thStyle}>Сообщение</th></tr></thead>
             <tbody>
               {logs.map((log) => (
-                <tr key={log.id}>
-                  <td style={tdStyle}>{formatDate(log.createdAt)}</td>
-                  <td style={tdStyle}>{logTypeText(log.syncType)}</td>
-                  <td style={tdStyle}>{logStatusText(log.status)}</td>
-                  <td style={tdStyle}>{log.message}</td>
-                </tr>
+                <tr key={log.id}><td style={tdStyle}>{formatDate(log.createdAt)}</td><td style={tdStyle}>{logTypeText(log.syncType)}</td><td style={tdStyle}>{logStatusText(log.status)}</td><td style={tdStyle}>{log.message}</td></tr>
               ))}
-              {logs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                    Журнал Wialon пока пуст.
-                  </td>
-                </tr>
-              ) : null}
+              {logs.length === 0 ? <tr><td colSpan={4} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>Журнал Wialon пока пуст.</td></tr> : null}
             </tbody>
           </table>
         </div>
