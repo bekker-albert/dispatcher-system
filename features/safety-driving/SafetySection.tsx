@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 
+import { AdminWialonSection } from "@/features/admin/wialon/AdminWialonSection";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { SectionCard } from "@/shared/ui/layout";
 import type { SubTabConfig } from "../../lib/domain/navigation/tabs";
@@ -64,13 +65,17 @@ function statusLabel(vehicle: VehicleRow) {
   return vehicle.active ? "Активна" : "Неактивна";
 }
 
-export function SafetySection({ vehicleRows }: SafetySectionProps) {
+export function SafetySection({ tbTab, vehicleRows }: SafetySectionProps) {
   const rows = vehicleRows.filter((vehicle) => vehicle.visible !== false);
+
+  if (tbTab === "wialon" || tbTab === "integrations" || tbTab === "gps-integrations") {
+    return <AdminWialonSection vehicleRows={vehicleRows} />;
+  }
 
   return (
     <SectionCard title="">
       <div style={noteStyle}>
-        Preview: GPS, Wialon и ДУТ объединены в рабочий блок мониторинга техники. Интеграция Wialon не запускается, preview-поля остаются пустыми до появления источника данных.
+        GPS, Wialon и ДУТ объединены в рабочий блок мониторинга техники. Wialon Local доступен в подразделе интеграций GPS/СМТС.
       </div>
       <div style={tableWrapStyle}>
         <table style={tableStyle}>
