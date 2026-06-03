@@ -13,6 +13,12 @@ export type VehicleFilterKey =
   | "plateNumber"
   | "garageNumber"
   | "fuelCardNumber"
+  | "gpsInstalled"
+  | "dutInstalled"
+  | "canInstalled"
+  | "mainMileageSource"
+  | "mainFuelSource"
+  | "mainEngineHoursSource"
   | "manufactureYear"
   | "vin"
   | "owner";
@@ -33,6 +39,12 @@ export type VehicleInlineField =
   | "plateNumber"
   | "garageNumber"
   | "fuelCardNumber"
+  | "gpsInstalled"
+  | "dutInstalled"
+  | "canInstalled"
+  | "mainMileageSource"
+  | "mainFuelSource"
+  | "mainEngineHoursSource"
   | "manufactureYear"
   | "vin"
   | "owner";
@@ -45,12 +57,29 @@ export const vehicleInlineFields: VehicleInlineField[] = [
   "plateNumber",
   "garageNumber",
   "fuelCardNumber",
+  "gpsInstalled",
+  "dutInstalled",
+  "canInstalled",
+  "mainMileageSource",
+  "mainFuelSource",
+  "mainEngineHoursSource",
   "manufactureYear",
   "vin",
   "owner",
 ];
 
-export const vehicleAutocompleteFilterKeys: VehicleFilterKey[] = ["vehicleType", "equipmentType", "brand", "owner"];
+export const vehicleAutocompleteFilterKeys: VehicleFilterKey[] = [
+  "vehicleType",
+  "equipmentType",
+  "brand",
+  "owner",
+  "gpsInstalled",
+  "dutInstalled",
+  "canInstalled",
+  "mainMileageSource",
+  "mainFuelSource",
+  "mainEngineHoursSource",
+];
 
 export const vehicleFilterColumnConfigs: VehicleFilterColumnConfig[] = [
   { key: "visible", label: "Показ", getValue: (vehicle) => (vehicle.visible === false ? "Скрыта" : "Показана") },
@@ -61,6 +90,12 @@ export const vehicleFilterColumnConfigs: VehicleFilterColumnConfig[] = [
   { key: "plateNumber", label: "Госномер", getValue: (vehicle) => vehicle.plateNumber },
   { key: "garageNumber", label: "Гарномер", getValue: (vehicle) => vehicle.garageNumber },
   { key: "fuelCardNumber", label: "№ топл.карты", getValue: (vehicle) => vehicle.fuelCardNumber ?? "" },
+  { key: "gpsInstalled", label: "GPS", getValue: (vehicle) => vehicle.gpsInstalled ?? "" },
+  { key: "dutInstalled", label: "ДУТ", getValue: (vehicle) => vehicle.dutInstalled ?? "" },
+  { key: "canInstalled", label: "CAN", getValue: (vehicle) => vehicle.canInstalled ?? "" },
+  { key: "mainMileageSource", label: "Источник пробега", getValue: (vehicle) => vehicle.mainMileageSource ?? "" },
+  { key: "mainFuelSource", label: "Источник топлива", getValue: (vehicle) => vehicle.mainFuelSource ?? "" },
+  { key: "mainEngineHoursSource", label: "Источник м/ч", getValue: (vehicle) => vehicle.mainEngineHoursSource ?? "" },
   { key: "manufactureYear", label: "Год выпуска", getValue: (vehicle) => vehicle.manufactureYear },
   { key: "vin", label: "VIN", getValue: (vehicle) => vehicle.vin },
   { key: "owner", label: "Собственник", getValue: (vehicle) => vehicle.owner },
