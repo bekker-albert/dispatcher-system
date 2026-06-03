@@ -3,6 +3,31 @@ import type { RowDataPacket } from "mysql2/promise";
 import { dbExecute, dbRows, dbTransaction, type DbExecutor } from "@/lib/server/mysql/pool";
 import type { StoredWialonUnit, WialonPosition, WialonSyncLog, WialonTelemetry, WialonUnit, WialonUnitMappingInput } from "./types";
 
+const fuelParameterKeys = [
+  "can_fuel_vlm",
+  "fuel level",
+  "fuel_level",
+  "fuel_lvl",
+  "fuel",
+  "fuel1",
+  "fuel_1",
+  "fuel_l",
+  "fuel_liters",
+  "fuel_litres",
+  "can_fuel_level",
+  "can_fuel_liters",
+  "can_fuel_litres",
+  "can_fuel",
+  "lls",
+  "lls1",
+  "dut",
+  "dut1",
+  "ДУТ",
+  "ДУТ1",
+  "топливо",
+  "уровень топлива",
+];
+
 type WialonUnitRow = RowDataPacket & {
   wialon_unit_id: number;
   vehicle_id: number | null;
@@ -80,6 +105,36 @@ function firstNumber(...values: unknown[]) {
   return null;
 }
 
+function findParamNumber(params: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const direct = asNumber(params[key]);
+    if (direct !== null) return { value: direct, source: key };
+
+    const nested = asNumber(paramValue(params, key));
+    if (nested !== null) return { value: nested, source: key };
+  }
+
+  const normalizedKeys = new Set(keys.map((key) => key.trim().toLowerCase()));
+  for (const [key, rawValue] of Object.entries(params)) {
+    const normalizedKey = key.trim().toLowerCase();
+    const looksLikeFuel = normalizedKeys.has(normalizedKey)
+      || normalizedKey.includes("fuel")
+      || normalizedKey.includes("топл")
+      || normalizedKey.includes("дут")
+      || normalizedKey.includes("lls");
+
+    if (!looksLikeFuel) continue;
+
+    const direct = asNumber(rawValue);
+    if (direct !== null) return { value: direct, source: key };
+
+    const nested = asNumber(paramValue(params, key));
+    if (nested !== null) return { value: nested, source: key };
+  }
+
+  return { value: null, source: null };
+}
+
 function normalizeStoredPosition(unitRaw: Record<string, unknown>): WialonPosition | null {
   const position = asRecord(unitRaw.pos);
   if (!Object.keys(position).length) return null;
@@ -100,6 +155,14 @@ function normalizeStoredTelemetry(unitRaw: Record<string, unknown>, position: Wi
   const lastMessagePosition = asRecord(lastMessage.pos);
   const lastMessageParams = asRecord(lastMessage.p);
   const params = asRecord(unitRaw.prms);
+  const fuelFromLastMessage = findParamNumber(lastMessageParams, fuelParameterKeys);
+  const fuelFromParams = findParamNumber(params, fuelParameterKeys);
+  const fuelLevel = firstNumber(fuelFromLastMessage.value, fuelFromParams.value);
+  const fuelLevelSource = fuelFromLastMessage.value !== null
+    ? `last message: ${fuelFromLastMessage.source}`
+    : fuelFromParams.value !== null
+      ? `unit parameter: ${fuelFromParams.source}`
+      : null;
 
   return {
     lastSignalAt: unixTimeToIso(lastMessage.t ?? position?.time),
@@ -112,7 +175,8 @@ function normalizeStoredTelemetry(unitRaw: Record<string, unknown>, position: Wi
     engineHours: firstNumber(lastMessageParams.engine_hours, paramValue(params, "engine_hours"), unitRaw.cneh),
     engineOn: asBoolean(lastMessageParams["engine operation"] ?? paramValue(params, "engine operation") ?? paramValue(params, "in1")),
     engineRpm: firstNumber(lastMessageParams.engine_rpm, paramValue(params, "engine_rpm")),
-    fuelLevel: firstNumber(lastMessageParams.can_fuel_vlm, lastMessageParams["fuel level"], paramValue(params, "can_fuel_vlm"), paramValue(params, "fuel level")),
+    fuelLevel,
+    fuelLevelSource,
     externalVoltage: firstNumber(lastMessageParams.pwr_ext, lastMessageParams.voltage, paramValue(params, "pwr_ext"), paramValue(params, "voltage")),
     internalVoltage: firstNumber(lastMessageParams.pwr_int, paramValue(params, "pwr_int")),
     gsmLevel: firstNumber(lastMessageParams.gsm, paramValue(params, "gsm")),
@@ -174,13 +238,13 @@ export async function upsertWialonUnits(units: WialonUnit[]) {
       await execute(
         `INSERT INTO wialon_units
           (wialon_unit_id, name, unique_id, phone, raw, synced_at)
-        VALUES (?, ?, ?, ?, ?, NOW())
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(3))
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           unique_id = VALUES(unique_id),
           phone = VALUES(phone),
           raw = VALUES(raw),
-          synced_at = NOW(),
+          synced_at = CURRENT_TIMESTAMP(3),
           updated_at = CURRENT_TIMESTAMP(3)`,
         [unit.id, unit.name, unit.uniqueId || null, unit.phone || null, unit.raw],
       );
