@@ -26,6 +26,12 @@ export const defaultVehicleForm: VehicleRow = {
   equipmentType: "",
   manufactureYear: "",
   fuelCardNumber: "",
+  gpsInstalled: "",
+  dutInstalled: "",
+  canInstalled: "",
+  mainMileageSource: "",
+  mainFuelSource: "",
+  mainEngineHoursSource: "",
   fuelNormWinter: 0,
   fuelNormSummer: 0,
   fuelCalcType: "Моточасы",
@@ -199,8 +205,8 @@ export function createDefaultVehicles(seedRows: VehicleSeedRow[], fallbackRows: 
         ? "Пробег"
         : "Моточасы";
       const vehicle: VehicleRow = {
+        ...defaultVehicleForm,
         id: index + 1,
-        name: "",
         brand: seedVehicle.brand,
         model: seedVehicle.model,
         plateNumber: seedVehicle.plateNumber,
@@ -208,29 +214,17 @@ export function createDefaultVehicles(seedRows: VehicleSeedRow[], fallbackRows: 
         vehicleType: seedVehicle.category,
         equipmentType: seedVehicle.equipmentType,
         manufactureYear: seedVehicle.manufactureYear ?? "",
-        fuelCardNumber: "",
-        fuelNormWinter: 0,
-        fuelNormSummer: 0,
         fuelCalcType,
-        vin: "",
         owner: seedVehicle.owner,
         area: "",
-        location: "",
-        workType: "",
         excavator: "",
         contractor: seedVehicle.owner,
-        work: 0,
-        rent: 0,
-        repair: 0,
-        downtime: 0,
-        trips: 0,
-        active: true,
         visible: true,
       };
 
       return { ...vehicle, name: buildVehicleDisplayName(vehicle) };
     })
-    : fallbackRows;
+    : fallbackRows.map(normalizeVehicleRow);
 }
 
 export function normalizeVehicleRow(vehicle: unknown): VehicleRow {
@@ -241,6 +235,12 @@ export function normalizeVehicleRow(vehicle: unknown): VehicleRow {
 
   const normalizedVehicle = {
     ...mergedVehicle,
+    gpsInstalled: mergedVehicle.gpsInstalled ?? "",
+    dutInstalled: mergedVehicle.dutInstalled ?? "",
+    canInstalled: mergedVehicle.canInstalled ?? "",
+    mainMileageSource: mergedVehicle.mainMileageSource ?? "",
+    mainFuelSource: mergedVehicle.mainFuelSource ?? "",
+    mainEngineHoursSource: mergedVehicle.mainEngineHoursSource ?? "",
     equipmentType: mergedVehicle.equipmentType || mergedVehicle.vehicleType,
     visible: mergedVehicle.visible !== false,
   };
