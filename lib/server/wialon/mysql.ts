@@ -182,6 +182,10 @@ function findParamNumber(params: Record<string, unknown>, keys: string[]) {
   return { value: null, source: null };
 }
 
+function sourceLabel(source: string | null, prefix: string) {
+  return source ? `${prefix}: ${source}` : null;
+}
+
 function normalizeStoredPosition(unitRaw: Record<string, unknown>): WialonPosition | null {
   const position = asRecord(unitRaw.pos);
   if (!Object.keys(position).length) return null;
@@ -204,12 +208,15 @@ function normalizeStoredTelemetry(unitRaw: Record<string, unknown>, position: Wi
   const params = asRecord(unitRaw.prms);
   const fuelFromLastMessage = findParamNumber(lastMessageParams, fuelLevelParameterKeys);
   const fuelFromParams = findParamNumber(params, fuelLevelParameterKeys);
-  const fuelLevel = firstNumber(fuelFromLastMessage.value, fuelFromParams.value);
-  const fuelLevelSource = fuelFromLastMessage.value !== null
-    ? `last message: ${fuelFromLastMessage.source}`
+  const rawFuelLevel = firstNumber(fuelFromLastMessage.value, fuelFromParams.value);
+  const rawFuelLevelSource = fuelFromLastMessage.value !== null
+    ? sourceLabel(fuelFromLastMessage.source, "last message")
     : fuelFromParams.value !== null
-      ? `unit parameter: ${fuelFromParams.source}`
+      ? sourceLabel(fuelFromParams.source, "unit parameter")
       : null;
+  const mileage = firstNumber(lastMessageParams.mileage, paramValue(params, "mileage"), unitRaw.cnm, unitRaw.cnm_km);
+  const canMileage = firstNumber(lastMessageParams.can_mileage, paramValue(params, "can_mileage"));
+  const engineHours = firstNumber(lastMessageParams.engine_hours, paramValue(params, "engine_hours"), unitRaw.cneh);
 
   return {
     lastSignalAt: unixTimeToIso(lastMessage.t ?? position?.time),
@@ -217,13 +224,22 @@ function normalizeStoredTelemetry(unitRaw: Record<string, unknown>, position: Wi
     longitude: firstNumber(position?.longitude, lastMessagePosition.x),
     speed: firstNumber(position?.speed, lastMessagePosition.s, lastMessageParams.can_speed, paramValue(params, "can_speed")),
     satellites: firstNumber(position?.raw.sc, lastMessagePosition.sc, lastMessageParams.sats, paramValue(params, "sats")),
-    mileage: firstNumber(lastMessageParams.mileage, paramValue(params, "mileage"), unitRaw.cnm, unitRaw.cnm_km),
-    canMileage: firstNumber(lastMessageParams.can_mileage, paramValue(params, "can_mileage")),
-    engineHours: firstNumber(lastMessageParams.engine_hours, paramValue(params, "engine_hours"), unitRaw.cneh),
+    mileage,
+    mileageSource: mileage !== null ? "GPS/Wialon mileage" : null,
+    mileageTrust: mileage !== null ? "trusted" : "not-configured",
+    canMileage,
+    canMileageSource: canMileage !== null ? "raw can_mileage" : null,
+    canMileageTrust: canMileage !== null ? "diagnostic" : "not-configured",
+    engineHours,
+    engineHoursSource: engineHours !== null ? "engine_hours/Wialon" : null,
+    engineHoursTrust: engineHours !== null ? "diagnostic" : "not-configured",
     engineOn: asBoolean(lastMessageParams["engine operation"] ?? paramValue(params, "engine operation") ?? paramValue(params, "in1")),
     engineRpm: firstNumber(lastMessageParams.engine_rpm, paramValue(params, "engine_rpm")),
-    fuelLevel,
-    fuelLevelSource,
+    fuelLevel: null,
+    fuelLevelSource: null,
+    fuelLevelTrust: rawFuelLevel !== null ? "diagnostic" : "not-configured",
+    rawFuelLevel,
+    rawFuelLevelSource,
     externalVoltage: firstNumber(lastMessageParams.pwr_ext, lastMessageParams.voltage, paramValue(params, "pwr_ext"), paramValue(params, "voltage")),
     internalVoltage: firstNumber(lastMessageParams.pwr_int, paramValue(params, "pwr_int")),
     gsmLevel: firstNumber(lastMessageParams.gsm, paramValue(params, "gsm")),
