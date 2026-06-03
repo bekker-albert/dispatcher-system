@@ -3,8 +3,18 @@ import type { RowDataPacket } from "mysql2/promise";
 import { dbExecute, dbRows, dbTransaction, type DbExecutor } from "@/lib/server/mysql/pool";
 import type { StoredWialonUnit, WialonPosition, WialonSyncLog, WialonTelemetry, WialonUnit, WialonUnitMappingInput } from "./types";
 
-const fuelLevelParameterKeys = [
+const canFuelParameterKeys = [
   "can_fuel_vlm",
+  "can_fuel_level",
+  "can_fuel_liters",
+  "can_fuel_litres",
+  "can_fuel",
+  "can fuel",
+  "can fuel level",
+  "can fuel liters",
+];
+
+const rawFuelLevelParameterKeys = [
   "fuel level",
   "fuel_level",
   "fuel_lvl",
@@ -14,10 +24,6 @@ const fuelLevelParameterKeys = [
   "fuel_l",
   "fuel_liters",
   "fuel_litres",
-  "can_fuel_level",
-  "can_fuel_liters",
-  "can_fuel_litres",
-  "can_fuel",
   "rs485fuel_level",
   "rs485fuel_level1",
   "rs485_fuel_level",
@@ -131,8 +137,24 @@ function isFuelTemperatureParameter(normalizedKey: string) {
   return fuelTemperatureTokens.some((token) => normalizedKey.includes(token));
 }
 
-function isFuelLevelParameter(normalizedKey: string, allowedKeys: Set<string>) {
+function isCanFuelParameter(normalizedKey: string, allowedKeys: Set<string>) {
   if (isFuelTemperatureParameter(normalizedKey)) return false;
+  if (allowedKeys.has(normalizedKey)) return true;
+  return normalizedKey.includes("can")
+    && normalizedKey.includes("fuel")
+    && (
+      normalizedKey.includes("level")
+      || normalizedKey.includes("vlm")
+      || normalizedKey.includes("volume")
+      || normalizedKey.includes("liter")
+      || normalizedKey.includes("litre")
+      || normalizedKey.endsWith("fuel")
+    );
+}
+
+function isRawFuelLevelParameter(normalizedKey: string, allowedKeys: Set<string>) {
+  if (isFuelTemperatureParameter(normalizedKey)) return false;
+  if (normalizedKey.includes("can")) return false;
   if (allowedKeys.has(normalizedKey)) return true;
 
   const looksLikeLevel = normalizedKey.includes("level")
@@ -154,12 +176,12 @@ function isFuelLevelParameter(normalizedKey: string, allowedKeys: Set<string>) {
   return looksLikeFuelSensor && looksLikeLevel;
 }
 
-function findParamNumber(params: Record<string, unknown>, keys: string[]) {
+function findParamNumber(params: Record<string, unknown>, keys: string[], isAllowed: (normalizedKey: string, allowedKeys: Set<string>) => boolean) {
   const allowedKeys = new Set(keys.map(normalizeParameterKey));
 
   for (const key of keys) {
     const normalizedKey = normalizeParameterKey(key);
-    if (!isFuelLevelParameter(normalizedKey, allowedKeys)) continue;
+    if (!isAllowed(normalizedKey, allowedKeys)) continue;
 
     const direct = asNumber(params[key]);
     if (direct !== null) return { value: direct, source: key };
@@ -170,7 +192,7 @@ function findParamNumber(params: Record<string, unknown>, keys: string[]) {
 
   for (const [key, rawValue] of Object.entries(params)) {
     const normalizedKey = normalizeParameterKey(key);
-    if (!isFuelLevelParameter(normalizedKey, allowedKeys)) continue;
+    if (!isAllowed(normalizedKey, allowedKeys)) continue;
 
     const direct = asNumber(rawValue);
     if (direct !== null) return { value: direct, source: key };
@@ -206,8 +228,16 @@ function normalizeStoredTelemetry(unitRaw: Record<string, unknown>, position: Wi
   const lastMessagePosition = asRecord(lastMessage.pos);
   const lastMessageParams = asRecord(lastMessage.p);
   const params = asRecord(unitRaw.prms);
-  const fuelFromLastMessage = findParamNumber(lastMessageParams, fuelLevelParameterKeys);
-  const fuelFromParams = findParamNumber(params, fuelLevelParameterKeys);
+  const canFuelFromLastMessage = findParamNumber(lastMessageParams, canFuelParameterKeys, isCanFuelParameter);
+  const canFuelFromParams = findParamNumber(params, canFuelParameterKeys, isCanFuelParameter);
+  const canFuelLevel = firstNumber(canFuelFromLastMessage.value, canFuelFromParams.value);
+  const canFuelLevelSource = canFuelFromLastMessage.value !== null
+    ? sourceLabel(canFuelFromLastMessage.source, "last message")
+    : canFuelFromParams.value !== null
+      ? sourceLabel(canFuelFromParams.source, "unit parameter")
+      : null;
+  const fuelFromLastMessage = findParamNumber(lastMessageParams, rawFuelLevelParameterKeys, isRawFuelLevelParameter);
+  const fuelFromParams = findParamNumber(params, rawFuelLevelParameterKeys, isRawFuelLevelParameter);
   const rawFuelLevel = firstNumber(fuelFromLastMessage.value, fuelFromParams.value);
   const rawFuelLevelSource = fuelFromLastMessage.value !== null
     ? sourceLabel(fuelFromLastMessage.source, "last message")
@@ -237,7 +267,9 @@ function normalizeStoredTelemetry(unitRaw: Record<string, unknown>, position: Wi
     engineRpm: firstNumber(lastMessageParams.engine_rpm, paramValue(params, "engine_rpm")),
     fuelLevel: null,
     fuelLevelSource: null,
-    fuelLevelTrust: rawFuelLevel !== null ? "diagnostic" : "not-configured",
+    fuelLevelTrust: canFuelLevel !== null || rawFuelLevel !== null ? "diagnostic" : "not-configured",
+    canFuelLevel,
+    canFuelLevelSource,
     rawFuelLevel,
     rawFuelLevelSource,
     externalVoltage: firstNumber(lastMessageParams.pwr_ext, lastMessageParams.voltage, paramValue(params, "pwr_ext"), paramValue(params, "voltage")),
