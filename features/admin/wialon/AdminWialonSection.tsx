@@ -84,6 +84,11 @@ type AdminWialonSectionProps = {
 };
 
 const PAGE_SIZE = 50;
+const GPS_WARNING_AFTER_HOURS = 0.5;
+const GPS_ERROR_AFTER_HOURS = 2;
+const MILEAGE_DIFF_WARNING_KM = 100;
+const LOW_FUEL_WARNING_LITERS = 10;
+const LOW_VOLTAGE_WARNING = 11.5;
 
 function vehicleLabel(vehicle: VehicleRow) {
   return [
@@ -165,6 +170,17 @@ function hoursSince(value: string | null) {
   return (Date.now() - date.getTime()) / 1000 / 60 / 60;
 }
 
+function maxStatus(current: DiagnosticStatus, next: DiagnosticStatus): DiagnosticStatus {
+  const order: Record<DiagnosticStatus, number> = {
+    "Норма": 0,
+    "Предупреждение": 1,
+    "Ошибка": 2,
+    "Нет данных": 3,
+  };
+
+  return order[next] > order[current] ? next : current;
+}
+
 function sensorText(unit: WialonAdminUnit) {
   const telemetry = unit.telemetry;
   const parts = [
@@ -218,38 +234,93 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
   const recommendations: string[] = [];
   let status: DiagnosticStatus = "Норма";
   const syncAgeHours = hoursSince(unit.syncedAt);
-  const signalAgeHours = hoursSince(unit.telemetry?.lastSignalAt ?? null);
+  const telemetry = unit.telemetry;
+  const signalAgeHours = hoursSince(telemetry?.lastSignalAt ?? null);
+  const isMapped = unit.vehicleId !== null;
 
-  if (unit.vehicleId === null) {
-    status = "Ошибка";
+  if (!isMapped) {
+    status = maxStatus(status, "Ошибка");
     problems.push("объект Wialon не сопоставлен с техникой сайта");
     recommendations.push("сопоставить по гаражному номеру или выбрать технику вручную");
   }
 
   if (!unit.syncedAt) {
-    status = "Нет данных";
+    status = maxStatus(status, "Нет данных");
     problems.push("нет даты загрузки объекта из Wialon");
     recommendations.push("нажать “Загрузить технику”");
   } else if (syncAgeHours !== null && syncAgeHours > 24) {
-    status = status === "Ошибка" ? "Ошибка" : "Предупреждение";
+    status = maxStatus(status, "Предупреждение");
     problems.push("список Wialon не обновлялся больше суток");
     recommendations.push("обновить список техники из Wialon");
   }
 
-  if (!unit.telemetry?.lastSignalAt) {
-    status = status === "Ошибка" || status === "Нет данных" ? status : "Нет данных";
+  if (!telemetry?.lastSignalAt) {
+    status = maxStatus(status, "Нет данных");
     problems.push("нет последнего сигнала GPS");
     recommendations.push("обновить координаты или проверить терминал GPS");
-  } else if (signalAgeHours !== null && signalAgeHours > 2) {
-    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
+  } else if (signalAgeHours !== null && signalAgeHours > GPS_ERROR_AFTER_HOURS) {
+    status = maxStatus(status, "Ошибка");
     problems.push("последний сигнал GPS старше 2 часов");
     recommendations.push("проверить связь, питание терминала и стоянку техники");
+  } else if (signalAgeHours !== null && signalAgeHours > GPS_WARNING_AFTER_HOURS) {
+    status = maxStatus(status, "Предупреждение");
+    problems.push("последний сигнал GPS старше 30 минут");
+    recommendations.push("проверить, находится ли техника в зоне связи");
   }
 
-  if (unit.telemetry?.validNavigation === false) {
-    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
+  if (telemetry?.validNavigation === false) {
+    status = maxStatus(status, "Предупреждение");
     problems.push("последняя навигация невалидна");
     recommendations.push("проверить GPS-антенну и прием спутников");
+  }
+
+  if (isMapped && typeof telemetry?.engineHours !== "number") {
+    status = maxStatus(status, "Предупреждение");
+    problems.push("моточасы не получены из Wialon");
+    recommendations.push("проверить параметр engine_hours и настройки моточасов в Wialon");
+  }
+
+  if (isMapped && telemetry?.engineOn === true && typeof telemetry.engineHours !== "number") {
+    status = maxStatus(status, "Ошибка");
+    problems.push("двигатель включен, но моточасы не передаются");
+    recommendations.push("проверить подключение зажигания/CAN и источник моточасов");
+  }
+
+  if (isMapped && telemetry?.engineOn === false && typeof telemetry.engineRpm === "number" && telemetry.engineRpm > 0) {
+    status = maxStatus(status, "Предупреждение");
+    problems.push("обороты двигателя есть, но зажигание показывает выключено");
+    recommendations.push("проверить настройку датчика зажигания и CAN-параметры");
+  }
+
+  if (isMapped && typeof telemetry?.mileage !== "number" && typeof telemetry?.canMileage !== "number") {
+    status = maxStatus(status, "Предупреждение");
+    problems.push("пробег не получен из Wialon/CAN");
+    recommendations.push("проверить датчик пробега, CAN и счетчик пробега в Wialon");
+  }
+
+  if (typeof telemetry?.mileage === "number" && typeof telemetry.canMileage === "number") {
+    const mileageDiff = Math.abs(telemetry.mileage - telemetry.canMileage);
+    if (mileageDiff > MILEAGE_DIFF_WARNING_KM) {
+      status = maxStatus(status, "Предупреждение");
+      problems.push(`GPS-пробег и CAN-пробег отличаются на ${formatNumber(mileageDiff, 1)} км`);
+      recommendations.push("проверить, какой пробег брать как основной: GPS, CAN или одометр Wialon");
+    }
+  }
+
+  if (isMapped && typeof telemetry?.fuelLevel !== "number") {
+    status = maxStatus(status, "Предупреждение");
+    problems.push("уровень топлива не получен");
+    recommendations.push("проверить ДУТ/CAN-параметр топлива и настройки датчика в Wialon");
+  } else if (typeof telemetry?.fuelLevel === "number" && telemetry.fuelLevel < LOW_FUEL_WARNING_LITERS) {
+    status = maxStatus(status, "Предупреждение");
+    problems.push(`низкий остаток топлива: ${formatNumber(telemetry.fuelLevel, 1)} л`);
+    recommendations.push("проверить фактический остаток и последнюю заправку");
+  }
+
+  if (typeof telemetry?.externalVoltage === "number" && telemetry.externalVoltage < LOW_VOLTAGE_WARNING) {
+    status = maxStatus(status, "Предупреждение");
+    problems.push(`низкое напряжение питания терминала: ${formatNumber(telemetry.externalVoltage, 2)} В`);
+    recommendations.push("проверить питание GPS-терминала и аккумулятор техники");
   }
 
   if (!unit.uniqueId && !unit.phone) {
@@ -257,7 +328,7 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
   }
 
   if (unit.hidden) {
-    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
+    status = maxStatus(status, "Предупреждение");
     problems.push("объект скрыт на сайте");
     recommendations.push("оставить скрытым только лишнюю, тестовую или снятую технику");
   }
@@ -265,7 +336,7 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
   return {
     id: unit.id,
     unitName: unit.name,
-    mapping: unit.vehicleId === null ? "Нет привязки" : "Привязана",
+    mapping: isMapped ? "Привязана" : "Нет привязки",
     gps: gpsText(unit),
     engineHours: engineHoursText(unit),
     mileage: mileageText(unit),
@@ -596,7 +667,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
           <div style={{ ...statusCardStyle, marginBottom: 10 }}>
             <div style={labelStyle}>Диагностика качества данных Wialon / GPS / ДУТ / CAN</div>
             <div style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>
-              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас показываются реальные данные Wialon API: последний сигнал, скорость, спутники, моточасы, пробег, CAN-пробег, топливо, напряжение и GSM.
+              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас система автоматически проверяет GPS-сигнал, навигацию, моточасы, пробег GPS/CAN, топливо и питание терминала.
             </div>
           </div>
           <table style={tableStyle}>
