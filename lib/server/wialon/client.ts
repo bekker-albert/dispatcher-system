@@ -4,7 +4,7 @@ import type { WialonPosition, WialonTelemetry, WialonUnit } from "./types";
 const wialonHost = "https://wialon.fleetbook.kz/wialon/ajax.html";
 const wialonUnitFlags = 4194303;
 
-const fuelParameterKeys = [
+const fuelLevelParameterKeys = [
   "can_fuel_vlm",
   "fuel level",
   "fuel_level",
@@ -19,6 +19,10 @@ const fuelParameterKeys = [
   "can_fuel_liters",
   "can_fuel_litres",
   "can_fuel",
+  "rs485fuel_level",
+  "rs485fuel_level1",
+  "rs485_fuel_level",
+  "rs485_fuel_level1",
   "lls",
   "lls1",
   "dut",
@@ -27,6 +31,20 @@ const fuelParameterKeys = [
   "ДУТ1",
   "топливо",
   "уровень топлива",
+];
+
+const fuelTemperatureTokens = [
+  "temp",
+  "temperature",
+  "temper",
+  "thermo",
+  "term",
+  " t",
+  "_t",
+  "-t",
+  ".t",
+  "темп",
+  "температура",
 ];
 
 type WialonLoginResponse = {
@@ -93,8 +111,44 @@ function firstNumber(...values: unknown[]) {
   return null;
 }
 
+function normalizeParameterKey(key: string) {
+  return key.trim().toLowerCase();
+}
+
+function isFuelTemperatureParameter(normalizedKey: string) {
+  return fuelTemperatureTokens.some((token) => normalizedKey.includes(token));
+}
+
+function isFuelLevelParameter(normalizedKey: string, allowedKeys: Set<string>) {
+  if (isFuelTemperatureParameter(normalizedKey)) return false;
+  if (allowedKeys.has(normalizedKey)) return true;
+
+  const looksLikeLevel = normalizedKey.includes("level")
+    || normalizedKey.includes("lvl")
+    || normalizedKey.includes("vlm")
+    || normalizedKey.includes("volume")
+    || normalizedKey.includes("liter")
+    || normalizedKey.includes("litre")
+    || normalizedKey.includes("литр")
+    || normalizedKey.includes("уров")
+    || normalizedKey.includes("остат");
+
+  const looksLikeFuelSensor = normalizedKey.includes("fuel")
+    || normalizedKey.includes("топл")
+    || normalizedKey.includes("дут")
+    || normalizedKey.includes("dut")
+    || normalizedKey.includes("lls");
+
+  return looksLikeFuelSensor && looksLikeLevel;
+}
+
 function findParamNumber(params: Record<string, unknown>, keys: string[]) {
+  const allowedKeys = new Set(keys.map(normalizeParameterKey));
+
   for (const key of keys) {
+    const normalizedKey = normalizeParameterKey(key);
+    if (!isFuelLevelParameter(normalizedKey, allowedKeys)) continue;
+
     const direct = asNumber(params[key]);
     if (direct !== null) return { value: direct, source: key };
 
@@ -102,16 +156,9 @@ function findParamNumber(params: Record<string, unknown>, keys: string[]) {
     if (nested !== null) return { value: nested, source: key };
   }
 
-  const normalizedKeys = new Set(keys.map((key) => key.trim().toLowerCase()));
   for (const [key, rawValue] of Object.entries(params)) {
-    const normalizedKey = key.trim().toLowerCase();
-    const looksLikeFuel = normalizedKeys.has(normalizedKey)
-      || normalizedKey.includes("fuel")
-      || normalizedKey.includes("топл")
-      || normalizedKey.includes("дут")
-      || normalizedKey.includes("lls");
-
-    if (!looksLikeFuel) continue;
+    const normalizedKey = normalizeParameterKey(key);
+    if (!isFuelLevelParameter(normalizedKey, allowedKeys)) continue;
 
     const direct = asNumber(rawValue);
     if (direct !== null) return { value: direct, source: key };
@@ -143,8 +190,8 @@ function normalizeWialonTelemetry(unit: Record<string, unknown>, position: Wialo
   const lastMessagePosition = asRecord(lastMessage.pos);
   const lastMessageParams = asRecord(lastMessage.p);
   const params = asRecord(unit.prms);
-  const fuelFromLastMessage = findParamNumber(lastMessageParams, fuelParameterKeys);
-  const fuelFromParams = findParamNumber(params, fuelParameterKeys);
+  const fuelFromLastMessage = findParamNumber(lastMessageParams, fuelLevelParameterKeys);
+  const fuelFromParams = findParamNumber(params, fuelLevelParameterKeys);
   const fuelLevel = firstNumber(fuelFromLastMessage.value, fuelFromParams.value);
   const fuelLevelSource = fuelFromLastMessage.value !== null
     ? `last message: ${fuelFromLastMessage.source}`
