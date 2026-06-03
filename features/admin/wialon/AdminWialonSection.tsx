@@ -23,11 +23,30 @@ import {
   valueStyle,
 } from "./AdminWialonStyles";
 
+type WialonTelemetry = {
+  lastSignalAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  speed: number | null;
+  satellites: number | null;
+  mileage: number | null;
+  canMileage: number | null;
+  engineHours: number | null;
+  engineOn: boolean | null;
+  engineRpm: number | null;
+  fuelLevel: number | null;
+  externalVoltage: number | null;
+  internalVoltage: number | null;
+  gsmLevel: number | null;
+  validNavigation: boolean | null;
+};
+
 type WialonAdminUnit = {
   id: number;
   name: string;
   uniqueId: string;
   phone: string;
+  telemetry?: WialonTelemetry;
   vehicleId: number | null;
   hidden: boolean;
   syncedAt: string | null;
@@ -50,6 +69,7 @@ type DiagnosticRow = {
   id: number;
   unitName: string;
   mapping: string;
+  gps: string;
   engineHours: string;
   mileage: string;
   fuel: string;
@@ -110,6 +130,11 @@ function formatDate(value: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("ru-RU");
 }
 
+function formatNumber(value: number | null | undefined, digits = 1) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "нет данных";
+  return value.toLocaleString("ru-RU", { maximumFractionDigits: digits });
+}
+
 function statusText(status: "unknown" | "ok" | "error") {
   if (status === "ok") return "Успешно";
   if (status === "error") return "Ошибка";
@@ -141,11 +166,51 @@ function hoursSince(value: string | null) {
 }
 
 function sensorText(unit: WialonAdminUnit) {
-  if (unit.uniqueId || unit.phone) {
-    return [unit.uniqueId ? "UID есть" : "UID не отдается API", unit.phone ? "SIM есть" : "SIM не отдается API"].join(" / ");
-  }
+  const telemetry = unit.telemetry;
+  const parts = [
+    unit.uniqueId ? "UID есть" : "UID API не отдает",
+    unit.phone ? "SIM есть" : "SIM API не отдает",
+    telemetry?.validNavigation === true ? "GPS валиден" : telemetry?.validNavigation === false ? "GPS невалиден" : "GPS н/д",
+    typeof telemetry?.satellites === "number" ? `${telemetry.satellites} спутн.` : "спутн. н/д",
+    typeof telemetry?.gsmLevel === "number" ? `GSM ${telemetry.gsmLevel}` : "GSM н/д",
+  ];
 
-  return "UID/SIM не отдаются API";
+  return parts.join(" / ");
+}
+
+function gpsText(unit: WialonAdminUnit) {
+  const telemetry = unit.telemetry;
+  if (!telemetry?.lastSignalAt) return "нет сигнала";
+
+  const speed = typeof telemetry.speed === "number" ? `${formatNumber(telemetry.speed, 0)} км/ч` : "скорость н/д";
+  const satellites = typeof telemetry.satellites === "number" ? `${telemetry.satellites} спутн.` : "спутн. н/д";
+  return `${formatDate(telemetry.lastSignalAt)} / ${speed} / ${satellites}`;
+}
+
+function engineHoursText(unit: WialonAdminUnit) {
+  const telemetry = unit.telemetry;
+  if (typeof telemetry?.engineHours !== "number") return unit.vehicleId === null ? "Не проверяется" : "нет моточасов";
+
+  const engineState = telemetry.engineOn === true ? "двигатель вкл" : telemetry.engineOn === false ? "двигатель выкл" : "двигатель н/д";
+  const rpm = typeof telemetry.engineRpm === "number" ? ` / ${formatNumber(telemetry.engineRpm, 0)} об/мин` : "";
+  return `${formatNumber(telemetry.engineHours, 2)} мч / ${engineState}${rpm}`;
+}
+
+function mileageText(unit: WialonAdminUnit) {
+  const telemetry = unit.telemetry;
+  const values = [];
+  if (typeof telemetry?.mileage === "number") values.push(`GPS ${formatNumber(telemetry.mileage, 1)} км`);
+  if (typeof telemetry?.canMileage === "number") values.push(`CAN ${formatNumber(telemetry.canMileage, 1)} км`);
+  if (!values.length) return unit.vehicleId === null ? "Не проверяется" : "нет пробега";
+  return values.join(" / ");
+}
+
+function fuelText(unit: WialonAdminUnit) {
+  const telemetry = unit.telemetry;
+  if (typeof telemetry?.fuelLevel !== "number") return unit.vehicleId === null ? "Не проверяется" : "нет топлива";
+
+  const voltage = typeof telemetry.externalVoltage === "number" ? ` / ${formatNumber(telemetry.externalVoltage, 2)} В` : "";
+  return `${formatNumber(telemetry.fuelLevel, 1)} л${voltage}`;
 }
 
 function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
@@ -153,6 +218,7 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
   const recommendations: string[] = [];
   let status: DiagnosticStatus = "Норма";
   const syncAgeHours = hoursSince(unit.syncedAt);
+  const signalAgeHours = hoursSince(unit.telemetry?.lastSignalAt ?? null);
 
   if (unit.vehicleId === null) {
     status = "Ошибка";
@@ -170,6 +236,22 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
     recommendations.push("обновить список техники из Wialon");
   }
 
+  if (!unit.telemetry?.lastSignalAt) {
+    status = status === "Ошибка" || status === "Нет данных" ? status : "Нет данных";
+    problems.push("нет последнего сигнала GPS");
+    recommendations.push("обновить координаты или проверить терминал GPS");
+  } else if (signalAgeHours !== null && signalAgeHours > 2) {
+    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
+    problems.push("последний сигнал GPS старше 2 часов");
+    recommendations.push("проверить связь, питание терминала и стоянку техники");
+  }
+
+  if (unit.telemetry?.validNavigation === false) {
+    status = status === "Ошибка" || status === "Нет данных" ? status : "Предупреждение";
+    problems.push("последняя навигация невалидна");
+    recommendations.push("проверить GPS-антенну и прием спутников");
+  }
+
   if (!unit.uniqueId && !unit.phone) {
     recommendations.push("UID/SIM Wialon API не отдает; для контроля IMEI/SIM использовать карточку техники или ручные поля");
   }
@@ -184,15 +266,16 @@ function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
     id: unit.id,
     unitName: unit.name,
     mapping: unit.vehicleId === null ? "Нет привязки" : "Привязана",
-    engineHours: unit.vehicleId === null ? "Не проверяется" : "Нужен источник моточасов",
-    mileage: unit.vehicleId === null ? "Не проверяется" : "Нужен источник пробега",
-    fuel: unit.vehicleId === null ? "Не проверяется" : "Нужен ДУТ/CAN",
+    gps: gpsText(unit),
+    engineHours: engineHoursText(unit),
+    mileage: mileageText(unit),
+    fuel: fuelText(unit),
     sensors: sensorText(unit),
     status,
     problem: problems.length ? problems.join("; ") : "критичных проблем по связке Wialon не найдено",
     recommendation: recommendations.length
       ? Array.from(new Set(recommendations)).join("; ")
-      : "после подключения моточасов, пробега и топлива включить сверку с нормами и сводкой",
+      : "следующий этап — сверить моточасы, пробег и топливо со сводкой и нормами",
   };
 }
 
@@ -513,7 +596,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
           <div style={{ ...statusCardStyle, marginBottom: 10 }}>
             <div style={labelStyle}>Диагностика качества данных Wialon / GPS / ДУТ / CAN</div>
             <div style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>
-              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас проверяется связка Wialon с техникой сайта и актуальность загрузки. UID/SIM являются справочными полями: если API их не отдает, это не считается неисправностью техники.
+              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас показываются реальные данные Wialon API: последний сигнал, скорость, спутники, моточасы, пробег, CAN-пробег, топливо, напряжение и GSM.
             </div>
           </div>
           <table style={tableStyle}>
@@ -521,6 +604,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
               <tr>
                 <th style={thStyle}>Объект Wialon</th>
                 <th style={thStyle}>Связка</th>
+                <th style={thStyle}>GPS</th>
                 <th style={thStyle}>Моточасы</th>
                 <th style={thStyle}>Пробег</th>
                 <th style={thStyle}>Топливо</th>
@@ -535,6 +619,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.unitName}</td>
                   <td style={tdStyle}>{row.mapping}</td>
+                  <td style={tdStyle}>{row.gps}</td>
                   <td style={tdStyle}>{row.engineHours}</td>
                   <td style={tdStyle}>{row.mileage}</td>
                   <td style={tdStyle}>{row.fuel}</td>
@@ -546,7 +631,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
               ))}
               {diagnosticRows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
+                  <td colSpan={10} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
                     Нет данных для диагностики. Сначала загрузите технику из Wialon.
                   </td>
                 </tr>
