@@ -35,6 +35,7 @@ type WialonTelemetry = {
   engineOn: boolean | null;
   engineRpm: number | null;
   fuelLevel: number | null;
+  fuelLevelSource?: string | null;
   externalVoltage: number | null;
   internalVoltage: number | null;
   gsmLevel: number | null;
@@ -225,8 +226,9 @@ function fuelText(unit: WialonAdminUnit) {
   const telemetry = unit.telemetry;
   if (typeof telemetry?.fuelLevel !== "number") return unit.vehicleId === null ? "Не проверяется" : "нет топлива";
 
+  const source = telemetry.fuelLevelSource ? ` / ${telemetry.fuelLevelSource}` : "";
   const voltage = typeof telemetry.externalVoltage === "number" ? ` / ${formatNumber(telemetry.externalVoltage, 2)} В` : "";
-  return `${formatNumber(telemetry.fuelLevel, 1)} л${voltage}`;
+  return `${formatNumber(telemetry.fuelLevel, 1)} л${source}${voltage}`;
 }
 
 function buildDiagnosticRow(unit: WialonAdminUnit): DiagnosticRow {
@@ -359,6 +361,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   const [showUnits, setShowUnits] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(true);
+  const [diagnosticView, setDiagnosticView] = useState<"problems" | "all">("problems");
   const [filter, setFilter] = useState<"all" | "mapped" | "unmapped" | "hidden">("all");
   const [page, setPage] = useState(1);
   const [dirtyIds, setDirtyIds] = useState<Set<number>>(() => new Set());
@@ -405,11 +408,12 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
   const mappedCount = units.filter((unit) => unit.vehicleId !== null).length;
   const hiddenCount = units.filter((unit) => unit.hidden).length;
   const unmappedCount = units.length - mappedCount;
+  const withFuelCount = units.filter((unit) => typeof unit.telemetry?.fuelLevel === "number").length;
   const diagnostics = useMemo(() => units.map(buildDiagnosticRow), [units]);
   const diagnosticsToReview = diagnostics.filter((row) => row.status !== "Норма");
   const diagnosticErrors = diagnostics.filter((row) => row.status === "Ошибка" || row.status === "Нет данных").length;
   const diagnosticWarnings = diagnostics.filter((row) => row.status === "Предупреждение").length;
-  const diagnosticRows = diagnosticsToReview.length ? diagnosticsToReview.slice(0, 50) : diagnostics.slice(0, 50);
+  const diagnosticRows = (diagnosticView === "all" ? diagnostics : diagnosticsToReview).slice(0, 100);
 
   const filteredUnits = useMemo(() => {
     const result = units.filter((unit) => {
@@ -510,7 +514,7 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
 
     await loadStoredSnapshot();
     setStatus("ok");
-    setMessage(`Координаты обновлены: ${body.result?.insertedPositionsCount ?? 0}.`);
+    setMessage(`Координаты обновлены: ${body.result?.insertedPositionsCount ?? 0}. Ошибок: ${body.result?.failedUnitsCount ?? 0}. Без координат: ${body.result?.unitsWithoutPositionCount ?? 0}.`);
   });
 
   const saveMappings = () => runAction(async () => {
@@ -634,6 +638,10 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
           <div style={valueStyle}>{unmappedCount}</div>
         </div>
         <div style={statusCardStyle}>
+          <div style={labelStyle}>С топливом</div>
+          <div style={valueStyle}>{withFuelCount}</div>
+        </div>
+        <div style={statusCardStyle}>
           <div style={labelStyle}>Скрыто</div>
           <div style={valueStyle}>{hiddenCount}</div>
         </div>
@@ -667,7 +675,15 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
           <div style={{ ...statusCardStyle, marginBottom: 10 }}>
             <div style={labelStyle}>Диагностика качества данных Wialon / GPS / ДУТ / CAN</div>
             <div style={{ color: "#475569", fontSize: 13, marginTop: 6 }}>
-              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. Сейчас система автоматически проверяет GPS-сигнал, навигацию, моточасы, пробег GPS/CAN, топливо и питание терминала.
+              Ошибки: {diagnosticErrors}. Предупреждения: {diagnosticWarnings}. С топливом: {withFuelCount} из {units.length}. Сейчас система проверяет GPS-сигнал, навигацию, моточасы, пробег GPS/CAN, топливо и питание терминала.
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button onClick={() => setDiagnosticView("problems")} style={diagnosticView === "problems" ? primaryButtonStyle : buttonStyle} type="button">
+                Проблемные ({diagnosticsToReview.length})
+              </button>
+              <button onClick={() => setDiagnosticView("all")} style={diagnosticView === "all" ? primaryButtonStyle : buttonStyle} type="button">
+                Вся техника ({diagnostics.length})
+              </button>
             </div>
           </div>
           <table style={tableStyle}>
@@ -703,7 +719,9 @@ export function AdminWialonSection({ vehicleRows }: AdminWialonSectionProps) {
               {diagnosticRows.length === 0 ? (
                 <tr>
                   <td colSpan={10} style={{ ...tdStyle, color: "#64748b", textAlign: "center" }}>
-                    Нет данных для диагностики. Сначала загрузите технику из Wialon.
+                    {diagnosticView === "problems" && diagnostics.length
+                      ? "Проблемных строк нет. Нажмите “Вся техника”, чтобы посмотреть все объекты."
+                      : "Нет данных для диагностики. Сначала загрузите технику из Wialon."}
                   </td>
                 </tr>
               ) : null}
