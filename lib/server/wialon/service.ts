@@ -160,19 +160,21 @@ export async function syncWialonPositions() {
 
   try {
     const inserted = await insertWialonPositions(units);
+    await upsertWialonUnits(units);
     const hasProblems = failedUnits.length > 0 || unitsWithoutPosition.length > 0;
 
     await logWialonSync({
       syncType: "position-sync",
       status: failedUnits.length > 0 ? "error" : "success",
       message: hasProblems
-        ? `Wialon positions synced: ${inserted}. Failed units: ${failedUnits.length}. Units without coordinates: ${unitsWithoutPosition.length}.`
-        : `Wialon positions synced: ${inserted}.`,
+        ? `Wialon positions synced: ${inserted}. Unit snapshots refreshed: ${units.length}. Failed units: ${failedUnits.length}. Units without coordinates: ${unitsWithoutPosition.length}.`
+        : `Wialon positions synced: ${inserted}. Unit snapshots refreshed: ${units.length}.`,
       startedAt,
       details: {
         requestedUnitsCount: storedUnits.length,
         fetchedUnitsCount: units.length,
         insertedPositionsCount: inserted,
+        refreshedUnitsCount: units.length,
         failedUnitsCount: failedUnits.length,
         unitsWithoutPositionCount: unitsWithoutPosition.length,
         failedUnits,
@@ -184,6 +186,7 @@ export async function syncWialonPositions() {
       requestedUnitsCount: storedUnits.length,
       fetchedUnitsCount: units.length,
       insertedPositionsCount: inserted,
+      refreshedUnitsCount: units.length,
       failedUnitsCount: failedUnits.length,
       unitsWithoutPositionCount: unitsWithoutPosition.length,
       failedUnits,
