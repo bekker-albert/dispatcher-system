@@ -1,10 +1,24 @@
 import { NextResponse } from "next/server";
 
+import { canAuthUserEditTab, canAuthUserViewTab, isAuthUserSuperuser } from "@/lib/domain/auth/types";
 import { getAuthSessionFromRequest } from "@/lib/server/auth/session";
+
+function canUseWialonLocal(session: Awaited<ReturnType<typeof getAuthSessionFromRequest>>) {
+  const user = session?.user;
+  if (!user) return false;
+  if (isAuthUserSuperuser(user)) return true;
+  if (user.canManageUsers) return true;
+
+  return canAuthUserEditTab(user, "tb")
+    || canAuthUserEditTab(user, "fleet")
+    || canAuthUserEditTab(user, "admin")
+    || canAuthUserViewTab(user, "tb")
+    || canAuthUserViewTab(user, "fleet");
+}
 
 export async function requireWialonAdmin(request: Request) {
   const session = await getAuthSessionFromRequest(request);
-  if (!session?.user.canManageUsers) {
+  if (!canUseWialonLocal(session)) {
     return NextResponse.json({ error: "Недостаточно прав для Wialon Local" }, { status: 403 });
   }
 
