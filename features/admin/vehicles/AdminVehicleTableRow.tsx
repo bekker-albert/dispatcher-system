@@ -179,6 +179,66 @@ function AdminVehicleTableRowComponent({
           />
         </VehicleCell>
       </td>
+      <td style={adminVehicleTdStyle}>
+        <VehicleCell adminVehiclesEditing={adminVehiclesEditing} value={vehicle.gpsInstalled ?? ""}>
+          <EditableVehicleCell
+            vehicle={vehicle}
+            field="gpsInstalled"
+            onVehicleCellChange={onVehicleCellChange}
+            vehicleCellInputProps={vehicleCellInputProps}
+          />
+        </VehicleCell>
+      </td>
+      <td style={adminVehicleTdStyle}>
+        <VehicleCell adminVehiclesEditing={adminVehiclesEditing} value={vehicle.dutInstalled ?? ""}>
+          <EditableVehicleCell
+            vehicle={vehicle}
+            field="dutInstalled"
+            onVehicleCellChange={onVehicleCellChange}
+            vehicleCellInputProps={vehicleCellInputProps}
+          />
+        </VehicleCell>
+      </td>
+      <td style={adminVehicleTdStyle}>
+        <VehicleCell adminVehiclesEditing={adminVehiclesEditing} value={vehicle.canInstalled ?? ""}>
+          <EditableVehicleCell
+            vehicle={vehicle}
+            field="canInstalled"
+            onVehicleCellChange={onVehicleCellChange}
+            vehicleCellInputProps={vehicleCellInputProps}
+          />
+        </VehicleCell>
+      </td>
+      <td style={adminVehicleTdStyle}>
+        <VehicleCell adminVehiclesEditing={adminVehiclesEditing} value={vehicle.mainMileageSource ?? ""}>
+          <EditableVehicleCell
+            vehicle={vehicle}
+            field="mainMileageSource"
+            onVehicleCellChange={onVehicleCellChange}
+            vehicleCellInputProps={vehicleCellInputProps}
+          />
+        </VehicleCell>
+      </td>
+      <td style={adminVehicleTdStyle}>
+        <VehicleCell adminVehiclesEditing={adminVehiclesEditing} value={vehicle.mainFuelSource ?? ""}>
+          <EditableVehicleCell
+            vehicle={vehicle}
+            field="mainFuelSource"
+            onVehicleCellChange={onVehicleCellChange}
+            vehicleCellInputProps={vehicleCellInputProps}
+          />
+        </VehicleCell>
+      </td>
+      <td style={adminVehicleTdStyle}>
+        <VehicleCell adminVehiclesEditing={adminVehiclesEditing} value={vehicle.mainEngineHoursSource ?? ""}>
+          <EditableVehicleCell
+            vehicle={vehicle}
+            field="mainEngineHoursSource"
+            onVehicleCellChange={onVehicleCellChange}
+            vehicleCellInputProps={vehicleCellInputProps}
+          />
+        </VehicleCell>
+      </td>
       <td style={adminVehicleNumberTdStyle}>
         <VehicleCell adminVehiclesEditing={adminVehiclesEditing} numeric value={vehicle.manufactureYear}>
           <EditableVehicleCell
