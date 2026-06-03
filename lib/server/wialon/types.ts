@@ -10,6 +10,7 @@ export type WialonTelemetry = {
   engineOn: boolean | null;
   engineRpm: number | null;
   fuelLevel: number | null;
+  fuelLevelSource: string | null;
   externalVoltage: number | null;
   internalVoltage: number | null;
   gsmLevel: number | null;
