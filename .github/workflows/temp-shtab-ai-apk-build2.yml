@@ -56,38 +56,57 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import base64
+          import re
           from pathlib import Path
-          source = Path('.github/workflows/temp-shtab-ai-apk.yml').read_text(encoding='utf-8').splitlines()
-          start = next(i for i, line in enumerate(source) if line.strip() == '- name: Generate Android project')
-          run_line = next(i for i in range(start, len(source)) if source[i].strip() == 'run: |')
-          end = next(i for i in range(run_line + 1, len(source)) if source[i].strip() == '- name: Build installable APK')
-          commands = []
-          for line in source[run_line + 1:end]:
-              commands.append(line[10:] if line.startswith('          ') else line)
-          Path('/tmp/generate-project.sh').write_text('\n'.join(commands) + '\n', encoding='utf-8')
+
+          source = Path('.github/workflows/temp-shtab-ai-apk.yml').read_text(encoding='utf-8')
+          pattern = re.compile(r"echo '([^']+)' \| base64 -d > '([^']*app/src/main/assets/[^']+)'" )
+          assets = {}
+          for encoded, target in pattern.findall(source):
+              target = target.replace('app/src/main/assets/', 'shtab-ai-android/app/src/main/assets/')
+              path = Path(target)
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_bytes(base64.b64decode(encoded))
+              assets[path.name] = path.stat().st_size
+
+          required = {'index.html', 'styles.css', 'app.js'}
+          missing = required.difference(assets)
+          if missing:
+              raise SystemExit(f'Missing assets: {sorted(missing)}')
+          for name in sorted(assets):
+              print(f'{name}: {assets[name]} bytes')
           PY
-          chmod +x /tmp/generate-project.sh
-          cd shtab-ai-android
-          set +e
-          bash /tmp/generate-project.sh
-          set -e
-          mkdir -p ../build-output
-          find . -maxdepth 8 -type f -printf '%p %s bytes\n' | sort > ../build-output/generation-report.txt
-          cat ../build-output/generation-report.txt
+          mkdir -p build-output
+          find shtab-ai-android -maxdepth 9 -type f -printf '%p %s bytes\n' | sort > build-output/generation-report.txt
 
       - name: Build installable APK
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         run: cd shtab-ai-android && gradle :app:assembleDebug --stacktrace
 
-      - name: Encode APK for retrieval
+      - name: Prepare APK
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         run: |
           mkdir -p build-output
           cp shtab-ai-android/app/build/outputs/apk/debug/app-debug.apk build-output/Shtab-AI-v1.apk
           sha256sum build-output/Shtab-AI-v1.apk > build-output/sha256.txt
-          base64 -w0 build-output/Shtab-AI-v1.apk | split -b 700000 -d -a 3 - build-output/apk.b64.part-
+
+      - name: Upload APK artifact
+        if: steps.existing.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shtab-AI-v1-apk
+          path: build-output/Shtab-AI-v1.apk
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Encode APK for retrieval
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: |
+          base64 -w0 build-output/Shtab-AI-v1.apk | split -b 100000 -d -a 3 - build-output/apk.b64.part-
           ls -1 build-output/apk.b64.part-* > build-output/parts.txt
           printf "Штаб AI 1.0.0\nAPK собран GitHub Actions\n" > build-output/build-complete.txt
           rm build-output/Shtab-AI-v1.apk
