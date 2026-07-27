@@ -24,26 +24,45 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Start detached process
+      - name: Start detached process from persistent directory
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
-            set -e
-            site=/var/www/dispatcher/data/www/logistics.aam-dispatch.kz
+            set -euo pipefail
+            app=/var/www/dispatcher/data/logistics-app
             socket=/var/www/dispatcher/data/nodejs/0.sock
-            if [ -f "$site/run.pid" ]; then kill "$(cat "$site/run.pid")" 2>/dev/null || true; fi
-            pkill -f "$site/server.js" 2>/dev/null || true
+            mkdir -p "$app"
+            cat > "$app/server.js" <<'JS'
+            'use strict';
+            const http = require('http');
+            const fs = require('fs');
+            const path = require('path');
+            const socket = process.env.SOCKET_PATH;
+            fs.mkdirSync(path.dirname(socket), {recursive:true});
+            if (fs.existsSync(socket)) fs.unlinkSync(socket);
+            const page='<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Логистика Газели</title></head><body><h1>Логистика Газели</h1><p>Сервер подключён.</p></body></html>';
+            const server=http.createServer((req,res)=>{
+              if(req.url==='/health'||req.url==='/health/') {res.writeHead(200,{'content-type':'application/json'});return res.end('{"status":"ok"}');}
+              res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(page);
+            });
+            server.on('error',e=>{console.error(e);process.exit(1)});
+            server.listen(socket,()=>{fs.chmodSync(socket,0o666);console.log('LISTENING '+socket)});
+            JS
+            if [ -f "$app/run.pid" ]; then kill "$(cat "$app/run.pid")" 2>/dev/null || true; fi
+            pkill -f "$app/server.js" 2>/dev/null || true
             rm -f "$socket"
-            cd "$site"
-            nohup setsid env SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/node "$site/server.js" >> "$site/runtime.log" 2>&1 < /dev/null &
-            echo $! > "$site/run.pid"
+            : > "$app/runtime.log"
+            cd "$app"
+            nohup setsid env SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/node "$app/server.js" >> "$app/runtime.log" 2>&1 < /dev/null &
+            echo $! > "$app/run.pid"
             sleep 3
+            cat "$app/runtime.log"
             test -S "$socket"
             curl -fsS --unix-socket "$socket" http://localhost/health
-            echo "STARTED_PID=$(cat "$site/run.pid")"
+            echo "STARTED_PID=$(cat "$app/run.pid")"
           EOF
 
       - name: Verify after new SSH session
@@ -54,19 +73,16 @@ jobs:
         run: |
           sleep 10
           ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
-            site=/var/www/dispatcher/data/www/logistics.aam-dispatch.kz
+            set -e
+            app=/var/www/dispatcher/data/logistics-app
             socket=/var/www/dispatcher/data/nodejs/0.sock
-            pid=$(cat "$site/run.pid" 2>/dev/null || true)
-            echo "PID=$pid"
-            ps -o pid,ppid,sid,stat,cmd -p "$pid" 2>/dev/null || true
-            ls -l "$socket" 2>/dev/null || true
-            tail -20 "$site/runtime.log" 2>/dev/null || true
-            test -n "$pid"
+            pid=$(cat "$app/run.pid")
+            ps -o pid,ppid,sid,stat,cmd -p "$pid"
+            test -f "$app/server.js"
             kill -0 "$pid"
             test -S "$socket"
             curl -fsS --unix-socket "$socket" http://localhost/health
           EOF
 
       - name: Verify public site
-        run: |
-          curl -fsS --retry 5 --retry-delay 2 https://logistics.aam-dispatch.kz/ | grep -q "Логистика Газели"
+        run: curl -fsS --retry 5 --retry-delay 2 https://logistics.aam-dispatch.kz/ | grep -q "Логистика Газели"
