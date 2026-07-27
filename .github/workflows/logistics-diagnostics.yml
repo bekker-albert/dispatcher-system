@@ -26,9 +26,9 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Read deployment essentials
+      - name: Read assigned logistics port
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'export PATH=/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin; export PM2_HOME=/var/www/dispatcher/data/.pm2; echo ===PM2===; /usr/lib/ispnodejs/bin/pm2 jlist 2>/dev/null | node -e '\''let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{for(const p of JSON.parse(s)){const e=p.pm2_env||{};console.log(JSON.stringify({name:p.name,cwd:e.pm_cwd,script:e.pm_exec_path,args:e.args,PORT:e.PORT,NODE_ENV:e.NODE_ENV,status:e.status}))}})'\''; echo ===PROXY===; grep -RInE --exclude="*.log" --exclude="*.pem" --exclude="*.key" "logistics\.aam-dispatch\.kz|proxy_pass[^;]*127\.0\.0\.1:[0-9]+" /var/www/dispatcher/data/etc /etc/nginx 2>/dev/null | head -80; echo ===PORTS===; ss -ltn 2>/dev/null | grep -E "127\.0\.0\.1|0\.0\.0\.0" | head -80; echo ===HTTP===; curl -sSIk --max-time 10 https://logistics.aam-dispatch.kz/ | head -8 || true'
+        run: ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'port=$(grep -RhoE "127\.0\.0\.1:[0-9]+" /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz/dynamic 2>/dev/null | head -1 | cut -d: -f2); echo "LOGISTICS_PORT=${port:-NOT_FOUND}"; echo "DYNAMIC_CONFIG:"; grep -RInE "proxy_pass|127\.0\.0\.1:[0-9]+" /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz/dynamic 2>/dev/null || true'
