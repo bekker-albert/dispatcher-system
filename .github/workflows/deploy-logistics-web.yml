@@ -9,6 +9,14 @@ on:
       - "features/logistics/**"
       - "logistics-server.js"
       - ".github/workflows/deploy-logistics-web.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/logistics/**"
+      - "features/logistics/**"
+      - "logistics-server.js"
+      - ".github/workflows/deploy-logistics-web.yml"
   workflow_dispatch:
 
 concurrency:
