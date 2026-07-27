@@ -1,0 +1,42 @@
+name: Logistics admin build diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/logistics-admin-build-diagnostics.yml"
+      - "features/logistics/AdvancedAdminWorkspace.tsx"
+      - "features/logistics/advanced-admin.module.css"
+      - "app/logistics/admin/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --silent
+      - name: Capture build output
+        shell: bash
+        run: |
+          set +e
+          npm run build > admin-build.log 2>&1
+          code=$?
+          echo "$code" > admin-build.exit
+          tail -n 250 admin-build.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logistics-admin-build-log
+          path: |
+            admin-build.log
+            admin-build.exit
+      - name: Fail when build failed
+        run: test "$(cat admin-build.exit)" = "0"
