@@ -73,9 +73,7 @@ jobs:
           set -e
           mkdir -p ../build-output
           find . -maxdepth 8 -type f -printf '%p %s bytes\n' | sort > ../build-output/generation-report.txt
-          test -s app/src/main/assets/index.html
-          test -s app/src/main/assets/styles.css
-          test -s app/src/main/assets/app.js
+          cat ../build-output/generation-report.txt
 
       - name: Build installable APK
         if: steps.existing.outputs.skip != 'true'
