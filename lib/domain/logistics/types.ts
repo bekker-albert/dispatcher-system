@@ -19,6 +19,7 @@ export type LogisticsTripStatus =
   | "cancelled";
 
 export type LogisticsRequestKind = "passengers" | "cargo" | "documents" | "mixed";
+export type LogisticsStopType = "origin" | "loading" | "waypoint" | "unloading" | "destination";
 
 export type LogisticsDataScope = "own" | "department" | "project" | "company";
 
@@ -48,7 +49,7 @@ export type LogisticsRequestInput = {
   notes?: string;
   stops: Array<{
     sequence: number;
-    type: "origin" | "loading" | "waypoint" | "unloading" | "destination";
+    type: string;
     name: string;
     address?: string;
     plannedAt?: string;
