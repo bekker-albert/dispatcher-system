@@ -1,0 +1,234 @@
+name: Deploy Gazel Logistics v0.6.2
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [".github/workflows/logistics-deploy-v062.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gazel-logistics-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PAYLOAD_BLOB_SHA: 2e193b08e20732f3e224150da72677e1b133a8a4
+      PAYLOAD_SHA256: 647653312cc143be096744d2fb488cccfb3a8bb2125b5c01c8c6a6ab474fe74b
+    steps:
+      - name: Download deployment payload from GitHub blob
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/blobs/${PAYLOAD_BLOB_SHA}" \
+            -o /tmp/blob.json
+          jq -r '.content' /tmp/blob.json | tr -d '\n' | base64 -d > /tmp/gazel-logistics-v0.6.2.tar.xz
+          echo "${PAYLOAD_SHA256}  /tmp/gazel-logistics-v0.6.2.tar.xz" | sha256sum -c -
+          tar -tJf /tmp/gazel-logistics-v0.6.2.tar.xz >/dev/null
+
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload release archive
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" \
+            /tmp/gazel-logistics-v0.6.2.tar.xz \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/gazel-logistics-v0.6.2.tar.xz"
+
+      - name: Install and activate release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          RELEASE_ID: ${{ github.sha }}
+          PAYLOAD_SHA256: ${{ env.PAYLOAD_SHA256 }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "RELEASE_ID='${RELEASE_ID}' PAYLOAD_SHA256='${PAYLOAD_SHA256}' bash -s" <<'EOF'
+            set -euo pipefail
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+
+            root=/var/www/dispatcher/data
+            archive="$root/gazel-logistics-v0.6.2.tar.xz"
+            releases="$root/logistics-releases"
+            shared="$root/logistics-shared"
+            control="$root/logistics-control"
+            current="$root/logistics-current"
+            release="$releases/${RELEASE_ID:0:12}"
+            socket="$root/nodejs/0.sock"
+            backend_port=18101
+
+            echo "${PAYLOAD_SHA256}  ${archive}" | sha256sum -c -
+            mkdir -p "$releases" "$shared/data/media" "$shared/logs" "$control"
+            rm -rf "$release"
+            mkdir -p "$release"
+            tar -xJf "$archive" -C "$release"
+
+            rm -rf "$release/data" "$release/logs"
+            ln -s "$shared/data" "$release/data"
+            ln -s "$shared/logs" "$release/logs"
+
+            python3 - <<PY
+            from pathlib import Path
+            path = Path("$release/app/server/accounts/management/commands/seed_demo.py")
+            text = path.read_text(encoding="utf-8")
+            marker = "        template_dir=Path(__file__).resolve().parents[3]/'sample_templates'\n"
+            replacement = marker + "        if not template_dir.exists():\n            self.stdout.write(self.style.WARNING('Официальные бланки пока не загружены.'))\n            self.stdout.write(self.style.SUCCESS('Демо-данные созданы. admin/admin12345'))\n            return\n"
+            if marker in text and "Официальные бланки пока не загружены" not in text:
+                path.write_text(text.replace(marker, replacement), encoding="utf-8")
+            PY
+
+            cd "$release"
+            python3 -m venv .venv
+            .venv/bin/python -m pip install --upgrade pip
+            .venv/bin/pip install -r app/server/requirements.txt
+
+            export GAZEL_DATA_DIR="$shared/data"
+            if [ ! -s "$shared/data/secret_key" ]; then
+              .venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(64))' > "$shared/data/secret_key"
+              chmod 600 "$shared/data/secret_key"
+            fi
+            export DJANGO_SECRET_KEY="$(cat "$shared/data/secret_key")"
+            export DJANGO_DEBUG=0
+            export DJANGO_ALLOWED_HOSTS="logistics.aam-dispatch.kz,127.0.0.1,localhost"
+            export CORS_ALLOWED_ORIGINS="https://logistics.aam-dispatch.kz"
+            export CSRF_TRUSTED_ORIGINS="https://logistics.aam-dispatch.kz"
+            export DJANGO_SECURE_COOKIES=1
+            export DJANGO_SECURE_SSL_REDIRECT=0
+
+            .venv/bin/python app/server/manage.py migrate --noinput
+            .venv/bin/python app/server/manage.py collectstatic --noinput
+            .venv/bin/python app/server/manage.py seed_demo
+            .venv/bin/python app/server/manage.py check
+
+            test_port=13101
+            test_log="$shared/logs/release-test.log"
+            : > "$test_log"
+            PORT="$test_port" GAZEL_BACKEND_PORT="$backend_port" SITE_HOST=logistics.aam-dispatch.kz \
+              nohup setsid /usr/lib/ispnodejs/bin/node "$release/server.js" >> "$test_log" 2>&1 < /dev/null &
+            test_pid=$!
+            cleanup_test() { kill "$test_pid" 2>/dev/null || true; }
+            trap cleanup_test EXIT
+            for attempt in $(seq 1 60); do
+              if curl -fsS "http://127.0.0.1:${test_port}/health/" >/dev/null; then break; fi
+              sleep 1
+            done
+            curl -fsS "http://127.0.0.1:${test_port}/health/" >/dev/null
+            curl -fsS "http://127.0.0.1:${test_port}/" | grep -q '<div id="root">'
+            cleanup_test
+            wait "$test_pid" 2>/dev/null || true
+            trap - EXIT
+
+            previous=""
+            if [ -L "$current" ]; then previous="$(readlink -f "$current" || true)"; fi
+            ln -sfn "$release" "$current"
+
+            cat > "$control/start.sh" <<'SH'
+            #!/usr/bin/env bash
+            set -euo pipefail
+            root=/var/www/dispatcher/data
+            current="$root/logistics-current"
+            shared="$root/logistics-shared"
+            socket="$root/nodejs/0.sock"
+            pidfile="$control_pidfile"
+            SH
+            sed -i "s|\$control_pidfile|$control/gazel-logistics.pid|" "$control/start.sh"
+            cat >> "$control/start.sh" <<'SH'
+            logfile="$shared/logs/runtime.log"
+            if [ -s "$pidfile" ]; then
+              pid="$(cat "$pidfile")"
+              if kill -0 "$pid" 2>/dev/null; then exit 0; fi
+            fi
+            rm -f "$socket"
+            cd "$current"
+            nohup setsid env \
+              SOCKET_PATH="$socket" \
+              SITE_HOST=logistics.aam-dispatch.kz \
+              GAZEL_BACKEND_PORT=18101 \
+              NODE_ENV=production \
+              /usr/lib/ispnodejs/bin/node "$current/server.js" >> "$logfile" 2>&1 < /dev/null &
+            echo $! > "$pidfile"
+            SH
+
+            cat > "$control/stop.sh" <<SH
+            #!/usr/bin/env bash
+            set -u
+            pidfile="$control/gazel-logistics.pid"
+            if [ -s "\$pidfile" ]; then
+              pid="\$(cat "\$pidfile")"
+              kill "\$pid" 2>/dev/null || true
+              for attempt in \$(seq 1 20); do kill -0 "\$pid" 2>/dev/null || break; sleep 1; done
+              kill -9 "\$pid" 2>/dev/null || true
+              rm -f "\$pidfile"
+            fi
+            rm -f "$socket"
+            SH
+            chmod 700 "$control/start.sh" "$control/stop.sh"
+
+            if [ -s "$root/logistics-app/run.pid" ]; then
+              kill "$(cat "$root/logistics-app/run.pid")" 2>/dev/null || true
+            fi
+            pkill -f "$root/logistics-app/server.js" 2>/dev/null || true
+            "$control/stop.sh" || true
+            "$control/start.sh"
+
+            for attempt in $(seq 1 60); do
+              if [ -S "$socket" ] && curl -fsS --unix-socket "$socket" http://localhost/health/ >/dev/null; then break; fi
+              sleep 1
+            done
+            test -S "$socket"
+            curl -fsS --unix-socket "$socket" http://localhost/health/
+
+            existing_cron="$(crontab -l 2>/dev/null | grep -v 'gazel-logistics-managed' || true)"
+            {
+              printf '%s\n' "$existing_cron"
+              echo '@reboot sleep 30 && /var/www/dispatcher/data/logistics-control/start.sh # gazel-logistics-managed'
+              echo '* * * * * /var/www/dispatcher/data/logistics-control/start.sh >/dev/null 2>&1 # gazel-logistics-managed'
+            } | sed '/^$/d' | crontab -
+
+            find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | tail -n +4 | cut -d' ' -f2- | xargs -r rm -rf
+            rm -f "$archive"
+            echo "ACTIVE_RELEASE=$(readlink -f "$current")"
+            echo "PREVIOUS_RELEASE=$previous"
+          EOF
+
+      - name: Verify public web application
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code="$(curl -sS -o /tmp/gazel-home.html -w '%{http_code}' --max-time 20 https://logistics.aam-dispatch.kz/ || true)"
+            if [ "$code" = "200" ] && grep -q '<div id="root">' /tmp/gazel-home.html; then
+              break
+            fi
+            sleep 2
+          done
+          grep -q '<div id="root">' /tmp/gazel-home.html
+          curl -fsS https://logistics.aam-dispatch.kz/health/ | jq -e '.status == "ok"' >/dev/null
+          token="$(curl -fsS -X POST https://logistics.aam-dispatch.kz/api/auth/token/ \
+            -H 'Content-Type: application/json' \
+            --data '{"username":"admin","password":"admin12345"}' | jq -r '.token')"
+          test -n "$token" && test "$token" != null
+          curl -fsS https://logistics.aam-dispatch.kz/api/auth/me/ \
+            -H "Authorization: Token $token" | jq -e '.username == "admin"' >/dev/null
+          echo "Gazel Logistics v0.6.2 is online"
