@@ -7,6 +7,7 @@ on:
       - ".github/workflows/gazel-v062-payload-check.yml"
       - "deploy/gazel-v0.6.2-payload/**"
       - "deploy/gazel-v0.6.2/**"
+      - "deploy/logistics-payload/**"
 
 permissions:
   contents: read
@@ -16,27 +17,72 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify candidates
+      - name: Analyze payloads
         shell: bash
         run: |
           set +e
-          : > payload-check.txt
-          for dir in deploy/gazel-v0.6.2-payload deploy/gazel-v0.6.2; do
-            echo "== $dir ==" | tee -a payload-check.txt
-            find "$dir" -maxdepth 1 -type f -printf '%f %s\n' 2>/dev/null | sort | tee -a payload-check.txt
-            cat "$dir"/*.b64 2>/dev/null | tr -d '\r\n' > candidate.b64
-            echo "b64_bytes=$(wc -c < candidate.b64)" | tee -a payload-check.txt
-            base64 -d candidate.b64 > candidate.bin 2>>payload-check.txt
-            echo "base64_status=$?" | tee -a payload-check.txt
-            sha256sum candidate.bin | tee -a payload-check.txt
-            file candidate.bin | tee -a payload-check.txt
-            xz -t candidate.bin 2>>payload-check.txt
-            echo "xz_status=$?" | tee -a payload-check.txt
-            tar -tJf candidate.bin > candidate.list 2>>payload-check.txt
-            echo "tar_status=$?" | tee -a payload-check.txt
-            sed -n '1,40p' candidate.list | tee -a payload-check.txt
-          done
+          python - <<'PY' > payload-check.txt 2>&1
+          from pathlib import Path
+          from difflib import SequenceMatcher
+          import base64, hashlib, lzma, tarfile, io
+
+          def load(pattern):
+              files = sorted(Path('.').glob(pattern))
+              text = ''.join(p.read_text().replace('\r','').replace('\n','') for p in files)
+              print(f"{pattern}: files={len(files)} chars={len(text)} mod4={len(text)%4}")
+              for p in files:
+                  data=p.read_bytes()
+                  print(f"  {p.name}: {len(data)} sha256={hashlib.sha256(data).hexdigest()}")
+              return text
+
+          gazel = load('deploy/gazel-v0.6.2-payload/*.b64')
+          logistics = load('deploy/logistics-payload/*.b64')
+          print(f"common_prefix={next((i for i,(a,b) in enumerate(zip(gazel, logistics)) if a!=b), min(len(gazel),len(logistics)))}")
+          sm=SequenceMatcher(None,gazel,logistics,autojunk=False)
+          print('matching_blocks:')
+          for b in sorted(sm.get_matching_blocks(), key=lambda x:x.size, reverse=True)[:20]:
+              print(f"  gazel={b.a} logistics={b.b} size={b.size}")
+
+          candidates={'gazel':gazel,'logistics':logistics}
+          # Try common recovery combinations based on matching blocks and padding.
+          for block in sm.get_matching_blocks():
+              if block.size >= 200:
+                  candidates[f'g_to_l_{block.a}_{block.b}_{block.size}']=gazel[:block.a]+logistics[block.b:]
+                  candidates[f'l_to_g_{block.b}_{block.a}_{block.size}']=logistics[:block.b]+gazel[block.a:]
+
+          seen=set()
+          for name,text in candidates.items():
+              if text in seen: continue
+              seen.add(text)
+              padded=text+'='*((-len(text))%4)
+              try:
+                  raw=base64.b64decode(padded,validate=True)
+                  b64ok=True
+              except Exception as exc:
+                  print(f"candidate {name}: base64_error={exc}")
+                  continue
+              print(f"candidate {name}: chars={len(text)} raw={len(raw)} sha256={hashlib.sha256(raw).hexdigest()}")
+              try:
+                  unpacked=lzma.decompress(raw)
+                  print(f"  xz=ok unpacked={len(unpacked)}")
+                  try:
+                      tf=tarfile.open(fileobj=io.BytesIO(unpacked),mode='r:')
+                      names=tf.getnames()
+                      print(f"  tar=ok files={len(names)} server.js={'./server.js' in names or 'server.js' in names} index={'./public/index.html' in names or 'public/index.html' in names}")
+                      Path('recovered.tar.xz').write_bytes(raw)
+                      Path('recovered-name.txt').write_text(name)
+                      break
+                  except Exception as exc:
+                      print(f"  tar_error={exc}")
+              except Exception as exc:
+                  print(f"  xz_error={exc}")
+          PY
+          cat payload-check.txt
       - uses: actions/upload-artifact@v4
         with:
           name: gazel-v062-payload-check
-          path: payload-check.txt
+          path: |
+            payload-check.txt
+            recovered.tar.xz
+            recovered-name.txt
+          if-no-files-found: warn
