@@ -1,0 +1,124 @@
+name: Logistics bootstrap
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/logistics-bootstrap.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Start isolated logistics process
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+            set -euo pipefail
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+            export PM2_HOME="/var/www/dispatcher/data/.pm2"
+            site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+            socket="/var/www/dispatcher/data/nodejs/0.sock"
+            mkdir -p "$site" "$(dirname "$socket")" "$site/backups"
+
+            if [ -f "$site/index.html" ]; then
+              cp -p "$site/index.html" "$site/backups/index-before-node-$(date +%Y%m%d-%H%M%S).html"
+            fi
+
+            cat > "$site/package.json" <<'JSON'
+            {
+              "name": "gazel-logistics-bootstrap",
+              "version": "0.1.0",
+              "private": true,
+              "main": "server.js",
+              "scripts": { "start": "node server.js" },
+              "engines": { "node": ">=24 <25" }
+            }
+            JSON
+
+            cat > "$site/server.js" <<'JS'
+            'use strict';
+            const http = require('http');
+            const fs = require('fs');
+            const path = require('path');
+
+            const socketPath = process.env.SOCKET_PATH || '/var/www/dispatcher/data/nodejs/0.sock';
+            fs.mkdirSync(path.dirname(socketPath), { recursive: true });
+            try { if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath); } catch (error) {
+              console.error(error);
+              process.exit(1);
+            }
+
+            const page = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Логистика Газели</title><style>body{margin:0;background:#f4f6f8;color:#1c2430;font-family:Arial,sans-serif}.wrap{max-width:900px;margin:80px auto;padding:0 24px}.card{background:#fff;border:1px solid #dce2e8;border-radius:16px;padding:36px;box-shadow:0 12px 30px rgba(31,45,61,.08)}h1{margin:0 0 14px;font-size:34px}.ok{display:inline-block;background:#e7f7ee;color:#177343;padding:7px 12px;border-radius:999px;font-weight:700}.note{margin-top:22px;line-height:1.6;color:#52606d}</style></head><body><main class="wrap"><section class="card"><span class="ok">Сервер подключён</span><h1>Логистика Газели</h1><p class="note">Отдельный защищённый веб-контур работает. Основной сайт диспетчерской службы не затронут. Здесь будет развёрнут рабочий модуль заявок, согласования, документов и отчётности.</p></section></main></body></html>`;
+
+            const server = http.createServer((req, res) => {
+              if (req.url === '/health' || req.url === '/health/') {
+                res.writeHead(200, {'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
+                return res.end(JSON.stringify({status:'ok',service:'gazel-logistics-bootstrap'}));
+              }
+              res.writeHead(200, {'content-type':'text/html; charset=utf-8','cache-control':'no-store'});
+              res.end(page);
+            });
+
+            server.listen(socketPath, () => {
+              fs.chmodSync(socketPath, 0o666);
+              console.log(`Listening on ${socketPath}`);
+            });
+
+            const stop = () => server.close(() => {
+              try { if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath); } catch (_) {}
+              process.exit(0);
+            });
+            process.on('SIGTERM', stop);
+            process.on('SIGINT', stop);
+            JS
+
+            cd "$site"
+            /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics >/dev/null 2>&1 || true
+            rm -f "$socket"
+            SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start server.js --name gazel-logistics --cwd "$site" --update-env
+            /usr/lib/ispnodejs/bin/pm2 save
+
+            for attempt in $(seq 1 20); do
+              if [ -S "$socket" ] && curl --silent --show-error --fail --unix-socket "$socket" http://localhost/health >/dev/null; then
+                break
+              fi
+              sleep 1
+            done
+            test -S "$socket"
+            curl --silent --show-error --fail --unix-socket "$socket" http://localhost/health
+          EOF
+
+      - name: Verify public site
+        run: |
+          for attempt in $(seq 1 20); do
+            code="$(curl -sS -o /tmp/logistics.html -w '%{http_code}' --max-time 15 https://logistics.aam-dispatch.kz/ || true)"
+            if [ "$code" = "200" ]; then
+              grep -q "Логистика Газели" /tmp/logistics.html
+              echo "Public site is online"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/logistics.html 2>/dev/null || true
+          exit 1
