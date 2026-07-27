@@ -35,22 +35,8 @@ jobs:
             app=/var/www/dispatcher/data/logistics-app
             socket=/var/www/dispatcher/data/nodejs/0.sock
             mkdir -p "$app"
-            cat > "$app/server.js" <<'JS'
-            'use strict';
-            const http = require('http');
-            const fs = require('fs');
-            const path = require('path');
-            const socket = process.env.SOCKET_PATH;
-            fs.mkdirSync(path.dirname(socket), {recursive:true});
-            if (fs.existsSync(socket)) fs.unlinkSync(socket);
-            const page='<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Логистика Газели</title></head><body><h1>Логистика Газели</h1><p>Сервер подключён.</p></body></html>';
-            const server=http.createServer((req,res)=>{
-              if(req.url==='/health'||req.url==='/health/') {res.writeHead(200,{'content-type':'application/json'});return res.end('{"status":"ok"}');}
-              res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(page);
-            });
-            server.on('error',e=>{console.error(e);process.exit(1)});
-            server.listen(socket,()=>{fs.chmodSync(socket,0o666);console.log('LISTENING '+socket)});
-            JS
+            printf '%s' 'J3VzZSBzdHJpY3QnOwpjb25zdCBodHRwID0gcmVxdWlyZSgnaHR0cCcpOwpjb25zdCBmcyA9IHJlcXVpcmUoJ2ZzJyk7CmNvbnN0IHBhdGggPSByZXF1aXJlKCdwYXRoJyk7CmNvbnN0IHNvY2tldCA9IHByb2Nlc3MuZW52LlNPQ0tFVF9QQVRIOwpmcy5ta2RpclN5bmMocGF0aC5kaXJuYW1lKHNvY2tldCksIHtyZWN1cnNpdmU6dHJ1ZX0pOwppZiAoZnMuZXhpc3RzU3luYyhzb2NrZXQpKSBmcy51bmxpbmtTeW5jKHNvY2tldCk7CmNvbnN0IHBhZ2U9JzwhZG9jdHlwZSBodG1sPjxodG1sIGxhbmc9InJ1Ij48aGVhZD48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPjx0aXRsZT7Qm9C+0LPQuNGB0YLQuNC60LAg0JPQsNC30LXQu9C4PC90aXRsZT48L2hlYWQ+PGJvZHk+PGgxPtCb0L7Qs9C40YHRgtC40LrQsCDQk9Cw0LfQtdC70Lg8L2gxPjxwPtCh0LXRgNCy0LXRgCDQv9C+0LTQutC70Y7Rh9GR0L0uPC9wPjwvYm9keT48L2h0bWw+JzsKY29uc3Qgc2VydmVyPWh0dHAuY3JlYXRlU2VydmVyKChyZXEscmVzKT0+ewogIGlmKHJlcS51cmw9PT0nL2hlYWx0aCd8fHJlcS51cmw9PT0nL2hlYWx0aC8nKSB7cmVzLndyaXRlSGVhZCgyMDAseydjb250ZW50LXR5cGUnOidhcHBsaWNhdGlvbi9qc29uJ30pO3JldHVybiByZXMuZW5kKCd7InN0YXR1cyI6Im9rIn0nKTt9CiAgcmVzLndyaXRlSGVhZCgyMDAseydjb250ZW50LXR5cGUnOid0ZXh0L2h0bWw7IGNoYXJzZXQ9dXRmLTgnfSk7cmVzLmVuZChwYWdlKTsKfSk7CnNlcnZlci5vbignZXJyb3InLGU9Pntjb25zb2xlLmVycm9yKGUpO3Byb2Nlc3MuZXhpdCgxKX0pOwpzZXJ2ZXIubGlzdGVuKHNvY2tldCwoKT0+e2ZzLmNobW9kU3luYyhzb2NrZXQsMG82NjYpO2NvbnNvbGUubG9nKCdMSVNURU5JTkcgJytzb2NrZXQpfSk7Cg==' | base64 -d > "$app/server.js"
+            /usr/lib/ispnodejs/bin/node --check "$app/server.js"
             if [ -f "$app/run.pid" ]; then kill "$(cat "$app/run.pid")" 2>/dev/null || true; fi
             pkill -f "$app/server.js" 2>/dev/null || true
             rm -f "$socket"
