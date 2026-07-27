@@ -1,0 +1,37 @@
+name: Logistics payload diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "deploy/logistics-payload/**"
+      - ".github/workflows/logistics-payload-diagnostics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print payload integrity
+        run: |
+          set -u
+          echo '== parts =='
+          for f in deploy/logistics-payload/part_*.b64; do
+            wc -c "$f"
+            sha256sum "$f"
+          done
+          echo '== concatenated base64 =='
+          cat deploy/logistics-payload/part_*.b64 | tr -d '\r\n' > payload.b64
+          wc -c payload.b64
+          sha256sum payload.b64
+          echo '== decoded archive =='
+          base64 -d payload.b64 > payload.tar.xz
+          wc -c payload.tar.xz
+          sha256sum payload.tar.xz
+          xz -t payload.tar.xz; echo "xz_status=$?"
+          tar -tJf payload.tar.xz | head -20; echo "tar_status=${PIPESTATUS[0]}"
