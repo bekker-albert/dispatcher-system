@@ -88,6 +88,8 @@ export type LogisticsTripRecord = {
   id: string;
   number: string;
   status: LogisticsTripStatus;
+  requestId?: string;
+  requestNumber?: string;
   vehicleId?: string;
   driverUserId?: string;
   plannedDepartureAt?: string;
