@@ -17,21 +17,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print payload integrity
+      - name: Build diagnostics report
+        shell: bash
         run: |
-          set -u
-          echo '== parts =='
-          for f in deploy/logistics-payload/part_*.b64; do
-            wc -c "$f"
-            sha256sum "$f"
-          done
-          echo '== concatenated base64 =='
-          cat deploy/logistics-payload/part_*.b64 | tr -d '\r\n' > payload.b64
-          wc -c payload.b64
-          sha256sum payload.b64
-          echo '== decoded archive =='
-          base64 -d payload.b64 > payload.tar.xz
-          wc -c payload.tar.xz
-          sha256sum payload.tar.xz
-          xz -t payload.tar.xz; echo "xz_status=$?"
-          tar -tJf payload.tar.xz | head -20; echo "tar_status=${PIPESTATUS[0]}"
+          set +e
+          {
+            echo '== parts =='
+            for f in deploy/logistics-payload/part_*.b64; do
+              wc -c "$f"
+              sha256sum "$f"
+            done
+            echo '== concatenated base64 =='
+            cat deploy/logistics-payload/part_*.b64 | tr -d '\r\n' > payload.b64
+            wc -c payload.b64
+            sha256sum payload.b64
+            echo '== decoded archive =='
+            base64 -d payload.b64 > payload.tar.xz
+            echo "base64_status=$?"
+            wc -c payload.tar.xz
+            sha256sum payload.tar.xz
+            xz -t payload.tar.xz
+            echo "xz_status=$?"
+            tar -tJf payload.tar.xz | head -20
+            echo "tar_status=${PIPESTATUS[0]}"
+          } > payload-report.txt 2>&1
+          cat payload-report.txt
+          exit 0
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: logistics-payload-report
+          path: payload-report.txt
+          if-no-files-found: error
