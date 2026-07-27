@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server";
 
-import type { LogisticsRequestStatus } from "@/lib/domain/logistics/types";
+import type { LogisticsTripStatus } from "@/lib/domain/logistics/types";
 import { authRequired, getAuthDisabledUser } from "@/lib/server/auth/config";
 import { getAuthSessionFromRequest } from "@/lib/server/auth/session";
 import {
   createLogisticsRequest,
   getLogisticsBootstrap,
-  transitionLogisticsRequest,
 } from "@/lib/server/logistics/repository";
+import {
+  createLogisticsTrip,
+  decideLogisticsApproval,
+  listLogisticsTrips,
+  submitLogisticsRequest,
+  transitionLogisticsTrip,
+} from "@/lib/server/logistics/process";
 
 export const dynamic = "force-dynamic";
 
-type LogisticsApiBody = {
-  action?: string;
-  payload?: unknown;
-};
+type LogisticsApiBody = { action?: string; payload?: unknown };
 
 function getRequestIp(request: Request) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
@@ -35,10 +38,21 @@ async function getCurrentUser(request: Request) {
 
 function errorResponse(error: unknown, fallbackStatus = 400) {
   const message = error instanceof Error ? error.message : "Не удалось выполнить операцию";
-  const status = /Недостаточно прав|Только уполномоченный/.test(message) ? 403
-    : /не найдена/i.test(message) ? 404
+  const status = /Недостаточно прав|Только уполномоченный|Только диспетчер/.test(message) ? 403
+    : /не найдена|не найдено/i.test(message) ? 404
       : fallbackStatus;
   return NextResponse.json({ error: message }, { status });
+}
+
+function record(payload: unknown) {
+  return payload && typeof payload === "object" && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : {};
+}
+function requiredText(value: unknown, message: string) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  if (!normalized) throw new Error(message);
+  return normalized;
 }
 
 export async function GET(request: Request) {
@@ -46,10 +60,18 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Требуется авторизация" }, { status: 401 });
 
   try {
-    const data = await getLogisticsBootstrap(user);
-    return NextResponse.json(data, {
-      headers: { "Cache-Control": "no-store" },
-    });
+    const [bootstrap, trips] = await Promise.all([
+      getLogisticsBootstrap(user),
+      listLogisticsTrips(user, 100),
+    ]);
+    return NextResponse.json({
+      ...bootstrap,
+      trips,
+      summary: {
+        ...bootstrap.summary,
+        activeTrips: trips.filter((trip) => trip.status !== "completed" && trip.status !== "cancelled").length,
+      },
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error, 500);
   }
@@ -63,10 +85,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({})) as LogisticsApiBody;
+  const payload = record(body.payload);
   const meta = {
     ip: getRequestIp(request),
     userAgent: request.headers.get("user-agent") ?? undefined,
     correlationId: request.headers.get("x-correlation-id") ?? undefined,
+    reason: typeof payload.reason === "string" ? payload.reason.trim() || undefined : undefined,
   };
 
   try {
@@ -74,21 +98,32 @@ export async function POST(request: Request) {
       const requestRecord = await createLogisticsRequest(body.payload, user, meta);
       return NextResponse.json({ request: requestRecord }, { status: 201 });
     }
-
-    if (body.action === "transition-request") {
-      const payload = body.payload && typeof body.payload === "object" && !Array.isArray(body.payload)
-        ? body.payload as Record<string, unknown>
-        : {};
-      const requestId = typeof payload.requestId === "string" ? payload.requestId.trim() : "";
-      const status = typeof payload.status === "string" ? payload.status as LogisticsRequestStatus : undefined;
-      if (!requestId || !status) throw new Error("Не указана заявка или новый статус");
-      const result = await transitionLogisticsRequest(requestId, status, user, {
-        ...meta,
-        reason: typeof payload.reason === "string" ? payload.reason.trim() || undefined : undefined,
-      });
+    if (body.action === "submit-request") {
+      const result = await submitLogisticsRequest(requiredText(payload.requestId, "Не указана заявка"), user, meta);
       return NextResponse.json(result);
     }
-
+    if (body.action === "decide-request") {
+      const decision = payload.decision;
+      if (decision !== "approved" && decision !== "returned" && decision !== "rejected") throw new Error("Некорректное решение");
+      const result = await decideLogisticsApproval(requiredText(payload.requestId, "Не указана заявка"), decision, user, meta);
+      return NextResponse.json(result);
+    }
+    if (body.action === "create-trip") {
+      const result = await createLogisticsTrip(body.payload, user, meta);
+      return NextResponse.json(result, { status: 201 });
+    }
+    if (body.action === "transition-trip") {
+      const status = payload.status as LogisticsTripStatus;
+      if (!status) throw new Error("Не указан новый статус рейса");
+      const result = await transitionLogisticsTrip(
+        requiredText(payload.tripId, "Не указан рейс"),
+        status,
+        payload,
+        user,
+        meta,
+      );
+      return NextResponse.json(result);
+    }
     return NextResponse.json({ error: "Неизвестное действие логистики" }, { status: 400 });
   } catch (error) {
     return errorResponse(error);
