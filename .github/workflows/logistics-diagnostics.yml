@@ -21,64 +21,14 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          set -euo pipefail
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Inspect logistics proxy and runtime
+      - name: Read deployment essentials
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          set -euo pipefail
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
-            set -u
-            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
-            export PM2_HOME="/var/www/dispatcher/data/.pm2"
-            site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
-
-            echo "== versions =="
-            id
-            echo "node=$(node --version 2>/dev/null || true)"
-            echo "npm=$(npm --version 2>/dev/null || true)"
-
-            echo "== site files =="
-            find "$site" -maxdepth 2 -mindepth 1 -printf "%y %M %u:%g %p\n" 2>/dev/null | sort || true
-
-            echo "== pm2 summary =="
-            /usr/lib/ispnodejs/bin/pm2 list || true
-
-            echo "== main process runtime fields =="
-            /usr/lib/ispnodejs/bin/pm2 jlist 2>/dev/null | node -e '
-              let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{
-                try {
-                  for (const p of JSON.parse(s)) {
-                    const e=p.pm2_env||{};
-                    console.log(JSON.stringify({name:p.name,pid:p.pid,status:e.status,cwd:e.pm_cwd,script:e.pm_exec_path,args:e.args,PORT:e.PORT,NODE_ENV:e.NODE_ENV}));
-                  }
-                } catch (err) { console.error(String(err)); }
-              });'
-
-            echo "== listening tcp ports =="
-            ss -ltn 2>/dev/null | sed -n "1,120p" || true
-
-            echo "== matching config files =="
-            for base in /var/www/dispatcher/data/etc /etc/nginx; do
-              if [ -d "$base" ]; then
-                grep -RIl --exclude='*.log' --exclude='*.pem' --exclude='*.key' 'logistics.aam-dispatch.kz' "$base" 2>/dev/null | head -100 || true
-              fi
-            done
-
-            echo "== matching proxy lines =="
-            for base in /var/www/dispatcher/data/etc /etc/nginx; do
-              if [ -d "$base" ]; then
-                grep -RInE --exclude='*.log' --exclude='*.pem' --exclude='*.key' 'logistics\.aam-dispatch\.kz|proxy_pass|127\.0\.0\.1:[0-9]+' "$base" 2>/dev/null | head -240 || true
-              fi
-            done
-
-            echo "== public response =="
-            curl -sSIk --max-time 15 https://logistics.aam-dispatch.kz/ | sed -n "1,20p" || true
-          EOF
+        run: ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'export PATH=/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin; export PM2_HOME=/var/www/dispatcher/data/.pm2; echo ===PM2===; /usr/lib/ispnodejs/bin/pm2 jlist 2>/dev/null | node -e '\''let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{for(const p of JSON.parse(s)){const e=p.pm2_env||{};console.log(JSON.stringify({name:p.name,cwd:e.pm_cwd,script:e.pm_exec_path,args:e.args,PORT:e.PORT,NODE_ENV:e.NODE_ENV,status:e.status}))}})'\''; echo ===PROXY===; grep -RInE --exclude="*.log" --exclude="*.pem" --exclude="*.key" "logistics\.aam-dispatch\.kz|proxy_pass[^;]*127\.0\.0\.1:[0-9]+" /var/www/dispatcher/data/etc /etc/nginx 2>/dev/null | head -80; echo ===PORTS===; ss -ltn 2>/dev/null | grep -E "127\.0\.0\.1|0\.0\.0\.0" | head -80; echo ===HTTP===; curl -sSIk --max-time 10 https://logistics.aam-dispatch.kz/ | head -8 || true'
