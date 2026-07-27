@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LogisticsWorkspace from "@/features/logistics/LogisticsWorkspace";
+import DocumentPackageGuard from "@/features/logistics/DocumentPackageGuard";
 
 export const metadata: Metadata = {
   title: "Логистика Газели",
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function LogisticsPage() {
   return (
-    <>
+    <DocumentPackageGuard>
       <a
         href="/admin"
         style={{
@@ -29,6 +30,6 @@ export default function LogisticsPage() {
         Расширенная админка
       </a>
       <LogisticsWorkspace />
-    </>
+    </DocumentPackageGuard>
   );
 }
