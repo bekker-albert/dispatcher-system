@@ -1,0 +1,105 @@
+name: Temporary build Shtab AI APK v2
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    if: ${{ startsWith(github.head_ref, 'temp/build-shtab-ai-apk-') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout temporary branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Skip completed build
+        id: existing
+        shell: bash
+        run: |
+          if [ -f build-output/build-complete.txt ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Java
+        if: steps.existing.outputs.skip != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        if: steps.existing.outputs.skip != 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        if: steps.existing.outputs.skip != 'true'
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Extract bundled web assets
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('.github/workflows/temp-shtab-ai-apk.yml').read_text(encoding='utf-8').splitlines()
+          start = next(i for i, line in enumerate(source) if line.strip() == '- name: Generate Android project')
+          run_line = next(i for i in range(start, len(source)) if source[i].strip() == 'run: |')
+          end = next(i for i in range(run_line + 1, len(source)) if source[i].strip() == '- name: Build installable APK')
+          commands = []
+          for line in source[run_line + 1:end]:
+              commands.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/generate-project.sh').write_text('\n'.join(commands) + '\n', encoding='utf-8')
+          PY
+          chmod +x /tmp/generate-project.sh
+          cd shtab-ai-android
+          set +e
+          bash /tmp/generate-project.sh
+          set -e
+          mkdir -p ../build-output
+          find . -maxdepth 8 -type f -printf '%p %s bytes\n' | sort > ../build-output/generation-report.txt
+          test -s app/src/main/assets/index.html
+          test -s app/src/main/assets/styles.css
+          test -s app/src/main/assets/app.js
+
+      - name: Build installable APK
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: cd shtab-ai-android && gradle :app:assembleDebug --stacktrace
+
+      - name: Encode APK for retrieval
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: |
+          mkdir -p build-output
+          cp shtab-ai-android/app/build/outputs/apk/debug/app-debug.apk build-output/Shtab-AI-v1.apk
+          sha256sum build-output/Shtab-AI-v1.apk > build-output/sha256.txt
+          base64 -w0 build-output/Shtab-AI-v1.apk | split -b 700000 -d -a 3 - build-output/apk.b64.part-
+          ls -1 build-output/apk.b64.part-* > build-output/parts.txt
+          printf "Штаб AI 1.0.0\nAPK собран GitHub Actions\n" > build-output/build-complete.txt
+          rm build-output/Shtab-AI-v1.apk
+
+      - name: Commit temporary output
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: |
+          git config user.name "shtab-ai-builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add build-output
+          git commit -m "chore: temporary APK output [skip ci]"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
