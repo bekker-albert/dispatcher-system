@@ -1,9 +1,6 @@
 name: Logistics runtime probe
 
 on:
-  pull_request:
-    branches: [main]
-    paths: [".github/workflows/logistics-runtime-probe.yml"]
   workflow_dispatch:
 
 permissions:
@@ -13,62 +10,4 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
-
-      - name: Start detached process from persistent directory
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
-            set -euo pipefail
-            app=/var/www/dispatcher/data/logistics-app
-            socket=/var/www/dispatcher/data/nodejs/0.sock
-            mkdir -p "$app"
-            printf '%s' 'J3VzZSBzdHJpY3QnOwpjb25zdCBodHRwID0gcmVxdWlyZSgnaHR0cCcpOwpjb25zdCBmcyA9IHJlcXVpcmUoJ2ZzJyk7CmNvbnN0IHBhdGggPSByZXF1aXJlKCdwYXRoJyk7CmNvbnN0IHNvY2tldCA9IHByb2Nlc3MuZW52LlNPQ0tFVF9QQVRIOwpmcy5ta2RpclN5bmMocGF0aC5kaXJuYW1lKHNvY2tldCksIHtyZWN1cnNpdmU6dHJ1ZX0pOwppZiAoZnMuZXhpc3RzU3luYyhzb2NrZXQpKSBmcy51bmxpbmtTeW5jKHNvY2tldCk7CmNvbnN0IHBhZ2U9JzwhZG9jdHlwZSBodG1sPjxodG1sIGxhbmc9InJ1Ij48aGVhZD48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPjx0aXRsZT7Qm9C+0LPQuNGB0YLQuNC60LAg0JPQsNC30LXQu9C4PC90aXRsZT48L2hlYWQ+PGJvZHk+PGgxPtCb0L7Qs9C40YHRgtC40LrQsCDQk9Cw0LfQtdC70Lg8L2gxPjxwPtCh0LXRgNCy0LXRgCDQv9C+0LTQutC70Y7Rh9GR0L0uPC9wPjwvYm9keT48L2h0bWw+JzsKY29uc3Qgc2VydmVyPWh0dHAuY3JlYXRlU2VydmVyKChyZXEscmVzKT0+ewogIGlmKHJlcS51cmw9PT0nL2hlYWx0aCd8fHJlcS51cmw9PT0nL2hlYWx0aC8nKSB7cmVzLndyaXRlSGVhZCgyMDAseydjb250ZW50LXR5cGUnOidhcHBsaWNhdGlvbi9qc29uJ30pO3JldHVybiByZXMuZW5kKCd7InN0YXR1cyI6Im9rIn0nKTt9CiAgcmVzLndyaXRlSGVhZCgyMDAseydjb250ZW50LXR5cGUnOid0ZXh0L2h0bWw7IGNoYXJzZXQ9dXRmLTgnfSk7cmVzLmVuZChwYWdlKTsKfSk7CnNlcnZlci5vbignZXJyb3InLGU9Pntjb25zb2xlLmVycm9yKGUpO3Byb2Nlc3MuZXhpdCgxKX0pOwpzZXJ2ZXIubGlzdGVuKHNvY2tldCwoKT0+e2ZzLmNobW9kU3luYyhzb2NrZXQsMG82NjYpO2NvbnNvbGUubG9nKCdMSVNURU5JTkcgJytzb2NrZXQpfSk7Cg==' | base64 -d > "$app/server.js"
-            /usr/lib/ispnodejs/bin/node --check "$app/server.js"
-            if [ -f "$app/run.pid" ]; then kill "$(cat "$app/run.pid")" 2>/dev/null || true; fi
-            pkill -f "$app/server.js" 2>/dev/null || true
-            rm -f "$socket"
-            : > "$app/runtime.log"
-            cd "$app"
-            nohup setsid env SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/node "$app/server.js" >> "$app/runtime.log" 2>&1 < /dev/null &
-            echo $! > "$app/run.pid"
-            sleep 3
-            cat "$app/runtime.log"
-            test -S "$socket"
-            curl -fsS --unix-socket "$socket" http://localhost/health
-            echo "STARTED_PID=$(cat "$app/run.pid")"
-          EOF
-
-      - name: Verify after new SSH session
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          sleep 10
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
-            set -e
-            app=/var/www/dispatcher/data/logistics-app
-            socket=/var/www/dispatcher/data/nodejs/0.sock
-            pid=$(cat "$app/run.pid")
-            ps -o pid,ppid,sid,stat,cmd -p "$pid"
-            test -f "$app/server.js"
-            kill -0 "$pid"
-            test -S "$socket"
-            curl -fsS --unix-socket "$socket" http://localhost/health
-          EOF
-
-      - name: Verify public site
-        run: curl -fsS --retry 5 --retry-delay 2 https://logistics.aam-dispatch.kz/ | grep -q "Логистика Газели"
+      - run: curl -fsS https://logistics.aam-dispatch.kz/health >/dev/null
