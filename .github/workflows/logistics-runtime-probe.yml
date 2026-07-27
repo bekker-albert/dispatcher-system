@@ -1,0 +1,72 @@
+name: Logistics runtime probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [".github/workflows/logistics-runtime-probe.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Start detached process
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+            set -e
+            site=/var/www/dispatcher/data/www/logistics.aam-dispatch.kz
+            socket=/var/www/dispatcher/data/nodejs/0.sock
+            if [ -f "$site/run.pid" ]; then kill "$(cat "$site/run.pid")" 2>/dev/null || true; fi
+            pkill -f "$site/server.js" 2>/dev/null || true
+            rm -f "$socket"
+            cd "$site"
+            nohup setsid env SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/node "$site/server.js" >> "$site/runtime.log" 2>&1 < /dev/null &
+            echo $! > "$site/run.pid"
+            sleep 3
+            test -S "$socket"
+            curl -fsS --unix-socket "$socket" http://localhost/health
+            echo "STARTED_PID=$(cat "$site/run.pid")"
+          EOF
+
+      - name: Verify after new SSH session
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          sleep 10
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+            site=/var/www/dispatcher/data/www/logistics.aam-dispatch.kz
+            socket=/var/www/dispatcher/data/nodejs/0.sock
+            pid=$(cat "$site/run.pid" 2>/dev/null || true)
+            echo "PID=$pid"
+            ps -o pid,ppid,sid,stat,cmd -p "$pid" 2>/dev/null || true
+            ls -l "$socket" 2>/dev/null || true
+            tail -20 "$site/runtime.log" 2>/dev/null || true
+            test -n "$pid"
+            kill -0 "$pid"
+            test -S "$socket"
+            curl -fsS --unix-socket "$socket" http://localhost/health
+          EOF
+
+      - name: Verify public site
+        run: |
+          curl -fsS --retry 5 --retry-delay 2 https://logistics.aam-dispatch.kz/ | grep -q "Логистика Газели"
