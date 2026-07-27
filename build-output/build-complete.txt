@@ -1,0 +1,2 @@
+Штаб AI 1.0.0
+APK собран GitHub Actions

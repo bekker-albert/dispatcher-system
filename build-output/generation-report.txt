@@ -1,0 +1,11 @@
+shtab-ai-android/app/build.gradle.kts 399 bytes
+shtab-ai-android/app/src/main/AndroidManifest.xml 1068 bytes
+shtab-ai-android/app/src/main/assets/app.js 13959 bytes
+shtab-ai-android/app/src/main/assets/index.html 2578 bytes
+shtab-ai-android/app/src/main/assets/styles.css 8412 bytes
+shtab-ai-android/app/src/main/java/kz/shtabai/app/MainActivity.java 6582 bytes
+shtab-ai-android/app/src/main/java/kz/shtabai/app/ReminderReceiver.java 2546 bytes
+shtab-ai-android/app/src/main/res/drawable/app_icon.xml 598 bytes
+shtab-ai-android/app/src/main/res/values/styles.xml 640 bytes
+shtab-ai-android/build.gradle.kts 70 bytes
+shtab-ai-android/settings.gradle.kts 269 bytes
