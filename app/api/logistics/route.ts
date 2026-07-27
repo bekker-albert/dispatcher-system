@@ -12,8 +12,12 @@ import {
   decideLogisticsApproval,
   listLogisticsTrips,
   submitLogisticsRequest,
-  transitionLogisticsTrip,
 } from "@/lib/server/logistics/process";
+import {
+  listTripReleaseChecklists,
+  saveTripReleaseChecklist,
+  transitionLogisticsTripWithReleaseGuard,
+} from "@/lib/server/logistics/release";
 
 export const dynamic = "force-dynamic";
 
@@ -64,12 +68,15 @@ export async function GET(request: Request) {
       getLogisticsBootstrap(user),
       listLogisticsTrips(user, 100),
     ]);
+    const releases = await listTripReleaseChecklists(user, trips.map((trip) => trip.id));
     return NextResponse.json({
       ...bootstrap,
       trips,
+      releases,
       summary: {
         ...bootstrap.summary,
         activeTrips: trips.filter((trip) => trip.status !== "completed" && trip.status !== "cancelled").length,
+        blockedReleases: releases.filter((release) => release.status === "blocked" || release.status === "pending").length,
       },
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
@@ -112,10 +119,19 @@ export async function POST(request: Request) {
       const result = await createLogisticsTrip(body.payload, user, meta);
       return NextResponse.json(result, { status: 201 });
     }
+    if (body.action === "save-trip-release") {
+      const result = await saveTripReleaseChecklist(
+        requiredText(payload.tripId, "Не указан рейс"),
+        payload,
+        user,
+        meta,
+      );
+      return NextResponse.json({ release: result });
+    }
     if (body.action === "transition-trip") {
       const status = payload.status as LogisticsTripStatus;
       if (!status) throw new Error("Не указан новый статус рейса");
-      const result = await transitionLogisticsTrip(
+      const result = await transitionLogisticsTripWithReleaseGuard(
         requiredText(payload.tripId, "Не указан рейс"),
         status,
         payload,
