@@ -1,0 +1,137 @@
+name: Deploy logistics web
+
+on:
+  push:
+    branches:
+      - feature/gazel-logistics-release
+    paths:
+      - "app/logistics/**"
+      - "features/logistics/**"
+      - "logistics-server.js"
+      - ".github/workflows/deploy-logistics-web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: logistics-web-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web application
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Pack release
+        run: |
+          set -euo pipefail
+          items=(.next public package.json package-lock.json logistics-server.js)
+          if [ -f next.config.ts ]; then items+=(next.config.ts); fi
+          if [ -f next.config.mjs ]; then items+=(next.config.mjs); fi
+          tar -czf logistics-web-${GITHUB_SHA}.tar.gz "${items[@]}"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" "logistics-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/logistics.aam-dispatch.kz/"
+
+      - name: Install and start
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" <<'EOF'
+            set -euo pipefail
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
+            export PM2_HOME="/var/www/dispatcher/data/.pm2"
+            export NEXT_TELEMETRY_DISABLED="1"
+
+            site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+            archive="$site/logistics-web-${DEPLOY_SHA}.tar.gz"
+            stage="$site/.release-${DEPLOY_SHA}"
+            socket="/var/www/dispatcher/data/nodejs/0.sock"
+
+            test -f "$archive"
+            rm -rf "$stage"
+            mkdir -p "$stage" "$site/data" "$site/logs"
+            tar -xzf "$archive" -C "$stage"
+            test -f "$stage/.next/BUILD_ID"
+            test -f "$stage/logistics-server.js"
+
+            /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics-web >/dev/null 2>&1 || true
+            rm -f "$socket"
+
+            find "$site" -mindepth 1 -maxdepth 1 \
+              ! -name data \
+              ! -name logs \
+              ! -name "$(basename "$archive")" \
+              ! -name "$(basename "$stage")" \
+              -exec rm -rf {} +
+            cp -a "$stage"/. "$site"/
+            rm -rf "$stage"
+            cd "$site"
+            npm ci --omit=dev --no-audit --no-fund
+
+            SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js \
+              --name gazel-logistics-web \
+              --cwd "$site" \
+              --time \
+              --update-env
+            /usr/lib/ispnodejs/bin/pm2 save
+
+            healthy=0
+            for attempt in $(seq 1 60); do
+              if curl -fsS --unix-socket "$socket" http://localhost/health/ > /tmp/logistics-health.json 2>/dev/null; then
+                healthy=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$healthy" -ne 1 ]; then
+              /usr/lib/ispnodejs/bin/pm2 logs gazel-logistics-web --lines 150 --nostream || true
+              exit 1
+            fi
+            cat /tmp/logistics-health.json
+            curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Логистика Газели'
+            rm -f "$archive"
+          EOF
+
+      - name: Public smoke test
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/health/ | grep -q 'gazel-logistics-web'
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/ | grep -q 'Логистика Газели'
