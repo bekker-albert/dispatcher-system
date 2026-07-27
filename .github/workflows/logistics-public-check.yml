@@ -1,9 +1,6 @@
 name: Logistics public check
 
 on:
-  pull_request:
-    branches: [main]
-    paths: [".github/workflows/logistics-public-check.yml"]
   workflow_dispatch:
 
 permissions:
@@ -13,31 +10,4 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
-
-      - name: Read detached runtime error
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
-            site=/var/www/dispatcher/data/www/logistics.aam-dispatch.kz
-            echo "RUNTIME_LOG:"
-            cat "$site/runtime.log" 2>/dev/null || true
-            echo "SERVER_SYNTAX:"
-            /usr/lib/ispnodejs/bin/node --check "$site/server.js" 2>&1 || true
-            echo "PATH_PERMISSIONS:"
-            namei -l /var/www/dispatcher/data/nodejs/0.sock || true
-            echo "NODE_VERSION:"
-            /usr/lib/ispnodejs/bin/node --version || true
-          EOF
+      - run: curl -fsS https://logistics.aam-dispatch.kz/ >/dev/null
