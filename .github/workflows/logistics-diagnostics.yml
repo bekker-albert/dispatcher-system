@@ -31,4 +31,6 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'port=$(grep -RhoE "127\.0\.0\.1:[0-9]+" /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz/dynamic 2>/dev/null | head -1 | cut -d: -f2); echo "LOGISTICS_PORT=${port:-NOT_FOUND}"; echo "DYNAMIC_CONFIG:"; grep -RInE "proxy_pass|127\.0\.0\.1:[0-9]+" /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz/dynamic 2>/dev/null || true'
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "grep -RhoE '127\\.0\\.0\\.1:[0-9]+' /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz/dynamic 2>/dev/null | sort -u"
