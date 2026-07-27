@@ -1,0 +1,70 @@
+name: Logistics diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/logistics-diagnostics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Inspect logistics site
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+            set -u
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
+            export PM2_HOME="/var/www/dispatcher/data/.pm2"
+            site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+
+            echo "== identity =="
+            id
+            echo "node=$(node --version 2>/dev/null || true)"
+            echo "npm=$(npm --version 2>/dev/null || true)"
+
+            echo "== site directory =="
+            if [ -d "$site" ]; then
+              find "$site" -maxdepth 2 -mindepth 1 -printf "%y %M %u:%g %p\n" | sort
+            else
+              echo "SITE_DIRECTORY_MISSING"
+            fi
+
+            echo "== pm2 list =="
+            /usr/lib/ispnodejs/bin/pm2 list || true
+
+            echo "== logistics pm2 description =="
+            /usr/lib/ispnodejs/bin/pm2 describe logistics.aam-dispatch.kz || true
+
+            echo "== public response =="
+            curl -sSIk --max-time 15 https://logistics.aam-dispatch.kz/ | sed -n "1,20p" || true
+
+            echo "== readable site references =="
+            for base in /var/www/dispatcher/data/etc /var/www/dispatcher/data/.pm2; do
+              if [ -d "$base" ]; then
+                grep -RIl --exclude='*.log' --exclude='dump.pm2' 'logistics.aam-dispatch.kz' "$base" 2>/dev/null | head -50 || true
+              fi
+            done
+          EOF
