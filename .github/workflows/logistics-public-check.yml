@@ -1,0 +1,50 @@
+name: Logistics public check
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [".github/workflows/logistics-public-check.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Check runtime and nginx
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+            export PM2_HOME="/var/www/dispatcher/data/.pm2"
+            socket="/var/www/dispatcher/data/nodejs/0.sock"
+            echo "PM2=$( /usr/lib/ispnodejs/bin/pm2 pid gazel-logistics 2>/dev/null || true )"
+            namei -l "$socket" || true
+            ls -l "$socket" || true
+            echo "LOCAL:"
+            curl -sS -D - --unix-socket "$socket" http://localhost/health -o - || true
+            echo "PUBLIC:"
+            curl -sk -D - https://logistics.aam-dispatch.kz/ -o /tmp/public-body || true
+            head -c 500 /tmp/public-body 2>/dev/null || true
+            echo
+            echo "NGINX_ERROR:"
+            tail -20 /var/www/httpd-logs/logistics.aam-dispatch.kz.error.log 2>/dev/null || true
+            echo "PM2_ERROR:"
+            /usr/lib/ispnodejs/bin/pm2 logs gazel-logistics --err --lines 15 --nostream 2>/dev/null || true
+          EOF
