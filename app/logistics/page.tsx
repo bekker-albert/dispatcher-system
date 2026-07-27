@@ -3,7 +3,7 @@ import ServerLogisticsWorkspace from "@/features/logistics/ServerLogisticsWorksp
 
 export const metadata: Metadata = {
   title: "Логистика Газели",
-  description: "Серверная система заявок, согласований, рейсов и документов",
+  description: "Серверная система заявок, согласований, рейсов, документов и аудита",
 };
 
 export default function LogisticsPage() {
