@@ -26,11 +26,11 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Read assigned logistics port
+      - name: Read logistics nginx resources
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "grep -RhoE '127\\.0\\.0\\.1:[0-9]+' /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz/dynamic 2>/dev/null | sort -u"
+            "find /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz -maxdepth 3 -type f -print -exec sh -c 'echo ---; sed -n \"1,140p\" \"\$1\"' sh {} \\; 2>/dev/null; echo ===VHOST===; sed -n '1,140p' /etc/nginx/vhosts/dispatcher/logistics.aam-dispatch.kz.conf 2>/dev/null || true"
