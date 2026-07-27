@@ -24,7 +24,7 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Check runtime and nginx
+      - name: Inspect process termination
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -33,18 +33,16 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
             export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
             export PM2_HOME="/var/www/dispatcher/data/.pm2"
-            socket="/var/www/dispatcher/data/nodejs/0.sock"
-            echo "PM2=$( /usr/lib/ispnodejs/bin/pm2 pid gazel-logistics 2>/dev/null || true )"
-            namei -l "$socket" || true
-            ls -l "$socket" || true
-            echo "LOCAL:"
-            curl -sS -D - --unix-socket "$socket" http://localhost/health -o - || true
-            echo "PUBLIC:"
-            curl -sk -D - https://logistics.aam-dispatch.kz/ -o /tmp/public-body || true
-            head -c 500 /tmp/public-body 2>/dev/null || true
-            echo
-            echo "NGINX_ERROR:"
-            tail -20 /var/www/httpd-logs/logistics.aam-dispatch.kz.error.log 2>/dev/null || true
-            echo "PM2_ERROR:"
-            /usr/lib/ispnodejs/bin/pm2 logs gazel-logistics --err --lines 15 --nostream 2>/dev/null || true
+            echo "PM2_LIST:"
+            /usr/lib/ispnodejs/bin/pm2 list || true
+            echo "DUMP_MATCH:"
+            grep -n -A8 -B4 'gazel-logistics' "$PM2_HOME/dump.pm2" 2>/dev/null || true
+            echo "OUT_LOG:"
+            tail -30 "$PM2_HOME/logs/gazel-logistics-out.log" 2>/dev/null || true
+            echo "ERROR_LOG:"
+            tail -50 "$PM2_HOME/logs/gazel-logistics-error.log" 2>/dev/null || true
+            echo "PM2_DAEMON_LOG:"
+            tail -60 "$PM2_HOME/pm2.log" 2>/dev/null || true
+            echo "FILES:"
+            ls -la /var/www/dispatcher/data/www/logistics.aam-dispatch.kz/server.js /var/www/dispatcher/data/nodejs 2>/dev/null || true
           EOF
