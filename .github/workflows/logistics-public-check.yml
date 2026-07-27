@@ -24,25 +24,20 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Inspect process termination
+      - name: Read detached runtime error
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
-            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
-            export PM2_HOME="/var/www/dispatcher/data/.pm2"
-            echo "PM2_LIST:"
-            /usr/lib/ispnodejs/bin/pm2 list || true
-            echo "DUMP_MATCH:"
-            grep -n -A8 -B4 'gazel-logistics' "$PM2_HOME/dump.pm2" 2>/dev/null || true
-            echo "OUT_LOG:"
-            tail -30 "$PM2_HOME/logs/gazel-logistics-out.log" 2>/dev/null || true
-            echo "ERROR_LOG:"
-            tail -50 "$PM2_HOME/logs/gazel-logistics-error.log" 2>/dev/null || true
-            echo "PM2_DAEMON_LOG:"
-            tail -60 "$PM2_HOME/pm2.log" 2>/dev/null || true
-            echo "FILES:"
-            ls -la /var/www/dispatcher/data/www/logistics.aam-dispatch.kz/server.js /var/www/dispatcher/data/nodejs 2>/dev/null || true
+            site=/var/www/dispatcher/data/www/logistics.aam-dispatch.kz
+            echo "RUNTIME_LOG:"
+            cat "$site/runtime.log" 2>/dev/null || true
+            echo "SERVER_SYNTAX:"
+            /usr/lib/ispnodejs/bin/node --check "$site/server.js" 2>&1 || true
+            echo "PATH_PERMISSIONS:"
+            namei -l /var/www/dispatcher/data/nodejs/0.sock || true
+            echo "NODE_VERSION:"
+            /usr/lib/ispnodejs/bin/node --version || true
           EOF
