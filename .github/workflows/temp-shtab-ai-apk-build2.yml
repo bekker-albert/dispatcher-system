@@ -51,32 +51,14 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Extract bundled web assets
+      - name: Verify bundled interface
         if: steps.existing.outputs.skip != 'true'
         shell: bash
         run: |
-          python3 - <<'PY'
-          import base64
-          import re
-          from pathlib import Path
-
-          source = Path('.github/workflows/temp-shtab-ai-apk.yml').read_text(encoding='utf-8')
-          pattern = re.compile(r"echo '([^']+)' \| base64 -d > '([^']*app/src/main/assets/[^']+)'" )
-          assets = {}
-          for encoded, target in pattern.findall(source):
-              target = target.replace('app/src/main/assets/', 'shtab-ai-android/app/src/main/assets/')
-              path = Path(target)
-              path.parent.mkdir(parents=True, exist_ok=True)
-              path.write_bytes(base64.b64decode(encoded))
-              assets[path.name] = path.stat().st_size
-
-          required = {'index.html', 'styles.css', 'app.js'}
-          missing = required.difference(assets)
-          if missing:
-              raise SystemExit(f'Missing assets: {sorted(missing)}')
-          for name in sorted(assets):
-              print(f'{name}: {assets[name]} bytes')
-          PY
+          test -s shtab-ai-android/app/src/main/assets/index.html
+          test -s shtab-ai-android/app/src/main/assets/styles.css
+          test -s shtab-ai-android/app/src/main/assets/app.js
+          node --check shtab-ai-android/app/src/main/assets/app.js
           mkdir -p build-output
           find shtab-ai-android -maxdepth 9 -type f -printf '%p %s bytes\n' | sort > build-output/generation-report.txt
 
