@@ -1,11 +1,6 @@
 name: Logistics diagnostics
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/logistics-diagnostics.yml"
   workflow_dispatch:
 
 permissions:
@@ -15,22 +10,4 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
-
-      - name: Read logistics nginx resources
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "find /etc/nginx/vhosts-resources/logistics.aam-dispatch.kz -maxdepth 3 -type f -print -exec sh -c 'echo ---; sed -n \"1,140p\" \"\$1\"' sh {} \\; 2>/dev/null; echo ===VHOST===; sed -n '1,140p' /etc/nginx/vhosts/dispatcher/logistics.aam-dispatch.kz.conf 2>/dev/null || true"
+      - run: echo "Diagnostics are manual after bootstrap completion."
