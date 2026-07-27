@@ -1,0 +1,42 @@
+name: Verify Gazel v0.6.2 payload
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gazel-v062-payload-check.yml"
+      - "deploy/gazel-v0.6.2-payload/**"
+      - "deploy/gazel-v0.6.2/**"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify candidates
+        shell: bash
+        run: |
+          set +e
+          : > payload-check.txt
+          for dir in deploy/gazel-v0.6.2-payload deploy/gazel-v0.6.2; do
+            echo "== $dir ==" | tee -a payload-check.txt
+            find "$dir" -maxdepth 1 -type f -printf '%f %s\n' 2>/dev/null | sort | tee -a payload-check.txt
+            cat "$dir"/*.b64 2>/dev/null | tr -d '\r\n' > candidate.b64
+            echo "b64_bytes=$(wc -c < candidate.b64)" | tee -a payload-check.txt
+            base64 -d candidate.b64 > candidate.bin 2>>payload-check.txt
+            echo "base64_status=$?" | tee -a payload-check.txt
+            sha256sum candidate.bin | tee -a payload-check.txt
+            file candidate.bin | tee -a payload-check.txt
+            xz -t candidate.bin 2>>payload-check.txt
+            echo "xz_status=$?" | tee -a payload-check.txt
+            tar -tJf candidate.bin > candidate.list 2>>payload-check.txt
+            echo "tar_status=$?" | tee -a payload-check.txt
+            sed -n '1,40p' candidate.list | tee -a payload-check.txt
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gazel-v062-payload-check
+          path: payload-check.txt
