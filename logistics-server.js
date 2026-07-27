@@ -15,7 +15,10 @@ app.prepare().then(() => {
       return res.end(JSON.stringify({ status: "ok", service: "gazel-logistics-web" }));
     }
     const host = String(req.headers.host || "").split(":")[0].toLowerCase();
-    if (host === "logistics.aam-dispatch.kz" && (req.url === "/" || req.url === "")) req.url = "/logistics";
+    if (host === "logistics.aam-dispatch.kz") {
+      if (req.url === "/" || req.url === "") req.url = "/logistics";
+      else if (req.url === "/admin" || req.url === "/admin/") req.url = "/logistics/admin";
+    }
     return handle(req, res);
   });
 
