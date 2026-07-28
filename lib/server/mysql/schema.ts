@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { RowDataPacket } from "mysql2/promise";
 import { getMysqlPool } from "./connection";
+import { logisticsDocumentSchemaStatements } from "./logistics-document-schema";
 import { logisticsReleaseSchemaStatements } from "./logistics-release-schema";
 import { logisticsSchemaStatements } from "./logistics-schema";
 import { rebuildPtoRowYearMembership } from "./pto-row-year-membership";
@@ -19,6 +20,7 @@ function createSchemaVersionMetaKey() {
     ...schemaStatements,
     ...logisticsSchemaStatements,
     ...logisticsReleaseSchemaStatements,
+    ...logisticsDocumentSchemaStatements,
     ...schemaMigrations.map((migration) => migration.statement),
   ].join("\n\n");
   return `schema:v${createHash("sha256").update(schemaSignature).digest("hex").slice(0, 16)}`;
@@ -120,6 +122,10 @@ async function runMysqlSchemaSetup() {
   }
 
   for (const statement of logisticsReleaseSchemaStatements) {
+    await getMysqlPool().execute(statement);
+  }
+
+  for (const statement of logisticsDocumentSchemaStatements) {
     await getMysqlPool().execute(statement);
   }
 
