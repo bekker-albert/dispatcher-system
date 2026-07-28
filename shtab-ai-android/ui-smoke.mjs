@@ -26,7 +26,7 @@ window.Android={
   speak(){},showToast(){}
 };
 
-const scripts=Array.from({length:11},(_,i)=>fs.readFileSync(path.join(root,`chunk${i+1}.js`),'utf8')).join('\n;\n');
+const scripts=Array.from({length:12},(_,i)=>fs.readFileSync(path.join(root,`chunk${i+1}.js`),'utf8')).join('\n;\n');
 try{window.eval(scripts)}catch(error){errors.push(`initialization: ${error.stack||error}`)}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
@@ -35,6 +35,15 @@ const run=async(name,fn)=>{try{await fn();process.stdout.write(`✓ ${name}\n`)}
 await run('initial render',async()=>{
   assert(window.document.querySelector('#today.active'),'Today page is not active');
   assert(window.document.querySelectorAll('.nav-item').length===5,'Bottom navigation count');
+});
+
+await run('Today compact layout',async()=>{
+  window.setPage('today');
+  const today=window.document.querySelector('#today');
+  assert(!today.textContent.includes('Быстро'),'Obsolete quick section is visible');
+  assert(today.querySelectorAll('.today-metrics .dash-card').length===4,'Compact metric cards missing');
+  assert(today.textContent.includes('Заметки'),'Notes section is not visible on Today');
+  assert(today.querySelector('.today-notes'),'Today notes container missing');
 });
 
 await run('all quick-create forms',async()=>{
@@ -48,6 +57,21 @@ await run('all quick-create forms',async()=>{
     assert(window.document.querySelector('#editor-fields').children.length>0,`Editor fields empty for ${type}`);
     window.document.querySelector('#editor-cancel').click();
   }
+});
+
+await run('styled task actions',async()=>{
+  window.setPage('today');
+  const menu=window.document.querySelector('.task .menu-btn');
+  assert(menu,'Task menu button missing');
+  menu.click();
+  const dialog=window.document.querySelector('#task-actions-dialog');
+  assert(dialog?.open,'Task action sheet did not open');
+  assert(dialog.querySelectorAll('.task-action').length>=4,'Task action buttons missing');
+  const edit=dialog.querySelector('[data-task-action="edit"]');
+  edit.click();
+  await wait(120);
+  assert(window.document.querySelector('#editor-dialog').open,'Edit action did not open editor');
+  window.closeDialog('editor-dialog');
 });
 
 await run('bottom navigation',async()=>{
@@ -68,6 +92,28 @@ await run('more modules',async()=>{
   for(const view of ['projects','sport','goals','notes','settings','data']){window.openMore(view);assert(window.document.querySelector('#more').textContent.length>20,`Empty more view ${view}`)}
   window.showDiagnostics();
   assert(window.document.querySelector('#more').textContent.includes('Проверка пройдена'),'Diagnostics failed');
+});
+
+await run('owner profile settings',async()=>{
+  window.openMore('settings');
+  const input=window.document.querySelector('#owner-name-input');
+  assert(input,'Owner name input missing');
+  input.value='Тестовый Владелец';
+  window.saveOwnerName();
+  window.openMore('home');
+  assert(window.document.querySelector('#more').textContent.includes('Тестовый Владелец'),'Owner name not reflected in profile');
+  window.setPage('today');
+  assert(window.document.querySelector('#page-subtitle').textContent.includes('Тестовый'),'Owner greeting not updated');
+});
+
+await run('notes stay visible',async()=>{
+  window.openEditor('note');
+  const form=window.document.querySelector('#editor-form');
+  form.elements.title.value='Важная заметка';
+  form.elements.body.value='Информация, которую нужно быстро увидеть на главном экране.';
+  form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+  window.setPage('today');
+  assert(window.document.querySelector('#today').textContent.includes('Важная заметка'),'Created note not visible on Today');
 });
 
 await run('search and backup dialogs',async()=>{
