@@ -29,7 +29,9 @@ export default async function LogisticsAdminLayout({ children }: LogisticsAdminL
     cookieStore.get(authSessionCookieName)?.value,
   );
 
-  if (!session) redirect("/logistics");
+  // The parent logistics layout displays the login screen for anonymous users.
+  if (!session) return children;
+
   if (!canManageLogistics(session.user.role, session.user.canManageUsers)) {
     redirect("/logistics");
   }
