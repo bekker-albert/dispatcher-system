@@ -4,6 +4,13 @@ import type { LogisticsTripStatus } from "@/lib/domain/logistics/types";
 import { authRequired, getAuthDisabledUser } from "@/lib/server/auth/config";
 import { getAuthSessionFromRequest } from "@/lib/server/auth/session";
 import {
+  activateDocumentTemplate,
+  createDocumentPackageRule,
+  createDocumentTemplate,
+  generateDocumentPackage,
+  getDocumentBootstrap,
+} from "@/lib/server/logistics/documents";
+import {
   createLogisticsRequest,
   getLogisticsBootstrap,
 } from "@/lib/server/logistics/repository";
@@ -64,19 +71,22 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Требуется авторизация" }, { status: 401 });
 
   try {
-    const [bootstrap, trips] = await Promise.all([
+    const [bootstrap, trips, documents] = await Promise.all([
       getLogisticsBootstrap(user),
       listLogisticsTrips(user, 100),
+      getDocumentBootstrap(user),
     ]);
     const releases = await listTripReleaseChecklists(user, trips.map((trip) => trip.id));
     return NextResponse.json({
       ...bootstrap,
       trips,
       releases,
+      documents,
       summary: {
         ...bootstrap.summary,
         activeTrips: trips.filter((trip) => trip.status !== "completed" && trip.status !== "cancelled").length,
         blockedReleases: releases.filter((release) => release.status === "blocked" || release.status === "pending").length,
+        generatedDocuments: documents.instances.length,
       },
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
@@ -139,6 +149,22 @@ export async function POST(request: Request) {
         meta,
       );
       return NextResponse.json(result);
+    }
+    if (body.action === "create-document-template") {
+      const result = await createDocumentTemplate(body.payload, user, meta);
+      return NextResponse.json({ template: result }, { status: 201 });
+    }
+    if (body.action === "activate-document-template") {
+      const result = await activateDocumentTemplate(requiredText(payload.templateId, "Не указан шаблон"), user, meta);
+      return NextResponse.json(result);
+    }
+    if (body.action === "create-document-rule") {
+      const result = await createDocumentPackageRule(body.payload, user, meta);
+      return NextResponse.json({ rule: result }, { status: 201 });
+    }
+    if (body.action === "generate-document-package") {
+      const result = await generateDocumentPackage(requiredText(payload.requestId, "Не указана заявка"), user, meta);
+      return NextResponse.json(result, { status: 201 });
     }
     return NextResponse.json({ error: "Неизвестное действие логистики" }, { status: 400 });
   } catch (error) {
