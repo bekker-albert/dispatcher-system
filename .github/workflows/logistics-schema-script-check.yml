@@ -1,0 +1,56 @@
+name: Verify logistics schema bootstrap script
+
+on:
+  push:
+    branches:
+      - feature/gazel-logistics-release
+    paths:
+      - ".github/workflows/logistics-schema-script-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload schema script
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" scripts/ensure-logistics-schema.mjs "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/logistics.aam-dispatch.kz/data/ensure-logistics-schema-check.mjs"
+
+      - name: Execute schema script without restarting services
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          cd "$site"
+          test -f .env.local
+          test -d node_modules
+          node data/ensure-logistics-schema-check.mjs
+          rm -f data/ensure-logistics-schema-check.mjs
+          EOF
