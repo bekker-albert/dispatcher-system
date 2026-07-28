@@ -11,7 +11,7 @@ virtualConsole.on('error',e=>errors.push(String(e)));
 const dom=new JSDOM(html,{url:'https://shtab-ai.local/',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole});
 const {window}=dom;
 window.console.error=(...args)=>errors.push(args.map(String).join(' '));
-window.confirm=()=>true;
+window.confirm=()=>{throw new Error('Native browser confirm must not be used')};
 window.prompt=()=> '1';
 window.alert=()=>{};
 window.requestAnimationFrame=cb=>setTimeout(cb,0);
@@ -26,7 +26,7 @@ window.Android={
   speak(){},showToast(){}
 };
 
-const scripts=Array.from({length:12},(_,i)=>fs.readFileSync(path.join(root,`chunk${i+1}.js`),'utf8')).join('\n;\n');
+const scripts=Array.from({length:13},(_,i)=>fs.readFileSync(path.join(root,`chunk${i+1}.js`),'utf8')).join('\n;\n');
 try{window.eval(scripts)}catch(error){errors.push(`initialization: ${error.stack||error}`)}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
@@ -59,12 +59,12 @@ await run('all quick-create forms',async()=>{
   }
 });
 
-await run('styled task actions',async()=>{
+await run('styled task actions and app confirmation',async()=>{
   window.setPage('today');
-  const menu=window.document.querySelector('.task .menu-btn');
+  let menu=window.document.querySelector('.task .menu-btn');
   assert(menu,'Task menu button missing');
   menu.click();
-  const dialog=window.document.querySelector('#task-actions-dialog');
+  let dialog=window.document.querySelector('#task-actions-dialog');
   assert(dialog?.open,'Task action sheet did not open');
   assert(dialog.querySelectorAll('.task-action').length>=4,'Task action buttons missing');
   const edit=dialog.querySelector('[data-task-action="edit"]');
@@ -72,6 +72,20 @@ await run('styled task actions',async()=>{
   await wait(120);
   assert(window.document.querySelector('#editor-dialog').open,'Edit action did not open editor');
   window.closeDialog('editor-dialog');
+
+  window.setPage('today');
+  menu=window.document.querySelector('.task .menu-btn');
+  menu.click();
+  dialog=window.document.querySelector('#task-actions-dialog');
+  dialog.querySelector('[data-task-action="delete"]').click();
+  await wait(120);
+  const confirmDialog=window.document.querySelector('#app-confirm-dialog');
+  assert(confirmDialog?.open,'App confirmation dialog did not open');
+  assert(confirmDialog.textContent.includes('Удалить задачу'),'Delete confirmation title missing');
+  assert(!confirmDialog.textContent.includes('file://'),'Technical file URL leaked into confirmation');
+  confirmDialog.querySelector('#app-confirm-cancel').click();
+  assert(!confirmDialog.open,'Confirmation dialog did not close on cancel');
+  assert(window.document.querySelector('.task'),'Task was deleted after cancel');
 });
 
 await run('bottom navigation',async()=>{
