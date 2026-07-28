@@ -38,6 +38,26 @@ function initials(displayName: string, login: string) {
   return (value || login.slice(0, 2) || "П").toUpperCase();
 }
 
+function pageInfo(pathname: string) {
+  if (pathname.startsWith("/logistics/admin/constructor")) {
+    return {
+      title: "Конструктор системы",
+      text: "Расширенная настройка форм, процессов, статусов, ролей и уведомлений.",
+      back: "/logistics/admin",
+    };
+  }
+  if (pathname.startsWith("/logistics/admin")) {
+    return { title: "Настройки", text: "Учётная запись и управление системой." };
+  }
+  if (pathname.startsWith("/logistics/documents")) {
+    return { title: "Документы", text: "Официальные бланки, комплекты и сформированные экземпляры." };
+  }
+  if (pathname.startsWith("/logistics/release")) {
+    return { title: "Выпуск рейсов", text: "Медицинские, технические и документальные проверки перед выездом." };
+  }
+  return { title: "Заявки и рейсы", text: "Создание заявки, согласование, планирование и выполнение поездки." };
+}
+
 export default function LogisticsShell({ user, children }: LogisticsShellProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -52,6 +72,7 @@ export default function LogisticsShell({ user, children }: LogisticsShellProps) 
     () => navItems.filter((item) => !item.adminOnly || user.role === "admin" || user.role === "dispatch-chief"),
     [user.role],
   );
+  const currentPage = pageInfo(pathname);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -63,11 +84,19 @@ export default function LogisticsShell({ user, children }: LogisticsShellProps) 
         setPasswordOpen(false);
       }
     };
+    const openPassword = () => {
+      setMenuOpen(false);
+      setError("");
+      setPasswordOpen(true);
+    };
+
     document.addEventListener("mousedown", close);
     document.addEventListener("keydown", escape);
+    window.addEventListener("logistics:open-password", openPassword);
     return () => {
       document.removeEventListener("mousedown", close);
       document.removeEventListener("keydown", escape);
+      window.removeEventListener("logistics:open-password", openPassword);
     };
   }, []);
 
@@ -188,6 +217,14 @@ export default function LogisticsShell({ user, children }: LogisticsShellProps) 
           ) : null}
         </div>
       </header>
+
+      <section className={styles.sectionHead}>
+        <div>
+          {currentPage.back ? <Link href={currentPage.back}>← Назад к настройкам</Link> : null}
+          <h1>{currentPage.title}</h1>
+          <p>{currentPage.text}</p>
+        </div>
+      </section>
 
       {notice ? <div className={styles.notice}>{notice}</div> : null}
       <div className={styles.page}>{children}</div>
