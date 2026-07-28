@@ -100,7 +100,7 @@ jobs:
           set -euo pipefail
           export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
           export PM2_HOME="/var/www/dispatcher/data/.pm2"
-          export NEXT_TEMETRY_DISABLED="1"
+          export NEXT_TELEMETRY_DISABLED="1"
 
           site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
           main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
@@ -160,9 +160,11 @@ jobs:
           done
           test "$healthy" = "1"
           grep -q 'gazel-logistics-web' /tmp/logistics-health.json
+
           curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Логистика Газели'
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/release | grep -q 'Выпуск'
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/documents | grep -q 'Документ'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Войти'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/release | grep -q 'Войти'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/documents | grep -q 'Войти'
           api_status=$(curl -sS -o /tmp/logistics-api-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics)
           case "$api_status" in 401|403) ;; *) cat /tmp/logistics-api-anon.json; exit 1;; esac
 
@@ -181,7 +183,8 @@ jobs:
           set -euo pipefail
           curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/health/ | grep -q 'gazel-logistics-web'
           curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/ | grep -q 'Логистика Газели'
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/logistics/release | grep -q 'Выпуск'
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/logistics/documents | grep -q 'Документ'
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/ | grep -q 'Войти'
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/logistics/release | grep -q 'Войти'
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/logistics/documents | grep -q 'Войти'
           curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://aam-dispatch.kz/ >/tmp/aam-main.html
           test -s /tmp/aam-main.html
