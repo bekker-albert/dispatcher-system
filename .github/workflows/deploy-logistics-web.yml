@@ -6,6 +6,7 @@ on:
       - feature/gazel-logistics-release
     paths:
       - "app/api/logistics/**"
+      - "app/api/auth/password/**"
       - "app/logistics/**"
       - "features/logistics/**"
       - "lib/domain/logistics/**"
@@ -20,6 +21,7 @@ on:
     branches: [main]
     paths:
       - "app/api/logistics/**"
+      - "app/api/auth/password/**"
       - "app/logistics/**"
       - "features/logistics/**"
       - "lib/domain/logistics/**"
@@ -165,16 +167,18 @@ jobs:
           test "$healthy" = "1"
           grep -q 'gazel-logistics-web' /tmp/logistics-health.json
 
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o /tmp/logistics-root.html http://localhost/
-          grep -q 'Логистика Газели' /tmp/logistics-root.html
-          grep -q 'Войти' /tmp/logistics-root.html
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o /tmp/logistics-release.html http://localhost/logistics/release
-          grep -q 'Войти' /tmp/logistics-release.html
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o /tmp/logistics-documents.html http://localhost/logistics/documents
-          grep -q 'Войти' /tmp/logistics-documents.html
+          for path in / /logistics/release /logistics/documents /logistics/admin /logistics/admin/constructor; do
+            safe_name=$(printf '%s' "$path" | tr '/' '_')
+            curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o "/tmp/logistics-${safe_name}.html" "http://localhost$path"
+            grep -q 'Войти' "/tmp/logistics-${safe_name}.html"
+          done
+          grep -q 'Логистика Газели' /tmp/logistics-_.html
 
           api_status=$(curl -sS -o /tmp/logistics-api-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics)
           case "$api_status" in 401|403) ;; *) cat /tmp/logistics-api-anon.json; exit 1;; esac
+
+          password_status=$(curl -sS -o /tmp/logistics-password-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -H 'Content-Type: application/json' -H 'X-Dispatcher-Request: same-origin' --data '{"currentPassword":"x","newPassword":"ExamplePassword1","confirmPassword":"ExamplePassword1"}' http://localhost/api/auth/password)
+          test "$password_status" = "401"
 
           main_after=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(x=>x.name==='aam-dispatch');if(!row||row.pm2_env?.status!=='online')process.exit(1);process.stdout.write(String(row.pm2_env.restart_time)+':'+String(row.pm2_env.pm_uptime))")
           test "$main_before" = "$main_after"
@@ -202,12 +206,16 @@ jobs:
           set -euo pipefail
           curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-health.json https://logistics.aam-dispatch.kz/health/
           grep -q 'gazel-logistics-web' /tmp/logistics-public-health.json
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-root.html https://logistics.aam-dispatch.kz/
-          grep -q 'Логистика Газели' /tmp/logistics-public-root.html
-          grep -q 'Войти' /tmp/logistics-public-root.html
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-release.html https://logistics.aam-dispatch.kz/logistics/release
-          grep -q 'Войти' /tmp/logistics-public-release.html
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-documents.html https://logistics.aam-dispatch.kz/logistics/documents
-          grep -q 'Войти' /tmp/logistics-public-documents.html
+
+          for path in / /logistics/release /logistics/documents /logistics/admin /logistics/admin/constructor; do
+            safe_name=$(printf '%s' "$path" | tr '/' '_')
+            curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o "/tmp/logistics-public-${safe_name}.html" "https://logistics.aam-dispatch.kz$path"
+            grep -q 'Войти' "/tmp/logistics-public-${safe_name}.html"
+          done
+          grep -q 'Логистика Газели' /tmp/logistics-public-_.html
+
+          password_status=$(curl -sS --retry 5 --retry-delay 2 --max-time 20 -o /tmp/logistics-public-password-anon.json -w '%{http_code}' -H 'Content-Type: application/json' -H 'X-Dispatcher-Request: same-origin' --data '{"currentPassword":"x","newPassword":"ExamplePassword1","confirmPassword":"ExamplePassword1"}' https://logistics.aam-dispatch.kz/api/auth/password)
+          test "$password_status" = "401"
+
           curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://aam-dispatch.kz/ >/tmp/aam-main.html
           test -s /tmp/aam-main.html
