@@ -26,6 +26,7 @@ import android.widget.Toast;
 import android.speech.tts.TextToSpeech;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends Activity implements TextToSpeech.OnInitListener {
@@ -36,41 +37,28 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private static final int REQ_NOTIFICATIONS = 1001;
     private static final int REQ_AUDIO = 1002;
     private static final int REQ_SPEECH = 1003;
+    private static final int REQ_INITIAL = 1004;
     private WebView webView;
     private TextToSpeech tts;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(Color.rgb(11,13,19));
         getWindow().setNavigationBarColor(Color.rgb(11,13,19));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) getWindow().getDecorView().setSystemUiVisibility(0);
         createChannels();
         tts = new TextToSpeech(this, this);
-
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(11,13,19));
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         WebSettings s = webView.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setDatabaseEnabled(true);
-        s.setAllowFileAccess(true);
-        s.setAllowContentAccess(false);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            s.setAllowFileAccessFromFileURLs(false);
-            s.setAllowUniversalAccessFromFileURLs(false);
-        }
-        s.setBuiltInZoomControls(false);
-        s.setDisplayZoomControls(false);
-        s.setSupportZoom(false);
+        s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setDatabaseEnabled(true);s.setAllowFileAccess(true);s.setAllowContentAccess(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {s.setAllowFileAccessFromFileURLs(false);s.setAllowUniversalAccessFromFileURLs(false);}
+        s.setBuiltInZoomControls(false);s.setDisplayZoomControls(false);s.setSupportZoom(false);
         webView.addJavascriptInterface(new AndroidBridge(), "Android");
         webView.setWebChromeClient(new WebChromeClient());
-        webView.setWebViewClient(new WebViewClient(){
-            @Override public void onPageFinished(WebView view,String url){view.evaluateJavascript("if(window.syncAllNotifications){window.syncAllNotifications();}",null);}
-        });
-        setContentView(webView);
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView view,String url){view.evaluateJavascript("if(window.syncAllNotifications){window.syncAllNotifications();}",null);}});
+        setContentView(webView);webView.loadUrl("file:///android_asset/index.html");
     }
 
     @Override public void onInit(int status){if(status==TextToSpeech.SUCCESS){tts.setLanguage(new Locale("ru","RU"));tts.setSpeechRate(1.0f);}}
@@ -86,31 +74,26 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         NotificationChannel health=new NotificationChannel(CHANNEL_HEALTH,"Спорт и привычки",NotificationManager.IMPORTANCE_DEFAULT);health.setDescription("Тренировки, привычки и здоровье");
         nm.createNotificationChannel(normal);nm.createNotificationChannel(important);nm.createNotificationChannel(finance);nm.createNotificationChannel(health);
     }
+    private void requestInitialPermissions(){
+        if(Build.VERSION.SDK_INT<Build.VERSION_CODES.M)return;
+        List<String> missing=new ArrayList<>();
+        if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED)missing.add(Manifest.permission.RECORD_AUDIO);
+        if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)missing.add(Manifest.permission.POST_NOTIFICATIONS);
+        if(!missing.isEmpty())requestPermissions(missing.toArray(new String[0]),REQ_INITIAL);
+    }
     private String channelId(String key){if("important".equals(key))return CHANNEL_IMPORTANT;if("finance".equals(key))return CHANNEL_FINANCE;if("health".equals(key))return CHANNEL_HEALTH;return CHANNEL_NORMAL;}
     private int code(String id){return id==null?0:(id.hashCode()&0x7fffffff);}
-    private PendingIntent pending(String id,String title,String body,String channel){
-        Intent i=new Intent(this,ReminderReceiver.class);i.setAction("kz.shtabai.app.REMIND."+id);i.putExtra("id",id);i.putExtra("title",title);i.putExtra("body",body);i.putExtra("channel",channelId(channel));i.putExtra("requestCode",code(id));
-        int flags=PendingIntent.FLAG_UPDATE_CURRENT;if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M)flags|=PendingIntent.FLAG_IMMUTABLE;
-        return PendingIntent.getBroadcast(this,code(id),i,flags);
-    }
-    private void schedule(String id,String title,String body,long at,String channel){
-        if(at<=System.currentTimeMillis()){cancel(id);return;}AlarmManager am=(AlarmManager)getSystemService(Context.ALARM_SERVICE);if(am==null)return;PendingIntent pi=pending(id,title,body,channel);
-        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.S&&am.canScheduleExactAlarms())am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi);
-        else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M)am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi);
-        else am.set(AlarmManager.RTC_WAKEUP,at,pi);
-    }
+    private PendingIntent pending(String id,String title,String body,String channel){Intent i=new Intent(this,ReminderReceiver.class);i.setAction("kz.shtabai.app.REMIND."+id);i.putExtra("id",id);i.putExtra("title",title);i.putExtra("body",body);i.putExtra("channel",channelId(channel));i.putExtra("requestCode",code(id));int flags=PendingIntent.FLAG_UPDATE_CURRENT;if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M)flags|=PendingIntent.FLAG_IMMUTABLE;return PendingIntent.getBroadcast(this,code(id),i,flags);}
+    private void schedule(String id,String title,String body,long at,String channel){if(at<=System.currentTimeMillis()){cancel(id);return;}AlarmManager am=(AlarmManager)getSystemService(Context.ALARM_SERVICE);if(am==null)return;PendingIntent pi=pending(id,title,body,channel);if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.S&&am.canScheduleExactAlarms())am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi);else if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M)am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi);else am.set(AlarmManager.RTC_WAKEUP,at,pi);}
     private void cancel(String id){AlarmManager am=(AlarmManager)getSystemService(Context.ALARM_SERVICE);if(am==null)return;PendingIntent pi=pending(id,"","","normal");am.cancel(pi);pi.cancel();}
-    private void startSpeech(){
-        if(!SpeechRecognizer.isRecognitionAvailable(this)){voiceError("Распознавание речи недоступно");return;}
-        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQ_AUDIO);return;}
-        Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"ru-RU");i.putExtra(RecognizerIntent.EXTRA_PROMPT,"Говорите");startActivityForResult(i,REQ_SPEECH);
-    }
+    private void startSpeech(){if(!SpeechRecognizer.isRecognitionAvailable(this)){voiceError("Распознавание речи недоступно");return;}if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQ_AUDIO);return;}Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);i.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"ru-RU");i.putExtra(RecognizerIntent.EXTRA_PROMPT,"Говорите");startActivityForResult(i,REQ_SPEECH);}
     private void voiceError(String msg){if(webView!=null)webView.post(()->webView.evaluateJavascript("window.onVoiceError("+quote(msg)+");",null));}
     private String quote(String s){return "\""+s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n")+"\"";}
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==REQ_SPEECH){if(resultCode==RESULT_OK&&data!=null){ArrayList<String> r=data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);String text=r!=null&&!r.isEmpty()?r.get(0):"";webView.evaluateJavascript("window.onVoiceResult("+quote(text)+");",null);}else voiceError("Команда не распознана");}}
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grants){super.onRequestPermissionsResult(requestCode,permissions,grants);if(requestCode==REQ_AUDIO){if(grants.length>0&&grants[0]==PackageManager.PERMISSION_GRANTED)startSpeech();else voiceError("Нет доступа к микрофону");}}
 
     public class AndroidBridge{
+        @JavascriptInterface public void requestInitialPermissions(){runOnUiThread(MainActivity.this::requestInitialPermissions);}
         @JavascriptInterface public void requestNotifications(){runOnUiThread(()->{createChannels();if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},REQ_NOTIFICATIONS);else{Intent i=new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,getPackageName());startActivity(i);}});}
         @JavascriptInterface public void requestExactAlarmPermission(){runOnUiThread(()->{if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.S){Intent i=new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:"+getPackageName()));startActivity(i);}});}
         @JavascriptInterface public void scheduleNotification(String id,String title,String body,double epochMillis,String channel){schedule(id,title,body,(long)epochMillis,channel);}
