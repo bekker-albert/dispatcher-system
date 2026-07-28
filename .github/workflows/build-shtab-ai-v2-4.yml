@@ -33,7 +33,7 @@ jobs:
           cd shtab-ai-android
           npm init -y >/dev/null 2>&1
           npm install jsdom --no-save
-          node ui-smoke.mjs | tee ../ui-smoke-report.txt
+          node ui-smoke-v24.mjs | tee ../ui-smoke-report.txt
 
       - name: Upload smoke report on failure
         if: failure()
