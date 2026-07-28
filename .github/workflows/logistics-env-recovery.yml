@@ -41,6 +41,7 @@ jobs:
           main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
           socket="/var/www/dispatcher/data/nodejs/0.sock"
 
+          echo "Restoring logistics environment from protected main-site configuration"
           test -f "$main_site/.env.local"
           test -f "$site/logistics-server.js"
           cp "$main_site/.env.local" "$site/.env.local"
