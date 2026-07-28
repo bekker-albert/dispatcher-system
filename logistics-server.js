@@ -22,6 +22,9 @@ app.prepare().then(() => {
     return handle(req, res);
   });
 
+  server.on("error", (error) => {
+    console.error("Gazel logistics web server error", error);
+  });
   fs.mkdirSync(path.dirname(socketPath), { recursive: true });
   try { if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath); } catch (error) { console.error(error); process.exit(1); }
   server.listen(socketPath, () => {
