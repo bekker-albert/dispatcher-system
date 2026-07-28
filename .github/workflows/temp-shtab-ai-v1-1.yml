@@ -1,0 +1,66 @@
+name: Build Shtab AI 1.1 APK
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    if: ${{ startsWith(github.head_ref, 'temp/build-shtab-ai-v1-1-') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout build branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        shell: bash
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Verify application files
+        shell: bash
+        run: |
+          test -s shtab-ai-android/app/src/main/assets/index.html
+          test -s shtab-ai-android/app/src/main/assets/styles.css
+          test -s shtab-ai-android/app/src/main/assets/app.js
+          node --check shtab-ai-android/app/src/main/assets/app.js
+
+      - name: Build installable APK
+        shell: bash
+        run: cd shtab-ai-android && gradle :app:assembleDebug --stacktrace
+
+      - name: Prepare APK
+        shell: bash
+        run: |
+          mkdir -p release
+          cp shtab-ai-android/app/build/outputs/apk/debug/app-debug.apk release/Shtab-AI-v1.1.apk
+          sha256sum release/Shtab-AI-v1.1.apk > release/sha256.txt
+          unzip -t release/Shtab-AI-v1.1.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shtab-AI-v1.1-apk
+          path: release/
+          if-no-files-found: error
+          retention-days: 1
