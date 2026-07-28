@@ -54,102 +54,88 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Capture production audit
+      - name: Restore logistics environment without touching main app
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        shell: bash
         run: |
-          set +e
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s > logistics-production-audit.log 2>&1 <<'EOF'
-            set -u
-            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
-            export PM2_HOME="/var/www/dispatcher/data/.pm2"
-            site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
-            main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
-            socket="/var/www/dispatcher/data/nodejs/0.sock"
-            failures=0
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          export PM2_HOME="/var/www/dispatcher/data/.pm2"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
+          socket="/var/www/dispatcher/data/nodejs/0.sock"
 
-            check() {
-              label="$1"; shift
-              if "$@"; then echo "PASS: $label"; else echo "FAIL: $label"; failures=$((failures+1)); fi
-            }
+          test -f "$main_site/.env.local"
+          test -f "$site/logistics-server.js"
+          main_before=$(node -e "const{execFileSync}=require('node:child_process');const r=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}})).find(x=>x.name==='aam-dispatch');if(!r||r.pm2_env.status!=='online')process.exit(1);process.stdout.write(String(r.pm2_env.restart_time)+':'+String(r.pm2_env.pm_uptime))")
 
-            check "logistics site directory" test -d "$site"
-            check "logistics socket" test -S "$socket"
-            check "logistics build" test -f "$site/.next/BUILD_ID"
-            check "logistics server entry" test -f "$site/logistics-server.js"
-            check "logistics env file" test -f "$site/.env.local"
-            check "main env file" test -f "$main_site/.env.local"
+          cp "$main_site/.env.local" "$site/.env.local"
+          chmod 600 "$site/.env.local"
+          /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics-web >/dev/null 2>&1 || true
+          rm -f "$socket"
+          cd "$site"
+          SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js --name gazel-logistics-web --cwd "$site" --time --update-env
+          /usr/lib/ispnodejs/bin/pm2 save
 
-            node <<'NODE' || failures=$((failures+1))
-            const { execFileSync } = require('node:child_process');
-            const rows = JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2', ['jlist'], {encoding:'utf8', env:{...process.env, PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));
-            for (const name of ['aam-dispatch','gazel-logistics-web']) {
-              const row = rows.find((item)=>item.name===name);
-              console.log(`${row && row.pm2_env?.status === 'online' ? 'PASS' : 'FAIL'}: PM2 ${name}; status=${row?.pm2_env?.status ?? 'missing'}; restarts=${row?.pm2_env?.restart_time ?? 'unknown'}; uptime=${row?.pm2_env?.pm_uptime ?? 'unknown'}`);
-              if (!row || row.pm2_env?.status !== 'online') process.exitCode = 1;
-            }
-            NODE
+          healthy=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS --unix-socket "$socket" http://localhost/health/ >/tmp/logistics-health.json 2>/dev/null; then healthy=1; break; fi
+            sleep 2
+          done
+          test "$healthy" = "1"
+          grep -q 'gazel-logistics-web' /tmp/logistics-health.json
 
-            for path in /health/ / /logistics/release /logistics/documents; do
-              code=$(curl -sS -o /tmp/body.out -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' "http://localhost$path" 2>/tmp/curl.err || true)
-              echo "INFO: internal $path status=$code bytes=$(wc -c </tmp/body.out 2>/dev/null || echo 0)"
-              case "$path:$code" in
-                /health/:200|/:200|/logistics/release:200|/logistics/documents:200) ;;
-                *) echo "FAIL: internal endpoint $path"; cat /tmp/curl.err; failures=$((failures+1));;
-              esac
-            done
-
-            api_status=$(curl -sS -o /tmp/api.out -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics 2>/tmp/api.err || true)
-            echo "INFO: anonymous API status=$api_status body=$(cat /tmp/api.out 2>/dev/null || true)"
-            case "$api_status" in 401|403) echo "PASS: anonymous API blocked";; *) echo "FAIL: anonymous API must be blocked"; failures=$((failures+1));; esac
-
-            if [ -f "$site/.env.local" ]; then
-              cd "$site"
-              node <<'NODE' || failures=$((failures+1))
-              const { loadEnvConfig } = require('@next/env');
-              const mysql = require('mysql2/promise');
-              loadEnvConfig(process.cwd());
-              const keys = ['DB_HOST','DB_NAME','DB_USER','DB_PASSWORD','AUTH_SESSION_SECRET','AUTH_REQUIRED'];
-              for (const key of keys) console.log(`${process.env[key] ? 'PASS' : 'FAIL'}: env ${key}`);
-              const missing = ['DB_HOST','DB_NAME','DB_USER','DB_PASSWORD','AUTH_SESSION_SECRET'].filter((key)=>!process.env[key]);
-              if (missing.length) throw new Error(`Missing environment variables: ${missing.join(', ')}`);
-              (async()=>{
-                const connection = await mysql.createConnection({host:process.env.DB_HOST,port:Number(process.env.DB_PORT||3306),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD});
-                console.log('PASS: database connection');
-                const required = ['logistics_requests','logistics_request_stops','logistics_approvals','logistics_approval_steps','logistics_trips','logistics_trip_requests','logistics_trip_release_checklists','logistics_document_templates','logistics_document_package_rules','logistics_document_instances','logistics_audit_events','logistics_config_versions'];
-                const [rows] = await connection.query('SELECT table_name FROM information_schema.tables WHERE table_schema = ?', [process.env.DB_NAME]);
-                const existing = new Set(rows.map((row)=>row.TABLE_NAME || row.table_name));
-                for (const table of required) console.log(`${existing.has(table) ? 'PASS' : 'FAIL'}: table ${table}`);
-                const missingTables = required.filter((table)=>!existing.has(table));
-                const [auditRows] = await connection.query('SELECT COUNT(*) AS total FROM logistics_audit_events').catch(()=>[[{total:'unavailable'}]]);
-                console.log(`INFO: audit events=${auditRows[0]?.total ?? 'unknown'}`);
-                await connection.end();
-                if (missingTables.length) throw new Error(`Missing tables: ${missingTables.join(', ')}`);
-              })().catch((error)=>{console.error(`FAIL: ${error.message}`);process.exit(1)});
-              NODE
-            fi
-
-            echo "INFO: failures=$failures"
-            exit "$failures"
+          main_after=$(node -e "const{execFileSync}=require('node:child_process');const r=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}})).find(x=>x.name==='aam-dispatch');if(!r||r.pm2_env.status!=='online')process.exit(1);process.stdout.write(String(r.pm2_env.restart_time)+':'+String(r.pm2_env.pm_uptime))")
+          test "$main_before" = "$main_after"
           EOF
-          code=$?
-          echo "$code" > logistics-production-audit.exit
-          cat logistics-production-audit.log
-          exit 0
 
-      - name: Upload audit artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: logistics-production-audit
-          path: |
-            logistics-production-audit.log
-            logistics-production-audit.exit
+      - name: Audit production runtime and authorization
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          export PM2_HOME="/var/www/dispatcher/data/.pm2"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          socket="/var/www/dispatcher/data/nodejs/0.sock"
 
-      - name: Fail when production audit failed
-        run: test "$(cat logistics-production-audit.exit)" = "0"
+          test -d "$site"
+          test -S "$socket"
+          test -f "$site/.next/BUILD_ID"
+          test -f "$site/logistics-server.js"
+          test -f "$site/.env.local"
+
+          node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));for(const name of ['aam-dispatch','gazel-logistics-web']){const r=rows.find(x=>x.name===name);if(!r||r.pm2_env.status!=='online')throw new Error('PM2 process unavailable: '+name);console.log(name+': online')}"
+
+          curl -fsS --unix-socket "$socket" http://localhost/health/ | grep -q 'gazel-logistics-web'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Логистика Газели'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/release | grep -q 'Выпуск'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/documents | grep -q 'Документ'
+
+          api_status=$(curl -sS -o /tmp/logistics-api-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics)
+          echo "anonymous API status: $api_status"
+          case "$api_status" in 401|403) ;; *) cat /tmp/logistics-api-anon.json; exit 1;; esac
+          EOF
+
+      - name: Audit production database and schemas
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          cd "$site"
+          node -e "const{loadEnvConfig}=require('@next/env');const mysql=require('mysql2/promise');loadEnvConfig(process.cwd());const required=['DB_HOST','DB_NAME','DB_USER','DB_PASSWORD','AUTH_SESSION_SECRET'];const missing=required.filter(k=>!process.env[k]);if(missing.length)throw new Error('Missing environment variables: '+missing.join(', '));(async()=>{const c=await mysql.createConnection({host:process.env.DB_HOST,port:Number(process.env.DB_PORT||3306),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD});const tables=['logistics_requests','logistics_request_stops','logistics_approvals','logistics_approval_steps','logistics_trips','logistics_trip_requests','logistics_trip_release_checklists','logistics_document_templates','logistics_document_package_rules','logistics_document_instances','logistics_audit_events','logistics_config_versions'];const [rows]=await c.query('SELECT table_name FROM information_schema.tables WHERE table_schema=?',[process.env.DB_NAME]);const existing=new Set(rows.map(r=>r.TABLE_NAME||r.table_name));const absent=tables.filter(t=>!existing.has(t));const [audit]=await c.query('SELECT COUNT(*) AS total FROM logistics_audit_events');console.log('audit events='+audit[0].total);await c.end();if(absent.length)throw new Error('Missing tables: '+absent.join(', '))})().catch(e=>{console.error(e);process.exit(1)})"
+          EOF
 
       - name: Audit public endpoints and main-site availability
         run: |
