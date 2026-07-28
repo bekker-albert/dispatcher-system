@@ -145,3 +145,6 @@ jobs:
           curl -fsS --retry 10 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/logistics/documents | grep -q 'Документ'
           curl -fsS --retry 10 --retry-delay 3 --max-time 20 https://aam-dispatch.kz/ > /tmp/aam-main.html
           test -s /tmp/aam-main.html
+
+      - name: Audit completed
+        run: echo "Logistics final audit completed"
