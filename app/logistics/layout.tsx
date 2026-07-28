@@ -2,7 +2,12 @@ import type { CSSProperties, ReactNode } from "react";
 import { cookies } from "next/headers";
 
 import { LoginScreen } from "@/features/auth/LoginScreen";
-import { authRequired, authSessionCookieName } from "@/lib/server/auth/config";
+import LogisticsShell from "@/features/logistics/LogisticsShell";
+import {
+  authRequired,
+  authSessionCookieName,
+  getAuthDisabledUser,
+} from "@/lib/server/auth/config";
 import { getAuthSessionFromCookieValue } from "@/lib/server/auth/session";
 
 type LogisticsLayoutProps = {
@@ -25,14 +30,18 @@ const logisticsTitleStyle: CSSProperties = {
 };
 
 export default async function LogisticsLayout({ children }: LogisticsLayoutProps) {
-  if (!authRequired()) return children;
+  if (!authRequired()) {
+    return <LogisticsShell user={getAuthDisabledUser()}>{children}</LogisticsShell>;
+  }
 
   const cookieStore = await cookies();
   const session = await getAuthSessionFromCookieValue(
     cookieStore.get(authSessionCookieName)?.value,
   );
 
-  if (session) return children;
+  if (session) {
+    return <LogisticsShell user={session.user}>{children}</LogisticsShell>;
+  }
 
   return (
     <div>
