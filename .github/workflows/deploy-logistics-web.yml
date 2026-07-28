@@ -96,7 +96,8 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SHA: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" <<'EOF'
+          set +e
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" > logistics-deploy-switch.log 2>&1 <<'EOF'
           set -euo pipefail
           export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
           export PM2_HOME="/var/www/dispatcher/data/.pm2"
@@ -161,10 +162,14 @@ jobs:
           test "$healthy" = "1"
           grep -q 'gazel-logistics-web' /tmp/logistics-health.json
 
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Логистика Газели'
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Войти'
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/release | grep -q 'Войти'
-          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/documents | grep -q 'Войти'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o /tmp/logistics-root.html http://localhost/
+          grep -q 'Логистика Газели' /tmp/logistics-root.html
+          grep -q 'Войти' /tmp/logistics-root.html
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o /tmp/logistics-release.html http://localhost/logistics/release
+          grep -q 'Войти' /tmp/logistics-release.html
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o /tmp/logistics-documents.html http://localhost/logistics/documents
+          grep -q 'Войти' /tmp/logistics-documents.html
+
           api_status=$(curl -sS -o /tmp/logistics-api-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics)
           case "$api_status" in 401|403) ;; *) cat /tmp/logistics-api-anon.json; exit 1;; esac
 
@@ -177,14 +182,29 @@ jobs:
           rm -f "$archive"
           find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | tail -n +4 | cut -d' ' -f2- | xargs -r rm -rf
           EOF
+          code=$?
+          cat logistics-deploy-switch.log
+          exit "$code"
+
+      - name: Upload deployment switch log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logistics-deploy-switch-${{ github.run_id }}
+          path: logistics-deploy-switch.log
+          if-no-files-found: ignore
 
       - name: Public smoke test
         run: |
           set -euo pipefail
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/health/ | grep -q 'gazel-logistics-web'
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/ | grep -q 'Логистика Газели'
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/ | grep -q 'Войти'
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/logistics/release | grep -q 'Войти'
-          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/logistics/documents | grep -q 'Войти'
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-health.json https://logistics.aam-dispatch.kz/health/
+          grep -q 'gazel-logistics-web' /tmp/logistics-public-health.json
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-root.html https://logistics.aam-dispatch.kz/
+          grep -q 'Логистика Газели' /tmp/logistics-public-root.html
+          grep -q 'Войти' /tmp/logistics-public-root.html
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-release.html https://logistics.aam-dispatch.kz/logistics/release
+          grep -q 'Войти' /tmp/logistics-public-release.html
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-documents.html https://logistics.aam-dispatch.kz/logistics/documents
+          grep -q 'Войти' /tmp/logistics-public-documents.html
           curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://aam-dispatch.kz/ >/tmp/aam-main.html
           test -s /tmp/aam-main.html
