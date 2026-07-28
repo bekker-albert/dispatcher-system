@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0c12">
-  <title>Штаб AI — версия 1</title>
+  <title>Штаб AI — версия 1.1</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
         <h1 id="page-title">Добрый день, Альберт</h1>
         <p id="page-subtitle"></p>
       </div>
-      <button class="icon-btn" id="notify-btn" aria-label="Уведомления">🔔</button>
+      <button type="button" class="icon-btn" id="notify-btn" aria-label="Настройки уведомлений">🔔</button>
     </header>
 
     <section id="today" class="page active"></section>
@@ -23,28 +23,35 @@
     <section id="projects" class="page"></section>
     <section id="more" class="page"></section>
 
-    <button class="fab" id="fab" aria-label="Добавить задачу">＋</button>
+    <button type="button" class="fab" id="fab" aria-label="Добавить задачу">＋</button>
 
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-page="today"><span>◫</span><small>Сегодня</small></button>
-      <button class="nav-item" data-page="plan"><span>▦</span><small>План</small></button>
-      <button class="nav-item" data-page="assistant"><span>✦</span><small>Помощник</small></button>
-      <button class="nav-item" data-page="projects"><span>▰</span><small>Проекты</small></button>
-      <button class="nav-item" data-page="more"><span>•••</span><small>Еще</small></button>
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button type="button" class="nav-item active" data-page="today"><span>◫</span><small>Сегодня</small></button>
+      <button type="button" class="nav-item" data-page="plan"><span>▦</span><small>План</small></button>
+      <button type="button" class="nav-item" data-page="assistant"><span>✦</span><small>Помощник</small></button>
+      <button type="button" class="nav-item" data-page="projects"><span>▰</span><small>Проекты</small></button>
+      <button type="button" class="nav-item" data-page="more"><span>•••</span><small>Еще</small></button>
     </nav>
   </main>
 
   <dialog id="task-dialog">
-    <form method="dialog" id="task-form">
-      <div class="dialog-head"><h2>Новая задача</h2><button value="cancel" class="close-btn">×</button></div>
-      <label>Название<input id="task-title" required placeholder="Что нужно сделать?"></label>
+    <form id="task-form" novalidate>
+      <div class="dialog-head">
+        <h2>Новая задача</h2>
+        <button type="button" class="close-btn" id="task-close" aria-label="Закрыть">×</button>
+      </div>
+      <label>Название<input id="task-title" placeholder="Что нужно сделать?" autocomplete="off"></label>
+      <p class="field-error" id="task-title-error" hidden>Введите название задачи.</p>
       <div class="form-row">
-        <label>Дата<input id="task-date" type="date" required></label>
-        <label>Время<input id="task-time" type="time" required></label>
+        <label>Дата<input id="task-date" type="date"></label>
+        <label>Время<input id="task-time" type="time"></label>
       </div>
       <label>Проект<select id="task-project"></select></label>
       <label>Приоритет<select id="task-priority"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="low">Низкий</option></select></label>
-      <div class="dialog-actions"><button value="cancel" class="secondary">Отмена</button><button type="submit" value="default" class="primary">Создать</button></div>
+      <div class="dialog-actions">
+        <button type="button" id="task-cancel" class="secondary">Отмена</button>
+        <button type="submit" class="primary">Создать</button>
+      </div>
     </form>
   </dialog>
 
