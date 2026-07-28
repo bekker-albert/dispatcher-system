@@ -3,58 +3,98 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0c12">
-  <title>Штаб AI — версия 1.1</title>
+  <meta name="theme-color" content="#0b0d13">
+  <title>Штаб AI</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="phone-shell">
+  <main class="app-shell">
     <header class="topbar">
-      <div>
-        <h1 id="page-title">Добрый день, Альберт</h1>
+      <div class="topbar-title">
+        <h1 id="page-title">Сегодня</h1>
         <p id="page-subtitle"></p>
       </div>
-      <button type="button" class="icon-btn" id="notify-btn" aria-label="Настройки уведомлений">🔔</button>
+      <div class="top-actions">
+        <button class="icon-btn" id="search-btn" aria-label="Поиск">⌕</button>
+        <button class="icon-btn" id="notify-btn" aria-label="Уведомления">🔔</button>
+      </div>
     </header>
 
     <section id="today" class="page active"></section>
     <section id="plan" class="page"></section>
     <section id="assistant" class="page assistant-page"></section>
-    <section id="projects" class="page"></section>
+    <section id="finance" class="page"></section>
     <section id="more" class="page"></section>
 
-    <button type="button" class="fab" id="fab" aria-label="Добавить задачу">＋</button>
+    <button class="fab" id="fab" aria-label="Добавить">＋</button>
 
-    <nav class="bottom-nav" aria-label="Основная навигация">
-      <button type="button" class="nav-item active" data-page="today"><span>◫</span><small>Сегодня</small></button>
-      <button type="button" class="nav-item" data-page="plan"><span>▦</span><small>План</small></button>
-      <button type="button" class="nav-item" data-page="assistant"><span>✦</span><small>Помощник</small></button>
-      <button type="button" class="nav-item" data-page="projects"><span>▰</span><small>Проекты</small></button>
-      <button type="button" class="nav-item" data-page="more"><span>•••</span><small>Еще</small></button>
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-page="today"><span>⌂</span><small>Сегодня</small></button>
+      <button class="nav-item" data-page="plan"><span>▦</span><small>План</small></button>
+      <button class="nav-item" data-page="assistant"><span>✦</span><small>Помощник</small></button>
+      <button class="nav-item" data-page="finance"><span>₸</span><small>Финансы</small></button>
+      <button class="nav-item" data-page="more"><span>•••</span><small>Еще</small></button>
     </nav>
   </main>
 
-  <dialog id="task-dialog">
-    <form id="task-form" novalidate>
+  <dialog id="quick-dialog" class="sheet-dialog">
+    <div class="sheet-head">
+      <div><small>Быстрое добавление</small><h2>Что создать?</h2></div>
+      <button class="close-btn" data-close="quick-dialog">×</button>
+    </div>
+    <div class="quick-grid">
+      <button data-create="task"><span>✓</span><b>Задача</b><small>Дело, поручение, встреча</small></button>
+      <button data-create="expense"><span>−₸</span><b>Расход</b><small>Плановый или фактический</small></button>
+      <button data-create="income"><span>+₸</span><b>Доход</b><small>Поступление или план</small></button>
+      <button data-create="project"><span>▰</span><b>Проект</b><small>Работа или личное направление</small></button>
+      <button data-create="habit"><span>↻</span><b>Привычка</b><small>Регулярное действие</small></button>
+      <button data-create="workout"><span>⚡</span><b>Тренировка</b><small>Спорт и активность</small></button>
+      <button data-create="goal"><span>◎</span><b>Цель</b><small>Измеримый результат</small></button>
+      <button data-create="note"><span>✎</span><b>Заметка</b><small>Мысль, информация, идея</small></button>
+    </div>
+  </dialog>
+
+  <dialog id="editor-dialog">
+    <form id="editor-form" novalidate>
       <div class="dialog-head">
-        <h2>Новая задача</h2>
-        <button type="button" class="close-btn" id="task-close" aria-label="Закрыть">×</button>
+        <div><small id="editor-kicker"></small><h2 id="editor-title"></h2></div>
+        <button type="button" class="close-btn" id="editor-close">×</button>
       </div>
-      <label>Название<input id="task-title" placeholder="Что нужно сделать?" autocomplete="off"></label>
-      <p class="field-error" id="task-title-error" hidden>Введите название задачи.</p>
-      <div class="form-row">
-        <label>Дата<input id="task-date" type="date"></label>
-        <label>Время<input id="task-time" type="time"></label>
-      </div>
-      <label>Проект<select id="task-project"></select></label>
-      <label>Приоритет<select id="task-priority"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="low">Низкий</option></select></label>
+      <div id="editor-fields"></div>
+      <p id="editor-error" class="form-error" hidden></p>
       <div class="dialog-actions">
-        <button type="button" id="task-cancel" class="secondary">Отмена</button>
-        <button type="submit" class="primary">Создать</button>
+        <button type="button" class="secondary" id="editor-cancel">Отмена</button>
+        <button type="submit" class="primary" id="editor-submit">Сохранить</button>
       </div>
     </form>
   </dialog>
 
-  <script src="app.js"></script>
+  <dialog id="search-dialog">
+    <form method="dialog" class="search-box">
+      <div class="dialog-head"><h2>Поиск</h2><button value="cancel" class="close-btn">×</button></div>
+      <input id="global-search" placeholder="Задачи, проекты, платежи, заметки…" autocomplete="off">
+      <div id="search-results"></div>
+    </form>
+  </dialog>
+
+  <dialog id="backup-dialog">
+    <div class="dialog-head"><div><small>Данные</small><h2 id="backup-title">Резервная копия</h2></div><button class="close-btn" data-close="backup-dialog">×</button></div>
+    <p class="muted" id="backup-help"></p>
+    <textarea id="backup-text" rows="13"></textarea>
+    <div class="dialog-actions">
+      <button class="secondary" id="backup-copy">Копировать</button>
+      <button class="primary" id="backup-apply">Восстановить</button>
+    </div>
+  </dialog>
+
+  <script src="chunk1.js"></script>
+  <script src="chunk2.js"></script>
+  <script src="chunk3.js"></script>
+  <script src="chunk4.js"></script>
+  <script src="chunk5.js"></script>
+  <script src="chunk6.js"></script>
+  <script src="chunk7.js"></script>
+  <script src="chunk8.js"></script>
+  <script src="chunk9.js"></script>
 </body>
 </html>
