@@ -80,10 +80,10 @@ await run('period tasks cross month boundaries',async()=>{
   const form=window.document.querySelector('#editor-form');
   form.elements.kind.value='trip';form.elements.title.value='Командировка в Астану';form.elements.date.value='2026-07-30';form.elements.endDate.value='2026-08-03';form.elements.time.value='09:00';
   form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
-  const trip=window.eval("state.tasks.find(item=>item.title==='Командировка в Астану')");
+  const trip=window.__shtabDiagnostics.taskByTitle('Командировка в Астану');
   assert(trip,'Period task was not saved');
-  assert(window.eval(`tasksForDate('2026-08-01').some(item=>item.id==='${trip.id}')`),'Task missing inside period');
-  assert(!window.eval(`tasksForDate('2026-08-04').some(item=>item.id==='${trip.id}')`),'Task visible after period');
+  assert(window.__shtabDiagnostics.taskIdsForDate('2026-08-01').includes(trip.id),'Task missing inside period');
+  assert(!window.__shtabDiagnostics.taskIdsForDate('2026-08-04').includes(trip.id),'Task visible after period');
 });
 
 await run('task action sheet and app confirmation',async()=>{
@@ -118,7 +118,7 @@ await run('budget editor only distributes existing categories',async()=>{
   const row=window.document.querySelector('.budget-allocation-row');assert(row,'Allocation row not added');
   row.querySelector('[name=allocationAmount]').value='300000';
   form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
-  const budget=window.eval("state.budgets.find(item=>item.month==='2026-08')");
+  const budget=window.__shtabDiagnostics.budgetForMonth('2026-08');
   assert(budget?.amount===1000000,'Budget amount not saved');assert(budget.allocations.length===1,'Allocation not saved');
 });
 
