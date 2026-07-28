@@ -5,7 +5,7 @@ function syncAllNotifications(){
   if(!state.settings.notifications){localStorage.setItem(STORAGE,JSON.stringify(state));return}
   const horizon=addDays(today,60);
   state.tasks.forEach(t=>{for(let i=0;i<=60;i++){const key=dayKey(addDays(today,i));if(!taskOccursOn(t,key)||taskDone(t,key))continue;const due=dateTime(key,t.time);(t.reminders||[]).forEach(off=>scheduleNative(`task:${t.id}:${key}:${off}`,notificationTitle('task',t.title),t.description||'Запланированная задача',new Date(due.getTime()-off*60000),t.priority==='high'?'important':'normal'));if(t.repeatUntilDone){[10,30,60].forEach(after=>scheduleNative(`task:${t.id}:${key}:after${after}`,t.title,'Задача еще не отмечена выполненной',new Date(due.getTime()+after*60000),'important'))}}});
-  state.transactions.forEach(tx=>{for(let i=0;i<=60;i++){const key=dayKey(addDays(today,i));if(!transactionOccursOn(tx,key)||txSettled(tx,key))continue;const due=dateTime(key,tx.time||'09:00');(tx.reminders||[]).forEach(off=>scheduleNative(`tx:${tx.id}:${key}:${off}`,notificationTitle('finance',category(tx.category)?.name||tx.note||'Платеж'),`${tx.type==='expense'?'Расход':'Доход'} ${money(tx.amount)}`,new Date(due.getTime()-off*60000),'finance'))}});
+  state.transactions.forEach(tx=>{for(let i=0;i<=60;i++){const key=dayKey(addDays(today,i));if(!transactionOccursOn(tx,key)||txSettled(tx,key))continue;const due=dateTime(key,tx.time||'09:00');(tx.reminders||[]).forEach(off=>scheduleNative(`tx:${tx.id}:${key}:${off}`,notificationTitle('finance',category(tx.category)?.name||tx.sourceName||tx.note||'Платеж'),`${tx.type==='expense'?'Расход':'Доход'} ${money(tx.amount)}`,new Date(due.getTime()-off*60000),'finance'))}});
   state.habits.forEach(h=>{for(let i=0;i<=30;i++){const key=dayKey(addDays(today,i));if(!habitDue(h,key)||habitDone(h,key))continue;(h.reminderTimes||[]).forEach(tm=>scheduleNative(`habit:${h.id}:${key}:${tm}`,notificationTitle('habit',h.name),h.description||'Отметьте выполнение',dateTime(key,tm),'health'))}});
   state.workouts.forEach(w=>{if(w.status==='completed')return;const due=dateTime(w.date,w.time);(w.reminders||[]).forEach(off=>scheduleNative(`workout:${w.id}:${off}`,notificationTitle('workout',w.title),w.plan||`${w.duration} минут`,new Date(due.getTime()-off*60000),'health'))});
   state.goals.forEach(g=>{if(g.status!=='active'||!g.deadline)return;const due=dateTime(g.deadline,'09:00');(g.reminders||[]).forEach(off=>scheduleNative(`goal:${g.id}:${off}`,notificationTitle('goal',g.title),`${g.current}/${g.target} ${g.unit||''}`,new Date(due.getTime()-off*60000),'normal'))});
@@ -14,7 +14,7 @@ function syncAllNotifications(){
 }
 window.syncAllNotifications=syncAllNotifications;
 
-function openQuick(){document.querySelector('#quick-dialog').showModal()}
+function openQuick(){document.querySelector('#quick-dialog')?.showModal()}
 function closeDialog(id){document.querySelector('#'+id)?.close()}
 function openMore(v){page='more';state.moreView=v;state.moreTab=v==='sport'?'habits':'active';render()}
 function setMoreTab(v){state.moreTab=v;render()}
@@ -33,11 +33,11 @@ function globalSearch(q){q=q.toLowerCase().trim();if(!q)return[];const out=[];st
 window.setPage=setPage;window.openMore=openMore;window.openEditor=openEditor;window.openProject=openProject;window.setMoreTab=setMoreTab;window.toggleProjectArchive=toggleProjectArchive;window.toggleTask=toggleTask;window.taskMenu=taskMenu;window.toggleHabit=toggleHabit;window.toggleWorkout=toggleWorkout;window.updateGoal=updateGoal;window.quickCommand=quickCommand;window.startVoice=startVoice;window.selectDate=selectDate;window.moveSelectedDate=moveSelectedDate;window.setPlanMode=setPlanMode;window.moveFinanceMonth=moveFinanceMonth;window.setSetting=setSetting;window.saveDefaultReminders=saveDefaultReminders;window.requestNotifications=requestNotifications;window.clearCompleted=clearCompleted;window.resetData=resetData;window.openBackup=openBackup;
 
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>setPage(b.dataset.page));
-document.querySelector('#fab').onclick=openQuick;
+document.querySelector('#fab')?.addEventListener('click',openQuick);
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeDialog(b.dataset.close));
 document.querySelectorAll('[data-create]').forEach(b=>b.onclick=()=>{closeDialog('quick-dialog');openEditor(b.dataset.create)});
 document.querySelector('#editor-close').onclick=()=>closeDialog('editor-dialog');document.querySelector('#editor-cancel').onclick=()=>closeDialog('editor-dialog');document.querySelector('#editor-form').onsubmit=e=>{e.preventDefault();submitEditor(e.currentTarget)};
-document.querySelector('#notify-btn').onclick=requestNotifications;
+const legacyNotifyButton=document.querySelector('#notify-btn');if(legacyNotifyButton)legacyNotifyButton.onclick=requestNotifications;
 document.querySelector('#search-btn').onclick=()=>{const d=document.querySelector('#search-dialog'),i=document.querySelector('#global-search');i.value='';document.querySelector('#search-results').innerHTML='';d.showModal();setTimeout(()=>i.focus(),80)};
 document.querySelector('#global-search').oninput=e=>{document.querySelector('#search-results').innerHTML=globalSearch(e.target.value).map(x=>`<div class="search-result" onclick="closeDialog('search-dialog');${x.action}"><strong>${esc(x.title)}</strong><br><small>${x.type}</small></div>`).join('')||'<div class="empty">Ничего не найдено.</div>'};
 document.querySelector('#backup-copy').onclick=async()=>{try{await navigator.clipboard.writeText(document.querySelector('#backup-text').value);toast('Скопировано')}catch{document.querySelector('#backup-text').select();document.execCommand('copy');toast('Скопировано')}};
