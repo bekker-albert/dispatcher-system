@@ -1,23 +1,24 @@
-plugins {
-    id("com.android.application")
-}
-
+plugins { id("com.android.application") }
 android {
     namespace = "kz.shtabai.app"
     compileSdk = 35
-
     defaultConfig {
         applicationId = "kz.shtabai.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "2.0.0"
     }
-
-    buildTypes {
-        debug {
-            applicationIdSuffix = ""
-            versionNameSuffix = ""
+    signingConfigs {
+        create("release") {
+            storeFile = file("../shtab-ai-release.jks")
+            storePassword = "ShtabAI2026!"
+            keyAlias = "shtabai"
+            keyPassword = "ShtabAI2026!"
         }
+    }
+    buildTypes {
+        getByName("debug") { signingConfig = signingConfigs.getByName("release") }
+        getByName("release") { isMinifyEnabled = false; signingConfig = signingConfigs.getByName("release") }
     }
 }
