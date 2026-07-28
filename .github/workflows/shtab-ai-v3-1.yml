@@ -1,0 +1,72 @@
+name: Build Shtab AI V3.1
+on:
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  test-and-build:
+    if: startsWith(github.head_ref, 'temp/fix-shtab-ai-v3-1-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          for file in shtab-ai-android/app/src/main/assets/chunk*.js; do node --check "$file"; done
+          node --check shtab-ai-android/ui-smoke.mjs
+      - name: Run version 3.1 interface audit
+        shell: bash
+        run: |
+          set -o pipefail
+          cd shtab-ai-android
+          npm init -y >/dev/null 2>&1
+          npm install jsdom --no-save
+          node ui-smoke.mjs | tee ../ui-smoke-report.txt
+      - name: Upload audit report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shtab-AI-v3.1-audit-failure
+          path: ui-smoke-report.txt
+          retention-days: 1
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore release signing key
+        run: base64 -d shtab-ai-android/signing.keystore.b64 > shtab-ai-android/shtab-ai-release.jks
+      - name: Build release APK
+        run: cd shtab-ai-android && gradle :app:assembleRelease --stacktrace
+      - name: Verify and prepare APK
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build-output
+          cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk build-output/Shtab-AI-v3.1.apk
+          cp ui-smoke-report.txt build-output/ui-smoke-report.txt
+          unzip -t build-output/Shtab-AI-v3.1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs build-output/Shtab-AI-v3.1.apk | tee build-output/signature-report.txt
+          sha256sum build-output/Shtab-AI-v3.1.apk | tee build-output/sha256.txt
+      - name: Upload tested APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shtab-AI-v3.1-tested-apk
+          path: build-output/
+          retention-days: 3
