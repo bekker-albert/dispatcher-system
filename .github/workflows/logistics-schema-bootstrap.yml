@@ -1,0 +1,102 @@
+name: Bootstrap logistics production schema
+
+on:
+  push:
+    branches:
+      - feature/gazel-logistics-release
+    paths:
+      - ".github/workflows/logistics-schema-bootstrap.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/logistics-schema-bootstrap.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Initialize and verify logistics schema
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          export PM2_HOME="/var/www/dispatcher/data/.pm2"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
+          socket="/var/www/dispatcher/data/nodejs/0.sock"
+
+          test -f "$site/.env.local"
+          test -S "$socket"
+          main_before=$(node -e "const{execFileSync}=require('node:child_process');const r=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}})).find(x=>x.name==='aam-dispatch');if(!r||r.pm2_env.status!=='online')process.exit(1);process.stdout.write(String(r.pm2_env.restart_time)+':'+String(r.pm2_env.pm_uptime))")
+
+          cd "$site"
+          node - <<'NODE'
+          const {loadEnvConfig}=require('@next/env'); const fs=require('node:fs');
+          loadEnvConfig(process.cwd());
+          const login=process.env.AUTH_INITIAL_LOGIN;
+          const password=process.env.AUTH_INITIAL_PASSWORD;
+          if(!login||!password) throw new Error('AUTH_INITIAL_LOGIN and AUTH_INITIAL_PASSWORD are required');
+          fs.writeFileSync('/tmp/logistics-bootstrap-login.json',JSON.stringify({login,password}),{mode:0o600});
+          NODE
+
+          login_status=$(curl -sS -D /tmp/logistics-bootstrap-headers -o /tmp/logistics-bootstrap-login-response -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -H 'Content-Type: application/json' --data-binary @/tmp/logistics-bootstrap-login.json http://localhost/api/auth/login)
+          echo "login_status=$login_status"
+          test "$login_status" = "200"
+          session_cookie=$(awk 'BEGIN{IGNORECASE=1} /^set-cookie:/{print $2; exit}' /tmp/logistics-bootstrap-headers | tr -d '\r')
+          test -n "$session_cookie"
+
+          api_status=$(curl -sS -o /tmp/logistics-bootstrap-api-response -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -H "Cookie: $session_cookie" http://localhost/api/logistics)
+          echo "authenticated_api_status=$api_status"
+          if [ "$api_status" != "200" ]; then
+            cat /tmp/logistics-bootstrap-api-response
+            exit 1
+          fi
+
+          node - <<'NODE'
+          const {loadEnvConfig}=require('@next/env'); const mysql=require('mysql2/promise');
+          loadEnvConfig(process.cwd());
+          (async()=>{
+            const c=await mysql.createConnection({host:process.env.DB_HOST,port:Number(process.env.DB_PORT||3306),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD});
+            const tables=['logistics_requests','logistics_request_stops','logistics_request_versions','logistics_approvals','logistics_approval_steps','logistics_trips','logistics_trip_requests','logistics_trip_release_checklists','logistics_document_templates','logistics_document_package_rules','logistics_document_instances','logistics_audit_events','logistics_config_versions'];
+            const [rows]=await c.query('SELECT table_name FROM information_schema.tables WHERE table_schema=?',[process.env.DB_NAME]);
+            const existing=new Set(rows.map(r=>r.TABLE_NAME||r.table_name));
+            const missing=tables.filter(t=>!existing.has(t));
+            console.log('missing_tables='+missing.join(','));
+            await c.end();
+            if(missing.length) throw new Error('Missing logistics tables: '+missing.join(', '));
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+          main_after=$(node -e "const{execFileSync}=require('node:child_process');const r=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}})).find(x=>x.name==='aam-dispatch');if(!r||r.pm2_env.status!=='online')process.exit(1);process.stdout.write(String(r.pm2_env.restart_time)+':'+String(r.pm2_env.pm_uptime))")
+          test "$main_before" = "$main_after"
+          rm -f /tmp/logistics-bootstrap-login.json /tmp/logistics-bootstrap-headers /tmp/logistics-bootstrap-login-response /tmp/logistics-bootstrap-api-response
+          EOF
+
+      - name: Public smoke
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 10 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/health/ | grep -q 'gazel-logistics-web'
+          curl -fsS --retry 10 --retry-delay 3 --max-time 20 https://logistics.aam-dispatch.kz/ | grep -q 'Логистика Газели'
+          curl -fsS --retry 10 --retry-delay 3 --max-time 20 https://aam-dispatch.kz/ >/tmp/aam-main.html
+          test -s /tmp/aam-main.html
