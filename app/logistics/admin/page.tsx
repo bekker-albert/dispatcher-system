@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import AdvancedAdminWorkspace from "@/features/logistics/AdvancedAdminWorkspace";
+
+import LogisticsSettingsHome from "@/features/logistics/LogisticsSettingsHome";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Расширенное администрирование · Логистика Газели",
-  description: "Конструктор структуры, прав, согласований, документов и уведомлений",
+  title: "Настройки · Логистика Газели",
+  description: "Учётная запись, документы, выпуск и конструктор системы",
 };
 
 export default function LogisticsAdminPage() {
-  return <AdvancedAdminWorkspace />;
+  return <LogisticsSettingsHome />;
 }
