@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0c12">
-  <title>Штаб AI — версия 1.1</title>
+  <title>Штаб AI — версия 1.2</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,43 +14,145 @@
         <h1 id="page-title">Добрый день, Альберт</h1>
         <p id="page-subtitle"></p>
       </div>
-      <button type="button" class="icon-btn" id="notify-btn" aria-label="Настройки уведомлений">🔔</button>
+      <button class="icon-btn" id="notify-btn" type="button" aria-label="Настройки уведомлений">🔔</button>
     </header>
 
     <section id="today" class="page active"></section>
     <section id="plan" class="page"></section>
     <section id="assistant" class="page assistant-page"></section>
     <section id="projects" class="page"></section>
+    <section id="finance" class="page"></section>
     <section id="more" class="page"></section>
 
-    <button type="button" class="fab" id="fab" aria-label="Добавить задачу">＋</button>
+    <button class="fab" id="fab" type="button" aria-label="Добавить">＋</button>
 
-    <nav class="bottom-nav" aria-label="Основная навигация">
-      <button type="button" class="nav-item active" data-page="today"><span>◫</span><small>Сегодня</small></button>
-      <button type="button" class="nav-item" data-page="plan"><span>▦</span><small>План</small></button>
-      <button type="button" class="nav-item" data-page="assistant"><span>✦</span><small>Помощник</small></button>
-      <button type="button" class="nav-item" data-page="projects"><span>▰</span><small>Проекты</small></button>
-      <button type="button" class="nav-item" data-page="more"><span>•••</span><small>Еще</small></button>
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-page="today" type="button"><span>◫</span><small>Сегодня</small></button>
+      <button class="nav-item" data-page="plan" type="button"><span>▦</span><small>План</small></button>
+      <button class="nav-item" data-page="assistant" type="button"><span>✦</span><small>Помощник</small></button>
+      <button class="nav-item" data-page="projects" type="button"><span>▰</span><small>Проекты</small></button>
+      <button class="nav-item" data-page="more" type="button"><span>•••</span><small>Еще</small></button>
     </nav>
   </main>
 
   <dialog id="task-dialog">
     <form id="task-form" novalidate>
       <div class="dialog-head">
-        <h2>Новая задача</h2>
-        <button type="button" class="close-btn" id="task-close" aria-label="Закрыть">×</button>
+        <h2 id="task-dialog-title">Новая задача</h2>
+        <button type="button" id="task-close" class="close-btn" aria-label="Закрыть">×</button>
       </div>
-      <label>Название<input id="task-title" placeholder="Что нужно сделать?" autocomplete="off"></label>
-      <p class="field-error" id="task-title-error" hidden>Введите название задачи.</p>
+      <input id="task-id" type="hidden">
+      <label>Название
+        <input id="task-title" placeholder="Что нужно сделать?">
+        <small class="field-error" id="task-title-error" hidden>Введите название задачи</small>
+      </label>
       <div class="form-row">
         <label>Дата<input id="task-date" type="date"></label>
         <label>Время<input id="task-time" type="time"></label>
       </div>
       <label>Проект<select id="task-project"></select></label>
-      <label>Приоритет<select id="task-priority"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="low">Низкий</option></select></label>
+      <label>Приоритет
+        <select id="task-priority">
+          <option value="normal">Обычный</option>
+          <option value="high">Высокий</option>
+          <option value="low">Низкий</option>
+        </select>
+      </label>
+      <fieldset class="reminder-box">
+        <legend>Напоминания</legend>
+        <div class="check-grid" id="task-reminders"></div>
+        <label class="compact-label">Дополнительно, за сколько минут
+          <input id="task-custom-reminder" type="number" inputmode="numeric" min="1" max="43200" placeholder="Например, 90">
+        </label>
+        <small class="hint">Можно выбрать несколько вариантов. Оставьте все пустым, чтобы отключить уведомления для этой задачи.</small>
+      </fieldset>
       <div class="dialog-actions">
         <button type="button" id="task-cancel" class="secondary">Отмена</button>
-        <button type="submit" class="primary">Создать</button>
+        <button type="submit" class="primary">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="project-dialog">
+    <form id="project-form" novalidate>
+      <div class="dialog-head">
+        <h2 id="project-dialog-title">Новый проект</h2>
+        <button type="button" id="project-close" class="close-btn" aria-label="Закрыть">×</button>
+      </div>
+      <input id="project-id" type="hidden">
+      <label>Название
+        <input id="project-name" placeholder="Например, Айдарлы">
+        <small class="field-error" id="project-name-error" hidden>Введите название проекта</small>
+      </label>
+      <label>Описание<textarea id="project-description" rows="3" placeholder="Краткое описание"></textarea></label>
+      <label>Цвет проекта
+        <select id="project-color">
+          <option value="#7c5cfc">Фиолетовый</option>
+          <option value="#00cfe8">Голубой</option>
+          <option value="#28c76f">Зеленый</option>
+          <option value="#ff9f43">Оранжевый</option>
+          <option value="#ff6b6b">Красный</option>
+          <option value="#b9bccb">Серый</option>
+        </select>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" id="project-cancel" class="secondary">Отмена</button>
+        <button type="submit" class="primary">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="finance-dialog">
+    <form id="finance-form" novalidate>
+      <div class="dialog-head">
+        <h2 id="finance-dialog-title">Новая операция</h2>
+        <button type="button" id="finance-close" class="close-btn" aria-label="Закрыть">×</button>
+      </div>
+      <input id="finance-id" type="hidden">
+      <div class="segmented">
+        <label><input type="radio" name="finance-type" value="expense" checked><span>Расход</span></label>
+        <label><input type="radio" name="finance-type" value="income"><span>Доход</span></label>
+      </div>
+      <label>Название
+        <input id="finance-title" placeholder="Например, аренда квартиры">
+        <small class="field-error" id="finance-title-error" hidden>Введите название</small>
+      </label>
+      <label>Сумма
+        <input id="finance-amount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="0">
+        <small class="field-error" id="finance-amount-error" hidden>Введите сумму больше нуля</small>
+      </label>
+      <div class="form-row">
+        <label>Дата<input id="finance-date" type="date"></label>
+        <label>Время<input id="finance-time" type="time"></label>
+      </div>
+      <label>Категория
+        <select id="finance-category">
+          <option value="salary">Зарплата</option>
+          <option value="housing">Жилье</option>
+          <option value="transport">Транспорт</option>
+          <option value="food">Питание</option>
+          <option value="health">Здоровье</option>
+          <option value="work">Работа</option>
+          <option value="other">Другое</option>
+        </select>
+      </label>
+      <label>Повтор
+        <select id="finance-repeat">
+          <option value="none">Однократно</option>
+          <option value="monthly">Каждый месяц</option>
+        </select>
+      </label>
+      <fieldset class="reminder-box">
+        <legend>Уведомления</legend>
+        <div class="check-grid" id="finance-reminders"></div>
+        <label class="compact-label">Дополнительно, за сколько минут
+          <input id="finance-custom-reminder" type="number" inputmode="numeric" min="1" max="43200" placeholder="Например, 2880">
+        </label>
+        <small class="hint">Для ежемесячной операции уведомление назначается на ближайшее наступление.</small>
+      </fieldset>
+      <div class="dialog-actions">
+        <button type="button" id="finance-cancel" class="secondary">Отмена</button>
+        <button type="submit" class="primary">Сохранить</button>
       </div>
     </form>
   </dialog>
