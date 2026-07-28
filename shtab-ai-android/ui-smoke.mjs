@@ -12,7 +12,7 @@ const dom=new JSDOM(html,{url:'https://shtab-ai.local/',runScripts:'dangerously'
 const {window}=dom;
 window.console.error=(...args)=>errors.push(args.map(String).join(' '));
 window.confirm=()=>{throw new Error('Native browser confirm must not be used')};
-window.prompt=()=> '1';
+window.prompt=()=>{throw new Error('Native browser prompt must not be used')};
 window.alert=()=>{};
 window.requestAnimationFrame=cb=>setTimeout(cb,0);
 window.HTMLElement.prototype.scrollIntoView=function(){};
@@ -26,7 +26,7 @@ window.Android={
   speak(){},showToast(){}
 };
 
-const scripts=Array.from({length:13},(_,i)=>fs.readFileSync(path.join(root,`chunk${i+1}.js`),'utf8')).join('\n;\n');
+const scripts=Array.from({length:14},(_,i)=>fs.readFileSync(path.join(root,`chunk${i+1}.js`),'utf8')).join('\n;\n');
 try{window.eval(scripts)}catch(error){errors.push(`initialization: ${error.stack||error}`)}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
@@ -37,10 +37,13 @@ await run('initial render',async()=>{
   assert(window.document.querySelectorAll('.nav-item').length===5,'Bottom navigation count');
 });
 
-await run('Today compact layout',async()=>{
+await run('Today compact layout without owner badge',async()=>{
   window.setPage('today');
   const today=window.document.querySelector('#today');
   assert(!today.textContent.includes('Быстро'),'Obsolete quick section is visible');
+  assert(today.querySelector('.today-compact-summary'),'Compact top summary missing');
+  assert(!today.querySelector('.hero'),'Large hero still visible');
+  assert(!today.querySelector('.today-compact-summary .assistant-mark'),'Owner initials leaked into top summary');
   assert(today.querySelectorAll('.today-metrics .dash-card').length===4,'Compact metric cards missing');
   assert(today.textContent.includes('Заметки'),'Notes section is not visible on Today');
   assert(today.querySelector('.today-notes'),'Today notes container missing');
@@ -59,6 +62,23 @@ await run('all quick-create forms',async()=>{
   }
 });
 
+await run('task type and cross-month period',async()=>{
+  window.openEditor('task');
+  const form=window.document.querySelector('#editor-form');
+  assert(form.elements.kind,'Task kind field missing');
+  assert(form.elements.endDate,'Task end date missing');
+  form.elements.kind.value='trip';
+  form.elements.title.value='Командировка в Астану';
+  form.elements.date.value='2026-07-30';
+  form.elements.endDate.value='2026-08-03';
+  form.elements.time.value='09:00';
+  form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+  const trip=window.eval("state.tasks.find(x=>x.title==='Командировка в Астану')");
+  assert(trip,'Period task was not saved');
+  assert(window.eval(`tasksForDate('2026-08-01').some(x=>x.id==='${trip.id}')`),'Period task missing inside cross-month range');
+  assert(!window.eval(`tasksForDate('2026-08-04').some(x=>x.id==='${trip.id}')`),'Period task visible after end date');
+});
+
 await run('styled task actions and app confirmation',async()=>{
   window.setPage('today');
   let menu=window.document.querySelector('.task .menu-btn');
@@ -67,7 +87,8 @@ await run('styled task actions and app confirmation',async()=>{
   let dialog=window.document.querySelector('#task-actions-dialog');
   assert(dialog?.open,'Task action sheet did not open');
   assert(dialog.querySelectorAll('.task-action').length>=4,'Task action buttons missing');
-  const edit=dialog.querySelector('[data-task-action="edit"]');
+  const edit=dialog.querySelector('[data-v24-task-action="edit"]');
+  assert(edit,'Styled edit action missing');
   edit.click();
   await wait(120);
   assert(window.document.querySelector('#editor-dialog').open,'Edit action did not open editor');
@@ -77,7 +98,9 @@ await run('styled task actions and app confirmation',async()=>{
   menu=window.document.querySelector('.task .menu-btn');
   menu.click();
   dialog=window.document.querySelector('#task-actions-dialog');
-  dialog.querySelector('[data-task-action="delete"]').click();
+  const del=dialog.querySelector('[data-v24-task-action="delete"]');
+  assert(del,'Styled delete action missing');
+  del.click();
   await wait(120);
   const confirmDialog=window.document.querySelector('#app-confirm-dialog');
   assert(confirmDialog?.open,'App confirmation dialog did not open');
@@ -86,6 +109,29 @@ await run('styled task actions and app confirmation',async()=>{
   confirmDialog.querySelector('#app-confirm-cancel').click();
   assert(!confirmDialog.open,'Confirmation dialog did not close on cancel');
   assert(window.document.querySelector('.task'),'Task was deleted after cancel');
+});
+
+await run('unified budget and allocations',async()=>{
+  window.setPage('finance');
+  assert(window.document.querySelector('.budget-summary'),'Unified budget summary missing');
+  window.openEditor('budget');
+  const form=window.document.querySelector('#editor-form');
+  assert(form.elements.amount,'Total budget field missing');
+  assert(window.document.querySelector('#budget-allocation-list'),'Budget allocation list missing');
+  form.elements.name.value='Бюджет августа';
+  form.elements.month.value='2026-08';
+  form.elements.amount.value='1000000';
+  window.addBudgetAllocationRow();
+  const row=window.document.querySelector('.budget-allocation-row');
+  assert(row,'Allocation row was not added');
+  row.querySelector('[name=allocationAmount]').value='300000';
+  form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+  const budget=window.eval("state.budgets.find(x=>x.month==='2026-08')");
+  assert(budget?.amount===1000000,'Total budget was not saved');
+  assert(budget.allocations.length===1&&budget.allocations[0].amount===300000,'Allocation was not saved');
+  window.setPage('finance');
+  assert(window.document.querySelector('#finance').textContent.includes('Перераспределить'),'Reallocation action missing');
+  assert(!window.document.querySelector('#finance').textContent.includes('Лимит по категории'),'Legacy category budget wording remains');
 });
 
 await run('bottom navigation',async()=>{
@@ -108,16 +154,20 @@ await run('more modules',async()=>{
   assert(window.document.querySelector('#more').textContent.includes('Проверка пройдена'),'Diagnostics failed');
 });
 
-await run('owner profile settings',async()=>{
-  window.openMore('settings');
+await run('profile card opens profile editing',async()=>{
+  window.openMore('home');
+  const profile=window.document.querySelector('#more .profile-entry');
+  assert(profile,'Clickable profile card missing');
+  profile.click();
+  await wait(120);
+  assert(window.document.querySelector('#owner-name-input'),'Profile click did not open owner settings');
   const input=window.document.querySelector('#owner-name-input');
-  assert(input,'Owner name input missing');
   input.value='Тестовый Владелец';
   window.saveOwnerName();
   window.openMore('home');
   assert(window.document.querySelector('#more').textContent.includes('Тестовый Владелец'),'Owner name not reflected in profile');
   window.setPage('today');
-  assert(window.document.querySelector('#page-subtitle').textContent.includes('Тестовый'),'Owner greeting not updated');
+  assert(!window.document.querySelector('.today-compact-summary').textContent.includes('Тестовый'),'Owner name remains in Today top summary');
 });
 
 await run('notes stay visible',async()=>{
