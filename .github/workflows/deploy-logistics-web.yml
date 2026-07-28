@@ -16,8 +16,7 @@ on:
       - "logistics-server.js"
       - ".github/workflows/deploy-logistics-web.yml"
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "app/api/logistics/**"
       - "app/logistics/**"
@@ -90,7 +89,7 @@ jobs:
         run: |
           scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" "logistics-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/logistics.aam-dispatch.kz/"
 
-      - name: Install, migrate, verify and start
+      - name: Prepare and switch atomic release
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
@@ -98,94 +97,83 @@ jobs:
           DEPLOY_SHA: ${{ github.sha }}
         run: |
           ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" <<'EOF'
-            set -euo pipefail
-            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
-            export PM2_HOME="/var/www/dispatcher/data/.pm2"
-            export NEXT_TELEMETRY_DISABLED="1"
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          export PM2_HOME="/var/www/dispatcher/data/.pm2"
+          export NEXT_TEMETRY_DISABLED="1"
 
-            site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
-            main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
-            archive="$site/logistics-web-${DEPLOY_SHA}.tar.gz"
-            stage="$site/.release-${DEPLOY_SHA}"
-            socket="/var/www/dispatcher/data/nodejs/0.sock"
-            env_copy="/tmp/logistics-env-${DEPLOY_SHA}.local"
-            backup="$site/data/previous-release.tar.gz"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
+          releases="$site/data/releases"
+          release="$releases/$DEPLOY_SHA"
+          archive="$site/logistics-web-${DEPLOY_SHA}.tar.gz"
+          socket="/var/www/dispatcher/data/nodejs/0.sock"
 
-            test -f "$archive"
-            rm -rf "$stage"
-            mkdir -p "$stage" "$site/data" "$site/logs"
-            tar -xzf "$archive" -C "$stage"
-            test -f "$stage/.next/BUILD_ID"
-            test -f "$stage/logistics-server.js"
-            test -f "$stage/scripts/ensure-logistics-schema.mjs"
+          test -f "$archive"
+          mkdir -p "$releases" "$site/logs"
+          rm -rf "$release"
+          mkdir -p "$release"
+          tar -xzf "$archive" -C "$release"
+          test -f "$release/.next/BUILD_ID"
+          test -f "$release/logistics-server.js"
+          test -f "$release/scripts/ensure-logistics-schema.mjs"
 
-            if [ -f "$site/.env.local" ]; then
-              cp "$site/.env.local" "$env_copy"
-            elif [ -f "$main_site/.env.local" ]; then
-              cp "$main_site/.env.local" "$env_copy"
-            else
-              echo "No server environment file available for logistics"
-              exit 1
-            fi
-            chmod 600 "$env_copy"
+          if [ -f "$site/.env.local" ]; then
+            cp "$site/.env.local" "$release/.env.local"
+          elif [ -f "$main_site/.env.local" ]; then
+            cp "$main_site/.env.local" "$release/.env.local"
+          else
+            echo "No protected environment file found"
+            exit 1
+          fi
+          chmod 600 "$release/.env.local"
 
-            main_before=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(item=>item.name==='aam-dispatch');if(!row||row.pm2_env?.status!=='online')process.exit(1);process.stdout.write(String(row.pm2_env.restart_time)+':'+String(row.pm2_env.pm_uptime))")
+          cd "$release"
+          npm ci --omit=dev --no-audit --no-fund
+          node scripts/ensure-logistics-schema.mjs
 
-            rm -f "$backup"
-            if [ -f "$site/.next/BUILD_ID" ]; then
-              tar --exclude='./data' --exclude='./logs' --exclude='./logistics-web-*.tar.gz' --exclude='./.release-*' -czf "$backup" -C "$site" .
-            fi
+          main_before=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(x=>x.name==='aam-dispatch');if(!row||row.pm2_env?.status!=='online')process.exit(1);process.stdout.write(String(row.pm2_env.restart_time)+':'+String(row.pm2_env.pm_uptime))")
+          previous_cwd=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(x=>x.name==='gazel-logistics-web');process.stdout.write(row?.pm2_env?.pm_cwd||'')")
 
-            rollback() {
-              echo "Deployment failed; restoring previous logistics release"
-              /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics-web >/dev/null 2>&1 || true
-              rm -f "$socket"
-              if [ -f "$backup" ]; then
-                find "$site" -mindepth 1 -maxdepth 1 ! -name data ! -name logs ! -name '.env.local' -exec rm -rf {} +
-                tar -xzf "$backup" -C "$site"
-                cp "$env_copy" "$site/.env.local"
-                chmod 600 "$site/.env.local"
-                cd "$site"
-                npm ci --omit=dev --no-audit --no-fund
-                SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js --name gazel-logistics-web --cwd "$site" --time --update-env || true
-                /usr/lib/ispnodejs/bin/pm2 save || true
-              fi
-            }
-            trap rollback ERR
-
+          rollback() {
+            echo "New logistics release failed; restoring previous process"
             /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics-web >/dev/null 2>&1 || true
             rm -f "$socket"
-            find "$site" -mindepth 1 -maxdepth 1 ! -name data ! -name logs ! -name '.env.local' ! -name "$(basename "$archive")" ! -name "$(basename "$stage")" -exec rm -rf {} +
-            cp -a "$stage"/. "$site"/
-            rm -rf "$stage"
-            cp "$env_copy" "$site/.env.local"
-            chmod 600 "$site/.env.local"
-            cd "$site"
-            npm ci --omit=dev --no-audit --no-fund
-            node scripts/ensure-logistics-schema.mjs
+            if [ -n "$previous_cwd" ] && [ -f "$previous_cwd/logistics-server.js" ]; then
+              cd "$previous_cwd"
+              SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js --name gazel-logistics-web --cwd "$previous_cwd" --time --update-env || true
+              /usr/lib/ispnodejs/bin/pm2 save || true
+            fi
+          }
+          trap rollback ERR
 
-            SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js --name gazel-logistics-web --cwd "$site" --time --update-env
-            /usr/lib/ispnodejs/bin/pm2 save
+          /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics-web >/dev/null 2>&1 || true
+          rm -f "$socket"
+          cd "$release"
+          SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js --name gazel-logistics-web --cwd "$release" --time --update-env
+          /usr/lib/ispnodejs/bin/pm2 save
 
-            healthy=0
-            for attempt in $(seq 1 60); do
-              if curl -fsS --unix-socket "$socket" http://localhost/health/ >/tmp/logistics-health.json 2>/dev/null; then healthy=1; break; fi
-              sleep 2
-            done
-            test "$healthy" = "1"
-            grep -q 'gazel-logistics-web' /tmp/logistics-health.json
-            curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Логистика Газели'
-            curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/release | grep -q 'Выпуск'
-            curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/documents | grep -q 'Документ'
+          healthy=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS --unix-socket "$socket" http://localhost/health/ >/tmp/logistics-health.json 2>/dev/null; then healthy=1; break; fi
+            sleep 2
+          done
+          test "$healthy" = "1"
+          grep -q 'gazel-logistics-web' /tmp/logistics-health.json
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/ | grep -q 'Логистика Газели'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/release | grep -q 'Выпуск'
+          curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/logistics/documents | grep -q 'Документ'
+          api_status=$(curl -sS -o /tmp/logistics-api-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics)
+          case "$api_status" in 401|403) ;; *) cat /tmp/logistics-api-anon.json; exit 1;; esac
 
-            api_status=$(curl -sS -o /tmp/logistics-api-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics)
-            case "$api_status" in 401|403) ;; *) cat /tmp/logistics-api-anon.json; exit 1;; esac
+          main_after=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(x=>x.name==='aam-dispatch');if(!row||row.pm2_env?.status!=='online')process.exit(1);process.stdout.write(String(row.pm2_env.restart_time)+':'+String(row.pm2_env.pm_uptime))")
+          test "$main_before" = "$main_after"
 
-            main_after=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(item=>item.name==='aam-dispatch');if(!row||row.pm2_env?.status!=='online')process.exit(1);process.stdout.write(String(row.pm2_env.restart_time)+':'+String(row.pm2_env.pm_uptime))")
-            test "$main_before" = "$main_after"
-
-            trap - ERR
-            rm -f "$archive" "$env_copy"
+          trap - ERR
+          cp "$release/.env.local" "$site/.env.local"
+          chmod 600 "$site/.env.local"
+          rm -f "$archive"
+          find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | tail -n +4 | cut -d' ' -f2- | xargs -r rm -rf
           EOF
 
       - name: Public smoke test
