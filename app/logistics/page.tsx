@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import ServerLogisticsWorkspace from "@/features/logistics/ServerLogisticsWorkspace";
 
@@ -6,7 +7,7 @@ export const metadata: Metadata = {
   description: "Серверная система заявок, согласований, рейсов, документов и аудита",
 };
 
-const quickLink: React.CSSProperties = {
+const quickLink: CSSProperties = {
   padding: "11px 15px",
   borderRadius: 10,
   color: "#fff",
