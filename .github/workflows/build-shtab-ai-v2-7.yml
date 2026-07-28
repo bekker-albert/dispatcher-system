@@ -19,11 +19,15 @@ jobs:
         with:
           node-version: '22'
       - name: Check JavaScript syntax
+        shell: bash
         run: |
+          set -euo pipefail
           for file in shtab-ai-android/app/src/main/assets/chunk*.js; do node --check "$file"; done
           node --check shtab-ai-android/ui-smoke.mjs
       - name: Run version 2.7 logic audit
+        shell: bash
         run: |
+          set -euo pipefail
           cd shtab-ai-android
           npm init -y >/dev/null 2>&1
           npm install jsdom --no-save
@@ -53,7 +57,9 @@ jobs:
       - name: Build release APK
         run: cd shtab-ai-android && gradle :app:assembleRelease --stacktrace
       - name: Verify and prepare APK
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p build-output
           cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk build-output/Shtab-AI-v2.7.apk
           cp ui-smoke-report.txt build-output/ui-smoke-report.txt
