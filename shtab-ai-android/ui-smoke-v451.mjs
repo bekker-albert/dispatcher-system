@@ -29,7 +29,7 @@ assert((html.match(/data-page="/g)||[]).length===4,'Expected four page destinati
 assert(patch.includes('.bottom-nav>#fab.nav-add-v45')&&patch.includes('display:flex!important')&&patch.includes('visibility:visible!important'),'Static high-specificity visibility protection is missing');
 assert(chunk.includes('.bottom-nav>#fab.nav-add-v45')&&chunk.includes("uiVersion:()=> '4.5.1'"),'Runtime visibility protection or UI version is missing');
 assert(manifest.includes('android:name=".ShtabApplication"'),'Version-aware application is not registered');
-assert(application.includes('clearCache(true)')&&application.includes('BuildConfig.VERSION_CODE'),'WebView interface cache is not refreshed per APK version');
+assert(application.includes('clearCache(true)')&&application.includes('installedVersionCode()')&&application.includes('getLongVersionCode()'),'WebView interface cache is not refreshed per installed APK version');
 assert(!application.includes('deleteAllData')&&!application.includes('WebStorage.getInstance().deleteAllData'),'Cache refresh must not delete local user data');
 console.log('✓ packaged central add exists and cannot be hidden by legacy #fab rules');
 console.log('✓ APK update refreshes only cached interface assets and preserves DOM storage');
