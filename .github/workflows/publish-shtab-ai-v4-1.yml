@@ -46,7 +46,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch --orphan downloads-v4.1
-          git rm -rf .
+          git rm -rf . || true
           cp /tmp/Shtab-AI-v4.1.apk ./Shtab-AI-v4.1.apk
           cp /tmp/Shtab-AI-v4.1.sha256.txt ./Shtab-AI-v4.1.sha256.txt
           APK_SHA=$(cut -d' ' -f1 /tmp/Shtab-AI-v4.1.sha256.txt)
