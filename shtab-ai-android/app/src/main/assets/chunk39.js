@@ -8,6 +8,12 @@
     try{dialog.showModal()}catch{dialog.setAttribute('open','')}
   }
 
+  function setImportantStyle(element,name,value){
+    if(!element)return;
+    if(element.style.getPropertyValue(name)===value&&element.style.getPropertyPriority(name)==='important')return;
+    element.style.setProperty(name,value,'important');
+  }
+
   function enforceCentralAddV452(){
     if(enforcing)return;
     enforcing=true;
@@ -25,10 +31,10 @@
       else if(analytics&&add.nextElementSibling!==analytics)nav.insertBefore(add,analytics);
       add.type='button';
       add.onclick=event=>{event.preventDefault();event.stopPropagation();openQuickV452()};
-      add.style.setProperty('display','flex','important');
-      add.style.setProperty('visibility','visible','important');
-      add.style.setProperty('opacity','1','important');
-      nav.style.setProperty('grid-template-columns','repeat(5,minmax(0,1fr))','important');
+      setImportantStyle(add,'display','flex');
+      setImportantStyle(add,'visibility','visible');
+      setImportantStyle(add,'opacity','1');
+      setImportantStyle(nav,'grid-template-columns','repeat(5,minmax(0,1fr))');
     }finally{enforcing=false}
   }
 
@@ -40,7 +46,7 @@
   window.render=render;
 
   const observer=new MutationObserver(()=>enforceCentralAddV452());
-  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
+  observer.observe(document.body,{childList:true,subtree:true});
   enforceCentralAddV452();
   render();
 })();
