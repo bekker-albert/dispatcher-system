@@ -38,7 +38,7 @@ jobs:
           cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk /tmp/Shtab-AI-v4.1.apk
           unzip -t /tmp/Shtab-AI-v4.1.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs /tmp/Shtab-AI-v4.1.apk
-          echo "ffc20176b0fa40af5c1042ae4d6d86ed864199b73acb96c95a5832989e9d0fd5  /tmp/Shtab-AI-v4.1.apk" | sha256sum -c -
+          sha256sum /tmp/Shtab-AI-v4.1.apk | tee /tmp/Shtab-AI-v4.1.sha256.txt
       - name: Publish public download branch
         shell: bash
         run: |
@@ -48,7 +48,9 @@ jobs:
           git switch --orphan downloads-v4.1
           git rm -rf .
           cp /tmp/Shtab-AI-v4.1.apk ./Shtab-AI-v4.1.apk
-          printf '%s\n' '# Shtab AI 4.1' 'Проверенный установочный APK.' 'SHA-256: ffc20176b0fa40af5c1042ae4d6d86ed864199b73acb96c95a5832989e9d0fd5' > README.md
-          git add Shtab-AI-v4.1.apk README.md
+          cp /tmp/Shtab-AI-v4.1.sha256.txt ./Shtab-AI-v4.1.sha256.txt
+          APK_SHA=$(cut -d' ' -f1 /tmp/Shtab-AI-v4.1.sha256.txt)
+          printf '%s\n' '# Shtab AI 4.1' 'Проверенный установочный APK.' "SHA-256: $APK_SHA" > README.md
+          git add Shtab-AI-v4.1.apk Shtab-AI-v4.1.sha256.txt README.md
           git commit -m "Опубликовать Shtab AI 4.1 APK"
           git push --force origin HEAD:refs/heads/downloads-v4.1
