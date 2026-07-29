@@ -6,12 +6,19 @@ import android.content.Intent;
 import android.os.Bundle;
 
 public class QuickCreateActivity extends Activity {
+    private static final String[] LABELS = new String[]{
+            "✓  Задача",
+            "✈  Командировка",
+            "◉  Событие",
+            "✎  Заметка"
+    };
+    private static final String[] TYPES = new String[]{"task", "trip", "event", "note"};
+
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        String[] actions = new String[]{"✓  Задача", "✎  Заметка"};
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Быстро создать")
-                .setItems(actions, (ignored, which) -> openEditor(which == 0 ? "task" : "note"))
+                .setItems(LABELS, (ignored, which) -> openEditor(TYPES[which]))
                 .setNegativeButton("Отмена", (ignored, which) -> finish())
                 .setOnCancelListener(ignored -> finish())
                 .create();
@@ -21,7 +28,8 @@ public class QuickCreateActivity extends Activity {
 
     private void openEditor(String type) {
         Intent intent = new Intent(this, MainActivity.class);
-        intent.putExtra("quick_create", type);
+        intent.putExtra("widget_page", "quick_create");
+        intent.putExtra("analytics_focus", type);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(intent);
         finish();
