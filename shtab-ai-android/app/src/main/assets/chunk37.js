@@ -24,8 +24,9 @@
   `;
   document.head.appendChild(style);
 
+  const directSectionsV45=root=>[...root.children].filter(node=>node.classList?.contains('simple-window-v30'));
   const sectionTitleV45=section=>section.querySelector('.simple-window-head-v30 h3')?.textContent.trim()||'';
-  const findSectionV45=(root,title)=>[...root.querySelectorAll(':scope > .simple-window-v30')].find(section=>sectionTitleV45(section)===title);
+  const findSectionV45=(root,title)=>directSectionsV45(root).find(section=>sectionTitleV45(section)===title);
   const simpleWindowV45=(title,count,rows,action='')=>`<section class="simple-window-v30" data-today-section-v45="${esc(title)}"><div class="simple-window-head-v30"><h3>${esc(title)}</h3><div><small>${count}</small>${action}</div></div><div class="simple-window-list-v30">${rows}</div></section>`;
   const deadlineLabelV45=value=>value?dateFmt(value,{day:'numeric',month:'short',year:new Date(`${value}T12:00:00`).getFullYear()!==today.getFullYear()?'numeric':undefined}):'Без срока';
 
@@ -50,7 +51,7 @@
     return goals.length?simpleWindowV45('Цели',goals.length,goals.map(goalRowV45).join(''),'<button type="button" class="today-section-link-v45" aria-label="Открыть цели" onclick="openMore(\'goals\')">›</button>'):'';
   }
   function removeEmptyWindowsV45(root){
-    root.querySelectorAll(':scope > .simple-window-v30').forEach(section=>{
+    directSectionsV45(root).forEach(section=>{
       const title=sectionTitleV45(section);if(title==='Приближающиеся')return;
       if(title==='Тренировки'){section.remove();return}
       const list=section.querySelector('.simple-window-list-v30'),hasContent=Boolean(list&&[...list.children].some(child=>!child.classList.contains('simple-empty-v30')));
@@ -72,8 +73,8 @@
     reorderTodayV45(root);
   }
   function auditApplicationV45(){
-    const ids=[...document.querySelectorAll('[id]')].map(node=>node.id),duplicates=ids.filter((id,index)=>ids.indexOf(id)!==index),buttonsWithoutType=[...document.querySelectorAll('button:not([type])')].length,financeVisible=Boolean(document.querySelector('#finance:not([hidden]),[data-page="finance"]'));
-    return{duplicates:[...new Set(duplicates)],buttonsWithoutType,financeVisible,pages:['today','plan','analytics','more','assistant'].every(id=>Boolean(document.querySelector('#'+id))),centralAdd:Boolean(document.querySelector('.bottom-nav>#fab.nav-add-v45'))};
+    const ids=[...document.querySelectorAll('[id]')].map(node=>node.id),duplicates=ids.filter((id,index)=>ids.indexOf(id)!==index),buttonsWithoutType=document.querySelectorAll('button:not([type])').length,financeVisible=Boolean(document.querySelector('#finance:not([hidden]),[data-page="finance"]'));
+    return{duplicates:[...new Set(duplicates)],buttonsWithoutType,financeVisible,pages:['today','plan','analytics','more','assistant'].every(id=>Boolean(document.querySelector('#'+id))),centralAdd:Boolean(document.querySelector('.bottom-nav > #fab.nav-add-v45')),quickTypes:[...document.querySelectorAll('#quick-dialog [data-create]')].map(button=>button.dataset.create)};
   }
 
   const previousRenderV45=render;
@@ -84,7 +85,7 @@
     document.querySelectorAll('button:not([type])').forEach(button=>button.type='button');
   };
   window.render=render;
-  window.__shtabDiagnostics={...(window.__shtabDiagnostics||{}),uiVersion:()=> '4.5.0',todaySectionsV45:()=>[...document.querySelectorAll('#today>:scope.simple-window-v30')].map(sectionTitleV45),todayHabitCountV45:()=>document.querySelectorAll('#today [data-today-habit-id]').length,todayWorkoutCountV45:()=>document.querySelectorAll('#today [data-today-workout-id]').length,todayGoalCountV45:()=>document.querySelectorAll('#today [data-today-goal-id]').length,applicationAuditV45:auditApplicationV45};
+  window.__shtabDiagnostics={...(window.__shtabDiagnostics||{}),uiVersion:()=> '4.5.0',todaySectionsV45:()=>directSectionsV45(document.querySelector('#today')).map(sectionTitleV45),todayHabitCountV45:()=>document.querySelectorAll('#today [data-today-habit-id]').length,todayWorkoutCountV45:()=>document.querySelectorAll('#today [data-today-workout-id]').length,todayGoalCountV45:()=>document.querySelectorAll('#today [data-today-goal-id]').length,applicationAuditV45:auditApplicationV45};
   render();
 })();
 //# sourceURL=chunk37.js
