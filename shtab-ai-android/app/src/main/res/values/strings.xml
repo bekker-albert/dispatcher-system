@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Штаб AI</string>
+    <string name="widget_description">Задачи, события, командировки и важные записи</string>
+    <string name="widget_name">Штаб AI 4×2</string>
+</resources>
