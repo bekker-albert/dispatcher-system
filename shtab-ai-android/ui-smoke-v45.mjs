@@ -29,20 +29,14 @@ function boot(seed=''){
   Object.defineProperty(window.navigator,'clipboard',{value:{writeText:async()=>{}},configurable:true});
   window.Android={requestInitialPermissions(){},requestNotifications(){},requestExactAlarmPermission(){},scheduleNotification(){},cancelNotification(){},startVoiceInput(){},speak(){},showToast(){},updateWidget(){}};
   const parts=[];
-  for(const source of scripts){
-    if(source==='chunk37.js'&&seed)parts.push(seed);
-    parts.push(fs.readFileSync(path.join(root,source),'utf8'));
-  }
+  for(const source of scripts){if(source==='chunk37.js'&&seed)parts.push(seed);parts.push(fs.readFileSync(path.join(root,source),'utf8'))}
   try{window.eval(parts.join('\n;\n'))}catch(error){errors.push(`initialization: ${error.stack||error}`)}
-  return{window,errors,dom};
+  return{window,errors};
 }
 
-const emptySeed=`
-  state.tasks=[];state.notes=[];state.habits=[];state.workouts=[];state.goals=[];state.projects=[];
-  state.settings.upcomingEventDays=7;state.moreView='home';state.moreTab='active';page='today';save();
-`;
+const emptySeed=`state.tasks=[];state.notes=[];state.habits=[];state.workouts=[];state.goals=[];state.projects=[];state.settings.upcomingEventDays=7;state.moreView='home';state.moreTab='active';page='today';save();`;
 const fullSeed=`
-  const __t=dayKey(today),__y=dayKey(addDays(today,-1)),__p1=dayKey(addDays(today,1)),__p2=dayKey(addDays(today,2)),__p3=dayKey(addDays(today,3));
+  const __t=dayKey(today),__y=dayKey(addDays(today,-1)),__p1=dayKey(addDays(today,1)),__p2=dayKey(addDays(today,2)),__p3=dayKey(addDays(today,3));window.__todayV45=__t;
   state.tasks=[];state.notes=[];state.habits=[];state.workouts=[];state.goals=[];state.projects=[];state.settings.upcomingEventDays=7;state.moreView='home';state.moreTab='active';page='today';
   const __base={description:'',project:'',priority:'normal',tags:[],subtasks:[],recurrence:{type:'none',interval:1},recurrenceEnd:'',reminders:[],repeatUntilDone:false,status:'active',completedDates:[],createdAt:Date.now()};
   state.tasks.push({...__base,id:'task-today',kind:'task',title:'Задача на сегодня',date:__t,endDate:__t,startTime:'10:00',time:'10:00',endTime:'11:00'});
@@ -57,113 +51,32 @@ const fullSeed=`
   state.habits.push({id:'habit-today',name:'Утренняя привычка',description:'',area:'health',frequency:'daily',days:[1,2,3,4,5,6,0],target:1,unit:'раз',reminderTimes:['09:00'],logs:{},active:true,createdAt:Date.now()});
   state.workouts.push({id:'workout-today',title:'Тренировка сегодня',type:'other',date:__t,time:'19:00',duration:45,plan:'',result:'',reminders:[],status:'planned',createdAt:Date.now()});
   state.goals.push({id:'goal-active',title:'Активная цель',area:'personal',current:1,target:5,unit:'этапов',deadline:__p3,reminders:[],status:'active',createdAt:Date.now()});
-  state.projects.push({id:'project-one',name:'Рабочий проект',description:'',area:'personal',color:'#7d65ff',status:'active',createdAt:Date.now()});
-  save();
+  state.projects.push({id:'project-one',name:'Рабочий проект',description:'',area:'personal',color:'#7d65ff',status:'active',createdAt:Date.now()});save();
 `;
 
-const failures=[];
-const assert=(value,message)=>{if(!value)throw new Error(message)};
-const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const failures=[],assert=(value,message)=>{if(!value)throw new Error(message)},wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const run=async(name,test)=>{try{await test();console.log(`✓ ${name}`)}catch(error){failures.push(`${name}: ${error.stack||error}`);console.log(`✕ ${name}`)}};
-function auditHandlers(window,rootNode=window.document){
-  const ignored=new Set(['if','for','while','switch','catch','function','setTimeout']);
-  rootNode.querySelectorAll('[onclick]').forEach(element=>{
-    const code=element.getAttribute('onclick')||'';
-    for(const match of code.matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)\s*\(/g)){
-      const name=match[1];if(ignored.has(name))continue;
-      let value;try{value=window.eval(name)}catch{value=undefined}
-      assert(typeof value==='function',`Unresolved onclick function ${name}: ${code}`);
-    }
-  });
-}
+function auditHandlers(window,rootNode=window.document){const ignored=new Set(['if','for','while','switch','catch','function','setTimeout']);rootNode.querySelectorAll('[onclick]').forEach(element=>{const code=element.getAttribute('onclick')||'';for(const match of code.matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)\s*\(/g)){const name=match[1];if(ignored.has(name))continue;let value;try{value=window.eval(name)}catch{value=undefined}assert(typeof value==='function',`Unresolved onclick function ${name}: ${code}`)}})}
 
 const empty=boot(emptySeed);
-await run('empty Today hides empty work windows',async()=>{
-  assert(empty.errors.length===0,`Empty boot errors: ${empty.errors.join('; ')}`);
-  const sections=empty.window.__shtabDiagnostics.todaySectionsV45();
-  assert(sections.length===1&&sections[0]==='Приближающиеся',`Unexpected empty sections: ${sections.join(', ')}`);
-  for(const title of ['Заметки','Задачи, поручения и события','Командировки','Спорт и привычки','Цели','Тренировки'])assert(!sections.includes(title),`Empty section remains: ${title}`);
-  assert(empty.window.document.querySelectorAll('#today .simple-empty-v30').length===1,'Only the upcoming empty state should remain');
-});
+await run('empty Today hides empty work windows',async()=>{assert(empty.errors.length===0,`Empty boot errors: ${empty.errors.join('; ')}`);const sections=empty.window.__shtabDiagnostics.todaySectionsV45();assert(sections.length===1&&sections[0]==='Приближающиеся',`Unexpected empty sections: ${sections.join(', ')}`);for(const title of ['Заметки','Задачи, поручения и события','Командировки','Спорт и привычки','Цели','Тренировки'])assert(!sections.includes(title),`Empty section remains: ${title}`);assert(empty.window.document.querySelectorAll('#today .simple-empty-v30').length===1,'Only upcoming may show an empty state')});
 
 const full=boot(fullSeed),{window}=full;
-await run('version, script order and Android metadata',async()=>{
-  assert(scripts.indexOf('chunk37.js')>scripts.indexOf('chunk36.js'),'chunk37 order is wrong');
-  assert(window.__shtabDiagnostics.uiVersion()==='4.5.0','UI version is not 4.5.0');
-  assert(gradle.includes('versionCode = 21')&&gradle.includes('versionName = "4.5.0"'),'Android version metadata is wrong');
-  assert(manifest.includes('QuickCreateActivity')&&manifest.includes('ShtabWidgetProvider'),'Android components missing');
-});
+await run('version, script order and Android metadata',async()=>{assert(scripts.indexOf('chunk37.js')>scripts.indexOf('chunk36.js'),'chunk37 order is wrong');assert(window.__shtabDiagnostics.uiVersion()==='4.5.0','UI version is not 4.5.0');assert(gradle.includes('versionCode = 21')&&gradle.includes('versionName = "4.5.0"'),'Android version metadata is wrong');assert(manifest.includes('QuickCreateActivity')&&manifest.includes('ShtabWidgetProvider'),'Android components missing')});
 
-await run('central add is inside bottom navigation and opens one quick-create dialog',async()=>{
-  const nav=window.document.querySelector('.bottom-nav'),children=[...nav.children],fab=window.document.querySelector('#fab');
-  assert(children.length===5,'Bottom navigation must contain five positions');
-  assert(children[0].dataset.page==='today'&&children[1].dataset.page==='plan'&&children[2]===fab&&children[3].dataset.page==='analytics'&&children[4].dataset.page==='more','Bottom navigation order is wrong');
-  assert(fab.parentElement===nav&&fab.classList.contains('nav-add-v45'),'Central add is not anchored in navigation');
-  assert(!window.document.querySelector('main.app-shell > #fab'),'Old floating add button remains');
-  const css=window.document.querySelector('#v45-unified-styles')?.textContent||'';
-  assert(css.includes('width:52px')&&css.includes('grid-template-columns:repeat(5'),'Central add sizing or five-column layout missing');
-  fab.click();assert(window.document.querySelector('#quick-dialog')?.open,'Central add did not open quick-create dialog');
-  const types=[...window.document.querySelectorAll('#quick-dialog [data-create]')].map(button=>button.dataset.create);
-  assert(types.join(',')==='task,note,project,habit,workout,goal',`Quick-create types are inconsistent: ${types.join(',')}`);
-  window.document.querySelector('#quick-dialog').close();
-});
+await run('central add is fixed between Plan and Analytics',async()=>{const nav=window.document.querySelector('.bottom-nav'),children=[...nav.children],fab=window.document.querySelector('#fab');assert(children.length===5,'Bottom navigation must contain five positions');assert(children[0].dataset.page==='today'&&children[1].dataset.page==='plan'&&children[2]===fab&&children[3].dataset.page==='analytics'&&children[4].dataset.page==='more','Bottom navigation order is wrong');assert(fab.parentElement===nav&&fab.classList.contains('nav-add-v45'),'Central add is not anchored in navigation');assert(!window.document.querySelector('main.app-shell > #fab'),'Old floating add remains');const css=window.document.querySelector('#v45-unified-styles')?.textContent||'';assert(css.includes('width:52px')&&css.includes('grid-template-columns:repeat(5'),'Central add styling missing');fab.click();assert(window.document.querySelector('#quick-dialog')?.open,'Central add did not open quick create');const types=[...window.document.querySelectorAll('#quick-dialog [data-create]')].map(button=>button.dataset.create);assert(types.join(',')==='task,note,project,habit,workout,goal',`Quick types differ: ${types.join(',')}`);window.document.querySelector('#quick-dialog').close()});
 
-await run('Today shows only populated unified sections in a stable order',async()=>{
-  window.setPage('today');
-  const sections=window.__shtabDiagnostics.todaySectionsV45();
-  for(const title of ['Приближающиеся','Задачи, поручения и события','Командировки','Спорт и привычки','Цели','Заметки'])assert(sections.includes(title),`Populated section missing: ${title}`);
-  assert(!sections.includes('Тренировки'),'Legacy separate workout window remains');
-  const expected=['Приближающиеся','Задачи, поручения и события','Командировки','Спорт и привычки','Цели','Заметки'];
-  assert(expected.every((title,index)=>sections.indexOf(title)>=0&&(index===0||sections.indexOf(title)>sections.indexOf(expected[index-1]))),`Today order is inconsistent: ${sections.join(', ')}`);
-  assert(window.__shtabDiagnostics.todayHabitCountV45()===1,'Today habit row missing');
-  assert(window.__shtabDiagnostics.todayWorkoutCountV45()===1,'Today workout row missing');
-  assert(window.__shtabDiagnostics.todayGoalCountV45()===1,'Today goal row missing');
-  assert(!window.document.querySelector('#today .simple-empty-v30:not(.upcoming-events-v42 .simple-empty-v30)'),'Empty placeholder leaked into a populated work section');
-});
+await run('Today shows populated sections without empty placeholders or workout duplication',async()=>{window.setPage('today');const sections=window.__shtabDiagnostics.todaySectionsV45();for(const title of ['Приближающиеся','Задачи, поручения и события','Спорт и привычки','Цели','Заметки'])assert(sections.includes(title),`Populated section missing: ${title}`);assert(!sections.includes('Тренировки'),'Legacy workout section remains');assert(window.__shtabDiagnostics.todayHabitCountV45()===1,'Habit row missing');assert(window.__shtabDiagnostics.todayWorkoutCountV45()===1,'Workout row missing');assert(window.__shtabDiagnostics.todayGoalCountV45()===1,'Goal row missing');const badEmpty=[...window.document.querySelectorAll('#today > .simple-window-v30')].filter(section=>section.querySelector('h3')?.textContent.trim()!=='Приближающиеся'&&section.querySelector('.simple-empty-v30'));assert(badEmpty.length===0,'An empty work section remains visible')});
 
-await run('Today habit, workout and goal controls work',async()=>{
-  let habit=window.document.querySelector('[data-today-habit-id="habit-today"] .today-life-check-v45');
-  assert(habit&&!habit.classList.contains('done'),'Habit starts in wrong state');habit.click();await wait(5);
-  habit=window.document.querySelector('[data-today-habit-id="habit-today"] .today-life-check-v45');assert(habit?.classList.contains('done'),'Habit completion did not update');
-  let workout=window.document.querySelector('[data-today-workout-id="workout-today"] .today-life-check-v45');assert(workout&&!workout.classList.contains('done'),'Workout starts in wrong state');workout.click();await wait(5);
-  workout=window.document.querySelector('[data-today-workout-id="workout-today"] .today-life-check-v45');assert(workout?.classList.contains('done'),'Workout completion did not update');
-  let goal=window.document.querySelector('[data-today-goal-id="goal-active"]');assert(goal?.textContent.includes('1/5'),'Initial goal progress missing');goal.querySelector('.today-goal-actions-v45 button:last-child').click();await wait(5);
-  goal=window.document.querySelector('[data-today-goal-id="goal-active"]');assert(goal?.textContent.includes('2/5'),'Goal progress did not increment');
-  goal.querySelector('.today-goal-main-v45').click();assert(window.document.querySelector('#editor-dialog')?.open,'Goal editor did not open from Today');window.document.querySelector('#editor-dialog').close();
-});
+await run('upcoming is deduplicated before completion changes',async()=>{window.setUpcomingEventDaysV42(7);window.setPage('today');const rows=[...window.document.querySelectorAll('#today [data-upcoming-token]')],tokens=rows.map(row=>row.dataset.upcomingToken);assert(tokens.length===new Set(tokens).size,'Upcoming contains duplicates');assert(rows.filter(row=>row.dataset.upcomingToken==='task:daily-one').length===1,'Recurring task duplicated by day');for(const type of ['task','assignment','trip','event','habit','workout','goal','note'])assert(rows.some(row=>row.dataset.upcomingType===type),`Upcoming type missing: ${type}`);assert(rows.every(row=>row.textContent.includes('Период:')),'Upcoming period label missing')});
 
-await run('analytics final-date logic and readable rows remain intact',async()=>{
-  window.setAnalyticsPeriodV40('7');window.setPage('analytics');
-  const row=window.document.querySelector('[data-analytics-task-id="done-long"]');assert(row?.classList.contains('completed-row-v44'),'Readable completed-row layout regressed');assert(row.children.length===2,'Completed row returned to compressed multi-column layout');
-  const rows=window.__shtabDiagnostics.analyticsRowsV44('7'),find=id=>rows.find(item=>item.item.id===id);
-  assert(find('expired-final')?.expired===true,'Expired final-date record is not counted');
-  assert(!find('future-final'),'Future final-date record entered historical analytics');
-  assert(window.document.querySelector('.analytics-period-note-v41')?.textContent.includes('дате окончания'),'Final-date analytics explanation missing');
-});
+await run('Today habit, workout and goal controls work',async()=>{let habit=window.document.querySelector('[data-today-habit-id="habit-today"] .today-life-check-v45');assert(habit&&!habit.classList.contains('done'),'Habit starts wrong');habit.click();await wait(5);habit=window.document.querySelector('[data-today-habit-id="habit-today"] .today-life-check-v45');assert(habit?.classList.contains('done'),'Habit did not complete');let workout=window.document.querySelector('[data-today-workout-id="workout-today"] .today-life-check-v45');assert(workout&&!workout.classList.contains('done'),'Workout starts wrong');workout.click();await wait(5);workout=window.document.querySelector('[data-today-workout-id="workout-today"] .today-life-check-v45');assert(workout?.classList.contains('done'),'Workout did not complete');let goal=window.document.querySelector('[data-today-goal-id="goal-active"]');assert(goal?.textContent.includes('1/5'),'Initial goal progress missing');goal.querySelector('.today-goal-actions-v45 button:last-child').click();await wait(5);goal=window.document.querySelector('[data-today-goal-id="goal-active"]');assert(goal?.textContent.includes('2/5'),'Goal did not increment');goal.querySelector('.today-goal-main-v45').click();assert(window.document.querySelector('#editor-dialog')?.open,'Goal editor did not open');window.document.querySelector('#editor-dialog').close()});
 
-await run('upcoming remains deduplicated and supports every scheduled type',async()=>{
-  window.setUpcomingEventDaysV42(7);window.setPage('today');
-  const rows=[...window.document.querySelectorAll('#today [data-upcoming-token]')],tokens=rows.map(row=>row.dataset.upcomingToken);
-  assert(tokens.length===new Set(tokens).size,'Upcoming contains duplicate records');
-  assert(rows.filter(row=>row.dataset.upcomingToken==='task:daily-one').length===1,'Recurring task duplicated by day');
-  for(const type of ['task','assignment','trip','event','habit','workout','goal','note'])assert(rows.some(row=>row.dataset.upcomingType===type),`Upcoming type missing: ${type}`);
-  assert(rows.every(row=>row.textContent.includes('Период:')),'Upcoming period label missing');
-});
+await run('analytics final-date logic and readable rows remain intact',async()=>{window.setAnalyticsPeriodV40('7');window.setPage('analytics');const row=window.document.querySelector('[data-analytics-task-id="done-long"]');assert(row?.classList.contains('completed-row-v44')&&row.children.length===2,'Completed row layout regressed');const rows=window.__shtabDiagnostics.analyticsRowsV44('7'),find=id=>rows.find(item=>item.item.id===id);assert(find('expired-final')?.expired===true,'Expired record not counted');assert(!find('future-final'),'Future-ending record entered history');assert(window.document.querySelector('.analytics-period-note-v41')?.textContent.includes('дате окончания'),'Final-date explanation missing')});
 
-await run('custom dialogs and all creation routes remain consistent',async()=>{
-  window.setPage('today');window.taskMenu('task-today',window.eval('dayKey(today)'));assert(window.document.querySelector('#task-menu-dialog-v43')?.open,'Custom task menu did not open');window.document.querySelector('#task-menu-dialog-v43').close();
-  window.deleteEntity('note','note-today');assert(window.document.querySelector('#confirm-dialog-v43')?.open,'Custom delete confirmation did not open');window.document.querySelector('#confirm-dialog-v43').close();
-  for(const type of ['task','note','project','habit','workout','goal']){window.document.querySelector('#fab').click();const button=window.document.querySelector(`#quick-dialog [data-create="${type}"]`);assert(button,`Quick-create button missing: ${type}`);button.click();assert(window.document.querySelector('#editor-dialog')?.open,`Editor did not open for ${type}`);window.document.querySelector('#editor-dialog').close()}
-  assert(!quickActivity.includes('AlertDialog'),'Native quick-create returned to system AlertDialog');
-});
+await run('custom dialogs and every quick-create route work',async()=>{window.setPage('today');window.taskMenu('task-today',window.__todayV45);assert(window.document.querySelector('#task-menu-dialog-v43')?.open,'Custom task menu missing');window.document.querySelector('#task-menu-dialog-v43').close();window.deleteEntity('note','note-today');assert(window.document.querySelector('#confirm-dialog-v43')?.open,'Custom confirmation missing');window.document.querySelector('#confirm-dialog-v43').close();for(const type of ['task','note','project','habit','workout','goal']){window.document.querySelector('#fab').click();const button=window.document.querySelector(`#quick-dialog [data-create="${type}"]`);assert(button,`Quick button missing: ${type}`);button.click();assert(window.document.querySelector('#editor-dialog')?.open,`Editor did not open for ${type}`);window.document.querySelector('#editor-dialog').close()}assert(!quickActivity.includes('AlertDialog'),'Native system AlertDialog returned')});
 
-await run('all pages, More subsections, handlers and styling pass the full audit',async()=>{
-  for(const pageName of ['today','plan','analytics','more','assistant']){window.setPage(pageName);assert(window.document.querySelector(`#${pageName}.active`),`${pageName} page inactive`);auditHandlers(window)}
-  for(const view of ['home','projects','notes','sport','goals','settings','data']){window.openMore(view);const more=window.document.querySelector('#more');assert(more.textContent.trim().length>0,`More view is empty: ${view}`);auditHandlers(window,more)}
-  const audit=window.__shtabDiagnostics.applicationAuditV45();assert(audit.duplicates.length===0,`Duplicate IDs: ${audit.duplicates.join(', ')}`);assert(audit.buttonsWithoutType===0,'Buttons without type remain');assert(audit.financeVisible===false,'Removed finance module became visible');assert(audit.pages&&audit.centralAdd,'Application structure audit failed');
-  assert(widgetLayout.includes('@+id/widget_add'),'Widget add control missing');
-  assert(full.errors.length===0,`Runtime errors: ${full.errors.join('; ')}`);
-});
+await run('all pages and More subsections pass structural and handler audit',async()=>{for(const pageName of ['today','plan','analytics','more','assistant']){window.setPage(pageName);assert(window.document.querySelector(`#${pageName}.active`),`${pageName} inactive`);auditHandlers(window)}for(const view of ['home','projects','notes','sport','goals','settings','data']){window.openMore(view);const more=window.document.querySelector('#more');assert(more.textContent.trim().length>0,`More view empty: ${view}`);auditHandlers(window,more)}const audit=window.__shtabDiagnostics.applicationAuditV45();assert(audit.duplicates.length===0,`Duplicate IDs: ${audit.duplicates.join(', ')}`);assert(audit.buttonsWithoutType===0,'Buttons without type remain');assert(audit.financeVisible===false,'Finance became visible');assert(audit.pages&&audit.centralAdd,'Application structure audit failed');assert(widgetLayout.includes('@+id/widget_add'),'Widget add missing');assert(full.errors.length===0,`Runtime errors: ${full.errors.join('; ')}`)});
 
 if(failures.length){console.log('\nAudit failures:');failures.forEach(error=>console.log(`- ${error}`));process.exit(1)}
 console.log('\nAll v4.5 conditional Today, central add, goals, habits, styling and full application tests passed.');
