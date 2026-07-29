@@ -8,6 +8,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -25,6 +26,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -32,14 +35,18 @@ import java.util.Locale;
 public class MainActivity extends Activity implements TextToSpeech.OnInitListener {
     public static final String CHANNEL_NORMAL = "shtab_ai_normal";
     public static final String CHANNEL_IMPORTANT = "shtab_ai_important";
-    public static final String CHANNEL_FINANCE = "shtab_ai_finance";
     public static final String CHANNEL_HEALTH = "shtab_ai_health";
+    private static final String LEGACY_CHANNEL_FINANCE = "shtab_ai_finance";
     private static final int REQ_NOTIFICATIONS = 1001;
     private static final int REQ_AUDIO = 1002;
     private static final int REQ_SPEECH = 1003;
     private static final int REQ_INITIAL = 1004;
     private WebView webView;
     private TextToSpeech tts;
+    private boolean pageReady;
+    private String pendingQuickCreate = "";
+    private String pendingPage = "";
+    private String pendingAnalyticsFocus = "";
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,6 +54,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         getWindow().setNavigationBarColor(Color.rgb(11,13,19));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) getWindow().getDecorView().setSystemUiVisibility(0);
         createChannels();
+        readLaunchIntent(getIntent());
         tts = new TextToSpeech(this, this);
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(11,13,19));
@@ -68,11 +76,54 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) {
-                view.evaluateJavascript("if(window.syncAllNotifications){window.syncAllNotifications();}", null);
+                pageReady = true;
+                view.evaluateJavascript("if(window.syncAllNotifications){window.syncAllNotifications();}if(window.syncShtabWidgetV40){window.syncShtabWidgetV40();}", null);
+                dispatchPendingLaunch();
             }
         });
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        readLaunchIntent(intent);
+        dispatchPendingLaunch();
+    }
+
+    private void readLaunchIntent(Intent intent) {
+        if (intent == null) return;
+        String quick = intent.getStringExtra("quick_create");
+        String page = intent.getStringExtra("widget_page");
+        String focus = intent.getStringExtra("analytics_focus");
+        if (quick != null) pendingQuickCreate = quick;
+        if (page != null) pendingPage = page;
+        if (focus != null) pendingAnalyticsFocus = focus;
+    }
+
+    private void dispatchPendingLaunch() {
+        if (!pageReady || webView == null) return;
+        final String quick = pendingQuickCreate;
+        final String targetPage = pendingPage;
+        final String focus = pendingAnalyticsFocus;
+        pendingQuickCreate = "";
+        pendingPage = "";
+        pendingAnalyticsFocus = "";
+        if (quick.isEmpty() && targetPage.isEmpty()) return;
+        webView.post(() -> {
+            StringBuilder js = new StringBuilder("(function(){");
+            if (!targetPage.isEmpty()) {
+                js.append("if(window.openFromNativeV40){window.openFromNativeV40(")
+                        .append(quote(targetPage)).append(",").append(quote(focus)).append(");}")
+                        .append("else if(window.setPage){window.setPage(").append(quote(targetPage)).append(");}");
+            }
+            if (!quick.isEmpty()) {
+                js.append("if(window.openEditor){window.openEditor(").append(quote(quick)).append(");}");
+            }
+            js.append("})();");
+            webView.evaluateJavascript(js.toString(), null);
+        });
     }
 
     @Override public void onInit(int status) {
@@ -100,14 +151,12 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         NotificationChannel important = new NotificationChannel(CHANNEL_IMPORTANT, "Важные напоминания", NotificationManager.IMPORTANCE_HIGH);
         important.setDescription("Срочные задачи и повторные сигналы");
         important.enableVibration(true);
-        NotificationChannel finance = new NotificationChannel(CHANNEL_FINANCE, "Финансы", NotificationManager.IMPORTANCE_HIGH);
-        finance.setDescription("Платежи, доходы и бюджеты");
         NotificationChannel health = new NotificationChannel(CHANNEL_HEALTH, "Спорт и привычки", NotificationManager.IMPORTANCE_DEFAULT);
         health.setDescription("Тренировки, привычки и здоровье");
         manager.createNotificationChannel(normal);
         manager.createNotificationChannel(important);
-        manager.createNotificationChannel(finance);
         manager.createNotificationChannel(health);
+        manager.deleteNotificationChannel(LEGACY_CHANNEL_FINANCE);
     }
 
     private void requestInitialPermissions() {
@@ -116,12 +165,8 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
             return;
         }
         List<String> missing = new ArrayList<>();
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            missing.add(Manifest.permission.RECORD_AUDIO);
-        }
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            missing.add(Manifest.permission.POST_NOTIFICATIONS);
-        }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.RECORD_AUDIO);
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.POST_NOTIFICATIONS);
         if (missing.isEmpty()) requestExactAlarmPermissionIfNeeded();
         else requestPermissions(missing.toArray(new String[0]), REQ_INITIAL);
     }
@@ -140,7 +185,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
     private String channelId(String key) {
         if ("important".equals(key)) return CHANNEL_IMPORTANT;
-        if ("finance".equals(key)) return CHANNEL_FINANCE;
         if ("health".equals(key)) return CHANNEL_HEALTH;
         return CHANNEL_NORMAL;
     }
@@ -158,15 +202,14 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         return PendingIntent.getBroadcast(this, code(id), intent, flags);
     }
     private void schedule(String id, String title, String body, long at, String channel) {
+        if ("finance".equals(channel)) { cancel(id); return; }
         if (at <= System.currentTimeMillis()) { cancel(id); return; }
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) return;
         PendingIntent pendingIntent = pending(id, title, body, channel);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pendingIntent);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pendingIntent);
-        } else alarmManager.set(AlarmManager.RTC_WAKEUP, at, pendingIntent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pendingIntent);
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pendingIntent);
+        else alarmManager.set(AlarmManager.RTC_WAKEUP, at, pendingIntent);
     }
     private void cancel(String id) {
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
@@ -192,7 +235,8 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         if (webView != null) webView.post(() -> webView.evaluateJavascript("window.onVoiceError(" + quote(message) + ");", null));
     }
     private String quote(String value) {
-        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"";
+        String safe = value == null ? "" : value;
+        return "\"" + safe.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"";
     }
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -209,8 +253,26 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         if (requestCode == REQ_AUDIO) {
             if (grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED) startSpeech();
             else voiceError("Нет доступа к микрофону");
-        } else if (requestCode == REQ_INITIAL) {
-            requestExactAlarmPermissionIfNeeded();
+        } else if (requestCode == REQ_INITIAL) requestExactAlarmPermissionIfNeeded();
+    }
+
+    private void updateWidgetPreferences(String json) {
+        try {
+            JSONObject object = new JSONObject(json);
+            SharedPreferences.Editor editor = getSharedPreferences(ShtabWidgetProvider.PREFS, Context.MODE_PRIVATE).edit();
+            editor.putInt("tasks", object.optInt("tasks", 0));
+            editor.putInt("trips", object.optInt("trips", 0));
+            editor.putInt("events", object.optInt("events", 0));
+            editor.putInt("important", object.optInt("important", 0));
+            editor.putString("taskMeta", object.optString("taskMeta", "0 важные"));
+            editor.putString("tripMeta", object.optString("tripMeta", "нет"));
+            editor.putString("eventMeta", object.optString("eventMeta", "нет"));
+            editor.putString("importantMeta", object.optString("importantMeta", "спокойно"));
+            editor.putLong("updated", object.optLong("updated", System.currentTimeMillis()));
+            editor.apply();
+            ShtabWidgetProvider.updateAll(this);
+        } catch (Exception ignored) {
+            Toast.makeText(this, "Не удалось обновить виджет", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -219,12 +281,8 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         @JavascriptInterface public void requestNotifications() {
             runOnUiThread(() -> {
                 createChannels();
-                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
-                } else {
-                    Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
-                    startActivity(intent);
-                }
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
+                else startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
             });
         }
         @JavascriptInterface public void requestExactAlarmPermission() { runOnUiThread(MainActivity.this::requestExactAlarmPermissionIfNeeded); }
@@ -233,5 +291,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         @JavascriptInterface public void startVoiceInput() { runOnUiThread(MainActivity.this::startSpeech); }
         @JavascriptInterface public void speak(String text) { runOnUiThread(() -> { if (tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "shtab-ai"); }); }
         @JavascriptInterface public void showToast(String text) { runOnUiThread(() -> Toast.makeText(MainActivity.this, text, Toast.LENGTH_SHORT).show()); }
+        @JavascriptInterface public void updateWidget(String json) { runOnUiThread(() -> updateWidgetPreferences(json)); }
     }
 }
