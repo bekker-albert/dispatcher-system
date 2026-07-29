@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg_neo"
-    android:padding="10dp">
+    android:padding="8dp">
 
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="bottom"
-        android:alpha="0.72"
+        android:alpha="0.48"
         android:contentDescription="@null"
         android:scaleType="fitXY"
         android:src="@drawable/widget_mountains" />
@@ -22,17 +22,17 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="34dp"
+            android:layout_height="32dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
                 android:gravity="center"
                 android:text="✦"
-                android:textColor="#B987FF"
-                android:textSize="21sp"
+                android:textColor="#C696FF"
+                android:textSize="19sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -44,13 +44,13 @@
                 android:fontFamily="sans-serif-medium"
                 android:text="Штаб AI"
                 android:textColor="#FFFFFFFF"
-                android:textSize="17sp" />
+                android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/widget_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="7dp"
                 android:text="Сегодня"
                 android:textColor="#D7D9E4"
                 android:textSize="10sp" />
@@ -60,11 +60,11 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:background="@drawable/widget_plus"
-                android:contentDescription="Быстро создать задачу или заметку"
+                android:contentDescription="Быстро создать задачу, командировку, событие или заметку"
                 android:gravity="center"
                 android:text="+"
                 android:textColor="#FFFFFFFF"
-                android:textSize="25sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -73,70 +73,130 @@
             android:layout_height="0dp"
             android:layout_marginTop="5dp"
             android:layout_weight="1"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/widget_tasks"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="3dp"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
                 android:layout_weight="1"
-                android:background="@drawable/widget_panel"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="4dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="✓" android:textColor="#C06BFF" android:textSize="20sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Задачи" android:textColor="#FFFFFFFF" android:textSize="9sp" />
-                <TextView android:id="@+id/widget_tasks_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="1dp" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="22sp" />
-                <TextView android:id="@+id/widget_tasks_meta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:text="0 важные" android:textColor="#FF748C" android:textSize="8sp" />
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/widget_tasks"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="3dp"
+                    android:layout_marginBottom="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_panel"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="5dp">
+
+                    <TextView
+                        android:layout_width="31dp"
+                        android:layout_height="31dp"
+                        android:gravity="center"
+                        android:text="✓"
+                        android:textColor="#C06BFF"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="7dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Задачи" android:textColor="#FFFFFFFF" android:textSize="11sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/widget_tasks_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="21sp" />
+                        </LinearLayout>
+                        <TextView android:id="@+id/widget_tasks_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:text="0 важные" android:textColor="#FF8DA0" android:textSize="9sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/widget_trips"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginBottom="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_panel"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="5dp">
+
+                    <TextView android:layout_width="31dp" android:layout_height="31dp" android:gravity="center" android:text="✈" android:textColor="#55D6FF" android:textSize="21sp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:layout_weight="1" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:maxLines="1" android:text="Командировки" android:textColor="#FFFFFFFF" android:textSize="10sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/widget_trips_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="21sp" />
+                        </LinearLayout>
+                        <TextView android:id="@+id/widget_trips_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:text="нет" android:textColor="#75DFFF" android:textSize="9sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/widget_trips"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginHorizontal="3dp"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
                 android:layout_weight="1"
-                android:background="@drawable/widget_panel"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="4dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="✈" android:textColor="#55D6FF" android:textSize="20sp" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Командировки" android:textColor="#FFFFFFFF" android:textSize="8sp" />
-                <TextView android:id="@+id/widget_trips_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="1dp" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="22sp" />
-                <TextView android:id="@+id/widget_trips_meta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:text="нет" android:textColor="#55D6FF" android:textSize="8sp" />
-            </LinearLayout>
+                android:orientation="horizontal">
 
-            <LinearLayout
-                android:id="@+id/widget_events"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginHorizontal="3dp"
-                android:layout_weight="1"
-                android:background="@drawable/widget_panel"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="4dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="◉" android:textColor="#62E2B2" android:textSize="20sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="События" android:textColor="#FFFFFFFF" android:textSize="9sp" />
-                <TextView android:id="@+id/widget_events_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="1dp" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="22sp" />
-                <TextView android:id="@+id/widget_events_meta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:text="нет" android:textColor="#62E2B2" android:textSize="8sp" />
-            </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/widget_events"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_panel"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="5dp">
 
-            <LinearLayout
-                android:id="@+id/widget_important"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="3dp"
-                android:layout_weight="1"
-                android:background="@drawable/widget_panel"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="4dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="!" android:textColor="#FFB14D" android:textSize="20sp" android:textStyle="bold" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Важное" android:textColor="#FFFFFFFF" android:textSize="9sp" />
-                <TextView android:id="@+id/widget_important_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="1dp" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="22sp" />
-                <TextView android:id="@+id/widget_important_meta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:text="спокойно" android:textColor="#FFB14D" android:textSize="8sp" />
+                    <TextView android:layout_width="31dp" android:layout_height="31dp" android:gravity="center" android:text="◉" android:textColor="#62E2B2" android:textSize="21sp" android:textStyle="bold" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:layout_weight="1" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="События" android:textColor="#FFFFFFFF" android:textSize="11sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/widget_events_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="21sp" />
+                        </LinearLayout>
+                        <TextView android:id="@+id/widget_events_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:text="нет" android:textColor="#7BE8C1" android:textSize="9sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/widget_important"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginTop="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_panel"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="5dp">
+
+                    <TextView android:layout_width="31dp" android:layout_height="31dp" android:gravity="center" android:text="!" android:textColor="#FFB14D" android:textSize="22sp" android:textStyle="bold" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="7dp" android:layout_weight="1" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Важное" android:textColor="#FFFFFFFF" android:textSize="11sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/widget_important_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-medium" android:text="0" android:textColor="#FFFFFFFF" android:textSize="21sp" />
+                        </LinearLayout>
+                        <TextView android:id="@+id/widget_important_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:text="спокойно" android:textColor="#FFC26F" android:textSize="9sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
