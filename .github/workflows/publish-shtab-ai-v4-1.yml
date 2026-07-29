@@ -1,0 +1,51 @@
+name: Publish Shtab AI 4.1 APK
+on:
+  push:
+    branches:
+      - temp/fix-shtab-ai-v4-1-download-20260729
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tested source
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore release signing key
+        run: base64 -d shtab-ai-android/signing.keystore.b64 > shtab-ai-android/shtab-ai-release.jks
+      - name: Build signed APK
+        run: cd shtab-ai-android && gradle :app:assembleRelease --stacktrace
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -o pipefail
+          cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk /tmp/Shtab-AI-v4.1.apk
+          unzip -t /tmp/Shtab-AI-v4.1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs /tmp/Shtab-AI-v4.1.apk
+          echo "ffc20176b0fa40af5c1042ae4d6d86ed864199b73acb96c95a5832989e9d0fd5  /tmp/Shtab-AI-v4.1.apk" | sha256sum -c -
+      - name: Publish public download branch
+        shell: bash
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan downloads-v4.1
+          git rm -rf .
+          cp /tmp/Shtab-AI-v4.1.apk ./Shtab-AI-v4.1.apk
+          printf '%s\n' '# Shtab AI 4.1' 'Проверенный установочный APK.' 'SHA-256: ffc20176b0fa40af5c1042ae4d6d86ed864199b73acb96c95a5832989e9d0fd5' > README.md
+          git add Shtab-AI-v4.1.apk README.md
+          git commit -m "Опубликовать Shtab AI 4.1 APK"
+          git push --force origin HEAD:refs/heads/downloads-v4.1
