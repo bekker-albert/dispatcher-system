@@ -40,7 +40,8 @@ window.HTMLElement.prototype.close=function(){this.open=false;this.removeAttribu
 Object.defineProperty(window.navigator,'clipboard',{value:{writeText:async()=>{}},configurable:true});
 const scheduled=[];
 window.Android={requestInitialPermissions(){},requestNotifications(){},requestExactAlarmPermission(){},scheduleNotification(...args){scheduled.push(args)},cancelNotification(){},startVoiceInput(){},speak(){},showToast(){},updateWidget(){}};
-for(const source of scripts)window.eval(fs.readFileSync(path.join(root,source),'utf8'));
+const packedScripts=scripts.map(source=>fs.readFileSync(path.join(root,source),'utf8')).join('\n;\n');
+window.eval(`${packedScripts}\n;window.__stateV46=state;`);
 
 const assert=(value,message)=>{if(!value)throw new Error(message)};
 assert(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
@@ -76,7 +77,7 @@ form.elements.reminderEnabled.checked=true;
 form.elements.reminderHours.value='0';
 form.elements.reminderMinutes.value='15';
 window.submitEditor(form);
-const savedTask=window.state.tasks.at(-1);
+const savedTask=window.__stateV46.tasks.at(-1);
 assert(savedTask.recurrence.type==='weekday'&&savedTask.recurrence.weekday===3,'Selected weekday was not saved');
 assert(savedTask.reminders.length===1&&savedTask.reminders[0]===15,'Reminder offset was not preserved');
 
@@ -89,7 +90,7 @@ frequency.value='weekends';frequency.dispatchEvent(new window.Event('change',{bu
 form.elements.name.value='Привычка выходного дня';
 form.elements.reminderTimes.value='09:00';
 window.submitEditor(form);
-const savedHabit=window.state.habits.at(-1);
+const savedHabit=window.__stateV46.habits.at(-1);
 assert(savedHabit.frequency==='weekends'&&savedHabit.days.join(',')==='6,0','Weekend habit schedule was not saved');
 assert(window.habitDue(savedHabit,'2026-08-08'),'Weekend habit misses Saturday');
 assert(!window.habitDue(savedHabit,'2026-08-10'),'Weekend habit appears on Monday');
