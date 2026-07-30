@@ -6,8 +6,8 @@ android {
         applicationId = "kz.shtabai.app"
         minSdk = 23
         targetSdk = 35
-        versionCode = 23
-        versionName = "4.5.2"
+        versionCode = 24
+        versionName = "4.6.0"
     }
     signingConfigs {
         create("release") {
