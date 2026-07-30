@@ -44,6 +44,7 @@ const packedScripts=scripts.map(source=>fs.readFileSync(path.join(root,source),'
 window.eval(`${packedScripts}\n;window.__stateV46=state;`);
 
 const assert=(value,message)=>{if(!value)throw new Error(message)};
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 assert(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
 assert(scripts.at(-1)==='chunk40.js','chunk40 is not loaded last');
 assert(window.__shtabDiagnostics.uiVersion()==='4.6.0','UI version is not 4.6.0');
@@ -61,6 +62,7 @@ assert(!window.taskOccursOn({...base,recurrence:{type:'weekends',interval:1}},'2
 assert(!window.taskOccursOn({...base,recurrenceEnd:'2026-08-09'},'2026-08-10'),'Recurrence continues after its end date');
 
 window.openEditor('task');
+await wait(5);
 let form=window.document.querySelector('#editor-form');
 let repeat=form.elements.repeat;
 const taskModes=[...repeat.options].map(option=>option.value);
@@ -82,6 +84,7 @@ assert(savedTask.recurrence.type==='weekday'&&savedTask.recurrence.weekday===3,'
 assert(savedTask.reminders.length===1&&savedTask.reminders[0]===15,'Reminder offset was not preserved');
 
 window.openEditor('habit');
+await wait(5);
 form=window.document.querySelector('#editor-form');
 const frequency=form.elements.frequency;
 const habitModes=[...frequency.options].map(option=>option.value);
