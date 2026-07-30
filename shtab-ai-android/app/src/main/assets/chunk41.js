@@ -18,7 +18,7 @@
   `;
   document.head.appendChild(style);
 
-  let selectCounterV461=0,activeSelectV461=null,selectObserverQueuedV461=false;
+  let selectCounterV461=0,activeSelectV461=null;
   const textOfSelectedV461=select=>select.selectedOptions?.[0]?.textContent?.trim()||select.options?.[select.selectedIndex]?.textContent?.trim()||'Выберите значение';
   function fieldTitleV461(select){
     const field=select.closest('.field');
@@ -27,7 +27,7 @@
   }
   function syncCustomSelectV461(select){
     const shell=select.closest('.custom-select-shell-v461'),button=shell?.querySelector('.custom-select-trigger-v461'),value=button?.querySelector('.custom-select-value-v461');if(!button||!value)return;
-    value.textContent=textOfSelectedV461(select);button.disabled=select.disabled;button.setAttribute('aria-label',`${fieldTitleV461(select)}: ${value.textContent}`);
+    const next=textOfSelectedV461(select);if(value.textContent!==next)value.textContent=next;button.disabled=select.disabled;button.setAttribute('aria-label',`${fieldTitleV461(select)}: ${next}`);
   }
   function ensureCustomSelectDialogV461(){
     let dialog=document.querySelector('#custom-select-dialog-v461');if(dialog)return dialog;
@@ -52,12 +52,10 @@
     const trigger=document.createElement('button');trigger.type='button';trigger.className='custom-select-trigger-v461';trigger.innerHTML='<span class="custom-select-value-v461"></span><span class="custom-select-arrow-v461">⌄</span>';trigger.onclick=event=>{event.preventDefault();event.stopPropagation();openCustomSelectV461(select)};shell.appendChild(trigger);select.addEventListener('change',()=>syncCustomSelectV461(select));new MutationObserver(()=>syncCustomSelectV461(select)).observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected']});syncCustomSelectV461(select);
   }
   function enhanceAllSelectsV461(root=document){root.querySelectorAll?.('select:not([multiple])').forEach(decorateSelectV461)}
-  function queueSelectEnhancementV461(){if(selectObserverQueuedV461)return;selectObserverQueuedV461=true;setTimeout(()=>{selectObserverQueuedV461=false;enhanceAllSelectsV461()},0)}
-  new MutationObserver(queueSelectEnhancementV461).observe(document.documentElement,{childList:true,subtree:true});
+  new MutationObserver(mutations=>{mutations.forEach(mutation=>mutation.addedNodes.forEach(node=>{if(node.nodeType!==1)return;if(node.matches?.('select:not([multiple])'))decorateSelectV461(node);node.querySelectorAll?.('select:not([multiple])').forEach(decorateSelectV461)}))}).observe(document.documentElement,{childList:true,subtree:true});
 
-  const previousImportantItemsV461=window.importantItemsV26;
   function importantItemsV461(){
-    const rows=[],used=new Set(),important=item=>item.priority==='high'||item.important===true,add=(item,key,urgent=false)=>{if(!item||used.has(item.id)||!important(item)||taskDone(item,key))return;used.add(item.id);rows.push({id:item.id,kind:'task',urgent,title:item.title,meta:`${item.priority==='high'?'Высокий приоритет':'Отмечено важным'} · ${dateFmt(item.endDate||item.date,{day:'2-digit',month:'2-digit',year:'numeric'})}`,action:`openTaskViewV31('${item.id}','${key}')`,sort:urgent?0:1})};
+    const rows=[],used=new Set(),important=item=>item.priority==='high'||item.important===true,add=(item,key,urgent=false)=>{if(!item||used.has(item.id)||!important(item)||taskDone(item,key))return;used.add(item.id);const due=item.endDate||item.date||TODAY_V461;rows.push({id:item.id,kind:'task',urgent,title:item.title,meta:`${item.priority==='high'?'Высокий приоритет':'Отмечено важным'} · ${dateFmt(due,{day:'2-digit',month:'2-digit',year:'numeric'})}`,action:`openTaskViewV31('${item.id}','${key}')`,sort:urgent?0:1})};
     tasksForDate(TODAY_V461).forEach(item=>add(item,TODAY_V461,false));state.tasks.filter(item=>item.status!=='archived'&&item.status!=='completed'&&important(item)&&(item.recurrence?.type||'none')==='none'&&(item.endDate||item.date||TODAY_V461)<TODAY_V461).forEach(item=>add(item,item.date||TODAY_V461,true));return rows.sort((a,b)=>a.sort-b.sort||a.title.localeCompare(b.title,'ru')).slice(0,6);
   }
   window.importantItemsV26=importantItemsV461;try{importantItemsV26=importantItemsV461}catch{}
