@@ -26,8 +26,6 @@
       ['yearly','Каждый год']
     ].map(([key,label])=>`<option value="${key}" ${selected===key?'selected':''}>${label}</option>`).join('');
   };
-  repeatOptions=repeatOptionsV46;
-  window.repeatOptions=repeatOptionsV46;
 
   const previousTaskOccursOnV46=taskOccursOn;
   taskOccursOn=function(item,key){
