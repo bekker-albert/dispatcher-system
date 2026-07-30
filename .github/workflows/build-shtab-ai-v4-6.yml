@@ -1,4 +1,4 @@
-name: Build Shtab AI V4.6.0
+name: Build Shtab AI V4.6.1
 on:
   pull_request:
     branches:
@@ -23,19 +23,20 @@ jobs:
           for file in shtab-ai-android/app/src/main/assets/chunk*.js; do node --check "$file"; done
           node --check shtab-ai-android/ui-smoke-v45.mjs
           node --check shtab-ai-android/ui-smoke-v46.mjs
-      - name: Run full application and reminder schedule audit
+          node --check shtab-ai-android/ui-smoke-v461.mjs
+      - name: Run full application and unified controls audit
         shell: bash
         run: |
           set -o pipefail
           cd shtab-ai-android
           npm init -y >/dev/null 2>&1
           npm install jsdom --no-save
-          node ui-smoke-v46.mjs | tee ../ui-smoke-report.txt
+          node ui-smoke-v461.mjs | tee ../ui-smoke-report.txt
       - name: Upload audit report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Shtab-AI-v4.6.0-audit-failure
+          name: Shtab-AI-v4.6.1-audit-failure
           path: ui-smoke-report.txt
           retention-days: 1
       - name: Set up Java
@@ -55,23 +56,23 @@ jobs:
         run: base64 -d shtab-ai-android/signing.keystore.b64 > shtab-ai-android/shtab-ai-release.jks
       - name: Build release APK
         run: cd shtab-ai-android && gradle :app:assembleRelease --stacktrace
-      - name: Verify packaged schedules, APK and signature
+      - name: Verify packaged controls, APK and signature
         shell: bash
         run: |
           set -o pipefail
           mkdir -p build-output
-          cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk build-output/Shtab-AI-v4.6.0.apk
+          cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk build-output/Shtab-AI-v4.6.1.apk
           cp ui-smoke-report.txt build-output/ui-smoke-report.txt
-          unzip -t build-output/Shtab-AI-v4.6.0.apk
-          unzip -p build-output/Shtab-AI-v4.6.0.apk assets/index.html | grep -q 'chunk40.js'
-          unzip -p build-output/Shtab-AI-v4.6.0.apk assets/chunk40.js | grep -q "'daily','weekday','weekdays','weekends'"
-          unzip -p build-output/Shtab-AI-v4.6.0.apk assets/chunk40.js | grep -q "type==='weekends'"
-          unzip -p build-output/Shtab-AI-v4.6.0.apk assets/chunk40.js | grep -q 'recurrenceEnd&&key>item.recurrenceEnd'
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs build-output/Shtab-AI-v4.6.0.apk | tee build-output/signature-report.txt
-          sha256sum build-output/Shtab-AI-v4.6.0.apk | tee build-output/sha256.txt
+          unzip -t build-output/Shtab-AI-v4.6.1.apk
+          unzip -p build-output/Shtab-AI-v4.6.1.apk assets/index.html | grep -q 'chunk41.js'
+          unzip -p build-output/Shtab-AI-v4.6.1.apk assets/chunk41.js | grep -q 'custom-select-dialog-v461'
+          unzip -p build-output/Shtab-AI-v4.6.1.apk assets/chunk41.js | grep -q 'task-view-complete-v461'
+          unzip -p build-output/Shtab-AI-v4.6.1.apk assets/chunk41.js | grep -q "item.priority==='high'||item.important===true"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs build-output/Shtab-AI-v4.6.1.apk | tee build-output/signature-report.txt
+          sha256sum build-output/Shtab-AI-v4.6.1.apk | tee build-output/sha256.txt
       - name: Upload tested APK
         uses: actions/upload-artifact@v4
         with:
-          name: Shtab-AI-v4.6.0-tested-apk
+          name: Shtab-AI-v4.6.1-tested-apk
           path: build-output/
           retention-days: 3
