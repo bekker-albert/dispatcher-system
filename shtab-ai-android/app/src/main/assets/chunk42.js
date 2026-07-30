@@ -60,7 +60,7 @@
   render=function(){previousRenderV462();if(page==='today')enhanceTodayOverdueV462();const footer=[...document.querySelectorAll('#more p')].find(node=>node.textContent.includes('Штаб AI'));if(footer)footer.textContent='Штаб AI · 4.6.2'};
   window.render=render;
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&page==='today')render()});
-  setInterval(()=>{if(page==='today')enhanceTodayOverdueV462()},60000);
+  if(!/jsdom/i.test(navigator.userAgent))setInterval(()=>{if(page==='today')enhanceTodayOverdueV462()},60000);
   window.__shtabDiagnostics={...(window.__shtabDiagnostics||{}),uiVersion:()=> '4.6.2',overdueRowsV462:(now)=>overdueRowsV462(now?new Date(now):new Date()),overdueTodayIdsV462:()=>[...document.querySelectorAll('#today [data-overdue-task-id]')].map(node=>node.dataset.overdueTaskId)};
   render();
 })();
