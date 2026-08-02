@@ -11,6 +11,7 @@ baseline=baseline
   .replaceAll('chunk42 must be loaded last','chunk44 must be loaded last')
   .replaceAll('4.6.2','4.7.0')
   .replaceAll('versionCode = 26','versionCode = 27')
+  .replaceAll('#task-menu-dialog-v43','#task-menu-dialog-v470')
   .replace("assert(window.__shtabDiagnostics.timeWheelSummaryV462()==='02 ч 30 мин','Wheel summary did not update');","await wait(5);assert(window.__shtabDiagnostics.wheelSummaryV470()==='02:30','Wheel summary did not update to HH:MM');");
 fs.writeFileSync(generatedPath,baseline);
 try{
