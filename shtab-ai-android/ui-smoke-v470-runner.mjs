@@ -15,7 +15,8 @@ const adaptedAudit=auditOriginal
   )
   .replaceAll("scripts.at(-1)==='chunk44.js'","scripts.at(-1)==='chunk45.js'")
   .replaceAll('chunk44 is not loaded last','chunk45 is not loaded last')
-  .replace("const state=window.eval('state');","const state=window.__shtabStateV470;");
+  .replace(/const\s+state\s*=\s*window\.eval\((['"])state\1\)\s*;/,"const state=window.__shtabStateV470;");
+if(adaptedAudit.includes("window.eval('state')")||adaptedAudit.includes('window.eval("state")'))throw new Error('State substitution for the generated audit failed');
 fs.writeFileSync(legacyPath,adaptedLegacy);
 fs.writeFileSync(generatedPath,adaptedAudit);
 try{
