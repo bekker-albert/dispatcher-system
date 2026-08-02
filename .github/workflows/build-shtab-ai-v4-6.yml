@@ -1,4 +1,4 @@
-name: Build Shtab AI V4.6.2
+name: Build Shtab AI V4.7.0
 on:
   pull_request:
     branches:
@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   test-and-build:
-    if: startsWith(github.head_ref, 'temp/fix-shtab-ai-v4-6-')
+    if: startsWith(github.head_ref, 'temp/fix-shtab-ai-v4-7-')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout fix branch
@@ -25,19 +25,20 @@ jobs:
           node --check shtab-ai-android/ui-smoke-v46.mjs
           node --check shtab-ai-android/ui-smoke-v461.mjs
           node --check shtab-ai-android/ui-smoke-v462.mjs
-      - name: Run full application and time wheel audit
+          node --check shtab-ai-android/ui-smoke-v470.mjs
+      - name: Run full application, archive and reminder audit
         shell: bash
         run: |
           set -o pipefail
           cd shtab-ai-android
           npm init -y >/dev/null 2>&1
           npm install jsdom --no-save
-          node ui-smoke-v462.mjs | tee ../ui-smoke-report.txt
+          node ui-smoke-v470.mjs | tee ../ui-smoke-report.txt
       - name: Upload audit report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Shtab-AI-v4.6.2-audit-failure
+          name: Shtab-AI-v4.7.0-audit-failure
           path: ui-smoke-report.txt
           retention-days: 1
       - name: Set up Java
@@ -57,24 +58,25 @@ jobs:
         run: base64 -d shtab-ai-android/signing.keystore.b64 > shtab-ai-android/shtab-ai-release.jks
       - name: Build release APK
         run: cd shtab-ai-android && gradle :app:assembleRelease --stacktrace
-      - name: Verify packaged wheel, APK and signature
+      - name: Verify packaged archive, scheduling, APK and signature
         shell: bash
         run: |
           set -o pipefail
           mkdir -p build-output
-          cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk build-output/Shtab-AI-v4.6.2.apk
+          cp shtab-ai-android/app/build/outputs/apk/release/app-release.apk build-output/Shtab-AI-v4.7.0.apk
           cp ui-smoke-report.txt build-output/ui-smoke-report.txt
-          unzip -t build-output/Shtab-AI-v4.6.2.apk
-          unzip -p build-output/Shtab-AI-v4.6.2.apk assets/index.html | grep -q 'chunk42.js'
-          unzip -p build-output/Shtab-AI-v4.6.2.apk assets/chunk42.js | grep -q 'time-wheel-dialog-v462'
-          unzip -p build-output/Shtab-AI-v4.6.2.apk assets/chunk42.js | grep -q 'scroll-snap-type:y mandatory'
-          unzip -p build-output/Shtab-AI-v4.6.2.apk assets/chunk42.js | grep -q 'За сколько напомнить'
-          unzip -p build-output/Shtab-AI-v4.6.2.apk assets/chunk41.js | grep -q "item.priority==='high'||item.important===true"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs build-output/Shtab-AI-v4.6.2.apk | tee build-output/signature-report.txt
-          sha256sum build-output/Shtab-AI-v4.6.2.apk | tee build-output/sha256.txt
+          unzip -t build-output/Shtab-AI-v4.7.0.apk
+          unzip -p build-output/Shtab-AI-v4.7.0.apk assets/index.html | grep -q 'chunk44.js'
+          unzip -p build-output/Shtab-AI-v4.7.0.apk assets/chunk42.js | grep -q 'time-wheel-dialog-v462'
+          unzip -p build-output/Shtab-AI-v4.7.0.apk assets/chunk43.js | grep -q 'Срок истёк'
+          unzip -p build-output/Shtab-AI-v4.7.0.apk assets/chunk44.js | grep -q 'Архив плана'
+          unzip -p build-output/Shtab-AI-v4.7.0.apk assets/chunk44.js | grep -q 'reminderMode'
+          unzip -p build-output/Shtab-AI-v4.7.0.apk assets/chunk44.js | grep -q 'timeEnabled'
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs build-output/Shtab-AI-v4.7.0.apk | tee build-output/signature-report.txt
+          sha256sum build-output/Shtab-AI-v4.7.0.apk | tee build-output/sha256.txt
       - name: Upload tested APK
         uses: actions/upload-artifact@v4
         with:
-          name: Shtab-AI-v4.6.2-tested-apk
+          name: Shtab-AI-v4.7.0-tested-apk
           path: build-output/
           retention-days: 3
