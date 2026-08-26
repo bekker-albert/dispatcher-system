@@ -21,7 +21,7 @@ export function usePlanFactWorkspaceController(appState: AppStateBundle) {
     if (!activeSourceTab) return;
     if (appState.ptoDateEditing === appState.planFactEditing) return;
     appState.setPlanFactEditing(appState.ptoDateEditing);
-  }, [activeSourceTab, appState.ptoDateEditing, appState.planFactEditing, appState.setPlanFactEditing]);
+  }, [activeSourceTab, appState]);
 
   const onSelectSourceTab = useCallback((tab: PtoDateTableKey) => {
     appState.setTopTab("pto");
