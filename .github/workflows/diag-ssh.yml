@@ -15,20 +15,11 @@ jobs:
       - name: Show deploy public key
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "PUBLIC_KEY_START"
           ssh-keygen -y -f ~/.ssh/id_ed25519
-          echo "PUBLIC_KEY_END"
-          ssh-keygen -lf ~/.ssh/id_ed25519
-
-      - name: Test dispetcher SSH
-        env:
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-        run: |
-          set +e
-          timeout 10 bash -lc '</dev/tcp/dispetcher.kz/22' && echo "tcp22=ok" || echo "tcp22=failed"
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 -p 22 "$DEPLOY_USER@dispetcher.kz" 'echo ssh=ok; whoami; pwd' 2>&1
-          exit $?
+          echo "deploy_user_is_dispatcher=$([ "$DEPLOY_USER" = dispatcher ] && echo yes || echo no)"
+          echo "deploy_user_is_albert=$([ "$DEPLOY_USER" = albert ] && echo yes || echo no)"
