@@ -20,21 +20,21 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Inspect runtime
+      - name: Inspect server state
         run: |
           ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 root@dispetcher.kz 'bash -s' <<'EOF'
             set +e
-            echo "NODE=$(/usr/lib/ispnodejs/bin/node -v 2>&1)"
-            echo "NPM=$(/usr/lib/ispnodejs/bin/npm -v 2>&1)"
-            echo "GIT=$(git --version 2>&1)"
-            echo "MEMORY"
-            free -h
-            echo "DISK"
-            df -h /
-            echo "PM2"
-            /usr/lib/ispnodejs/bin/pm2 jlist 2>/dev/null | /usr/lib/ispnodejs/bin/node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{for(const p of JSON.parse(s)){console.log(p.name,(p.pm2_env||{}).status,(p.pm2_env||{}).pm_cwd,(p.pm2_env||{}).PORT||"")} }catch(e){console.log("none")}})'
-            echo "PORTS"
-            ss -ltnp | grep -E ':(3000|3001|3002|8080|8081) ' || true
-            echo "MYSQL"
-            systemctl is-active mysql 2>/dev/null || systemctl is-active mariadb 2>/dev/null || true
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            echo "NODE=$(node -v 2>&1)"
+            echo "NPM=$(npm -v 2>&1)"
+            echo "DATABASES"
+            mysql -NBe "SHOW DATABASES" 2>/dev/null | grep -E '^(aam_dispatch|dispatcher|dispetcher)$' || true
+            echo "AAM_TABLE_COUNT"
+            mysql -NBe "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='aam_dispatch'" 2>/dev/null || true
+            echo "MYSQL_USERS"
+            mysql -NBe "SELECT CONCAT(user,'@',host) FROM mysql.user WHERE user IN ('dispatcher_ad','dispatcher','www-root')" 2>/dev/null || true
+            echo "NGINX_RESOURCES"
+            find /etc/nginx/vhosts-resources/dispetcher.kz -maxdepth 1 -type f -printf '%f\n' 2>/dev/null || true
+            echo "PM2_HOME_CONTENT"
+            find /var/www/www-root/data/.pm2 -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | head -n 30 || true
           EOF
