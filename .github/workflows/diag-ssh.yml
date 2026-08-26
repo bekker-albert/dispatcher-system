@@ -1,4 +1,4 @@
-name: Bootstrap dispetcher
+name: Prepare dispetcher deploy account
 
 on:
   push:
@@ -9,35 +9,10 @@ permissions:
   contents: read
 
 jobs:
-  bootstrap:
+  prepare:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build production app
-        env:
-          NEXT_PUBLIC_DATA_PROVIDER: mysql
-        run: npm run build
-
-      - name: Prepare build archive
-        run: |
-          APP_SHA=$(git rev-parse HEAD)
-          echo "APP_SHA=$APP_SHA" >> "$GITHUB_ENV"
-          tar -czf "next-build-${APP_SHA}.tar.gz" .next
-
-      - name: Prepare SSH
+      - name: Prepare SSH key
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
@@ -46,101 +21,53 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H dispetcher.kz >> ~/.ssh/known_hosts
 
-      - name: Upload build
-        run: scp -i ~/.ssh/id_ed25519 "next-build-${APP_SHA}.tar.gz" root@dispetcher.kz:/root/
-
-      - name: Configure and start production
+      - name: Create deploy account and move PM2
         run: |
-          ssh -i ~/.ssh/id_ed25519 root@dispetcher.kz "APP_SHA='${APP_SHA}' bash -s" <<'EOF'
+          ssh -i ~/.ssh/id_ed25519 root@dispetcher.kz 'bash -s' <<'EOF'
             set -euo pipefail
             export PATH="/usr/lib/ispnodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            DEPLOY_USER="dispatch-deploy"
+            DEPLOY_HOME="/home/${DEPLOY_USER}"
             APP_DIR="/var/www/www-root/data/apps/dispatcher-system"
-            PM2_HOME="/var/www/www-root/data/.pm2"
-            VHOST="/etc/nginx/vhosts/www-root/dispetcher.kz.conf"
-            ARCHIVE="/root/next-build-${APP_SHA}.tar.gz"
+            OLD_PM2_HOME="/var/www/www-root/data/.pm2"
+            NEW_PM2_HOME="${DEPLOY_HOME}/.pm2"
+            PUBKEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN7fdyPEnl9uf0a42j/MRskCgef4gO/UqTKkLROh2G9j github-actions-deploy'
 
-            mkdir -p "$(dirname "$APP_DIR")"
-            if [ ! -d "$APP_DIR/.git" ]; then
-              git clone https://github.com/bekker-albert/dispatcher-system.git "$APP_DIR"
+            if ! id "$DEPLOY_USER" >/dev/null 2>&1; then
+              useradd --create-home --shell /bin/bash "$DEPLOY_USER"
+            fi
+            passwd -l "$DEPLOY_USER" >/dev/null 2>&1 || true
+
+            install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$DEPLOY_HOME/.ssh"
+            touch "$DEPLOY_HOME/.ssh/authorized_keys"
+            grep -qxF "$PUBKEY" "$DEPLOY_HOME/.ssh/authorized_keys" || printf '%s\n' "$PUBKEY" >> "$DEPLOY_HOME/.ssh/authorized_keys"
+            chown "$DEPLOY_USER:$DEPLOY_USER" "$DEPLOY_HOME/.ssh/authorized_keys"
+            chmod 600 "$DEPLOY_HOME/.ssh/authorized_keys"
+
+            if [ -d "$APP_DIR" ]; then
+              chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
             fi
 
-            cd "$APP_DIR"
-            git fetch --prune origin main
-            git cat-file -e "${APP_SHA}^{commit}"
-            git reset --hard "$APP_SHA"
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$OLD_PM2_HOME" pm2 delete dispetcher >/dev/null 2>&1 || true
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$OLD_PM2_HOME" pm2 save >/dev/null 2>&1 || true
 
-            if [ ! -f .env.local ]; then
-              DBPASS=$(openssl rand -hex 24)
-              SESSION_SECRET=$(openssl rand -hex 48)
-              ADMINPASS="$(openssl rand -hex 12)A9!"
+            install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$NEW_PM2_HOME"
+            sudo -u "$DEPLOY_USER" env PATH="$PATH" PM2_HOME="$NEW_PM2_HOME" NODE_ENV=production pm2 delete dispetcher >/dev/null 2>&1 || true
+            sudo -u "$DEPLOY_USER" env PATH="$PATH" PM2_HOME="$NEW_PM2_HOME" NODE_ENV=production pm2 start /usr/lib/ispnodejs/lib/node_modules/npm/bin/npm-cli.js --name dispetcher --cwd "$APP_DIR" -- start -- --hostname 127.0.0.1 --port 3000
+            sudo -u "$DEPLOY_USER" env PATH="$PATH" PM2_HOME="$NEW_PM2_HOME" pm2 save
 
-              mysql -e "CREATE DATABASE IF NOT EXISTS aam_dispatch CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-              mysql -e "CREATE USER IF NOT EXISTS 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}'; CREATE USER IF NOT EXISTS 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}'; ALTER USER 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}'; ALTER USER 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}'; GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'localhost'; GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'127.0.0.1'; FLUSH PRIVILEGES;"
-
-              printf '%s\n' \
-                'NEXT_PUBLIC_DATA_PROVIDER=mysql' \
-                'DB_HOST=127.0.0.1' \
-                'DB_PORT=3306' \
-                'DB_NAME=aam_dispatch' \
-                'DB_USER=dispatcher_ad' \
-                "DB_PASSWORD=${DBPASS}" \
-                'AUTH_REQUIRED=true' \
-                "AUTH_SESSION_SECRET=${SESSION_SECRET}" \
-                'AUTH_INITIAL_LOGIN=albert' \
-                "AUTH_INITIAL_PASSWORD=${ADMINPASS}" \
-                'AUTH_INITIAL_DISPLAY_NAME=Беккер Альберт' > .env.local
-              chmod 600 .env.local
-
-              printf '%s\n' \
-                'URL=https://dispetcher.kz' \
-                'LOGIN=albert' \
-                "PASSWORD=${ADMINPASS}" > /root/dispetcher-login.txt
-              chmod 600 /root/dispetcher-login.txt
-            fi
-
-            npm ci --omit=dev --no-audit --no-fund
-
-            rm -rf .next-new
-            mkdir .next-new
-            tar -xzf "$ARCHIVE" -C .next-new --strip-components=1 .next
-            test -f .next-new/BUILD_ID
-            rm -rf .next
-            mv .next-new .next
-            rm -f "$ARCHIVE"
-
-            chown -R www-root:www-root .next .env.local
-            mkdir -p "$PM2_HOME"
-            chown -R www-root:www-root "$PM2_HOME"
-
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 delete dispetcher >/dev/null 2>&1 || true
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 start /usr/lib/ispnodejs/lib/node_modules/npm/bin/npm-cli.js --name dispetcher --cwd "$APP_DIR" -- start -- --hostname 127.0.0.1 --port 3000
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" pm2 save
-
-            for i in $(seq 1 30); do
-              if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
-                break
-              fi
+            for i in $(seq 1 20); do
+              curl -fsS http://127.0.0.1:3000/ >/dev/null && break
               sleep 1
             done
             curl -fsS http://127.0.0.1:3000/ >/dev/null
-
-            if ! grep -q 'proxy_pass http://127.0.0.1:3000;' "$VHOST"; then
-              cp "$VHOST" "${VHOST}.before-nextjs"
-              test "$(grep -c 'location / {' "$VHOST")" -eq 2
-              perl -0pi -e 's#location / \{\s*\}#location / {\n                proxy_pass http://127.0.0.1:3000;\n                proxy_http_version 1.1;\n                proxy_set_header Host \$host;\n                proxy_set_header X-Real-IP \$remote_addr;\n                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n                proxy_set_header X-Forwarded-Proto \$scheme;\n                proxy_set_header Upgrade \$http_upgrade;\n                proxy_set_header Connection "upgrade";\n                proxy_read_timeout 120s;\n        }#g' "$VHOST"
-              test "$(grep -c 'proxy_pass http://127.0.0.1:3000;' "$VHOST")" -eq 2
-            fi
-
-            nginx -t
-            systemctl reload nginx
-
-            echo "APP_SHA=$(git rev-parse HEAD)"
-            echo "PM2_STATUS"
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" pm2 jlist | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{for(const p of JSON.parse(s)){console.log(p.name,(p.pm2_env||{}).status,(p.pm2_env||{}).pm_cwd)}})'
-            echo "LOGIN_FILE_READY=$([ -f /root/dispetcher-login.txt ] && echo yes || echo no)"
           EOF
+
+      - name: Verify dedicated SSH login
+        run: |
+          ssh -i ~/.ssh/id_ed25519 dispatch-deploy@dispetcher.kz 'whoami; test -d /var/www/www-root/data/apps/dispatcher-system/.git; echo deploy-account-ok'
 
       - name: Public smoke
         run: |
           curl -fsSI https://dispetcher.kz/ | head -n 10
-          curl -fsS https://dispetcher.kz/ | grep -Eo '<title>[^<]*</title>' | head -n 1 || true
+          curl -fsS https://dispetcher.kz/ | grep -Eo '<title>[^<]*</title>' | head -n 1
