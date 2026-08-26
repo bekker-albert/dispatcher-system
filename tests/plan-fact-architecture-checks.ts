@@ -35,7 +35,7 @@ assert.doesNotMatch(workspaceTabs, /window\.prompt/);
 assert.doesNotMatch(reportManager, /window\.prompt/);
 assert.doesNotMatch(domainWorkspace, /from "react"|window\.|document\./);
 assert.match(architectureDoc, /не имеет фиксированной продолжительности/);
-assert.match(architectureDoc, /Опер учет.*сохраняется полностью/s);
+assert.match(architectureDoc, /Опер учет[\s\S]*сохраняется полностью/);
 assert.match(architectureDoc, /production smoke/);
 
 const aam = defaultReportCustomers[0];
