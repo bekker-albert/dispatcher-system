@@ -12,6 +12,7 @@ import { defaultSubTabs, defaultVehicles } from "@/features/app/appDefaults";
 import { useAppTabsState } from "@/features/navigation/useAppTabsState";
 import { useNavigationSelectionHandlers } from "@/features/navigation/useNavigationSelectionHandlers";
 import { useSectionSelectionState } from "@/features/navigation/useSectionSelectionState";
+import { usePlanFactWorkspaceState } from "@/features/plan-fact/usePlanFactWorkspaceState";
 import { usePtoDatabaseUiState } from "@/features/pto/usePtoDatabaseUiState";
 import { usePtoPersistentState } from "@/features/pto/usePtoPersistentState";
 import { usePtoUiState } from "@/features/pto/usePtoUiState";
@@ -26,6 +27,7 @@ export function useAppStateBundle() {
   const dataLoadState = useAppDataLoadState();
   const ptoUiState = usePtoUiState();
   const reportUiState = useReportUiState();
+  const planFactWorkspaceState = usePlanFactWorkspaceState();
   const ptoPersistentState = usePtoPersistentState();
   const adminStructureState = useAdminStructureState();
   const reportDateControls = useAppReportDateControls({
@@ -59,6 +61,7 @@ export function useAppStateBundle() {
     ...dataLoadState,
     ...ptoUiState,
     ...reportUiState,
+    ...planFactWorkspaceState,
     ...ptoPersistentState,
     ...adminStructureState,
     ...reportDateControls,
