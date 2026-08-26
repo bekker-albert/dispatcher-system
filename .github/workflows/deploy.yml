@@ -67,6 +67,7 @@ jobs:
 
             cd "$APP_DIR"
             node -e 'const [major] = process.versions.node.split(".").map(Number); if (major !== 24) throw new Error(`Node ${process.versions.node} does not match Node 24 production policy`);'
+            git config --global --add safe.directory "$APP_DIR"
 
             git fetch --prune origin main
             git cat-file -e "${DEPLOY_SHA}^{commit}"
