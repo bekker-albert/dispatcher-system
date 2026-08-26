@@ -27,7 +27,11 @@ export function TopBar({
     <header className="erp-topbar no-print">
       <div className="erp-topbar__left">
         <SidebarToggle mobile onClick={onOpenMobileMenu} />
-        <Breadcrumbs activeReportCustomerCode={activeReportCustomerCode} trail={trail} />
+        <Breadcrumbs
+          activeReportCustomerCode={activeReportCustomerCode}
+          reportDate={reportDate}
+          trail={trail}
+        />
       </div>
       <div className="erp-topbar__right">
         <label className="erp-topbar__date">
