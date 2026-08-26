@@ -88,7 +88,12 @@ export default function DispatchSection({
     }
   }, [areaFilter, onAreaFilterChange, user, userAreas]);
 
-  const planFactPanel = <DispatchPlanFactPanel rows={filteredDispatchSummaryRows} />;
+  const planFactPanel = (
+    <DispatchPlanFactPanel
+      rows={filteredDispatchSummaryRows}
+      percent={dispatchSummaryTotals.percent}
+    />
+  );
   const summaryTable = (
     <DispatchSummaryTable
       isDailyDispatchShift={isDailyDispatchShift}
