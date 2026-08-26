@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 
-import { formatPtoCellNumber } from "@/lib/domain/pto/formatting";
 import { formatNumber } from "@/lib/domain/reports/display";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
 import {
@@ -26,7 +25,6 @@ type DispatchPlanFactRow = {
   plan: number;
   fact: number;
   delta: number;
-  percent: number;
 };
 
 function createDispatchPlanFactRows(rows: DispatchSummaryRow[], dailyMode: boolean): DispatchPlanFactRow[] {
@@ -44,15 +42,10 @@ function createDispatchPlanFactRows(rows: DispatchSummaryRow[], dailyMode: boole
   });
 
   return Array.from(groups.values())
-    .map((value) => {
-      const delta = value.fact - value.plan;
-      const percent = value.plan > 0 ? Math.round((value.fact / value.plan) * 100) : value.fact > 0 ? 100 : 0;
-      return {
-        ...value,
-        delta,
-        percent,
-      };
-    })
+    .map((value) => ({
+      ...value,
+      delta: value.fact - value.plan,
+    }))
     .sort((left, right) => (
       left.area.localeCompare(right.area, "ru")
       || left.location.localeCompare(right.location, "ru")
@@ -79,7 +72,6 @@ export function DispatchPlanFactPanel({ rows, dailyMode = false }: DispatchPlanF
               <th style={dispatchPlanFactCellStyle}>План</th>
               <th style={dispatchPlanFactCellStyle}>Факт</th>
               <th style={dispatchPlanFactCellStyle}>Отклонение</th>
-              <th style={dispatchPlanFactCellStyle}>%</th>
             </tr>
           </thead>
           <tbody>
@@ -93,7 +85,6 @@ export function DispatchPlanFactPanel({ rows, dailyMode = false }: DispatchPlanF
                 <td style={{ ...dispatchPlanFactCellStyle, color: row.delta < 0 ? "#991b1b" : "#166534" }}>
                   {formatNumber(row.delta)}
                 </td>
-                <td style={dispatchPlanFactCellStyle}>{formatPtoCellNumber(row.percent)}%</td>
               </tr>
             ))}
           </tbody>
