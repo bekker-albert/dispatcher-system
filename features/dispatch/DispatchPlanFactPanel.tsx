@@ -57,7 +57,10 @@ export function DispatchPlanFactPanel({ rows, dailyMode = false }: DispatchPlanF
   const planFactRows = useMemo(() => createDispatchPlanFactRows(rows, dailyMode), [dailyMode, rows]);
 
   return (
-    <section style={dispatchPlanFactPanelStyle} aria-label="План факт по структурам работ">
+    <section
+      style={{ ...dispatchPlanFactPanelStyle, width: "100%", boxSizing: "border-box", alignSelf: "stretch" }}
+      aria-label="План факт по структурам работ"
+    >
       <div style={dispatchPlanFactHeaderStyle}>
         <span>{dailyMode ? "Объемы: участок / местонахождение / структура" : "План / факт по структурам"}</span>
         <span>{planFactRows.length} строк</span>
