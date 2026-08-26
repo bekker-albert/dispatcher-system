@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTypes";
 import { createEmptyPtoDateModel } from "@/features/app/emptyPtoDateModel";
 import type { AppPtoModels } from "@/features/app/appPtoScreenPropsTypes";
+import { usePlanFactWorkspaceController } from "@/features/app/usePlanFactWorkspaceController";
+import { PlanFactWorkspaceTabs } from "@/features/reports/PlanFactWorkspaceTabs";
 import { isPtoDateTableKey } from "@/lib/domain/pto/date-table";
 import { isPtoMatrixTableKey } from "@/lib/domain/pto/tabs";
 
@@ -29,6 +31,7 @@ export function PtoPrimaryContent({
 }: PtoPrimaryContentProps) {
   const isPtoDateTab = isPtoDateTableKey(appState.ptoTab);
   const isPtoBucketsSection = isPtoMatrixTableKey(appState.ptoTab);
+  const planFactWorkspace = usePlanFactWorkspaceController(appState);
 
   if (!isPtoDateTab && !isPtoBucketsSection) {
     const ptoModels: AppPtoModels = {
@@ -39,12 +42,21 @@ export function PtoPrimaryContent({
     return <PtoStaticPrimaryContent appState={appState} models={ptoModels} navigation={navigation} />;
   }
 
-  return (
+  const content = (
     <PtoDataPrimaryContent
       appState={appState}
       models={models}
       runtime={runtime}
       navigation={navigation}
     />
+  );
+
+  if (!isPtoDateTab) return content;
+
+  return (
+    <>
+      <PlanFactWorkspaceTabs {...planFactWorkspace} />
+      {content}
+    </>
   );
 }
