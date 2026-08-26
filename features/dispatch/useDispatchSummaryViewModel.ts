@@ -71,10 +71,11 @@ export function useDispatchSummaryViewModel({
 
     return vehicleSearchRecords
       .filter(({ vehicle, searchText }) => {
+        const loadingEquipment = normalizeLookupValue(vehicle.vehicleType) === normalizeLookupValue("Погрузочная");
         const areaOk = areaFilter === "Все участки" || vehicle.area === areaFilter;
         const textOk = normalizedDispatchSearch === "" || searchText.includes(normalizedDispatchSearch);
 
-        return areaOk && textOk;
+        return loadingEquipment && areaOk && textOk;
       })
       .map(({ vehicle }) => vehicle);
   }, [active, areaFilter, normalizedDispatchSearch, vehicleSearchRecords]);
