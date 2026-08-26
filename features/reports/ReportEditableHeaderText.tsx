@@ -6,6 +6,7 @@ type ReportEditableHeaderTextProps = {
   columnKey: string;
   fallback: string;
   label: string;
+  editable: boolean;
   isEditing: boolean;
   draft: string;
   onDraftChange: (value: string) => void;
@@ -18,6 +19,7 @@ export function ReportEditableHeaderText({
   columnKey,
   fallback,
   label,
+  editable,
   isEditing,
   draft,
   onDraftChange,
@@ -25,7 +27,7 @@ export function ReportEditableHeaderText({
   onCancel,
   onStartEdit,
 }: ReportEditableHeaderTextProps) {
-  if (isEditing) {
+  if (editable && isEditing) {
     return (
       <input
         autoFocus
@@ -53,6 +55,10 @@ export function ReportEditableHeaderText({
     );
   }
 
+  if (!editable) {
+    return <span style={reportHeaderStaticStyle}>{label}</span>;
+  }
+
   return (
     <button
       type="button"
@@ -68,18 +74,30 @@ export function ReportEditableHeaderText({
   );
 }
 
+const reportHeaderStaticStyle: CSSProperties = {
+  display: "block",
+  width: "100%",
+  minWidth: 0,
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  textAlign: "center",
+  whiteSpace: "normal",
+};
+
 const reportHeaderLabelButtonStyle: CSSProperties = {
   width: "100%",
   minWidth: 0,
-  border: "none",
-  background: "transparent",
+  border: "1px dashed #93c5fd",
+  borderRadius: 4,
+  background: "#eff6ff",
   color: "inherit",
   cursor: "text",
   fontFamily: "inherit",
   fontSize: 12,
   fontWeight: 800,
   lineHeight: 1.2,
-  padding: 0,
+  padding: "2px 4px",
   textAlign: "center",
   whiteSpace: "normal",
   overflowWrap: "normal",

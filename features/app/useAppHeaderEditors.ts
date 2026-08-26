@@ -14,6 +14,7 @@ type UseAppHeaderEditorsOptions = {
   reportHeaderLabels: Record<string, string>;
   reportHeaderDraft: string;
   editingReportHeaderKey: string | null;
+  reportEditing: boolean;
   setReportHeaderLabels: Dispatch<SetStateAction<Record<string, string>>>;
   setEditingReportHeaderKey: Dispatch<SetStateAction<string | null>>;
   setReportHeaderDraft: Dispatch<SetStateAction<string>>;
@@ -30,6 +31,7 @@ export function useAppHeaderEditors({
   reportHeaderLabels,
   reportHeaderDraft,
   editingReportHeaderKey,
+  reportEditing,
   setReportHeaderLabels,
   setEditingReportHeaderKey,
   setReportHeaderDraft,
@@ -84,6 +86,7 @@ export function useAppHeaderEditors({
     reportHeaderLabel,
     editingReportHeaderKey,
     reportHeaderDraft,
+    reportEditing,
     setReportHeaderDraft,
     commitReportHeaderEdit,
     cancelReportHeaderEdit,

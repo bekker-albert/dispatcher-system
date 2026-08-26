@@ -81,7 +81,13 @@ export function deriveReportRowFromPtoIndex(
 
   const dayOperFact = exactDateTotal(operEntry, reportDateValue);
   const daySurveyFact = exactDateTotal(surveyEntry, reportDateValue);
-  const dayFact = dayOperFact || daySurveyFact || (operEntry || surveyEntry ? 0 : row.dayFact);
+  const surveyHasDayFact = surveyEntry?.dailyTotals.has(reportDateValue) ?? false;
+  const operHasDayFact = operEntry?.dailyTotals.has(reportDateValue) ?? false;
+  const dayFact = surveyHasDayFact
+    ? daySurveyFact
+    : operHasDayFact
+      ? dayOperFact
+      : (operEntry || surveyEntry ? 0 : row.dayFact);
 
   const monthFactSource = surveyOperFactThroughDate(surveyEntry, operEntry, monthStart, reportDateValue);
   const yearFactSource = surveyOperFactThroughDate(surveyEntry, operEntry, yearStart, reportDateValue, { carryoverYear: year });

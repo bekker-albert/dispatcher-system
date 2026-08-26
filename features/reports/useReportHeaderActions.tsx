@@ -7,6 +7,7 @@ type ReportHeaderActionsOptions = {
   reportHeaderLabel: (key: string, fallback: string) => string;
   editingReportHeaderKey: string | null;
   reportHeaderDraft: string;
+  reportEditing: boolean;
   setReportHeaderDraft: Dispatch<SetStateAction<string>>;
   commitReportHeaderEdit: (key: string, fallback: string) => void;
   cancelReportHeaderEdit: () => void;
@@ -17,6 +18,7 @@ export function useReportHeaderActions({
   reportHeaderLabel,
   editingReportHeaderKey,
   reportHeaderDraft,
+  reportEditing,
   setReportHeaderDraft,
   commitReportHeaderEdit,
   cancelReportHeaderEdit,
@@ -27,6 +29,7 @@ export function useReportHeaderActions({
       columnKey={key}
       fallback={fallback}
       label={reportHeaderLabel(key, fallback)}
+      editable={reportEditing}
       isEditing={editingReportHeaderKey === key}
       draft={reportHeaderDraft}
       onDraftChange={setReportHeaderDraft}
@@ -38,6 +41,7 @@ export function useReportHeaderActions({
     cancelReportHeaderEdit,
     commitReportHeaderEdit,
     editingReportHeaderKey,
+    reportEditing,
     reportHeaderDraft,
     reportHeaderLabel,
     setReportHeaderDraft,

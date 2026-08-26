@@ -34,6 +34,7 @@ export function useAppRuntimeControllers({
     setReportHeaderLabels,
     setEditingReportHeaderKey,
     setReportHeaderDraft,
+    planFactEditing,
     addAdminLog,
     ptoRowHeights,
     setPtoColumnWidths,
@@ -104,6 +105,7 @@ export function useAppRuntimeControllers({
     reportHeaderLabels,
     reportHeaderDraft,
     editingReportHeaderKey,
+    reportEditing: planFactEditing,
     setReportHeaderLabels,
     setEditingReportHeaderKey,
     setReportHeaderDraft,
@@ -111,7 +113,8 @@ export function useAppRuntimeControllers({
     addAdminLog,
   });
 
-  const tableResizeActive = (topTab === "pto" && ptoDateEditing) || topTab === "reports";
+  const tableResizeActive = (topTab === "pto" && ptoDateEditing)
+    || (topTab === "reports" && planFactEditing);
   const vehicleSelectionActive = (topTab === "admin" && adminSection === "vehicles")
     || (topTab === "fleet" && fleetTab === "directory" && adminVehiclesEditing);
 
