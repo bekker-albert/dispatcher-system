@@ -224,7 +224,11 @@ export function createDefaultVehicles(seedRows: VehicleSeedRow[], fallbackRows: 
 
       return { ...vehicle, name: buildVehicleDisplayName(vehicle) };
     })
-    : fallbackRows.map(normalizeVehicleRow);
+    : fallbackRows.map((row) => {
+      const normalized = normalizeVehicleRow(row);
+      const preservedName = row.name.trim();
+      return { ...normalized, name: preservedName || normalized.name };
+    });
 }
 
 export function normalizeVehicleRow(vehicle: unknown): VehicleRow {
