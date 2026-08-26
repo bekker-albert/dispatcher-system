@@ -113,8 +113,7 @@ export function useAppRuntimeControllers({
     addAdminLog,
   });
 
-  const tableResizeActive = (topTab === "pto" && ptoDateEditing)
-    || (topTab === "reports" && planFactEditing);
+  const tableResizeActive = (topTab === "pto" && ptoDateEditing) || topTab === "reports";
   const vehicleSelectionActive = (topTab === "admin" && adminSection === "vehicles")
     || (topTab === "fleet" && fleetTab === "directory" && adminVehiclesEditing);
 
