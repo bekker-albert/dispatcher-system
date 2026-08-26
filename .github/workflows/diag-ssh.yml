@@ -19,6 +19,6 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-      - name: List site
+      - name: Locate nginx config
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 root@dispetcher.kz 'ls -la /var/www/www-root/data/www/dispetcher.kz'
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 root@dispetcher.kz "grep -R -l 'dispetcher.kz' /etc/nginx 2>/dev/null | head -n 20"
