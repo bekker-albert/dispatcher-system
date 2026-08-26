@@ -1,4 +1,4 @@
-name: Diagnose SSH
+name: Bootstrap dispetcher
 
 on:
   push:
@@ -9,32 +9,167 @@ permissions:
   contents: read
 
 jobs:
-  diagnose:
+  bootstrap:
     runs-on: ubuntu-latest
     steps:
-      - name: Prepare key
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production app
+        env:
+          NEXT_PUBLIC_DATA_PROVIDER: mysql
+        run: npm run build
+
+      - name: Prepare build archive
+        run: |
+          APP_SHA=$(git rev-parse HEAD)
+          echo "APP_SHA=$APP_SHA" >> "$GITHUB_ENV"
+          tar -czf "next-build-${APP_SHA}.tar.gz" .next
+
+      - name: Prepare SSH
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H dispetcher.kz >> ~/.ssh/known_hosts
 
-      - name: Inspect server state
+      - name: Upload build
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 root@dispetcher.kz 'bash -s' <<'EOF'
-            set +e
+          scp -i ~/.ssh/id_ed25519 "next-build-${APP_SHA}.tar.gz" root@dispetcher.kz:/root/
+
+      - name: Configure and start production
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@dispetcher.kz "APP_SHA='${APP_SHA}' bash -s" <<'EOF'
+            set -euo pipefail
             export PATH="/usr/lib/ispnodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-            echo "NODE=$(node -v 2>&1)"
-            echo "NPM=$(npm -v 2>&1)"
-            echo "DATABASES"
-            mysql -NBe "SHOW DATABASES" 2>/dev/null | grep -E '^(aam_dispatch|dispatcher|dispetcher)$' || true
-            echo "AAM_TABLE_COUNT"
-            mysql -NBe "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='aam_dispatch'" 2>/dev/null || true
-            echo "MYSQL_USERS"
-            mysql -NBe "SELECT CONCAT(user,'@',host) FROM mysql.user WHERE user IN ('dispatcher_ad','dispatcher','www-root')" 2>/dev/null || true
-            echo "NGINX_RESOURCES"
-            find /etc/nginx/vhosts-resources/dispetcher.kz -maxdepth 1 -type f -printf '%f\n' 2>/dev/null || true
-            echo "PM2_HOME_CONTENT"
-            find /var/www/www-root/data/.pm2 -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | head -n 30 || true
+            APP_DIR="/var/www/www-root/data/apps/dispatcher-system"
+            PM2_HOME="/var/www/www-root/data/.pm2"
+            VHOST="/etc/nginx/vhosts/www-root/dispetcher.kz.conf"
+            ARCHIVE="/root/next-build-${APP_SHA}.tar.gz"
+
+            mkdir -p "$(dirname "$APP_DIR")"
+            if [ ! -d "$APP_DIR/.git" ]; then
+              git clone https://github.com/bekker-albert/dispatcher-system.git "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            git fetch --prune origin main
+            git cat-file -e "${APP_SHA}^{commit}"
+            git reset --hard "$APP_SHA"
+
+            if [ ! -f .env.local ]; then
+              DBPASS=$(openssl rand -hex 24)
+              SESSION_SECRET=$(openssl rand -hex 48)
+              ADMINPASS="$(openssl rand -hex 12)A9!"
+
+              mysql <<SQL
+CREATE DATABASE IF NOT EXISTS aam_dispatch CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}';
+CREATE USER IF NOT EXISTS 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}';
+ALTER USER 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}';
+ALTER USER 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}';
+GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'localhost';
+GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'127.0.0.1';
+FLUSH PRIVILEGES;
+SQL
+
+              cat > .env.local <<ENV
+NEXT_PUBLIC_DATA_PROVIDER=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=aam_dispatch
+DB_USER=dispatcher_ad
+DB_PASSWORD=${DBPASS}
+AUTH_REQUIRED=true
+AUTH_SESSION_SECRET=${SESSION_SECRET}
+AUTH_INITIAL_LOGIN=albert
+AUTH_INITIAL_PASSWORD=${ADMINPASS}
+AUTH_INITIAL_DISPLAY_NAME=Беккер Альберт
+ENV
+              chmod 600 .env.local
+
+              cat > /root/dispetcher-login.txt <<LOGIN
+URL=https://dispetcher.kz
+LOGIN=albert
+PASSWORD=${ADMINPASS}
+LOGIN
+              chmod 600 /root/dispetcher-login.txt
+            fi
+
+            npm ci --omit=dev --no-audit --no-fund
+
+            rm -rf .next-new
+            mkdir .next-new
+            tar -xzf "$ARCHIVE" -C .next-new --strip-components=1 .next
+            test -f .next-new/BUILD_ID
+            rm -rf .next
+            mv .next-new .next
+            rm -f "$ARCHIVE"
+
+            chown -R www-root:www-root .next .env.local
+            mkdir -p "$PM2_HOME"
+            chown -R www-root:www-root "$PM2_HOME"
+
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 delete dispetcher >/dev/null 2>&1 || true
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 start /usr/lib/ispnodejs/lib/node_modules/npm/bin/npm-cli.js --name dispetcher --cwd "$APP_DIR" -- start -- --hostname 127.0.0.1 --port 3000
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" pm2 save
+
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+                break
+              fi
+              sleep 1
+            done
+            curl -fsS http://127.0.0.1:3000/ >/dev/null
+
+            if ! grep -q 'proxy_pass http://127.0.0.1:3000;' "$VHOST"; then
+              cp "$VHOST" "${VHOST}.before-nextjs"
+              python3 - <<'PY'
+from pathlib import Path
+import re
+p = Path('/etc/nginx/vhosts/www-root/dispetcher.kz.conf')
+text = p.read_text()
+replacement = '''location / {
+                proxy_pass http://127.0.0.1:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_read_timeout 120s;
+        }'''
+new, count = re.subn(r'location / \{\s*\}', replacement, text)
+if count != 2:
+    raise SystemExit(f'Expected 2 empty location blocks, found {count}')
+p.write_text(new)
+PY
+            fi
+
+            nginx -t
+            systemctl reload nginx
+
+            echo "APP_SHA=$(git rev-parse HEAD)"
+            echo "PM2_STATUS"
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" pm2 jlist | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{for(const p of JSON.parse(s)){console.log(p.name,(p.pm2_env||{}).status,(p.pm2_env||{}).pm_cwd)}})'
+            echo "LOGIN_FILE_READY=$([ -f /root/dispetcher-login.txt ] && echo yes || echo no)"
           EOF
+
+      - name: Public smoke
+        run: |
+          curl -fsSI https://dispetcher.kz/ | head -n 10
+          curl -fsS https://dispetcher.kz/ | grep -Eo '<title>[^<]*</title>' | head -n 1 || true
