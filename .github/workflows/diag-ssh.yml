@@ -47,8 +47,7 @@ jobs:
           ssh-keyscan -H dispetcher.kz >> ~/.ssh/known_hosts
 
       - name: Upload build
-        run: |
-          scp -i ~/.ssh/id_ed25519 "next-build-${APP_SHA}.tar.gz" root@dispetcher.kz:/root/
+        run: scp -i ~/.ssh/id_ed25519 "next-build-${APP_SHA}.tar.gz" root@dispetcher.kz:/root/
 
       - name: Configure and start production
         run: |
@@ -75,37 +74,27 @@ jobs:
               SESSION_SECRET=$(openssl rand -hex 48)
               ADMINPASS="$(openssl rand -hex 12)A9!"
 
-              mysql <<SQL
-CREATE DATABASE IF NOT EXISTS aam_dispatch CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}';
-CREATE USER IF NOT EXISTS 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}';
-ALTER USER 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}';
-ALTER USER 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}';
-GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'localhost';
-GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'127.0.0.1';
-FLUSH PRIVILEGES;
-SQL
+              mysql -e "CREATE DATABASE IF NOT EXISTS aam_dispatch CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+              mysql -e "CREATE USER IF NOT EXISTS 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}'; CREATE USER IF NOT EXISTS 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}'; ALTER USER 'dispatcher_ad'@'localhost' IDENTIFIED BY '${DBPASS}'; ALTER USER 'dispatcher_ad'@'127.0.0.1' IDENTIFIED BY '${DBPASS}'; GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'localhost'; GRANT ALL PRIVILEGES ON aam_dispatch.* TO 'dispatcher_ad'@'127.0.0.1'; FLUSH PRIVILEGES;"
 
-              cat > .env.local <<ENV
-NEXT_PUBLIC_DATA_PROVIDER=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=aam_dispatch
-DB_USER=dispatcher_ad
-DB_PASSWORD=${DBPASS}
-AUTH_REQUIRED=true
-AUTH_SESSION_SECRET=${SESSION_SECRET}
-AUTH_INITIAL_LOGIN=albert
-AUTH_INITIAL_PASSWORD=${ADMINPASS}
-AUTH_INITIAL_DISPLAY_NAME=Беккер Альберт
-ENV
+              printf '%s\n' \
+                'NEXT_PUBLIC_DATA_PROVIDER=mysql' \
+                'DB_HOST=127.0.0.1' \
+                'DB_PORT=3306' \
+                'DB_NAME=aam_dispatch' \
+                'DB_USER=dispatcher_ad' \
+                "DB_PASSWORD=${DBPASS}" \
+                'AUTH_REQUIRED=true' \
+                "AUTH_SESSION_SECRET=${SESSION_SECRET}" \
+                'AUTH_INITIAL_LOGIN=albert' \
+                "AUTH_INITIAL_PASSWORD=${ADMINPASS}" \
+                'AUTH_INITIAL_DISPLAY_NAME=Беккер Альберт' > .env.local
               chmod 600 .env.local
 
-              cat > /root/dispetcher-login.txt <<LOGIN
-URL=https://dispetcher.kz
-LOGIN=albert
-PASSWORD=${ADMINPASS}
-LOGIN
+              printf '%s\n' \
+                'URL=https://dispetcher.kz' \
+                'LOGIN=albert' \
+                "PASSWORD=${ADMINPASS}" > /root/dispetcher-login.txt
               chmod 600 /root/dispetcher-login.txt
             fi
 
@@ -137,27 +126,9 @@ LOGIN
 
             if ! grep -q 'proxy_pass http://127.0.0.1:3000;' "$VHOST"; then
               cp "$VHOST" "${VHOST}.before-nextjs"
-              python3 - <<'PY'
-from pathlib import Path
-import re
-p = Path('/etc/nginx/vhosts/www-root/dispetcher.kz.conf')
-text = p.read_text()
-replacement = '''location / {
-                proxy_pass http://127.0.0.1:3000;
-                proxy_http_version 1.1;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_read_timeout 120s;
-        }'''
-new, count = re.subn(r'location / \{\s*\}', replacement, text)
-if count != 2:
-    raise SystemExit(f'Expected 2 empty location blocks, found {count}')
-p.write_text(new)
-PY
+              test "$(grep -c 'location / {' "$VHOST")" -eq 2
+              perl -0pi -e 's#location / \{\s*\}#location / {\n                proxy_pass http://127.0.0.1:3000;\n                proxy_http_version 1.1;\n                proxy_set_header Host \$host;\n                proxy_set_header X-Real-IP \$remote_addr;\n                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n                proxy_set_header X-Forwarded-Proto \$scheme;\n                proxy_set_header Upgrade \$http_upgrade;\n                proxy_set_header Connection "upgrade";\n                proxy_read_timeout 120s;\n        }#g' "$VHOST"
+              test "$(grep -c 'proxy_pass http://127.0.0.1:3000;' "$VHOST")" -eq 2
             fi
 
             nginx -t
