@@ -15,16 +15,16 @@ export function DispatchSummaryHeader({
   reportDate,
   totals,
 }: DispatchSummaryHeaderProps) {
+  if (!isDailyDispatchShift) return null;
+
   return (
     <div style={dispatchSummaryHeaderStyle}>
-      {isDailyDispatchShift ? (
-        <div>
-          <div style={{ fontWeight: 800 }}>Заполнение сводки за {formatReportDate(reportDate)}</div>
-          <div style={{ color: "#64748b", marginTop: 3 }}>
-            Сутки формируются автоматически из ночной и дневной смены за выбранную дату.
-          </div>
+      <div>
+        <div style={{ fontWeight: 800 }}>Заполнение сводки за {formatReportDate(reportDate)}</div>
+        <div style={{ color: "#64748b", marginTop: 3 }}>
+          Сутки формируются автоматически из ночной и дневной смены за выбранную дату.
         </div>
-      ) : <div />}
+      </div>
       <Pill bg={statusColor(totals.percent)} color={statusTextColor(totals.percent)}>
         {totals.percent}%
       </Pill>
