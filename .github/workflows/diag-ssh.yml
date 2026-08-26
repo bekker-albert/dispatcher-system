@@ -1,0 +1,43 @@
+name: Diagnose SSH
+
+on:
+  push:
+    branches:
+      - diag/dispetcher
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "key_bytes=$(wc -c < ~/.ssh/id_ed25519)"
+
+      - name: Network diagnostics
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          set +e
+          echo "host_set=$([ -n "$DEPLOY_HOST" ] && echo yes || echo no)"
+          echo "port_set=$([ -n "$DEPLOY_PORT" ] && echo yes || echo no)"
+          getent ahosts "$DEPLOY_HOST" | head -n 5 || true
+          timeout 10 bash -lc "</dev/tcp/$DEPLOY_HOST/$DEPLOY_PORT" && echo "tcp=ok" || echo "tcp=failed"
+
+      - name: SSH diagnostics
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set +e
+          ssh -vv -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" 'echo ssh=ok; whoami; pwd; test -d /var/www/dispatcher/data/www/dispetcher.kz && echo dispetcher_dir=yes || echo dispetcher_dir=no; test -d /var/www/dispatcher/data/www/aam-dispatch.kz && echo legacy_dir=yes || echo legacy_dir=no' 2>&1 | sed -E 's/(Offering public key: ).*/\1[masked]/; s/(identity file ).*/\1[masked]/' | tail -n 80
+          exit ${PIPESTATUS[0]}
