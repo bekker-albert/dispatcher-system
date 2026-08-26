@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
+import { normalizeLookupValue } from "@/lib/utils/text";
 import {
   dispatchSummaryInputStyle,
   dispatchSummaryVehicleButtonStyle,
@@ -30,6 +31,13 @@ export function DispatchVehiclePicker({
   const displayValue = useMemo(() => (
     vehicle ? buildVehicleDisplayName(vehicle) : "Выбрать технику"
   ), [vehicle]);
+  const availableVehicles = useMemo(() => (
+    isTruckRow
+      ? vehicles
+      : vehicles.filter((item) => (
+          normalizeLookupValue(item.vehicleType) === normalizeLookupValue("Погрузочная")
+        ))
+  ), [isTruckRow, vehicles]);
 
   if (disabled || !editing) {
     return (
@@ -57,7 +65,7 @@ export function DispatchVehiclePicker({
       style={{ ...dispatchSummaryInputStyle, paddingLeft: isTruckRow ? 18 : undefined }}
     >
       <option value="">Выбрать технику</option>
-      {vehicles.map((item) => (
+      {availableVehicles.map((item) => (
         <option key={item.id} value={item.id}>{buildVehicleDisplayName(item)}</option>
       ))}
     </select>
