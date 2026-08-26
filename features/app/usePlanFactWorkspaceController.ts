@@ -1,16 +1,10 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { isPtoDateTableKey, type PtoDateTableKey } from "@/lib/domain/pto/date-table";
 import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import { createId } from "@/lib/utils/id";
-
-const builtInReportLabels: Record<string, string> = {
-  "aa-mining": "ААМ",
-  "ak-altynalmas": "АА",
-  "aa-engineering": "ААЕ",
-};
 
 function cloneReportCustomer(template: ReportCustomerConfig, label: string): ReportCustomerConfig {
   return {
@@ -82,27 +76,20 @@ export function usePlanFactWorkspaceController(appState: AppStateBundle) {
   const onCreateReportCopy = useCallback((templateId: string, label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
-    let createdId = "";
-    appState.setReportCustomers((current) => {
-      const template = current.find((customer) => customer.id === templateId) ?? current[0];
-      if (!template) return current;
-      const copy = cloneReportCustomer(template, trimmed);
-      createdId = copy.id;
-      return [...current, copy];
-    });
-    queueMicrotask(() => {
-      if (!createdId) return;
-      appState.setReportCustomerId(createdId);
-      appState.setTopTab("reports");
-    });
-  }, [appState]);
+    const template = appState.reportCustomers.find((customer) => customer.id === templateId)
+      ?? appState.reportCustomers[0];
+    if (!template) return;
 
-  const reportCustomers = useMemo(() => appState.reportCustomers, [appState.reportCustomers]);
+    const copy = cloneReportCustomer(template, trimmed);
+    appState.setReportCustomers((current) => [...current, copy]);
+    appState.setReportCustomerId(copy.id);
+    appState.setTopTab("reports");
+  }, [appState]);
 
   return {
     activeSourceTab,
     activeReportId,
-    reportCustomers,
+    reportCustomers: appState.reportCustomers,
     editing: appState.planFactEditing,
     onEditingChange,
     onSelectSourceTab,
@@ -110,6 +97,5 @@ export function usePlanFactWorkspaceController(appState: AppStateBundle) {
     onSetReportVisible,
     onRenameReport,
     onCreateReportCopy,
-    builtInReportLabels,
   };
 }
