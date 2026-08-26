@@ -19,6 +19,22 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-      - name: Check Node
+
+      - name: Inspect runtime
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 root@dispetcher.kz 'node -v'
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i ~/.ssh/id_ed25519 root@dispetcher.kz 'bash -s' <<'EOF'
+            set +e
+            echo "NODE=$(/usr/lib/ispnodejs/bin/node -v 2>&1)"
+            echo "NPM=$(/usr/lib/ispnodejs/bin/npm -v 2>&1)"
+            echo "GIT=$(git --version 2>&1)"
+            echo "MEMORY"
+            free -h
+            echo "DISK"
+            df -h /
+            echo "PM2"
+            /usr/lib/ispnodejs/bin/pm2 jlist 2>/dev/null | /usr/lib/ispnodejs/bin/node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{for(const p of JSON.parse(s)){console.log(p.name,(p.pm2_env||{}).status,(p.pm2_env||{}).pm_cwd,(p.pm2_env||{}).PORT||"")} }catch(e){console.log("none")}})'
+            echo "PORTS"
+            ss -ltnp | grep -E ':(3000|3001|3002|8080|8081) ' || true
+            echo "MYSQL"
+            systemctl is-active mysql 2>/dev/null || systemctl is-active mariadb 2>/dev/null || true
+          EOF
