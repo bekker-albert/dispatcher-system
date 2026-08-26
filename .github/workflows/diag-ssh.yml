@@ -1,4 +1,4 @@
-name: Prepare dispetcher deploy account
+name: Restore dispetcher
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  prepare:
+  restore:
     runs-on: ubuntu-latest
     steps:
       - name: Prepare SSH key
@@ -21,51 +21,25 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H dispetcher.kz >> ~/.ssh/known_hosts
 
-      - name: Create deploy account and move PM2
+      - name: Restore service under www-root
         run: |
           ssh -i ~/.ssh/id_ed25519 root@dispetcher.kz 'bash -s' <<'EOF'
             set -euo pipefail
             export PATH="/usr/lib/ispnodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-            DEPLOY_USER="dispatch-deploy"
-            DEPLOY_HOME="/home/${DEPLOY_USER}"
             APP_DIR="/var/www/www-root/data/apps/dispatcher-system"
-            OLD_PM2_HOME="/var/www/www-root/data/.pm2"
-            NEW_PM2_HOME="${DEPLOY_HOME}/.pm2"
-            PUBKEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN7fdyPEnl9uf0a42j/MRskCgef4gO/UqTKkLROh2G9j github-actions-deploy'
-
-            if ! id "$DEPLOY_USER" >/dev/null 2>&1; then
-              useradd --create-home --shell /bin/bash "$DEPLOY_USER"
-            fi
-            passwd -l "$DEPLOY_USER" >/dev/null 2>&1 || true
-
-            install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$DEPLOY_HOME/.ssh"
-            touch "$DEPLOY_HOME/.ssh/authorized_keys"
-            grep -qxF "$PUBKEY" "$DEPLOY_HOME/.ssh/authorized_keys" || printf '%s\n' "$PUBKEY" >> "$DEPLOY_HOME/.ssh/authorized_keys"
-            chown "$DEPLOY_USER:$DEPLOY_USER" "$DEPLOY_HOME/.ssh/authorized_keys"
-            chmod 600 "$DEPLOY_HOME/.ssh/authorized_keys"
-
-            if [ -d "$APP_DIR" ]; then
-              chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
-            fi
-
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$OLD_PM2_HOME" pm2 delete dispetcher >/dev/null 2>&1 || true
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$OLD_PM2_HOME" pm2 save >/dev/null 2>&1 || true
-
-            install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$NEW_PM2_HOME"
-            sudo -u "$DEPLOY_USER" env PATH="$PATH" PM2_HOME="$NEW_PM2_HOME" NODE_ENV=production pm2 delete dispetcher >/dev/null 2>&1 || true
-            sudo -u "$DEPLOY_USER" env PATH="$PATH" PM2_HOME="$NEW_PM2_HOME" NODE_ENV=production pm2 start /usr/lib/ispnodejs/lib/node_modules/npm/bin/npm-cli.js --name dispetcher --cwd "$APP_DIR" -- start -- --hostname 127.0.0.1 --port 3000
-            sudo -u "$DEPLOY_USER" env PATH="$PATH" PM2_HOME="$NEW_PM2_HOME" pm2 save
-
+            PM2_HOME="/var/www/www-root/data/.pm2"
+            chown -R www-root:www-root "$APP_DIR"
+            mkdir -p "$PM2_HOME"
+            chown -R www-root:www-root "$PM2_HOME"
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 delete dispetcher >/dev/null 2>&1 || true
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 start /usr/lib/ispnodejs/lib/node_modules/npm/bin/npm-cli.js --name dispetcher --cwd "$APP_DIR" -- start -- --hostname 127.0.0.1 --port 3000
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" pm2 save
             for i in $(seq 1 20); do
               curl -fsS http://127.0.0.1:3000/ >/dev/null && break
               sleep 1
             done
             curl -fsS http://127.0.0.1:3000/ >/dev/null
           EOF
-
-      - name: Verify dedicated SSH login
-        run: |
-          ssh -i ~/.ssh/id_ed25519 dispatch-deploy@dispetcher.kz 'whoami; test -d /var/www/www-root/data/apps/dispatcher-system/.git; echo deploy-account-ok'
 
       - name: Public smoke
         run: |
