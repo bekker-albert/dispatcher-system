@@ -23,7 +23,6 @@ export function useReportUiState() {
   const [reportReasons, setReportReasons] = useState<Record<string, string>>({});
   const [editingReportHeaderKey, setEditingReportHeaderKey] = useState<string | null>(null);
   const [reportHeaderDraft, setReportHeaderDraft] = useState("");
-  const [planFactEditing, setPlanFactEditing] = useState(false);
   const [areaShiftCutoffs, setAreaShiftCutoffs] = useState<AreaShiftCutoffMap>(defaultAreaShiftCutoffs);
 
   return {
@@ -57,8 +56,6 @@ export function useReportUiState() {
     setEditingReportHeaderKey,
     reportHeaderDraft,
     setReportHeaderDraft,
-    planFactEditing,
-    setPlanFactEditing,
     areaShiftCutoffs,
     setAreaShiftCutoffs,
   };
