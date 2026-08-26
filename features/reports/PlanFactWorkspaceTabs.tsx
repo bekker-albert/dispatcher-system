@@ -24,14 +24,16 @@ const sourceTabs: Array<{ id: PtoDateTableKey; label: string }> = [
   { id: "survey", label: "Марк замер" },
 ];
 
-const builtInReportLabels: Record<string, string> = {
-  "aa-mining": "ААМ",
-  "ak-altynalmas": "АА",
-  "aa-engineering": "ААЕ",
+const builtInReportInfo: Record<string, { short: string; defaultLabel: string }> = {
+  "aa-mining": { short: "ААМ", defaultLabel: "ТОО AA Mining" },
+  "ak-altynalmas": { short: "АА", defaultLabel: "АО АК Алтыналмас" },
+  "aa-engineering": { short: "ААЕ", defaultLabel: "ТОО AA Engineering" },
 };
 
 function reportTabLabel(customer: ReportCustomerConfig) {
-  return builtInReportLabels[customer.id] ?? customer.label;
+  const builtIn = builtInReportInfo[customer.id];
+  if (!builtIn) return customer.label;
+  return customer.label === builtIn.defaultLabel ? builtIn.short : customer.label;
 }
 
 export function PlanFactWorkspaceTabs({
@@ -51,8 +53,16 @@ export function PlanFactWorkspaceTabs({
   const visibleReports = reportCustomers.filter((customer) => customer.visible);
 
   const createReport = () => {
-    const template = reportCustomers.find((customer) => customer.visible) ?? reportCustomers[0];
-    if (!template) return;
+    const builtInTemplates = reportCustomers.filter((customer) => builtInReportInfo[customer.id]);
+    const fallbackTemplate = builtInTemplates[0] ?? reportCustomers[0];
+    if (!fallbackTemplate) return;
+
+    const templateAnswer = window.prompt("Шаблон новой вкладки: ААМ, АА или ААЕ", reportTabLabel(fallbackTemplate));
+    if (!templateAnswer?.trim()) return;
+    const normalized = templateAnswer.trim().toUpperCase();
+    const template = builtInTemplates.find((customer) => reportTabLabel(customer).toUpperCase() === normalized)
+      ?? fallbackTemplate;
+
     const label = window.prompt("Название новой отчетной вкладки", `${reportTabLabel(template)} копия`);
     if (!label?.trim()) return;
     onCreateReportCopy(template.id, label.trim());
