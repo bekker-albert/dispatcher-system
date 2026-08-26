@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 
-import { formatNumber } from "@/lib/domain/reports/display";
+import { formatNumber, statusColor, statusTextColor } from "@/lib/domain/reports/display";
 import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
+import { Pill } from "@/shared/ui/layout";
 import {
   dispatchPlanFactCellStyle,
   dispatchPlanFactEmptyStyle,
@@ -16,6 +17,7 @@ import {
 type DispatchPlanFactPanelProps = {
   rows: DispatchSummaryRow[];
   dailyMode?: boolean;
+  percent?: number;
 };
 
 type DispatchPlanFactRow = {
@@ -53,7 +55,7 @@ function createDispatchPlanFactRows(rows: DispatchSummaryRow[], dailyMode: boole
     ));
 }
 
-export function DispatchPlanFactPanel({ rows, dailyMode = false }: DispatchPlanFactPanelProps) {
+export function DispatchPlanFactPanel({ rows, dailyMode = false, percent }: DispatchPlanFactPanelProps) {
   const planFactRows = useMemo(() => createDispatchPlanFactRows(rows, dailyMode), [dailyMode, rows]);
 
   return (
@@ -63,7 +65,14 @@ export function DispatchPlanFactPanel({ rows, dailyMode = false }: DispatchPlanF
     >
       <div style={dispatchPlanFactHeaderStyle}>
         <span>{dailyMode ? "Объемы: участок / местонахождение / структура" : "План / факт по структурам"}</span>
-        <span>{planFactRows.length} строк</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span>{planFactRows.length} строк</span>
+          {typeof percent === "number" ? (
+            <Pill bg={statusColor(percent)} color={statusTextColor(percent)}>
+              {percent}%
+            </Pill>
+          ) : null}
+        </div>
       </div>
       {planFactRows.length > 0 ? (
         <table style={dispatchPlanFactTableStyle}>
