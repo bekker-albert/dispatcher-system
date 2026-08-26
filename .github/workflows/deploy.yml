@@ -13,6 +13,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  NEXT_PUBLIC_DATA_PROVIDER: mysql
+  NEXT_TELEMETRY_DISABLED: "1"
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -37,39 +41,32 @@ jobs:
 
       - name: Configure SSH
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H dispetcher.kz >> ~/.ssh/known_hosts
 
       - name: Upload production build
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" "next-build-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/aam-dispatch.kz/next-build-${GITHUB_SHA}.tar.gz"
+          scp -i ~/.ssh/id_ed25519 "next-build-${GITHUB_SHA}.tar.gz" root@dispetcher.kz:/root/
 
       - name: Deploy to production
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SHA: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" <<'EOF'
+          ssh -i ~/.ssh/id_ed25519 root@dispetcher.kz "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" <<'EOF'
             set -euo pipefail
-            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/games"
-            export PM2_HOME="/var/www/dispatcher/data/.pm2"
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             export NODE_OPTIONS="--max-old-space-size=1024"
             export NEXT_TELEMETRY_DISABLED="1"
-            cd /var/www/dispatcher/data/www/aam-dispatch.kz
+            APP_DIR="/var/www/www-root/data/apps/dispatcher-system"
+            PM2_HOME="/var/www/www-root/data/.pm2"
+            ARCHIVE="/root/next-build-${DEPLOY_SHA}.tar.gz"
 
-            node -e 'const [major] = process.versions.node.split(".").map(Number); if (major !== 24) { throw new Error(`Node ${process.versions.node} does not match the dispatcher Node 24 production policy`); }'
+            cd "$APP_DIR"
+            node -e 'const [major] = process.versions.node.split(".").map(Number); if (major !== 24) throw new Error(`Node ${process.versions.node} does not match Node 24 production policy`);'
 
             git fetch --prune origin main
             git cat-file -e "${DEPLOY_SHA}^{commit}"
@@ -77,40 +74,43 @@ jobs:
             test "$(git rev-parse HEAD)" = "${DEPLOY_SHA}"
             npm ci --omit=dev --no-audit --no-fund
 
-            next_archive="next-build-${DEPLOY_SHA}.tar.gz"
             next_tmp=".next-${DEPLOY_SHA}"
             next_previous=".next-previous-${DEPLOY_SHA}"
-            rm -rf "${next_tmp}" "${next_previous}"
-            mkdir "${next_tmp}"
-            tar -xzf "${next_archive}" -C "${next_tmp}" --strip-components=1 .next
-            test -f "${next_tmp}/BUILD_ID"
+            rm -rf "$next_tmp" "$next_previous"
+            mkdir "$next_tmp"
+            tar -xzf "$ARCHIVE" -C "$next_tmp" --strip-components=1 .next
+            test -f "$next_tmp/BUILD_ID"
 
             rollback_next() {
-              if [ -d "${next_previous}" ] && [ ! -d .next ]; then
-                mv "${next_previous}" .next
+              rm -rf .next
+              if [ -d "$next_previous" ]; then
+                mv "$next_previous" .next
+                chown -R www-root:www-root .next
+                sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 reload dispetcher --update-env >/dev/null 2>&1 || true
               fi
             }
             trap rollback_next ERR INT TERM
 
             if [ -d .next ]; then
-              mv .next "${next_previous}"
+              mv .next "$next_previous"
             fi
-            mv "${next_tmp}" .next
+            mv "$next_tmp" .next
+            chown -R www-root:www-root .next
 
-            if /usr/lib/ispnodejs/bin/pm2 reload aam-dispatch --update-env; then
-              trap - ERR INT TERM
-              rm -rf "${next_previous}" "${next_archive}"
-            else
-              rm -rf .next
-              if [ -d "${next_previous}" ]; then
-                mv "${next_previous}" .next
-              fi
-              exit 1
-            fi
+            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 reload dispetcher --update-env
+
+            for i in $(seq 1 20); do
+              curl -fsS http://127.0.0.1:3000/ >/dev/null && break
+              sleep 1
+            done
+            curl -fsS http://127.0.0.1:3000/ >/dev/null
+
+            trap - ERR INT TERM
+            rm -rf "$next_previous" "$ARCHIVE"
           EOF
 
       - name: Production smoke
         env:
-          PRODUCTION_SMOKE_URL: https://aam-dispatch.kz
-          PRODUCTION_SMOKE_API_URL: https://www.aam-dispatch.kz
+          PRODUCTION_SMOKE_URL: https://dispetcher.kz
+          PRODUCTION_SMOKE_API_URL: https://dispetcher.kz
         run: npm run smoke:production
