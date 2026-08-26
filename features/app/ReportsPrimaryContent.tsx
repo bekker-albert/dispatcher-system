@@ -3,6 +3,8 @@
 import type { AppPrimaryContentProps } from "@/features/app/AppPrimaryContentTypes";
 import { useAppReportsModel } from "@/features/app/useAppReportsModel";
 import { useAppReportsScreenProps } from "@/features/app/useAppReportsScreenProps";
+import { usePlanFactWorkspaceController } from "@/features/app/usePlanFactWorkspaceController";
+import { PlanFactWorkspaceTabs } from "@/features/reports/PlanFactWorkspaceTabs";
 import ReportsSection from "@/features/reports/ReportsSection";
 import { databaseConfigured } from "@/lib/data/config";
 
@@ -72,11 +74,15 @@ export function ReportsPrimaryContent({
     models: reportsModel,
     runtime,
   });
+  const planFactWorkspace = usePlanFactWorkspaceController(appState);
 
   return (
-    <ReportsSection
-      {...reportsProps}
-      databaseSyncMessage={databaseConfigured && !appState.ptoDatabaseReady ? appState.ptoDatabaseMessage : ""}
-    />
+    <>
+      <PlanFactWorkspaceTabs {...planFactWorkspace} />
+      <ReportsSection
+        {...reportsProps}
+        databaseSyncMessage={databaseConfigured && !appState.ptoDatabaseReady ? appState.ptoDatabaseMessage : ""}
+      />
+    </>
   );
 }
