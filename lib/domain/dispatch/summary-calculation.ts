@@ -42,6 +42,7 @@ export function createDispatchSummaryRow(vehicle: VehicleRow | undefined, date: 
     location: vehicle?.location ?? "",
     workType: vehicle?.workType ?? "",
     excavator: vehicle?.excavator ?? "",
+    material: "",
     planVolume,
     factVolume,
     workHours,
@@ -88,6 +89,7 @@ export function normalizeDispatchSummaryRow(row: unknown, index: number, fallbac
     location: stringValue(row.location),
     workType: stringValue(row.workType),
     excavator: stringValue(row.excavator),
+    material: stringValue(row.material),
     planVolume: numberValue(row.planVolume),
     factVolume: numberValue(row.factVolume),
     workHours: numberValue(row.workHours),
@@ -114,6 +116,7 @@ function dispatchConsolidationKey(row: DispatchSummaryRow) {
     row.location,
     row.workType,
     row.excavator,
+    row.material ?? "",
   ].map(normalizeLookupValue).join(":");
 }
 
