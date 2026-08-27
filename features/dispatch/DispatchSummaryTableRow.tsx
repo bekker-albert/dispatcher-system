@@ -96,10 +96,18 @@ export function DispatchSummaryTableRow({
   const hoursError = dispatchRowExceedsHourLimit(row);
   const isTruckRow = rowRole === "truck";
   const isLoadingRow = rowRole === "loading";
-  const hideMaterialAndTrips = categoryTab === "Спецтехника"
+  const isDowntimeTab = categoryTab === "Простои";
+  const isRepairTab = categoryTab === "Ремонты";
+  const isNonProductionVehicleTab = categoryTab === "Спецтехника"
     || categoryTab === "Вспомогательная"
     || categoryTab === "Легковая/Пассажирская";
-  const hideActions = categoryTab === "Простои" || categoryTab === "Ремонты";
+  const hideMaterial = isNonProductionVehicleTab || isDowntimeTab || isRepairTab;
+  const hideRentAndWork = isDowntimeTab || isRepairTab;
+  const hideDowntime = isRepairTab;
+  const hideRepair = isDowntimeTab;
+  const hideTrips = isNonProductionVehicleTab || isDowntimeTab || isRepairTab;
+  const hideProductivity = isDowntimeTab || isRepairTab;
+  const hideActions = isDowntimeTab || isRepairTab;
   const displayedTrips = isLoadingRow && typeof linkedTruckTrips === "number"
     ? linkedTruckTrips
     : row.trips;
@@ -217,7 +225,7 @@ export function DispatchSummaryTableRow({
           onChange={(vehicleId) => onUpdateDispatchSummaryVehicle(row.id, vehicleId)}
         />
       </td>
-      {hideMaterialAndTrips ? null : (
+      {hideMaterial ? null : (
         <td style={dispatchSummaryTdStyle}>
           <input
             type="text"
@@ -231,19 +239,27 @@ export function DispatchSummaryTableRow({
           />
         </td>
       )}
-      <td style={dispatchSummaryTdNumberStyle}>
-        <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.rentHours)} onChange={handleNumberChange("rentHours")} style={dispatchSummaryNumberInputStyle} />
-      </td>
-      <td style={dispatchSummaryTdNumberStyle}>
-        <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.workHours)} onChange={handleNumberChange("workHours")} style={dispatchSummaryNumberInputStyle} />
-      </td>
-      <td style={dispatchSummaryTdNumberStyle}>
-        <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.downtimeHours)} onChange={handleNumberChange("downtimeHours")} style={dispatchSummaryNumberInputStyle} />
-      </td>
-      <td style={dispatchSummaryTdNumberStyle}>
-        <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.repairHours)} onChange={handleNumberChange("repairHours")} style={dispatchSummaryNumberInputStyle} />
-      </td>
-      {hideMaterialAndTrips ? null : (
+      {hideRentAndWork ? null : (
+        <>
+          <td style={dispatchSummaryTdNumberStyle}>
+            <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.rentHours)} onChange={handleNumberChange("rentHours")} style={dispatchSummaryNumberInputStyle} />
+          </td>
+          <td style={dispatchSummaryTdNumberStyle}>
+            <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.workHours)} onChange={handleNumberChange("workHours")} style={dispatchSummaryNumberInputStyle} />
+          </td>
+        </>
+      )}
+      {hideDowntime ? null : (
+        <td style={dispatchSummaryTdNumberStyle}>
+          <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.downtimeHours)} onChange={handleNumberChange("downtimeHours")} style={dispatchSummaryNumberInputStyle} />
+        </td>
+      )}
+      {hideRepair ? null : (
+        <td style={dispatchSummaryTdNumberStyle}>
+          <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.repairHours)} onChange={handleNumberChange("repairHours")} style={dispatchSummaryNumberInputStyle} />
+        </td>
+      )}
+      {hideTrips ? null : (
         <td style={dispatchSummaryTdNumberStyle}>
           <input
             disabled={isLoadingRow}
@@ -258,14 +274,16 @@ export function DispatchSummaryTableRow({
           />
         </td>
       )}
-      <td style={dispatchSummaryReadonlyNumberStyle}>
-        {productivityText}
-        {hoursError ? (
-          <div style={{ ...dispatchSummaryMutedTextStyle, color: "#b45309" }}>
-            {dispatchRowHourTotal(row)} / {dispatchShiftHourLimit} ч.
-          </div>
-        ) : null}
-      </td>
+      {hideProductivity ? null : (
+        <td style={dispatchSummaryReadonlyNumberStyle}>
+          {productivityText}
+          {hoursError ? (
+            <div style={{ ...dispatchSummaryMutedTextStyle, color: "#b45309" }}>
+              {dispatchRowHourTotal(row)} / {dispatchShiftHourLimit} ч.
+            </div>
+          ) : null}
+        </td>
+      )}
       {hideActions ? null : (
         <td style={dispatchSummaryActionTdStyle}>
           {!isReadOnly ? (
