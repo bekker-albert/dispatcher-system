@@ -55,6 +55,26 @@ function createDispatchPlanFactRows(rows: DispatchSummaryRow[], dailyMode: boole
     ));
 }
 
+const dailyIdentityCellStyle = {
+  ...dispatchPlanFactStructureCellStyle,
+  width: "1%",
+  whiteSpace: "nowrap",
+} as const;
+
+const dailyStructureCellStyle = {
+  ...dispatchPlanFactStructureCellStyle,
+  whiteSpace: "nowrap",
+} as const;
+
+const dailyNumberCellStyle = {
+  ...dispatchPlanFactCellStyle,
+  width: 96,
+  minWidth: 96,
+  maxWidth: 96,
+  whiteSpace: "nowrap",
+  textAlign: "right",
+} as const;
+
 export function DispatchPlanFactPanel({ rows, dailyMode = false, percent }: DispatchPlanFactPanelProps) {
   const planFactRows = useMemo(() => createDispatchPlanFactRows(rows, dailyMode), [dailyMode, rows]);
 
@@ -75,26 +95,36 @@ export function DispatchPlanFactPanel({ rows, dailyMode = false, percent }: Disp
         </div>
       </div>
       {planFactRows.length > 0 ? (
-        <table style={dispatchPlanFactTableStyle}>
+        <table style={dailyMode ? { ...dispatchPlanFactTableStyle, tableLayout: "auto" } : dispatchPlanFactTableStyle}>
+          {dailyMode ? (
+            <colgroup>
+              <col style={{ width: "1%" }} />
+              <col style={{ width: "1%" }} />
+              <col />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 96 }} />
+            </colgroup>
+          ) : null}
           <thead>
             <tr>
-              {dailyMode ? <th style={dispatchPlanFactStructureCellStyle}>Участок</th> : null}
-              {dailyMode ? <th style={dispatchPlanFactStructureCellStyle}>Местонахождение</th> : null}
-              <th style={dispatchPlanFactStructureCellStyle}>{dailyMode ? "Структура" : ""}</th>
-              <th style={dispatchPlanFactCellStyle}>План</th>
-              <th style={dispatchPlanFactCellStyle}>Факт</th>
-              <th style={dispatchPlanFactCellStyle}>Отклонение</th>
+              {dailyMode ? <th style={dailyIdentityCellStyle}>Участок</th> : null}
+              {dailyMode ? <th style={dailyIdentityCellStyle}>Местонахождение</th> : null}
+              <th style={dailyMode ? dailyStructureCellStyle : dispatchPlanFactStructureCellStyle}>{dailyMode ? "Структура" : ""}</th>
+              <th style={dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle}>План</th>
+              <th style={dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle}>Факт</th>
+              <th style={dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle}>Отклонение</th>
             </tr>
           </thead>
           <tbody>
             {planFactRows.map((row) => (
               <tr key={`${row.area}:${row.location}:${row.structure}`}>
-                {dailyMode ? <td style={dispatchPlanFactStructureCellStyle}>{row.area}</td> : null}
-                {dailyMode ? <td style={dispatchPlanFactStructureCellStyle}>{row.location}</td> : null}
-                <td style={dispatchPlanFactStructureCellStyle}>{row.structure}</td>
-                <td style={dispatchPlanFactCellStyle}>{formatNumber(row.plan)}</td>
-                <td style={dispatchPlanFactCellStyle}>{formatNumber(row.fact)}</td>
-                <td style={{ ...dispatchPlanFactCellStyle, color: row.delta < 0 ? "#991b1b" : "#166534" }}>
+                {dailyMode ? <td style={dailyIdentityCellStyle}>{row.area}</td> : null}
+                {dailyMode ? <td style={dailyIdentityCellStyle}>{row.location}</td> : null}
+                <td style={dailyMode ? dailyStructureCellStyle : dispatchPlanFactStructureCellStyle}>{row.structure}</td>
+                <td style={dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle}>{formatNumber(row.plan)}</td>
+                <td style={dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle}>{formatNumber(row.fact)}</td>
+                <td style={{ ...(dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle), color: row.delta < 0 ? "#991b1b" : "#166534" }}>
                   {formatNumber(row.delta)}
                 </td>
               </tr>
