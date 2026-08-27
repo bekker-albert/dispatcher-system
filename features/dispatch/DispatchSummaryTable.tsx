@@ -52,6 +52,17 @@ type DispatchSummaryGroup = {
 
 const dispatchSummaryStructureMinWidth = 220;
 
+const dispatchSummaryFixedColumnWidths: Partial<Record<number, number>> = {
+  4: 90,
+  5: 160,
+  6: 76,
+  7: 76,
+  8: 76,
+  9: 76,
+  10: 70,
+  11: 82,
+};
+
 const dispatchSummaryHeaders = [
   ["Участок", dispatchSummaryThStyle],
   ["Местонахождение", dispatchSummaryThStyle],
@@ -98,6 +109,23 @@ function headerLabel(index: number, categoryTab: DispatchSummaryCategoryTab) {
   if (index === 13) return categoryTab === "Ремонты" ? "Группа ремонта" : "Группа простоя";
   if (index === 14) return categoryTab === "Ремонты" ? "Вид ремонта" : "Причина простоя";
   return dispatchSummaryHeaders[index][0];
+}
+
+function columnSizingStyle(index: number) {
+  const fixedWidth = dispatchSummaryFixedColumnWidths[index];
+  if (fixedWidth) {
+    return {
+      width: fixedWidth,
+      minWidth: fixedWidth,
+      maxWidth: fixedWidth,
+    };
+  }
+
+  if (index === 2) {
+    return { minWidth: dispatchSummaryStructureMinWidth };
+  }
+
+  return undefined;
 }
 
 function normalizeGroupKey(value: string) {
@@ -268,13 +296,19 @@ export function DispatchSummaryTable({
   return (
     <div style={dispatchSummaryTableScrollStyle}>
       <table style={{ ...dispatchSummaryTableStyle, minWidth: 0, tableLayout: "auto" }}>
+        <colgroup>
+          {visibleColumnIndexes.map((index) => (
+            <col key={`column-${index}`} style={columnSizingStyle(index)} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
             {visibleColumnIndexes.map((index) => {
               const [, style] = dispatchSummaryHeaders[index];
-              const resolvedStyle = index === 2
-                ? { ...style, minWidth: dispatchSummaryStructureMinWidth }
-                : style;
+              const resolvedStyle = {
+                ...style,
+                ...columnSizingStyle(index),
+              };
               return <th key={`${index}-${headerLabel(index, categoryTab)}`} style={resolvedStyle}>{headerLabel(index, categoryTab)}</th>;
             })}
           </tr>
