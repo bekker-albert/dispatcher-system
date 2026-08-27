@@ -50,23 +50,7 @@ type DispatchSummaryGroup = {
   unassignedRows: DispatchSummaryRow[];
 };
 
-const dispatchSummaryColumns = [
-  140,
-  150,
-  220,
-  280,
-  90,
-  160,
-  76,
-  76,
-  76,
-  76,
-  70,
-  82,
-  68,
-  200,
-  240,
-];
+const dispatchSummaryStructureMinWidth = 220;
 
 const dispatchSummaryHeaders = [
   ["Участок", dispatchSummaryThStyle],
@@ -277,23 +261,21 @@ export function DispatchSummaryTable({
       ? catalogs.repair
       : [];
   const hiddenColumns = hiddenColumnIndexes(categoryTab);
-  const visibleColumnIndexes = dispatchSummaryColumns
+  const visibleColumnIndexes = dispatchSummaryHeaders
     .map((_, index) => index)
     .filter((index) => !hiddenColumns.has(index));
 
   return (
     <div style={dispatchSummaryTableScrollStyle}>
-      <table style={dispatchSummaryTableStyle}>
-        <colgroup>
-          {visibleColumnIndexes.map((index) => (
-            <col key={`${dispatchSummaryColumns[index]}-${index}`} style={{ width: dispatchSummaryColumns[index] }} />
-          ))}
-        </colgroup>
+      <table style={{ ...dispatchSummaryTableStyle, minWidth: 0, tableLayout: "auto" }}>
         <thead>
           <tr>
             {visibleColumnIndexes.map((index) => {
               const [, style] = dispatchSummaryHeaders[index];
-              return <th key={`${index}-${headerLabel(index, categoryTab)}`} style={style}>{headerLabel(index, categoryTab)}</th>;
+              const resolvedStyle = index === 2
+                ? { ...style, minWidth: dispatchSummaryStructureMinWidth }
+                : style;
+              return <th key={`${index}-${headerLabel(index, categoryTab)}`} style={resolvedStyle}>{headerLabel(index, categoryTab)}</th>;
             })}
           </tr>
         </thead>
