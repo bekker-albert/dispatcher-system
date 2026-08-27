@@ -26,7 +26,6 @@ import {
   dispatchSummaryTdNumberStyle,
   dispatchSummaryTdStyle,
   dispatchSummaryTruckCellStyle,
-  dispatchSummaryTruckLinkCellStyle,
   dispatchSummaryTruckRowStyle,
 } from "@/features/dispatch/dispatchSectionStyles";
 import {
@@ -50,6 +49,7 @@ export type DispatchSummaryTableRowProps = {
   row: DispatchSummaryRow;
   isReadOnly: boolean;
   rowRole: "loading" | "truck" | "unassigned";
+  linkedTruckTrips?: number;
   vehicle?: VehicleRow;
   vehicles: VehicleRow[];
   areaOptions: string[];
@@ -77,6 +77,7 @@ export function DispatchSummaryTableRow({
   row,
   isReadOnly,
   rowRole,
+  linkedTruckTrips,
   vehicle,
   vehicles,
   areaOptions,
@@ -93,6 +94,10 @@ export function DispatchSummaryTableRow({
   const productivityText = formatPtoCellNumber(rowView.productivity);
   const hoursError = dispatchRowExceedsHourLimit(row);
   const isTruckRow = rowRole === "truck";
+  const isLoadingRow = rowRole === "loading";
+  const displayedTrips = isLoadingRow && typeof linkedTruckTrips === "number"
+    ? linkedTruckTrips
+    : row.trips;
   const rowStyle = {
     ...(isTruckRow ? dispatchSummaryTruckRowStyle : dispatchSummaryLoaderRowStyle),
     ...(hoursError ? dispatchSummaryBadRowStyle : {}),
@@ -143,9 +148,11 @@ export function DispatchSummaryTableRow({
   return (
     <tr style={rowStyle}>
       {isTruckRow ? (
-        <td colSpan={3} style={dispatchSummaryTruckLinkCellStyle}>
-          ↳
-        </td>
+        <>
+          <td style={dispatchSummaryTdStyle} />
+          <td style={dispatchSummaryTdStyle} />
+          <td style={dispatchSummaryTdStyle} />
+        </>
       ) : (
         <>
           <td style={dispatchSummaryTdStyle}>
@@ -176,20 +183,22 @@ export function DispatchSummaryTableRow({
       )}
       <td style={vehicleCellStyle}>
         <div
-          title={equipmentName || "Техника не выбрана"}
+          title={equipmentName || (isTruckRow ? "Выберите самосвал по гаражному номеру" : "Техника не выбрана")}
           style={{
-            ...dispatchSummaryInputStyle,
-            paddingLeft: isTruckRow ? 18 : undefined,
-            background: "#f8fafc",
             minHeight: 28,
             display: "flex",
             alignItems: "center",
+            gap: 6,
+            padding: "0 4px",
+            fontWeight: equipmentName ? 600 : 400,
+            color: equipmentName ? "#0f172a" : "#64748b",
           }}
         >
-          {equipmentName || "—"}
+          {isTruckRow ? <span aria-hidden>↳</span> : null}
+          <span>{equipmentName || (isTruckRow ? "Выберите самосвал" : "—")}</span>
         </div>
         {row.excavator && isTruckRow ? (
-          <div style={{ ...dispatchSummaryMutedTextStyle, marginTop: 3 }}>под {row.excavator}</div>
+          <div style={{ ...dispatchSummaryMutedTextStyle, marginTop: 3, paddingLeft: 22 }}>под {row.excavator}</div>
         ) : null}
       </td>
       <td style={dispatchSummaryTdStyle}>
@@ -224,7 +233,17 @@ export function DispatchSummaryTableRow({
         <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.repairHours)} onChange={handleNumberChange("repairHours")} style={dispatchSummaryNumberInputStyle} />
       </td>
       <td style={dispatchSummaryTdNumberStyle}>
-        <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.trips)} onChange={handleNumberChange("trips")} style={dispatchSummaryNumberInputStyle} />
+        <input
+          disabled={isLoadingRow}
+          readOnly={isReadOnly || isLoadingRow}
+          inputMode="numeric"
+          step={1}
+          min={0}
+          value={isLoadingRow ? String(displayedTrips) : dispatchNumberInputValue(displayedTrips)}
+          onChange={handleNumberChange("trips")}
+          style={dispatchSummaryNumberInputStyle}
+          title={isLoadingRow ? "Сумма рейсов привязанных самосвалов" : undefined}
+        />
       </td>
       <td style={dispatchSummaryReadonlyNumberStyle}>
         {productivityText}
