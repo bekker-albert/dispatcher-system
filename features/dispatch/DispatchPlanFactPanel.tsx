@@ -80,7 +80,7 @@ export function DispatchPlanFactPanel({ rows, dailyMode = false, percent }: Disp
             <tr>
               {dailyMode ? <th style={dispatchPlanFactStructureCellStyle}>Участок</th> : null}
               {dailyMode ? <th style={dispatchPlanFactStructureCellStyle}>Местонахождение</th> : null}
-              <th style={dispatchPlanFactStructureCellStyle}>Структура</th>
+              <th style={dispatchPlanFactStructureCellStyle}>{dailyMode ? "Структура" : ""}</th>
               <th style={dispatchPlanFactCellStyle}>План</th>
               <th style={dispatchPlanFactCellStyle}>Факт</th>
               <th style={dispatchPlanFactCellStyle}>Отклонение</th>
