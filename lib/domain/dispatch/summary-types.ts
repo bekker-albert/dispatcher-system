@@ -12,6 +12,7 @@ export type DispatchSummaryRow = {
   location: string;
   workType: string;
   excavator: string;
+  material?: string;
   planVolume: number;
   factVolume: number;
   workHours: number;
@@ -29,6 +30,7 @@ export type DispatchSummaryTextField =
   | "location"
   | "workType"
   | "excavator"
+  | "material"
   | "reason"
   | "comment";
 
