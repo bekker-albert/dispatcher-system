@@ -16,7 +16,20 @@ const reportCustomerCodeLabels: Record<string, string> = {
   AAM: "ААМ",
 };
 
+const compactReportDateFormatter = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+function compactReportDate(reportDate: string) {
+  return compactReportDateFormatter.format(new Date(`${reportDate}T00:00:00`));
+}
+
 function dispatchShiftTitle(itemId: string | undefined, reportDate: string) {
+  if (itemId === "dispatch-daily-volumes") {
+    return `Суточные объемы за ${compactReportDate(reportDate)}`;
+  }
   if (itemId === "dispatch-night") {
     return `Заполнение ночной сводки за ${formatReportDate(reportDate)}`;
   }
