@@ -63,6 +63,12 @@ assert.equal(productionMysqlConfig.serverDatabaseConfigured, true);
 assert.equal(productionMysqlConfig.supabaseBackendConfigured, false);
 assert.equal(productionMysqlConfig.supabaseConfigured, true);
 
+const dispetcherBrowserConfig = getSupabaseRuntimeConfig({
+  NODE_ENV: "production",
+}, "dispetcher.kz");
+assert.equal(dispetcherBrowserConfig.serverDatabaseConfigured, true);
+assert.equal(dispetcherBrowserConfig.supabaseConfigured, true);
+
 assert.match(envExampleSource, /NEXT_PUBLIC_ALLOW_PRODUCTION_SUPABASE_FALLBACK=false/);
 assert.match(envExampleSource, /AUTH_REQUIRED=false is blocked in production/);
 assert.doesNotMatch(supabaseSchemas, /create policy "[^"]* anon write"/i);
