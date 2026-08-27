@@ -211,10 +211,13 @@ export const dispatchSuggestionStyle: CSSProperties = {
 
 export const dispatchSummaryTableScrollStyle: CSSProperties = {
   flex: "1 1 auto",
+  width: "100%",
+  maxWidth: "100%",
   minHeight: 420,
   height: "calc(100dvh - 335px)",
   maxHeight: "none",
-  overflow: "auto",
+  overflowY: "auto",
+  overflowX: "hidden",
   borderWidth: 1,
   borderStyle: "solid",
   borderColor: "#e2e8f0",
@@ -223,10 +226,11 @@ export const dispatchSummaryTableScrollStyle: CSSProperties = {
 };
 
 export const dispatchSummaryTableStyle: CSSProperties = {
-  width: "max-content",
-  minWidth: 1290,
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
   borderCollapse: "collapse",
-  tableLayout: "fixed",
+  tableLayout: "auto",
   fontSize: 12,
 };
 
@@ -331,6 +335,7 @@ export const dispatchSummaryMutedTextStyle: CSSProperties = {
 
 export const dispatchSummaryInputStyle: CSSProperties = {
   width: "100%",
+  maxWidth: "100%",
   minWidth: 0,
   boxSizing: "border-box",
   borderWidth: 1,
