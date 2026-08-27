@@ -28,10 +28,6 @@ import {
   dispatchSummaryTruckCellStyle,
   dispatchSummaryTruckRowStyle,
 } from "@/features/dispatch/dispatchSectionStyles";
-import {
-  dispatchMaterialEmptyValue,
-  dispatchMaterialPlaceholder,
-} from "./dispatchMaterialRules";
 import { DispatchVehiclePicker } from "./DispatchVehiclePicker";
 import { buildDispatchVehicleLabel } from "./dispatchVehicleLabel";
 import {
@@ -50,6 +46,7 @@ export type DispatchSummaryTableRowProps = {
   isReadOnly: boolean;
   rowRole: "loading" | "truck" | "unassigned";
   linkedTruckTrips?: number;
+  hasLinkedTrucks?: boolean;
   vehicle?: VehicleRow;
   vehicles: VehicleRow[];
   areaOptions: string[];
@@ -78,6 +75,7 @@ export function DispatchSummaryTableRow({
   isReadOnly,
   rowRole,
   linkedTruckTrips,
+  hasLinkedTrucks = false,
   vehicle,
   vehicles,
   areaOptions,
@@ -98,6 +96,7 @@ export function DispatchSummaryTableRow({
   const displayedTrips = isLoadingRow && typeof linkedTruckTrips === "number"
     ? linkedTruckTrips
     : row.trips;
+  const materialLockedToTrucks = isLoadingRow && hasLinkedTrucks;
   const rowStyle = {
     ...(isTruckRow ? dispatchSummaryTruckRowStyle : dispatchSummaryLoaderRowStyle),
     ...(hoursError ? dispatchSummaryBadRowStyle : {}),
@@ -116,7 +115,9 @@ export function DispatchSummaryTableRow({
     return getDispatchStructureOptionsFromIndex(ptoPlanIndex, row.area, row.location);
   }, [ptoPlanIndex, row.area, row.location, structureOptions]);
 
-  const handleTextChange = (field: DispatchSummaryTextField) => (event: ChangeEvent<HTMLSelectElement>) => {
+  const handleTextChange = (field: DispatchSummaryTextField) => (
+    event: ChangeEvent<HTMLSelectElement | HTMLInputElement>,
+  ) => {
     onUpdateDispatchSummaryText(row.id, field, event.target.value);
   };
   const handleAreaChange = (event: ChangeEvent<HTMLSelectElement>) => {
@@ -197,9 +198,6 @@ export function DispatchSummaryTableRow({
           {isTruckRow ? <span aria-hidden>↳</span> : null}
           <span>{equipmentName || (isTruckRow ? "Выберите самосвал" : "—")}</span>
         </div>
-        {row.excavator && isTruckRow ? (
-          <div style={{ ...dispatchSummaryMutedTextStyle, marginTop: 3, paddingLeft: 22 }}>под {row.excavator}</div>
-        ) : null}
       </td>
       <td style={dispatchSummaryTdStyle}>
         <DispatchVehiclePicker
@@ -211,15 +209,18 @@ export function DispatchSummaryTableRow({
           onChange={(vehicleId) => onUpdateDispatchSummaryVehicle(row.id, vehicleId)}
         />
       </td>
-      {isTruckRow ? (
-        <td style={dispatchSummaryTdStyle} />
-      ) : (
-        <td style={dispatchSummaryTdStyle}>
-          <select disabled value={dispatchMaterialEmptyValue} style={dispatchSummaryInputStyle} title="Материал не равен местонахождению">
-            <option value={dispatchMaterialEmptyValue}>{dispatchMaterialPlaceholder}</option>
-          </select>
-        </td>
-      )}
+      <td style={dispatchSummaryTdStyle}>
+        <input
+          type="text"
+          disabled={materialLockedToTrucks}
+          readOnly={isReadOnly || materialLockedToTrucks}
+          value={materialLockedToTrucks ? "" : (row.material ?? "")}
+          onChange={handleTextChange("material")}
+          placeholder={materialLockedToTrucks ? "—" : "Материал"}
+          style={dispatchSummaryInputStyle}
+          title={materialLockedToTrucks ? "Материал задается по каждому самосвалу" : undefined}
+        />
+      </td>
       <td style={dispatchSummaryTdNumberStyle}>
         <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.rentHours)} onChange={handleNumberChange("rentHours")} style={dispatchSummaryNumberInputStyle} />
       </td>
