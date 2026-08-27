@@ -16,6 +16,10 @@ type DispatchVehiclePickerProps = {
   onChange: (vehicleId: string) => void;
 };
 
+function isVehicleType(vehicle: VehicleRow, expected: string) {
+  return normalizeLookupValue(vehicle.vehicleType) === normalizeLookupValue(expected);
+}
+
 export function DispatchVehiclePicker({
   disabled,
   isTruckRow,
@@ -26,11 +30,11 @@ export function DispatchVehiclePicker({
 }: DispatchVehiclePickerProps) {
   const listId = useId();
   const availableVehicles = useMemo(() => (
-    isTruckRow
-      ? vehicles
-      : vehicles.filter((item) => (
-          normalizeLookupValue(item.vehicleType) === normalizeLookupValue("Погрузочная")
-        ))
+    vehicles.filter((item) => (
+      isTruckRow
+        ? isVehicleType(item, "Транспортировочная")
+        : isVehicleType(item, "Погрузочная")
+    ))
   ), [isTruckRow, vehicles]);
   const selectedGarageNumber = vehicle?.garageNumber.trim() ?? "";
 
