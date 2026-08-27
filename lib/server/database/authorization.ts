@@ -113,6 +113,11 @@ export function getDatabaseAccessRequirement({
     return { level: "authenticated" };
   }
 
+  if (resource === "dispatch") {
+    if (action === "load-reason-catalogs") return { level: "authenticated" };
+    if (action === "save-reason-catalogs") return { level: "edit", tabIds: ["admin"] };
+  }
+
   if (resource === "pto") {
     return tabRequirement("pto", action);
   }
