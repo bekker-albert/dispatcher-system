@@ -1,7 +1,7 @@
 import { errorToMessage } from "../utils/normalizers";
 import { databaseApiUrlForHostname } from "./api-url";
 
-export type DatabaseResource = "status" | "vehicles" | "settings" | "app-state" | "pto";
+export type DatabaseResource = "status" | "vehicles" | "settings" | "app-state" | "pto" | "dispatch";
 
 export type DatabaseAction =
   | "status"
@@ -24,6 +24,8 @@ export type DatabaseAction =
   | "delete-bucket-values"
   | "save-client-snapshot"
   | "load-client-snapshots"
+  | "load-reason-catalogs"
+  | "save-reason-catalogs"
   | "savePatch";
 
 type DatabaseResponse<T> = {
