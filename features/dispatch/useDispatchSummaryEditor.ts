@@ -19,6 +19,7 @@ import {
   isDispatchHourField,
   parseDispatchIntegerCell,
 } from "./dispatchHoursValidation";
+import { buildDispatchVehicleLabel } from "./dispatchVehicleLabel";
 
 type AddAdminLog = (entry: AdminLogInput) => void;
 
@@ -175,22 +176,10 @@ export function useDispatchSummaryEditor({
       if (row.id !== id) return row;
       if (!vehicle) return { ...row, vehicleId: null, vehicleName: "" };
 
-      const nextVehicleRow = createDispatchSummaryRow(vehicle, row.date, row.shift, row.id);
       return {
         ...row,
         vehicleId: vehicle.id,
-        vehicleName: nextVehicleRow.vehicleName,
-        area: nextVehicleRow.area,
-        location: nextVehicleRow.location,
-        workType: nextVehicleRow.workType,
-        excavator: nextVehicleRow.excavator,
-        planVolume: nextVehicleRow.planVolume,
-        factVolume: nextVehicleRow.factVolume,
-        workHours: nextVehicleRow.workHours,
-        rentHours: nextVehicleRow.rentHours,
-        repairHours: nextVehicleRow.repairHours,
-        downtimeHours: nextVehicleRow.downtimeHours,
-        trips: nextVehicleRow.trips,
+        vehicleName: buildDispatchVehicleLabel(vehicle),
       };
     }));
   }, [dispatchVehicleOptions, isDailyDispatchShift, setDispatchSummaryRows]);
