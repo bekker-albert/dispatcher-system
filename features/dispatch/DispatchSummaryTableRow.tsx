@@ -10,6 +10,7 @@ import {
   type DispatchSummaryRow,
   type DispatchSummaryTextField,
 } from "@/lib/domain/dispatch/summary";
+import type { DispatchReasonCatalogGroup } from "@/lib/domain/dispatch/reason-catalog";
 import { formatPtoCellNumber } from "@/lib/domain/pto/formatting";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
@@ -47,6 +48,7 @@ export type DispatchSummaryTableRowProps = {
   isReadOnly: boolean;
   rowRole: "loading" | "truck" | "unassigned";
   categoryTab: DispatchSummaryCategoryTab;
+  reasonGroups: DispatchReasonCatalogGroup[];
   linkedTruckTrips?: number;
   hasLinkedTrucks?: boolean;
   vehicle?: VehicleRow;
@@ -77,6 +79,7 @@ export function DispatchSummaryTableRow({
   isReadOnly,
   rowRole,
   categoryTab,
+  reasonGroups,
   linkedTruckTrips,
   hasLinkedTrucks = false,
   vehicle,
@@ -98,16 +101,17 @@ export function DispatchSummaryTableRow({
   const isLoadingRow = rowRole === "loading";
   const isDowntimeTab = categoryTab === "Простои";
   const isRepairTab = categoryTab === "Ремонты";
+  const isReasonTab = isDowntimeTab || isRepairTab;
   const isNonProductionVehicleTab = categoryTab === "Спецтехника"
     || categoryTab === "Вспомогательная"
     || categoryTab === "Легковая/Пассажирская";
-  const hideMaterial = isNonProductionVehicleTab || isDowntimeTab || isRepairTab;
-  const hideRentAndWork = isDowntimeTab || isRepairTab;
+  const hideMaterial = isNonProductionVehicleTab || isReasonTab;
+  const hideRentAndWork = isReasonTab;
   const hideDowntime = isRepairTab;
   const hideRepair = isDowntimeTab;
-  const hideTrips = isNonProductionVehicleTab || isDowntimeTab || isRepairTab;
-  const hideProductivity = isDowntimeTab || isRepairTab;
-  const hideActions = isDowntimeTab || isRepairTab;
+  const hideTrips = isNonProductionVehicleTab || isReasonTab;
+  const hideProductivity = isReasonTab;
+  const hideActions = isReasonTab;
   const displayedTrips = isLoadingRow && typeof linkedTruckTrips === "number"
     ? linkedTruckTrips
     : row.trips;
@@ -129,6 +133,13 @@ export function DispatchSummaryTableRow({
 
     return getDispatchStructureOptionsFromIndex(ptoPlanIndex, row.area, row.location);
   }, [ptoPlanIndex, row.area, row.location, structureOptions]);
+
+  const reasonGroupValue = isRepairTab ? row.repairReasonGroup : row.downtimeReasonGroup;
+  const reasonValue = isRepairTab ? row.repairReason : row.downtimeReason;
+  const selectedReasonGroup = reasonGroups.find((group) => (
+    normalizeLookupValue(group.name) === normalizeLookupValue(reasonGroupValue)
+  ));
+  const reasonItems = selectedReasonGroup?.items ?? [];
 
   const handleTextChange = (field: DispatchSummaryTextField) => (
     event: ChangeEvent<HTMLSelectElement | HTMLInputElement>,
@@ -157,6 +168,22 @@ export function DispatchSummaryTableRow({
   };
   const handleNumberChange = (field: DispatchSummaryNumberField) => (event: ChangeEvent<HTMLInputElement>) => {
     onUpdateDispatchSummaryNumber(row.id, field, event.target.value);
+  };
+  const handleReasonGroupChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    if (isRepairTab) {
+      onUpdateDispatchSummaryText(row.id, "repairReasonGroup", value);
+      onUpdateDispatchSummaryText(row.id, "repairReason", "");
+    } else {
+      onUpdateDispatchSummaryText(row.id, "downtimeReasonGroup", value);
+      onUpdateDispatchSummaryText(row.id, "downtimeReason", "");
+    }
+    onUpdateDispatchSummaryText(row.id, "reason", "");
+  };
+  const handleReasonChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    onUpdateDispatchSummaryText(row.id, isRepairTab ? "repairReason" : "downtimeReason", value);
+    onUpdateDispatchSummaryText(row.id, "reason", value);
   };
 
   const equipmentName = vehicle ? buildDispatchVehicleLabel(vehicle) : row.vehicleName.trim();
@@ -300,6 +327,42 @@ export function DispatchSummaryTableRow({
           ) : null}
         </td>
       )}
+      {isReasonTab ? (
+        <>
+          <td style={dispatchSummaryTdStyle}>
+            <select
+              disabled={isReadOnly || reasonGroups.length === 0}
+              value={reasonGroupValue}
+              onChange={handleReasonGroupChange}
+              style={dispatchSummaryInputStyle}
+            >
+              <option value="">{reasonGroups.length === 0 ? "Справочник пуст" : "Выберите группу"}</option>
+              {reasonGroups.map((group) => (
+                <option key={group.id} value={group.name}>{group.name}</option>
+              ))}
+            </select>
+          </td>
+          <td style={dispatchSummaryTdStyle}>
+            <select
+              disabled={isReadOnly || !reasonGroupValue || reasonItems.length === 0}
+              value={reasonValue}
+              onChange={handleReasonChange}
+              style={dispatchSummaryInputStyle}
+            >
+              <option value="">
+                {!reasonGroupValue
+                  ? "Сначала выберите группу"
+                  : reasonItems.length === 0
+                    ? "Нет значений второго уровня"
+                    : isRepairTab ? "Выберите вид ремонта" : "Выберите причину"}
+              </option>
+              {reasonItems.map((item) => (
+                <option key={item.id} value={item.name}>{item.name}</option>
+              ))}
+            </select>
+          </td>
+        </>
+      ) : null}
     </tr>
   );
 }
