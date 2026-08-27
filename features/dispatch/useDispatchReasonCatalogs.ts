@@ -13,6 +13,26 @@ type CatalogResponse = {
   error?: unknown;
 };
 
+async function requestCatalogs(action: "load-reason-catalogs" | "save-reason-catalogs", catalogs?: DispatchReasonCatalogs) {
+  const response = await fetch("/api/database", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-dispatcher-request": "same-origin",
+    },
+    body: JSON.stringify({
+      resource: "dispatch",
+      action,
+      payload: catalogs ? { catalogs } : {},
+    }),
+  });
+  const body = await response.json() as CatalogResponse;
+  if (!response.ok) {
+    throw new Error(typeof body.error === "string" ? body.error : "Не удалось обработать справочники.");
+  }
+  return body;
+}
+
 export function useDispatchReasonCatalogs() {
   const [catalogs, setCatalogs] = useState<DispatchReasonCatalogs>(emptyDispatchReasonCatalogs);
   const [loading, setLoading] = useState(true);
@@ -23,9 +43,7 @@ export function useDispatchReasonCatalogs() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/dispatch/reason-catalogs", { cache: "no-store" });
-      const body = await response.json() as CatalogResponse;
-      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Не удалось загрузить справочники.");
+      const body = await requestCatalogs("load-reason-catalogs");
       setCatalogs(normalizeDispatchReasonCatalogs(body.catalogs));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить справочники.");
@@ -45,13 +63,7 @@ export function useDispatchReasonCatalogs() {
     setSaving(true);
     setError("");
     try {
-      const response = await fetch("/api/dispatch/reason-catalogs", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ catalogs: normalized }),
-      });
-      const body = await response.json() as CatalogResponse;
-      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Не удалось сохранить справочники.");
+      const body = await requestCatalogs("save-reason-catalogs", normalized);
       const saved = normalizeDispatchReasonCatalogs(body.catalogs);
       setCatalogs(saved);
       return saved;
