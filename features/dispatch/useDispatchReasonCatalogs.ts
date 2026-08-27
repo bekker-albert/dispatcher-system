@@ -64,5 +64,5 @@ export function useDispatchReasonCatalogs() {
     }
   }, [catalogs]);
 
-  return { catalogs, loading, saving, error, reload, save };
+  return { catalogs, setCatalogs, loading, saving, error, reload, save };
 }
