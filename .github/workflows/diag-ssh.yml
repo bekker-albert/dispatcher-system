@@ -1,4 +1,4 @@
-name: Restore dispetcher
+name: Diagnose production database
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  restore:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
       - name: Prepare SSH key
@@ -21,27 +21,42 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H dispetcher.kz >> ~/.ssh/known_hosts
 
-      - name: Restore service under www-root
+      - name: Inspect database setup without secrets
         run: |
           ssh -i ~/.ssh/id_ed25519 root@dispetcher.kz 'bash -s' <<'EOF'
-            set -euo pipefail
-            export PATH="/usr/lib/ispnodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            set -u
             APP_DIR="/var/www/www-root/data/apps/dispatcher-system"
-            PM2_HOME="/var/www/www-root/data/.pm2"
-            chown -R www-root:www-root "$APP_DIR"
-            mkdir -p "$PM2_HOME"
-            chown -R www-root:www-root "$PM2_HOME"
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 delete dispetcher >/dev/null 2>&1 || true
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" NODE_ENV=production pm2 start /usr/lib/ispnodejs/lib/node_modules/npm/bin/npm-cli.js --name dispetcher --cwd "$APP_DIR" -- start -- --hostname 127.0.0.1 --port 3000
-            sudo -u www-root env PATH="$PATH" PM2_HOME="$PM2_HOME" pm2 save
-            for i in $(seq 1 20); do
-              curl -fsS http://127.0.0.1:3000/ >/dev/null && break
-              sleep 1
-            done
-            curl -fsS http://127.0.0.1:3000/ >/dev/null
-          EOF
+            ENV_FILE="$APP_DIR/.env.local"
 
-      - name: Public smoke
-        run: |
-          curl -fsSI https://dispetcher.kz/ | head -n 10
-          curl -fsS https://dispetcher.kz/ | grep -Eo '<title>[^<]*</title>' | head -n 1
+            echo "=== ENV FILE ==="
+            echo "exists=$([ -f "$ENV_FILE" ] && echo yes || echo no)"
+            if [ -f "$ENV_FILE" ]; then
+              grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$ENV_FILE" | cut -d= -f1 | sort | sed 's/$/=SET/'
+            fi
+
+            echo "=== REQUIRED DB KEYS ==="
+            for key in DB_NAME DB_USER DB_PASSWORD DB_HOST DB_PORT; do
+              if [ -f "$ENV_FILE" ] && grep -qE "^${key}=" "$ENV_FILE"; then
+                value=$(grep -E "^${key}=" "$ENV_FILE" | tail -n1 | cut -d= -f2-)
+                echo "$key=$([ -n "$value" ] && echo SET || echo EMPTY)"
+              else
+                echo "$key=MISSING"
+              fi
+            done
+
+            echo "=== MYSQL SERVICE ==="
+            command -v mariadb || true
+            command -v mysql || true
+            systemctl is-active mariadb 2>/dev/null || true
+            systemctl is-active mysql 2>/dev/null || true
+
+            echo "=== DATABASES VIA LOCAL ROOT SOCKET ==="
+            if command -v mariadb >/dev/null 2>&1; then
+              mariadb -NBe 'SHOW DATABASES' 2>&1 | head -n 30 || true
+            elif command -v mysql >/dev/null 2>&1; then
+              mysql -NBe 'SHOW DATABASES' 2>&1 | head -n 30 || true
+            fi
+
+            echo "=== LOCAL API STATUS ==="
+            curl -sS -i http://127.0.0.1:3000/api/database | head -n 20 || true
+          EOF
