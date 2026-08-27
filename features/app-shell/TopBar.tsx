@@ -23,6 +23,9 @@ export function TopBar({
   onSelectReportDate,
   onOpenProfile,
 }: TopBarProps) {
+  const activeItemId = trail.childId ?? trail.itemId;
+  const dateMovedToTitle = activeItemId === "dispatch-daily-volumes";
+
   return (
     <header className="erp-topbar no-print">
       <div className="erp-topbar__left">
@@ -34,14 +37,16 @@ export function TopBar({
         />
       </div>
       <div className="erp-topbar__right">
-        <label className="erp-topbar__date">
-          <span>Дата</span>
-          <input
-            type="date"
-            value={reportDate}
-            onChange={(event) => onSelectReportDate(event.target.value)}
-          />
-        </label>
+        {!dateMovedToTitle ? (
+          <label className="erp-topbar__date">
+            <span>Дата</span>
+            <input
+              type="date"
+              value={reportDate}
+              onChange={(event) => onSelectReportDate(event.target.value)}
+            />
+          </label>
+        ) : null}
         <AuthSessionButton onOpenProfile={onOpenProfile} />
       </div>
     </header>
