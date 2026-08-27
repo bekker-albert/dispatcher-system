@@ -80,6 +80,16 @@ const dispatchSummaryHeaders = [
   ["", dispatchSummaryThStyle],
 ] as const;
 
+function hidesMaterialAndTrips(categoryTab: DispatchSummaryCategoryTab) {
+  return categoryTab === "Спецтехника"
+    || categoryTab === "Вспомогательная"
+    || categoryTab === "Легковая/Пассажирская";
+}
+
+function hidesActions(categoryTab: DispatchSummaryCategoryTab) {
+  return categoryTab === "Простои" || categoryTab === "Ремонты";
+}
+
 function normalizeGroupKey(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -234,20 +244,27 @@ export function DispatchSummaryTable({
   const groups = useMemo(() => (
     createDispatchSummaryGroups(rows, vehicleById, categoryTab)
   ), [categoryTab, rows, vehicleById]);
+  const hideMaterialAndTrips = hidesMaterialAndTrips(categoryTab);
+  const hideActions = hidesActions(categoryTab);
+  const visibleColumnIndexes = dispatchSummaryColumns
+    .map((_, index) => index)
+    .filter((index) => !(hideMaterialAndTrips && (index === 5 || index === 10)))
+    .filter((index) => !(hideActions && index === 12));
 
   return (
     <div style={dispatchSummaryTableScrollStyle}>
       <table style={dispatchSummaryTableStyle}>
         <colgroup>
-          {dispatchSummaryColumns.map((width, index) => (
-            <col key={`${width}-${index}`} style={{ width }} />
+          {visibleColumnIndexes.map((index) => (
+            <col key={`${dispatchSummaryColumns[index]}-${index}`} style={{ width: dispatchSummaryColumns[index] }} />
           ))}
         </colgroup>
         <thead>
           <tr>
-            {dispatchSummaryHeaders.map(([label, style]) => (
-              <th key={label || "actions"} style={style}>{label}</th>
-            ))}
+            {visibleColumnIndexes.map((index) => {
+              const [label, style] = dispatchSummaryHeaders[index];
+              return <th key={label || "actions"} style={style}>{label}</th>;
+            })}
           </tr>
         </thead>
         <tbody>
@@ -272,7 +289,7 @@ export function DispatchSummaryTable({
           ))}
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={13} style={dispatchSummaryEmptyStyle}>
+              <td colSpan={visibleColumnIndexes.length} style={dispatchSummaryEmptyStyle}>
                 {isDailyDispatchShift
                   ? "Сутки пока пустые: заполни ночную и дневную смену за выбранную дату."
                   : `Нет строк в разделе «${categoryTab}».`}

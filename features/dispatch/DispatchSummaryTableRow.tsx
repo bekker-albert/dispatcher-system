@@ -96,6 +96,10 @@ export function DispatchSummaryTableRow({
   const hoursError = dispatchRowExceedsHourLimit(row);
   const isTruckRow = rowRole === "truck";
   const isLoadingRow = rowRole === "loading";
+  const hideMaterialAndTrips = categoryTab === "Спецтехника"
+    || categoryTab === "Вспомогательная"
+    || categoryTab === "Легковая/Пассажирская";
+  const hideActions = categoryTab === "Простои" || categoryTab === "Ремонты";
   const displayedTrips = isLoadingRow && typeof linkedTruckTrips === "number"
     ? linkedTruckTrips
     : row.trips;
@@ -213,18 +217,20 @@ export function DispatchSummaryTableRow({
           onChange={(vehicleId) => onUpdateDispatchSummaryVehicle(row.id, vehicleId)}
         />
       </td>
-      <td style={dispatchSummaryTdStyle}>
-        <input
-          type="text"
-          disabled={materialLockedToTrucks}
-          readOnly={isReadOnly || materialLockedToTrucks}
-          value={materialLockedToTrucks ? "" : (row.material ?? "")}
-          onChange={handleTextChange("material")}
-          placeholder={materialLockedToTrucks ? "—" : "Материал"}
-          style={dispatchSummaryInputStyle}
-          title={materialLockedToTrucks ? "Материал задается по каждому самосвалу" : undefined}
-        />
-      </td>
+      {hideMaterialAndTrips ? null : (
+        <td style={dispatchSummaryTdStyle}>
+          <input
+            type="text"
+            disabled={materialLockedToTrucks}
+            readOnly={isReadOnly || materialLockedToTrucks}
+            value={materialLockedToTrucks ? "" : (row.material ?? "")}
+            onChange={handleTextChange("material")}
+            placeholder={materialLockedToTrucks ? "—" : "Материал"}
+            style={dispatchSummaryInputStyle}
+            title={materialLockedToTrucks ? "Материал задается по каждому самосвалу" : undefined}
+          />
+        </td>
+      )}
       <td style={dispatchSummaryTdNumberStyle}>
         <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.rentHours)} onChange={handleNumberChange("rentHours")} style={dispatchSummaryNumberInputStyle} />
       </td>
@@ -237,19 +243,21 @@ export function DispatchSummaryTableRow({
       <td style={dispatchSummaryTdNumberStyle}>
         <input readOnly={isReadOnly} inputMode="numeric" step={1} min={0} value={dispatchNumberInputValue(row.repairHours)} onChange={handleNumberChange("repairHours")} style={dispatchSummaryNumberInputStyle} />
       </td>
-      <td style={dispatchSummaryTdNumberStyle}>
-        <input
-          disabled={isLoadingRow}
-          readOnly={isReadOnly || isLoadingRow}
-          inputMode="numeric"
-          step={1}
-          min={0}
-          value={isLoadingRow ? String(displayedTrips) : dispatchNumberInputValue(displayedTrips)}
-          onChange={handleNumberChange("trips")}
-          style={dispatchSummaryNumberInputStyle}
-          title={isLoadingRow ? "Сумма рейсов привязанных самосвалов" : undefined}
-        />
-      </td>
+      {hideMaterialAndTrips ? null : (
+        <td style={dispatchSummaryTdNumberStyle}>
+          <input
+            disabled={isLoadingRow}
+            readOnly={isReadOnly || isLoadingRow}
+            inputMode="numeric"
+            step={1}
+            min={0}
+            value={isLoadingRow ? String(displayedTrips) : dispatchNumberInputValue(displayedTrips)}
+            onChange={handleNumberChange("trips")}
+            style={dispatchSummaryNumberInputStyle}
+            title={isLoadingRow ? "Сумма рейсов привязанных самосвалов" : undefined}
+          />
+        </td>
+      )}
       <td style={dispatchSummaryReadonlyNumberStyle}>
         {productivityText}
         {hoursError ? (
@@ -258,20 +266,22 @@ export function DispatchSummaryTableRow({
           </div>
         ) : null}
       </td>
-      <td style={dispatchSummaryActionTdStyle}>
-        {!isReadOnly ? (
-          <div style={dispatchSummaryActionGroupStyle}>
-            {onAddDumpTruckToCurrentLink ? (
-              <MiniIconButton label="Добавить самосвал под эту погрузочную" onClick={onAddDumpTruckToCurrentLink}>
-                <Plus size={14} aria-hidden />
+      {hideActions ? null : (
+        <td style={dispatchSummaryActionTdStyle}>
+          {!isReadOnly ? (
+            <div style={dispatchSummaryActionGroupStyle}>
+              {onAddDumpTruckToCurrentLink ? (
+                <MiniIconButton label="Добавить самосвал под эту погрузочную" onClick={onAddDumpTruckToCurrentLink}>
+                  <Plus size={14} aria-hidden />
+                </MiniIconButton>
+              ) : null}
+              <MiniIconButton label="Удалить строку сводки" onClick={() => onDeleteDispatchSummaryRow(row.id)}>
+                <Trash2 size={14} aria-hidden />
               </MiniIconButton>
-            ) : null}
-            <MiniIconButton label="Удалить строку сводки" onClick={() => onDeleteDispatchSummaryRow(row.id)}>
-              <Trash2 size={14} aria-hidden />
-            </MiniIconButton>
-          </div>
-        ) : null}
-      </td>
+            </div>
+          ) : null}
+        </td>
+      )}
     </tr>
   );
 }
