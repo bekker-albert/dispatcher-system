@@ -1,14 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ChangeEvent, type KeyboardEvent } from "react";
 
-import { buildVehicleDisplayName } from "@/lib/domain/vehicles/import-export";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
-import {
-  dispatchSummaryInputStyle,
-  dispatchSummaryVehicleButtonStyle,
-} from "@/features/dispatch/dispatchSectionStyles";
+import { dispatchSummaryInputStyle } from "@/features/dispatch/dispatchSectionStyles";
+import { buildDispatchVehicleLabel } from "./dispatchVehicleLabel";
 
 type DispatchVehiclePickerProps = {
   disabled: boolean;
@@ -27,10 +24,7 @@ export function DispatchVehiclePicker({
   vehicles,
   onChange,
 }: DispatchVehiclePickerProps) {
-  const [editing, setEditing] = useState(false);
-  const displayValue = useMemo(() => (
-    vehicle ? buildVehicleDisplayName(vehicle) : "Выбрать технику"
-  ), [vehicle]);
+  const listId = useId();
   const availableVehicles = useMemo(() => (
     isTruckRow
       ? vehicles
@@ -38,36 +32,73 @@ export function DispatchVehiclePicker({
           normalizeLookupValue(item.vehicleType) === normalizeLookupValue("Погрузочная")
         ))
   ), [isTruckRow, vehicles]);
+  const selectedGarageNumber = vehicle?.garageNumber.trim() ?? "";
+  const [query, setQuery] = useState(selectedGarageNumber);
 
-  if (disabled || !editing) {
-    return (
-      <button
-        type="button"
-        disabled={disabled}
-        title={displayValue}
-        onClick={() => setEditing(true)}
-        style={{ ...dispatchSummaryVehicleButtonStyle, paddingLeft: isTruckRow ? 18 : undefined }}
-      >
-        {displayValue}
-      </button>
-    );
-  }
+  useEffect(() => {
+    setQuery(selectedGarageNumber);
+  }, [selectedGarageNumber, value]);
+
+  const findVehicleByGarageNumber = (garageNumber: string) => {
+    const normalizedGarageNumber = normalizeLookupValue(garageNumber);
+    if (!normalizedGarageNumber) return undefined;
+
+    return availableVehicles.find((item) => (
+      normalizeLookupValue(item.garageNumber) === normalizedGarageNumber
+    ));
+  };
+
+  const selectExactGarageNumber = (garageNumber: string) => {
+    const matchedVehicle = findVehicleByGarageNumber(garageNumber);
+    if (!matchedVehicle) return false;
+
+    onChange(String(matchedVehicle.id));
+    setQuery(matchedVehicle.garageNumber.trim());
+    return true;
+  };
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    setQuery(nextValue);
+    selectExactGarageNumber(nextValue);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    selectExactGarageNumber(query);
+  };
 
   return (
-    <select
-      autoFocus
-      value={value ? String(value) : ""}
-      onBlur={() => setEditing(false)}
-      onChange={(event) => {
-        onChange(event.target.value);
-        setEditing(false);
-      }}
-      style={{ ...dispatchSummaryInputStyle, paddingLeft: isTruckRow ? 18 : undefined }}
-    >
-      <option value="">Выбрать технику</option>
-      {availableVehicles.map((item) => (
-        <option key={item.id} value={item.id}>{buildVehicleDisplayName(item)}</option>
-      ))}
-    </select>
+    <>
+      <input
+        type="text"
+        list={disabled ? undefined : listId}
+        disabled={disabled}
+        value={query}
+        placeholder="Гаражный №"
+        autoComplete="off"
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onBlur={() => {
+          if (!selectExactGarageNumber(query)) setQuery(selectedGarageNumber);
+        }}
+        style={{ ...dispatchSummaryInputStyle, textAlign: "center", fontVariantNumeric: "tabular-nums" }}
+        aria-label="Гаражный номер техники"
+      />
+      {!disabled ? (
+        <datalist id={listId}>
+          {availableVehicles
+            .filter((item) => item.garageNumber.trim())
+            .map((item) => (
+              <option
+                key={item.id}
+                value={item.garageNumber.trim()}
+                label={buildDispatchVehicleLabel(item)}
+              />
+            ))}
+        </datalist>
+      ) : null}
+    </>
   );
 }
