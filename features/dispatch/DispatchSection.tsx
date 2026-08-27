@@ -174,36 +174,35 @@ export default function DispatchSection({
 
           {isDailyDispatchShift ? null : planFactPanel}
 
-          <DispatchSummaryToolbar
-            areaFilter={areaFilter}
-            dispatchAreaOptions={accessibleAreaOptions}
-            isDailyDispatchShift={isDailyDispatchShift}
-            activeCategoryTab={activeCategoryTab}
-            onActiveCategoryTabChange={setActiveCategoryTab}
-            sectionScopeMessage={sectionScopeMessage}
-            onAddDispatchSummaryLink={onAddDispatchSummaryLink}
-            onAreaFilterChange={onAreaFilterChange}
-            onSearchChange={onSearchChange}
-            search={search}
-          />
-
-          {isDailyDispatchShift && dailyReportTab === "summary" ? (
-            <>
-              <DispatchSummaryStats totals={dispatchSummaryTotals} />
-              <DispatchDailyVehicleSummary rows={filteredDispatchSummaryRows} />
-            </>
-          ) : (
-            <>
-              {isDailyDispatchShift ? (
-                <DispatchPlanFactPanel
-                  rows={filteredDispatchSummaryRows}
-                  dailyMode
-                  percent={dispatchSummaryTotals.percent}
-                />
-              ) : null}
-              {summaryTable}
-            </>
+          {isDailyDispatchShift ? null : (
+            <DispatchSummaryToolbar
+              areaFilter={areaFilter}
+              dispatchAreaOptions={accessibleAreaOptions}
+              isDailyDispatchShift={false}
+              activeCategoryTab={activeCategoryTab}
+              onActiveCategoryTabChange={setActiveCategoryTab}
+              sectionScopeMessage={sectionScopeMessage}
+              onAddDispatchSummaryLink={onAddDispatchSummaryLink}
+              onAreaFilterChange={onAreaFilterChange}
+              onSearchChange={onSearchChange}
+              search={search}
+            />
           )}
+
+          {isDailyDispatchShift ? (
+            dailyReportTab === "summary" ? (
+              <>
+                <DispatchSummaryStats totals={dispatchSummaryTotals} />
+                <DispatchDailyVehicleSummary rows={filteredDispatchSummaryRows} />
+              </>
+            ) : (
+              <DispatchPlanFactPanel
+                rows={filteredDispatchSummaryRows}
+                dailyMode
+                percent={dispatchSummaryTotals.percent}
+              />
+            )
+          ) : summaryTable}
 
           <DispatchSummaryDatalists
             dispatchAreaOptions={dispatchAreaOptions}
