@@ -22,6 +22,6 @@ export const structureSectionTabs: Array<{ value: StructureSection; label: strin
   { value: "elements", label: "Элементы" },
   { value: "links", label: "Связи" },
   { value: "roles", label: "Роли" },
-  { value: "schedule", label: "Распорядок" },
   { value: "dictionaries", label: "Справочники" },
+  { value: "schedule", label: "Распорядок" },
 ];
