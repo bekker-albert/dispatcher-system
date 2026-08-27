@@ -312,6 +312,7 @@ function DispatchSummaryTableGroupRows({
           isReadOnly={isDailyDispatchShift}
           rowRole={role}
           linkedTruckTrips={role === "loading" ? linkedTruckTrips : undefined}
+          hasLinkedTrucks={role === "loading" ? group.truckRows.length > 0 : undefined}
           vehicle={row.vehicleId ? vehicleById.get(row.vehicleId) : undefined}
           vehicles={vehicles}
           areaOptions={areaOptions}
