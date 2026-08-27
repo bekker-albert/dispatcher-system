@@ -61,6 +61,14 @@ const dailyIdentityCellStyle = {
   whiteSpace: "nowrap",
 } as const;
 
+const dailyAreaCellStyle = {
+  ...dailyIdentityCellStyle,
+  minWidth: 94,
+  fontWeight: 800,
+  verticalAlign: "top",
+  background: "#f8fafc",
+} as const;
+
 const dailyStructureCellStyle = {
   ...dispatchPlanFactStructureCellStyle,
   whiteSpace: "nowrap",
@@ -75,25 +83,48 @@ const dailyNumberCellStyle = {
   textAlign: "right",
 } as const;
 
+const dailyGroupBorderStyle = {
+  borderTop: "2px solid #cbd5e1",
+} as const;
+
 export function DispatchPlanFactPanel({ rows, dailyMode = false, percent }: DispatchPlanFactPanelProps) {
   const planFactRows = useMemo(() => createDispatchPlanFactRows(rows, dailyMode), [dailyMode, rows]);
+  const dailyAreaRowSpans = useMemo(() => {
+    const spans = new Map<number, number>();
+    if (!dailyMode) return spans;
+
+    let startIndex = 0;
+    while (startIndex < planFactRows.length) {
+      const area = planFactRows[startIndex].area;
+      let endIndex = startIndex + 1;
+      while (endIndex < planFactRows.length && planFactRows[endIndex].area === area) {
+        endIndex += 1;
+      }
+      spans.set(startIndex, endIndex - startIndex);
+      startIndex = endIndex;
+    }
+
+    return spans;
+  }, [dailyMode, planFactRows]);
 
   return (
     <section
       style={{ ...dispatchPlanFactPanelStyle, width: "100%", boxSizing: "border-box", alignSelf: "stretch" }}
       aria-label="План факт по структурам работ"
     >
-      <div style={dispatchPlanFactHeaderStyle}>
-        <span>{dailyMode ? "Объемы: участок / местонахождение / структура" : "План / факт по структурам"}</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span>{planFactRows.length} строк</span>
-          {typeof percent === "number" ? (
-            <Pill bg={statusColor(percent)} color={statusTextColor(percent)}>
-              {percent}%
-            </Pill>
-          ) : null}
+      {!dailyMode ? (
+        <div style={dispatchPlanFactHeaderStyle}>
+          <span>План / факт по структурам</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>{planFactRows.length} строк</span>
+            {typeof percent === "number" ? (
+              <Pill bg={statusColor(percent)} color={statusTextColor(percent)}>
+                {percent}%
+              </Pill>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
       {planFactRows.length > 0 ? (
         <table style={dailyMode ? { ...dispatchPlanFactTableStyle, tableLayout: "auto" } : dispatchPlanFactTableStyle}>
           {dailyMode ? (
@@ -117,18 +148,28 @@ export function DispatchPlanFactPanel({ rows, dailyMode = false, percent }: Disp
             </tr>
           </thead>
           <tbody>
-            {planFactRows.map((row) => (
-              <tr key={`${row.area}:${row.location}:${row.structure}`}>
-                {dailyMode ? <td style={dailyIdentityCellStyle}>{row.area}</td> : null}
-                {dailyMode ? <td style={dailyIdentityCellStyle}>{row.location}</td> : null}
-                <td style={dailyMode ? dailyStructureCellStyle : dispatchPlanFactStructureCellStyle}>{row.structure}</td>
-                <td style={dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle}>{formatNumber(row.plan)}</td>
-                <td style={dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle}>{formatNumber(row.fact)}</td>
-                <td style={{ ...(dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle), color: row.delta < 0 ? "#991b1b" : "#166534" }}>
-                  {formatNumber(row.delta)}
-                </td>
-              </tr>
-            ))}
+            {planFactRows.map((row, index) => {
+              const areaRowSpan = dailyMode ? dailyAreaRowSpans.get(index) : undefined;
+              const startsNewArea = dailyMode && typeof areaRowSpan === "number";
+              const groupBorder = startsNewArea && index > 0 ? dailyGroupBorderStyle : undefined;
+
+              return (
+                <tr key={`${row.area}:${row.location}:${row.structure}`}>
+                  {dailyMode && areaRowSpan ? (
+                    <td rowSpan={areaRowSpan} style={{ ...dailyAreaCellStyle, ...groupBorder }}>
+                      {row.area}
+                    </td>
+                  ) : null}
+                  {dailyMode ? <td style={{ ...dailyIdentityCellStyle, ...groupBorder }}>{row.location}</td> : null}
+                  <td style={{ ...(dailyMode ? dailyStructureCellStyle : dispatchPlanFactStructureCellStyle), ...groupBorder }}>{row.structure}</td>
+                  <td style={{ ...(dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle), ...groupBorder }}>{formatNumber(row.plan)}</td>
+                  <td style={{ ...(dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle), ...groupBorder }}>{formatNumber(row.fact)}</td>
+                  <td style={{ ...(dailyMode ? dailyNumberCellStyle : dispatchPlanFactCellStyle), ...groupBorder, color: row.delta < 0 ? "#991b1b" : "#166534" }}>
+                    {formatNumber(row.delta)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       ) : (
