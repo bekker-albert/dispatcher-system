@@ -1,7 +1,7 @@
 type RuntimeEnv = Record<string, string | undefined>;
 
-function isAamProductionHost(hostname: string | undefined) {
-  return Boolean(hostname && /(^|\.)aam-dispatch\.kz$/i.test(hostname));
+function isServerDatabaseProductionHost(hostname: string | undefined) {
+  return Boolean(hostname && /(^|\.)dispetcher\.kz$/i.test(hostname));
 }
 
 function getBrowserHostname() {
@@ -12,7 +12,7 @@ export function getSupabaseRuntimeConfig(env: RuntimeEnv = process.env, browserH
   const dataProvider = env.NEXT_PUBLIC_DATA_PROVIDER;
   const forceSupabase = dataProvider === "supabase";
   const browserProductionHostUsesServerDatabase = Boolean(browserHostname)
-    && isAamProductionHost(browserHostname)
+    && isServerDatabaseProductionHost(browserHostname)
     && !forceSupabase;
   const serverRuntimeMysqlConfigured = !browserHostname
     && Boolean(env.DB_NAME && env.DB_USER && env.DB_PASSWORD)
