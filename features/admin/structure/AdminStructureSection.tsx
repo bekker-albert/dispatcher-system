@@ -9,6 +9,7 @@ import type {
   OrgMember,
 } from "@/lib/domain/admin/structure";
 import type { AreaShiftCutoffMap } from "@/lib/domain/admin/area-schedule";
+import { AdminDispatchReasonCatalogs } from "./AdminDispatchReasonCatalogs";
 import { AdminStructureElements } from "./AdminStructureElements";
 import { AdminStructureLinks } from "./AdminStructureLinks";
 import { AdminStructureRoles } from "./AdminStructureRoles";
@@ -151,6 +152,8 @@ export function AdminStructureSection({
           onUpdateAreaShiftCutoff={onUpdateAreaShiftCutoff}
         />
       )}
+
+      {structureSection === "dictionaries" && <AdminDispatchReasonCatalogs />}
     </div>
   );
 }

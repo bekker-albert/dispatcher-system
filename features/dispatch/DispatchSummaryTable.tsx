@@ -5,6 +5,7 @@ import {
   type DispatchSummaryRow,
   type DispatchSummaryTextField,
 } from "@/lib/domain/dispatch/summary";
+import type { DispatchReasonCatalogGroup } from "@/lib/domain/dispatch/reason-catalog";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/features/dispatch/dispatchStructureOptions";
 import { DispatchSummaryTableRow } from "@/features/dispatch/DispatchSummaryTableRow";
 import type { DispatchSummaryCategoryTab } from "@/features/dispatch/DispatchSummaryToolbar";
+import { useDispatchReasonCatalogs } from "@/features/dispatch/useDispatchReasonCatalogs";
 
 type DispatchSummaryTableProps = {
   isDailyDispatchShift: boolean;
@@ -62,6 +64,8 @@ const dispatchSummaryColumns = [
   70,
   82,
   68,
+  200,
+  240,
 ];
 
 const dispatchSummaryHeaders = [
@@ -78,6 +82,8 @@ const dispatchSummaryHeaders = [
   ["Рейсы", dispatchSummaryNumberThStyle],
   ["Произв.", dispatchSummaryNumberThStyle],
   ["", dispatchSummaryThStyle],
+  ["Группа", dispatchSummaryThStyle],
+  ["Причина / вид", dispatchSummaryThStyle],
 ] as const;
 
 function hiddenColumnIndexes(categoryTab: DispatchSummaryCategoryTab) {
@@ -94,13 +100,20 @@ function hiddenColumnIndexes(categoryTab: DispatchSummaryCategoryTab) {
 
   if (categoryTab === "Простои") {
     [5, 6, 7, 9, 10, 11, 12].forEach((index) => hidden.add(index));
-  }
-
-  if (categoryTab === "Ремонты") {
+  } else if (categoryTab === "Ремонты") {
     [5, 6, 7, 8, 10, 11, 12].forEach((index) => hidden.add(index));
+  } else {
+    hidden.add(13);
+    hidden.add(14);
   }
 
   return hidden;
+}
+
+function headerLabel(index: number, categoryTab: DispatchSummaryCategoryTab) {
+  if (index === 13) return categoryTab === "Ремонты" ? "Группа ремонта" : "Группа простоя";
+  if (index === 14) return categoryTab === "Ремонты" ? "Вид ремонта" : "Причина простоя";
+  return dispatchSummaryHeaders[index][0];
 }
 
 function normalizeGroupKey(value: string) {
@@ -257,6 +270,12 @@ export function DispatchSummaryTable({
   const groups = useMemo(() => (
     createDispatchSummaryGroups(rows, vehicleById, categoryTab)
   ), [categoryTab, rows, vehicleById]);
+  const { catalogs } = useDispatchReasonCatalogs();
+  const reasonGroups = categoryTab === "Простои"
+    ? catalogs.downtime
+    : categoryTab === "Ремонты"
+      ? catalogs.repair
+      : [];
   const hiddenColumns = hiddenColumnIndexes(categoryTab);
   const visibleColumnIndexes = dispatchSummaryColumns
     .map((_, index) => index)
@@ -273,8 +292,8 @@ export function DispatchSummaryTable({
         <thead>
           <tr>
             {visibleColumnIndexes.map((index) => {
-              const [label, style] = dispatchSummaryHeaders[index];
-              return <th key={label || "actions"} style={style}>{label}</th>;
+              const [, style] = dispatchSummaryHeaders[index];
+              return <th key={`${index}-${headerLabel(index, categoryTab)}`} style={style}>{headerLabel(index, categoryTab)}</th>;
             })}
           </tr>
         </thead>
@@ -284,6 +303,7 @@ export function DispatchSummaryTable({
               key={group.id}
               group={group}
               categoryTab={categoryTab}
+              reasonGroups={reasonGroups}
               isDailyDispatchShift={isDailyDispatchShift}
               vehicleById={vehicleById}
               vehicles={vehicles}
@@ -316,6 +336,7 @@ export function DispatchSummaryTable({
 function DispatchSummaryTableGroupRows({
   group,
   categoryTab,
+  reasonGroups,
   isDailyDispatchShift,
   vehicleById,
   vehicles,
@@ -331,6 +352,7 @@ function DispatchSummaryTableGroupRows({
 }: {
   group: DispatchSummaryGroup;
   categoryTab: DispatchSummaryCategoryTab;
+  reasonGroups: DispatchReasonCatalogGroup[];
   isDailyDispatchShift: boolean;
   vehicleById: Map<number, VehicleRow>;
   vehicles: VehicleRow[];
@@ -362,6 +384,7 @@ function DispatchSummaryTableGroupRows({
           isReadOnly={isDailyDispatchShift}
           rowRole={role}
           categoryTab={categoryTab}
+          reasonGroups={reasonGroups}
           linkedTruckTrips={role === "loading" ? linkedTruckTrips : undefined}
           hasLinkedTrucks={role === "loading" ? group.truckRows.length > 0 : undefined}
           vehicle={row.vehicleId ? vehicleById.get(row.vehicleId) : undefined}

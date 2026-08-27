@@ -20,6 +20,10 @@ export type DispatchSummaryRow = {
   repairHours: number;
   downtimeHours: number;
   trips: number;
+  downtimeReasonGroup: string;
+  downtimeReason: string;
+  repairReasonGroup: string;
+  repairReason: string;
   reason: string;
   comment: string;
 };
@@ -31,6 +35,10 @@ export type DispatchSummaryTextField =
   | "workType"
   | "excavator"
   | "material"
+  | "downtimeReasonGroup"
+  | "downtimeReason"
+  | "repairReasonGroup"
+  | "repairReason"
   | "reason"
   | "comment";
 
