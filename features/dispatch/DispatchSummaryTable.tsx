@@ -80,14 +80,27 @@ const dispatchSummaryHeaders = [
   ["", dispatchSummaryThStyle],
 ] as const;
 
-function hidesMaterialAndTrips(categoryTab: DispatchSummaryCategoryTab) {
-  return categoryTab === "Спецтехника"
-    || categoryTab === "Вспомогательная"
-    || categoryTab === "Легковая/Пассажирская";
-}
+function hiddenColumnIndexes(categoryTab: DispatchSummaryCategoryTab) {
+  const hidden = new Set<number>();
 
-function hidesActions(categoryTab: DispatchSummaryCategoryTab) {
-  return categoryTab === "Простои" || categoryTab === "Ремонты";
+  if (
+    categoryTab === "Спецтехника"
+    || categoryTab === "Вспомогательная"
+    || categoryTab === "Легковая/Пассажирская"
+  ) {
+    hidden.add(5);
+    hidden.add(10);
+  }
+
+  if (categoryTab === "Простои") {
+    [5, 6, 7, 9, 10, 11, 12].forEach((index) => hidden.add(index));
+  }
+
+  if (categoryTab === "Ремонты") {
+    [5, 6, 7, 8, 10, 11, 12].forEach((index) => hidden.add(index));
+  }
+
+  return hidden;
 }
 
 function normalizeGroupKey(value: string) {
@@ -244,12 +257,10 @@ export function DispatchSummaryTable({
   const groups = useMemo(() => (
     createDispatchSummaryGroups(rows, vehicleById, categoryTab)
   ), [categoryTab, rows, vehicleById]);
-  const hideMaterialAndTrips = hidesMaterialAndTrips(categoryTab);
-  const hideActions = hidesActions(categoryTab);
+  const hiddenColumns = hiddenColumnIndexes(categoryTab);
   const visibleColumnIndexes = dispatchSummaryColumns
     .map((_, index) => index)
-    .filter((index) => !(hideMaterialAndTrips && (index === 5 || index === 10)))
-    .filter((index) => !(hideActions && index === 12));
+    .filter((index) => !hiddenColumns.has(index));
 
   return (
     <div style={dispatchSummaryTableScrollStyle}>
