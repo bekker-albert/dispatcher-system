@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useId, useMemo, type ChangeEvent, type KeyboardEvent } from "react";
 
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
@@ -33,11 +33,6 @@ export function DispatchVehiclePicker({
         ))
   ), [isTruckRow, vehicles]);
   const selectedGarageNumber = vehicle?.garageNumber.trim() ?? "";
-  const [query, setQuery] = useState(selectedGarageNumber);
-
-  useEffect(() => {
-    setQuery(selectedGarageNumber);
-  }, [selectedGarageNumber, value]);
 
   const findVehicleByGarageNumber = (garageNumber: string) => {
     const normalizedGarageNumber = normalizeLookupValue(garageNumber);
@@ -53,35 +48,35 @@ export function DispatchVehiclePicker({
     if (!matchedVehicle) return false;
 
     onChange(String(matchedVehicle.id));
-    setQuery(matchedVehicle.garageNumber.trim());
     return true;
   };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextValue = event.target.value;
-    setQuery(nextValue);
-    selectExactGarageNumber(nextValue);
+    selectExactGarageNumber(event.target.value);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
-    selectExactGarageNumber(query);
+    selectExactGarageNumber(event.currentTarget.value);
   };
 
   return (
     <>
       <input
+        key={value ?? "empty"}
         type="text"
         list={disabled ? undefined : listId}
         disabled={disabled}
-        value={query}
+        defaultValue={selectedGarageNumber}
         placeholder="Гаражный №"
         autoComplete="off"
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onBlur={() => {
-          if (!selectExactGarageNumber(query)) setQuery(selectedGarageNumber);
+        onBlur={(event) => {
+          if (!selectExactGarageNumber(event.currentTarget.value)) {
+            event.currentTarget.value = selectedGarageNumber;
+          }
         }}
         style={{ ...dispatchSummaryInputStyle, textAlign: "center", fontVariantNumeric: "tabular-nums" }}
         aria-label="Гаражный номер техники"
