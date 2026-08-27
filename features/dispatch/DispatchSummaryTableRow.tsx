@@ -34,6 +34,7 @@ import {
   dispatchMaterialPlaceholder,
 } from "./dispatchMaterialRules";
 import { DispatchVehiclePicker } from "./DispatchVehiclePicker";
+import { buildDispatchVehicleLabel } from "./dispatchVehicleLabel";
 import {
   dispatchRowExceedsHourLimit,
   dispatchRowHourTotal,
@@ -61,10 +62,6 @@ export type DispatchSummaryTableRowProps = {
   onUpdateDispatchSummaryNumber: (rowId: string, field: DispatchSummaryNumberField, value: string) => void;
   onDeleteDispatchSummaryRow: (rowId: string) => void;
 };
-
-function vehicleNumber(vehicle: VehicleRow | undefined) {
-  return vehicle?.garageNumber || vehicle?.plateNumber || "";
-}
 
 function optionValues(values: string[], current: string) {
   const unique = Array.from(new Set([current, ...values].map((value) => value.trim()).filter(Boolean)));
@@ -141,6 +138,8 @@ export function DispatchSummaryTableRow({
     onUpdateDispatchSummaryNumber(row.id, field, event.target.value);
   };
 
+  const equipmentName = vehicle ? buildDispatchVehicleLabel(vehicle) : row.vehicleName.trim();
+
   return (
     <tr style={rowStyle}>
       {isTruckRow ? (
@@ -176,6 +175,24 @@ export function DispatchSummaryTableRow({
         </>
       )}
       <td style={vehicleCellStyle}>
+        <div
+          title={equipmentName || "Техника не выбрана"}
+          style={{
+            ...dispatchSummaryInputStyle,
+            paddingLeft: isTruckRow ? 18 : undefined,
+            background: "#f8fafc",
+            minHeight: 28,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          {equipmentName || "—"}
+        </div>
+        {row.excavator && isTruckRow ? (
+          <div style={{ ...dispatchSummaryMutedTextStyle, marginTop: 3 }}>под {row.excavator}</div>
+        ) : null}
+      </td>
+      <td style={dispatchSummaryTdStyle}>
         <DispatchVehiclePicker
           disabled={isReadOnly}
           isTruckRow={isTruckRow}
@@ -184,12 +201,6 @@ export function DispatchSummaryTableRow({
           vehicles={vehicles}
           onChange={(vehicleId) => onUpdateDispatchSummaryVehicle(row.id, vehicleId)}
         />
-        {row.excavator && isTruckRow ? (
-          <div style={{ ...dispatchSummaryMutedTextStyle, marginTop: 3 }}>под {row.excavator}</div>
-        ) : null}
-      </td>
-      <td style={dispatchSummaryTdStyle}>
-        <div style={dispatchSummaryMutedTextStyle}>{vehicleNumber(vehicle) || "—"}</div>
       </td>
       {isTruckRow ? (
         <td style={dispatchSummaryTdStyle} />
