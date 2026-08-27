@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import { isAuthUserSuperuser } from "@/lib/domain/auth/types";
+import type { DispatchSummaryRow } from "@/lib/domain/dispatch/summary";
+import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
 import { SectionCard } from "@/shared/ui/layout";
 import { blockStyle } from "@/features/dispatch/dispatchSectionStyles";
@@ -13,7 +15,10 @@ import { DispatchSummaryDatalists } from "@/features/dispatch/DispatchSummaryDat
 import { DispatchSummaryHeader } from "@/features/dispatch/DispatchSummaryHeader";
 import { DispatchSummaryStats } from "@/features/dispatch/DispatchSummaryStats";
 import { DispatchSummaryTable } from "@/features/dispatch/DispatchSummaryTable";
-import { DispatchSummaryToolbar } from "@/features/dispatch/DispatchSummaryToolbar";
+import {
+  DispatchSummaryToolbar,
+  type DispatchSummaryCategoryTab,
+} from "@/features/dispatch/DispatchSummaryToolbar";
 import type { DispatchSectionProps, DispatchTotals, DispatchVehicleSelectOption } from "@/features/dispatch/dispatchSectionTypes";
 
 export type { DispatchSectionProps, DispatchTotals, DispatchVehicleSelectOption };
@@ -28,6 +33,37 @@ function resolveLegacyUserAreas(userText: string, options: string[]) {
     const normalizedArea = normalizeLookupValue(area);
     return normalizedArea && normalizedUserText.includes(normalizedArea);
   });
+}
+
+function vehicleTypeMatches(vehicle: VehicleRow | undefined, expected: string) {
+  if (!vehicle) return false;
+  return normalizeLookupValue(vehicle.vehicleType) === normalizeLookupValue(expected);
+}
+
+function rowMatchesCategory(
+  row: DispatchSummaryRow,
+  vehicle: VehicleRow | undefined,
+  category: DispatchSummaryCategoryTab,
+) {
+  if (category === "Простои") return row.downtimeHours > 0;
+  if (category === "Ремонты") return row.repairHours > 0;
+
+  if (!vehicle) return true;
+
+  if (category === "Производственная") {
+    return vehicleTypeMatches(vehicle, "Погрузочная")
+      || vehicleTypeMatches(vehicle, "Транспортировочная")
+      || Boolean(row.excavator.trim());
+  }
+  if (category === "Спецтехника") return vehicleTypeMatches(vehicle, "Спецтехника");
+  if (category === "Вспомогательная") return vehicleTypeMatches(vehicle, "Вспомогательная");
+  if (category === "Легковая/Пассажирская") {
+    return vehicleTypeMatches(vehicle, "Легковая")
+      || vehicleTypeMatches(vehicle, "Пассажирская")
+      || vehicleTypeMatches(vehicle, "Легковая/Пассажирская");
+  }
+
+  return true;
 }
 
 export default function DispatchSection({
@@ -46,19 +82,18 @@ export default function DispatchSection({
   dispatchVehicleOptions,
   onAddDispatchSummaryLink,
   onAddDumpTruckToDispatchLink,
-  onAddFilteredVehiclesToDispatchSummary,
   filteredDispatchSummaryRows,
   onUpdateDispatchSummaryVehicle,
   onUpdateDispatchSummaryText,
   onUpdateDispatchSummaryNumber,
   onDeleteDispatchSummaryRow,
-  onDeleteCurrentDispatchShiftRows,
   dispatchLocationOptions,
   dispatchWorkTypeOptions,
   dispatchPtoPlanRows,
   dispatchExcavatorOptions,
 }: DispatchSectionProps) {
   const { user } = useAuth();
+  const [activeCategoryTab, setActiveCategoryTab] = useState<DispatchSummaryCategoryTab>("Производственная");
   const userAreaText = `${user.displayName} ${user.positionTitle} ${user.email} ${user.login}`;
   const userAreas = useMemo(() => (
     isAuthUserSuperuser(user) || user.canManageUsers
@@ -80,6 +115,19 @@ export default function DispatchSection({
     if (userAreas.length > 1) return "Пользователь имеет несколько участков по legacy-доступам.";
     return "Участок пользователя не определен. Это legacy UI layer, не server-side ERP authorization.";
   }, [user, userAreas]);
+  const vehicleById = useMemo(() => (
+    new Map(dispatchVehicleOptions.map((vehicle) => [vehicle.id, vehicle]))
+  ), [dispatchVehicleOptions]);
+  const categoryRows = useMemo(() => {
+    if (isDailyDispatchShift) return filteredDispatchSummaryRows;
+    return filteredDispatchSummaryRows.filter((row) => (
+      rowMatchesCategory(
+        row,
+        row.vehicleId ? vehicleById.get(row.vehicleId) : undefined,
+        activeCategoryTab,
+      )
+    ));
+  }, [activeCategoryTab, filteredDispatchSummaryRows, isDailyDispatchShift, vehicleById]);
 
   useEffect(() => {
     if (!isAuthUserSuperuser(user) && !user.canManageUsers && userAreas.length === 1 && areaFilter !== userAreas[0]) {
@@ -96,7 +144,8 @@ export default function DispatchSection({
   const summaryTable = (
     <DispatchSummaryTable
       isDailyDispatchShift={isDailyDispatchShift}
-      rows={filteredDispatchSummaryRows}
+      categoryTab={activeCategoryTab}
+      rows={categoryRows}
       vehicles={dispatchVehicleOptions}
       areaOptions={dispatchRowAreaOptions}
       locationOptions={dispatchLocationOptions}
@@ -129,10 +178,10 @@ export default function DispatchSection({
             areaFilter={areaFilter}
             dispatchAreaOptions={accessibleAreaOptions}
             isDailyDispatchShift={isDailyDispatchShift}
+            activeCategoryTab={activeCategoryTab}
+            onActiveCategoryTabChange={setActiveCategoryTab}
             sectionScopeMessage={sectionScopeMessage}
             onAddDispatchSummaryLink={onAddDispatchSummaryLink}
-            onAddFilteredVehiclesToDispatchSummary={onAddFilteredVehiclesToDispatchSummary}
-            onDeleteCurrentDispatchShiftRows={onDeleteCurrentDispatchShiftRows}
             onAreaFilterChange={onAreaFilterChange}
             onSearchChange={onSearchChange}
             search={search}
