@@ -294,6 +294,9 @@ function DispatchSummaryTableGroupRows({
   onUpdateDispatchSummaryNumber: (rowId: string, field: DispatchSummaryNumberField, value: string) => void;
   onUpdateDispatchSummaryText: (rowId: string, field: DispatchSummaryTextField, value: string) => void;
 }) {
+  const linkedTruckTrips = group.truckRows.reduce((sum, row) => (
+    sum + (Number.isFinite(row.trips) ? row.trips : 0)
+  ), 0);
   const rows = [
     ...group.loadingRows.map((row) => ({ row, role: "loading" as const })),
     ...group.truckRows.map((row) => ({ row, role: "truck" as const })),
@@ -308,6 +311,7 @@ function DispatchSummaryTableGroupRows({
           row={row}
           isReadOnly={isDailyDispatchShift}
           rowRole={role}
+          linkedTruckTrips={role === "loading" ? linkedTruckTrips : undefined}
           vehicle={row.vehicleId ? vehicleById.get(row.vehicleId) : undefined}
           vehicles={vehicles}
           areaOptions={areaOptions}
