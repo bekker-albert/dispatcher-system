@@ -40,11 +40,13 @@ import {
   getDispatchLocationOptionsFromIndex,
   getDispatchStructureOptionsFromIndex,
 } from "./dispatchStructureOptions";
+import type { DispatchSummaryCategoryTab } from "./DispatchSummaryToolbar";
 
 export type DispatchSummaryTableRowProps = {
   row: DispatchSummaryRow;
   isReadOnly: boolean;
   rowRole: "loading" | "truck" | "unassigned";
+  categoryTab: DispatchSummaryCategoryTab;
   linkedTruckTrips?: number;
   hasLinkedTrucks?: boolean;
   vehicle?: VehicleRow;
@@ -74,6 +76,7 @@ export function DispatchSummaryTableRow({
   row,
   isReadOnly,
   rowRole,
+  categoryTab,
   linkedTruckTrips,
   hasLinkedTrucks = false,
   vehicle,
@@ -203,6 +206,7 @@ export function DispatchSummaryTableRow({
         <DispatchVehiclePicker
           disabled={isReadOnly}
           isTruckRow={isTruckRow}
+          categoryTab={categoryTab}
           value={row.vehicleId}
           vehicle={vehicle}
           vehicles={vehicles}
