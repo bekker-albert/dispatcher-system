@@ -165,12 +165,14 @@ export default function DispatchSection({
         <div style={blockStyle}>{activeDispatchSubtabContent || "В этой подвкладке пока нет информации."}</div>
       ) : (
         <>
-          <DispatchSummaryHeader
-            currentDispatchShift={currentDispatchShift}
-            isDailyDispatchShift={isDailyDispatchShift}
-            reportDate={reportDate}
-            totals={dispatchSummaryTotals}
-          />
+          {isDailyDispatchShift && dailyReportTab === "volumes" ? null : (
+            <DispatchSummaryHeader
+              currentDispatchShift={currentDispatchShift}
+              isDailyDispatchShift={isDailyDispatchShift}
+              reportDate={reportDate}
+              totals={dispatchSummaryTotals}
+            />
+          )}
 
           {isDailyDispatchShift ? null : planFactPanel}
 
