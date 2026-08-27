@@ -5,11 +5,13 @@ import { useId, useMemo, type ChangeEvent, type KeyboardEvent } from "react";
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
 import { dispatchSummaryInputStyle } from "@/features/dispatch/dispatchSectionStyles";
+import type { DispatchSummaryCategoryTab } from "./DispatchSummaryToolbar";
 import { buildDispatchVehicleLabel } from "./dispatchVehicleLabel";
 
 type DispatchVehiclePickerProps = {
   disabled: boolean;
   isTruckRow: boolean;
+  categoryTab: DispatchSummaryCategoryTab;
   value: number | null;
   vehicle?: VehicleRow;
   vehicles: VehicleRow[];
@@ -20,9 +22,30 @@ function isVehicleType(vehicle: VehicleRow, expected: string) {
   return normalizeLookupValue(vehicle.vehicleType) === normalizeLookupValue(expected);
 }
 
+function vehicleMatchesCategory(
+  vehicle: VehicleRow,
+  categoryTab: DispatchSummaryCategoryTab,
+  isTruckRow: boolean,
+) {
+  if (categoryTab === "Производственная") {
+    return isTruckRow
+      ? isVehicleType(vehicle, "Транспортировочная")
+      : isVehicleType(vehicle, "Погрузочная");
+  }
+  if (categoryTab === "Спецтехника") return isVehicleType(vehicle, "Спецтехника");
+  if (categoryTab === "Вспомогательная") return isVehicleType(vehicle, "Вспомогательная");
+  if (categoryTab === "Легковая/Пассажирская") {
+    return isVehicleType(vehicle, "Легковая")
+      || isVehicleType(vehicle, "Пассажирская")
+      || isVehicleType(vehicle, "Легковая/Пассажирская");
+  }
+  return true;
+}
+
 export function DispatchVehiclePicker({
   disabled,
   isTruckRow,
+  categoryTab,
   value,
   vehicle,
   vehicles,
@@ -30,12 +53,8 @@ export function DispatchVehiclePicker({
 }: DispatchVehiclePickerProps) {
   const listId = useId();
   const availableVehicles = useMemo(() => (
-    vehicles.filter((item) => (
-      isTruckRow
-        ? isVehicleType(item, "Транспортировочная")
-        : isVehicleType(item, "Погрузочная")
-    ))
-  ), [isTruckRow, vehicles]);
+    vehicles.filter((item) => vehicleMatchesCategory(item, categoryTab, isTruckRow))
+  ), [categoryTab, isTruckRow, vehicles]);
   const selectedGarageNumber = vehicle?.garageNumber.trim() ?? "";
 
   const findVehicleByGarageNumber = (garageNumber: string) => {
