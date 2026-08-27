@@ -3,35 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  loadDispatchReasonCatalogsFromDatabase,
+  saveDispatchReasonCatalogsToDatabase,
+} from "@/lib/data/dispatch-reason-catalogs";
+import {
   emptyDispatchReasonCatalogs,
   normalizeDispatchReasonCatalogs,
   type DispatchReasonCatalogs,
 } from "@/lib/domain/dispatch/reason-catalog";
-
-type CatalogResponse = {
-  catalogs?: unknown;
-  error?: unknown;
-};
-
-async function requestCatalogs(action: "load-reason-catalogs" | "save-reason-catalogs", catalogs?: DispatchReasonCatalogs) {
-  const response = await fetch("/api/database", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-dispatcher-request": "same-origin",
-    },
-    body: JSON.stringify({
-      resource: "dispatch",
-      action,
-      payload: catalogs ? { catalogs } : {},
-    }),
-  });
-  const body = await response.json() as CatalogResponse;
-  if (!response.ok) {
-    throw new Error(typeof body.error === "string" ? body.error : "Не удалось обработать справочники.");
-  }
-  return body;
-}
 
 export function useDispatchReasonCatalogs() {
   const [catalogs, setCatalogs] = useState<DispatchReasonCatalogs>(emptyDispatchReasonCatalogs);
@@ -43,7 +22,7 @@ export function useDispatchReasonCatalogs() {
     setLoading(true);
     setError("");
     try {
-      const body = await requestCatalogs("load-reason-catalogs");
+      const body = await loadDispatchReasonCatalogsFromDatabase();
       setCatalogs(normalizeDispatchReasonCatalogs(body.catalogs));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Не удалось загрузить справочники.");
@@ -63,7 +42,7 @@ export function useDispatchReasonCatalogs() {
     setSaving(true);
     setError("");
     try {
-      const body = await requestCatalogs("save-reason-catalogs", normalized);
+      const body = await saveDispatchReasonCatalogsToDatabase(normalized);
       const saved = normalizeDispatchReasonCatalogs(body.catalogs);
       setCatalogs(saved);
       return saved;
