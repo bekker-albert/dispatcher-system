@@ -21,42 +21,53 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H dispetcher.kz >> ~/.ssh/known_hosts
 
-      - name: Inspect database setup without secrets
+      - name: Verify database connection without exposing secrets
         run: |
           ssh -i ~/.ssh/id_ed25519 root@dispetcher.kz 'bash -s' <<'EOF'
             set -u
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             APP_DIR="/var/www/www-root/data/apps/dispatcher-system"
-            ENV_FILE="$APP_DIR/.env.local"
+            cd "$APP_DIR"
 
-            echo "=== ENV FILE ==="
-            echo "exists=$([ -f "$ENV_FILE" ] && echo yes || echo no)"
-            if [ -f "$ENV_FILE" ]; then
-              grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$ENV_FILE" | cut -d= -f1 | sort | sed 's/$/=SET/'
-            fi
+            echo "=== ERROR TEXT SOURCE ==="
+            grep -R -n --exclude-dir=.next --exclude-dir=node_modules 'База данных не настроена' app features lib 2>/dev/null | head -n 20 || true
 
-            echo "=== REQUIRED DB KEYS ==="
-            for key in DB_NAME DB_USER DB_PASSWORD DB_HOST DB_PORT; do
-              if [ -f "$ENV_FILE" ] && grep -qE "^${key}=" "$ENV_FILE"; then
-                value=$(grep -E "^${key}=" "$ENV_FILE" | tail -n1 | cut -d= -f2-)
-                echo "$key=$([ -n "$value" ] && echo SET || echo EMPTY)"
-              else
-                echo "$key=MISSING"
-              fi
-            done
-
-            echo "=== MYSQL SERVICE ==="
-            command -v mariadb || true
-            command -v mysql || true
-            systemctl is-active mariadb 2>/dev/null || true
-            systemctl is-active mysql 2>/dev/null || true
-
-            echo "=== DATABASES VIA LOCAL ROOT SOCKET ==="
-            if command -v mariadb >/dev/null 2>&1; then
-              mariadb -NBe 'SHOW DATABASES' 2>&1 | head -n 30 || true
-            elif command -v mysql >/dev/null 2>&1; then
-              mysql -NBe 'SHOW DATABASES' 2>&1 | head -n 30 || true
-            fi
+            echo "=== APP DB CONNECTION ==="
+            node <<'NODE'
+            const fs = require('fs');
+            const mysql = require('mysql2/promise');
+            const raw = fs.readFileSync('.env.local', 'utf8');
+            const env = {};
+            for (const line of raw.split(/\r?\n/)) {
+              const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+              if (!match) continue;
+              let value = match[2].trim();
+              if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+              }
+              env[match[1]] = value;
+            }
+            (async () => {
+              const connection = await mysql.createConnection({
+                host: env.DB_HOST || 'localhost',
+                port: Number(env.DB_PORT || 3306),
+                user: env.DB_USER,
+                password: env.DB_PASSWORD,
+                database: env.DB_NAME,
+              });
+              const [rows] = await connection.query('SELECT 1 AS ok');
+              const [tables] = await connection.query('SHOW TABLES');
+              console.log(`connection=${rows?.[0]?.ok === 1 ? 'ok' : 'unexpected'}`);
+              console.log(`table_count=${tables.length}`);
+              await connection.end();
+            })().catch((error) => {
+              console.log(`connection=failed`);
+              console.log(`code=${error && error.code ? error.code : 'unknown'}`);
+              process.exitCode = 1;
+            });
+            NODE
 
             echo "=== LOCAL API STATUS ==="
-            curl -sS -i http://127.0.0.1:3000/api/database | head -n 20 || true
+            curl -sS http://127.0.0.1:3000/api/database || true
+            echo
           EOF
