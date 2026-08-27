@@ -6,7 +6,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { isAuthUserSuperuser } from "@/lib/domain/auth/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
 import { SectionCard } from "@/shared/ui/layout";
-import { blockStyle, dispatchSuggestionStyle } from "@/features/dispatch/dispatchSectionStyles";
+import { blockStyle } from "@/features/dispatch/dispatchSectionStyles";
 import { DispatchDailyVehicleSummary } from "@/features/dispatch/DispatchDailyVehicleSummary";
 import { DispatchPlanFactPanel } from "@/features/dispatch/DispatchPlanFactPanel";
 import { DispatchSummaryDatalists } from "@/features/dispatch/DispatchSummaryDatalists";
@@ -47,7 +47,6 @@ export default function DispatchSection({
   onAddDispatchSummaryLink,
   onAddDumpTruckToDispatchLink,
   onAddFilteredVehiclesToDispatchSummary,
-  dispatchAiSuggestion,
   filteredDispatchSummaryRows,
   onUpdateDispatchSummaryVehicle,
   onUpdateDispatchSummaryText,
@@ -143,16 +142,16 @@ export default function DispatchSection({
             <>
               <DispatchSummaryStats totals={dispatchSummaryTotals} />
               <DispatchDailyVehicleSummary rows={filteredDispatchSummaryRows} />
-              <div style={dispatchSuggestionStyle}>
-                <strong>Черновик для ИИ:</strong> {dispatchAiSuggestion}
-              </div>
             </>
           ) : (
             <>
-              {isDailyDispatchShift ? <DispatchPlanFactPanel rows={filteredDispatchSummaryRows} dailyMode /> : null}
-              <div style={dispatchSuggestionStyle}>
-                <strong>Черновик для ИИ:</strong> {dispatchAiSuggestion}
-              </div>
+              {isDailyDispatchShift ? (
+                <DispatchPlanFactPanel
+                  rows={filteredDispatchSummaryRows}
+                  dailyMode
+                  percent={dispatchSummaryTotals.percent}
+                />
+              ) : null}
               {summaryTable}
             </>
           )}
