@@ -19,9 +19,11 @@ import {
   type DispatchStructureOptionIndex,
 } from "@/features/dispatch/dispatchStructureOptions";
 import { DispatchSummaryTableRow } from "@/features/dispatch/DispatchSummaryTableRow";
+import type { DispatchSummaryCategoryTab } from "@/features/dispatch/DispatchSummaryToolbar";
 
 type DispatchSummaryTableProps = {
   isDailyDispatchShift: boolean;
+  categoryTab: DispatchSummaryCategoryTab;
   rows: DispatchSummaryRow[];
   vehicles: VehicleRow[];
   areaOptions: string[];
@@ -110,7 +112,21 @@ function isLoadingEquipment(vehicle: VehicleRow | undefined, row: DispatchSummar
 function createDispatchSummaryGroups(
   rows: DispatchSummaryRow[],
   vehicleById: Map<number, VehicleRow>,
+  categoryTab: DispatchSummaryCategoryTab,
 ): DispatchSummaryGroup[] {
+  if (categoryTab !== "Производственная") {
+    return rows.length > 0 ? [{
+      id: `category:${categoryTab}`,
+      label: categoryTab,
+      area: rows[0]?.area ?? "",
+      location: rows[0]?.location ?? "",
+      structure: rows[0]?.workType ?? "",
+      loadingRows: [],
+      truckRows: [],
+      unassignedRows: rows,
+    }] : [];
+  }
+
   const loaderGroups = new Map<string, DispatchSummaryGroup>();
   const pendingTruckRows: DispatchSummaryRow[] = [];
   const unassignedRows: DispatchSummaryRow[] = [];
@@ -198,6 +214,7 @@ function createDispatchSummaryGroups(
 
 export function DispatchSummaryTable({
   isDailyDispatchShift,
+  categoryTab,
   rows,
   vehicles,
   areaOptions,
@@ -214,7 +231,9 @@ export function DispatchSummaryTable({
   const ptoPlanIndex = useMemo(() => (
     ptoPlanRows.length > 0 ? createDispatchStructureOptionIndex(ptoPlanRows) : null
   ), [ptoPlanRows]);
-  const groups = useMemo(() => createDispatchSummaryGroups(rows, vehicleById), [rows, vehicleById]);
+  const groups = useMemo(() => (
+    createDispatchSummaryGroups(rows, vehicleById, categoryTab)
+  ), [categoryTab, rows, vehicleById]);
 
   return (
     <div style={dispatchSummaryTableScrollStyle}>
@@ -236,6 +255,7 @@ export function DispatchSummaryTable({
             <DispatchSummaryTableGroupRows
               key={group.id}
               group={group}
+              categoryTab={categoryTab}
               isDailyDispatchShift={isDailyDispatchShift}
               vehicleById={vehicleById}
               vehicles={vehicles}
@@ -255,7 +275,7 @@ export function DispatchSummaryTable({
               <td colSpan={13} style={dispatchSummaryEmptyStyle}>
                 {isDailyDispatchShift
                   ? "Сутки пока пустые: заполни ночную и дневную смену за выбранную дату."
-                  : "Нет строк сводки. Добавь звено или заполни из расстановки техники."}
+                  : `Нет строк в разделе «${categoryTab}».`}
               </td>
             </tr>
           ) : null}
@@ -267,6 +287,7 @@ export function DispatchSummaryTable({
 
 function DispatchSummaryTableGroupRows({
   group,
+  categoryTab,
   isDailyDispatchShift,
   vehicleById,
   vehicles,
@@ -281,6 +302,7 @@ function DispatchSummaryTableGroupRows({
   onUpdateDispatchSummaryText,
 }: {
   group: DispatchSummaryGroup;
+  categoryTab: DispatchSummaryCategoryTab;
   isDailyDispatchShift: boolean;
   vehicleById: Map<number, VehicleRow>;
   vehicles: VehicleRow[];
@@ -311,6 +333,7 @@ function DispatchSummaryTableGroupRows({
           row={row}
           isReadOnly={isDailyDispatchShift}
           rowRole={role}
+          categoryTab={categoryTab}
           linkedTruckTrips={role === "loading" ? linkedTruckTrips : undefined}
           hasLinkedTrucks={role === "loading" ? group.truckRows.length > 0 : undefined}
           vehicle={row.vehicleId ? vehicleById.get(row.vehicleId) : undefined}
@@ -319,7 +342,9 @@ function DispatchSummaryTableGroupRows({
           locationOptions={locationOptions}
           structureOptions={structureOptions}
           ptoPlanIndex={ptoPlanIndex}
-          onAddDumpTruckToCurrentLink={role === "loading" ? () => onAddDumpTruckToDispatchLink(group.label, row) : undefined}
+          onAddDumpTruckToCurrentLink={categoryTab === "Производственная" && role === "loading"
+            ? () => onAddDumpTruckToDispatchLink(group.label, row)
+            : undefined}
           onUpdateDispatchSummaryText={onUpdateDispatchSummaryText}
           onUpdateDispatchSummaryNumber={onUpdateDispatchSummaryNumber}
           onUpdateDispatchSummaryVehicle={onUpdateDispatchSummaryVehicle}
