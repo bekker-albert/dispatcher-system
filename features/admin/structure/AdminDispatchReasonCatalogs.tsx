@@ -283,8 +283,8 @@ export function AdminDispatchReasonCatalogs() {
 
 const wrapStyle: CSSProperties = { display: "grid", gap: 14 };
 const introStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" };
-const catalogGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 14 };
-const catalogCardStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ed", borderRadius: 12, padding: 14, display: "grid", gap: 12 };
+const catalogGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 14, alignItems: "start" };
+const catalogCardStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ed", borderRadius: 12, padding: 14, display: "grid", gap: 12, alignSelf: "start", height: "fit-content" };
 const catalogHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 };
 const hintStyle: CSSProperties = { color: "#64748b", fontSize: 12, marginTop: 3 };
 const addRowStyle: CSSProperties = { display: "grid", gridTemplateColumns: "1fr 36px", gap: 8 };
