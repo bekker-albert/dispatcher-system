@@ -1,8 +1,14 @@
 export type DispatchReasonCatalogKind = "downtime" | "repair";
 
+export type DispatchReasonCatalogDetail = {
+  id: string;
+  name: string;
+};
+
 export type DispatchReasonCatalogItem = {
   id: string;
   name: string;
+  items: DispatchReasonCatalogDetail[];
 };
 
 export type DispatchReasonCatalogGroup = {
@@ -26,12 +32,23 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeItem(value: unknown): DispatchReasonCatalogItem | null {
+function normalizeDetail(value: unknown): DispatchReasonCatalogDetail | null {
   if (!isRecord(value)) return null;
   const id = normalizeText(value.id);
   const name = normalizeText(value.name);
   if (!id || !name) return null;
   return { id, name };
+}
+
+function normalizeItem(value: unknown): DispatchReasonCatalogItem | null {
+  if (!isRecord(value)) return null;
+  const id = normalizeText(value.id);
+  const name = normalizeText(value.name);
+  if (!id || !name) return null;
+  const items = Array.isArray(value.items)
+    ? value.items.map(normalizeDetail).filter((item): item is DispatchReasonCatalogDetail => item !== null)
+    : [];
+  return { id, name, items };
 }
 
 function normalizeGroup(value: unknown): DispatchReasonCatalogGroup | null {
