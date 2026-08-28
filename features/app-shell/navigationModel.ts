@@ -62,15 +62,7 @@ export const erpNavigationModel: NavigationGroup[] = [
     label: "ПТО",
     icon: "clipboard-list",
     defaultTarget: { topTab: "pto", ptoTab: "plan" },
-    items: [
-      { id: "pto-plan", label: "План", status: "production", target: { topTab: "pto", ptoTab: "plan" } },
-      { id: "pto-oper", label: "Оперучет", status: "production", target: { topTab: "pto", ptoTab: "oper" } },
-      { id: "pto-survey", label: "Замер", status: "production", target: { topTab: "pto", ptoTab: "survey" } },
-      { id: "pto-cycle", label: "Цикл", status: "production", target: { topTab: "pto", ptoTab: "cycle" } },
-      { id: "pto-buckets", label: "Ковши", status: "production", target: { topTab: "pto", ptoTab: "buckets" } },
-      { id: "pto-bodies", label: "Кузова", status: "production", target: { topTab: "pto", ptoTab: "bodies" } },
-      { id: "pto-volume-calc", label: "Расчет объемов", status: "production", target: { topTab: "pto", ptoTab: "performance" } },
-    ],
+    items: [],
   },
   {
     id: "fleet",

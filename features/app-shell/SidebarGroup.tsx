@@ -74,6 +74,7 @@ export function SidebarGroup({
   const active = isNavigationGroupActive(group, state);
   const { expanded, setExpanded, toggleExpanded } = useSidebarGroupExpansion(group.id, active);
   const Icon = iconMap[group.icon] ?? LayoutDashboard;
+  const hasItems = group.items.length > 0;
 
   return (
     <div className="erp-sidebar-group">
@@ -85,6 +86,10 @@ export function SidebarGroup({
           title={group.label}
           onClick={() => {
             if (editing) return;
+            if (!hasItems) {
+              onSelectTarget(group.defaultTarget);
+              return;
+            }
             if (collapsed) {
               onSelectTarget(group.defaultTarget);
               return;
@@ -111,22 +116,24 @@ export function SidebarGroup({
             ) : group.label}
           </span>
         </button>
-        <button
-          type="button"
-          className="erp-sidebar-group__chevron"
-          data-active={active}
-          aria-label={`${expanded ? "Свернуть" : "Развернуть"} ${group.label}`}
-          title={`${expanded ? "Свернуть" : "Развернуть"} ${group.label}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (editing) return;
-            toggleExpanded();
-          }}
-        >
-          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </button>
+        {hasItems ? (
+          <button
+            type="button"
+            className="erp-sidebar-group__chevron"
+            data-active={active}
+            aria-label={`${expanded ? "Свернуть" : "Развернуть"} ${group.label}`}
+            title={`${expanded ? "Свернуть" : "Развернуть"} ${group.label}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (editing) return;
+              toggleExpanded();
+            }}
+          >
+            {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+        ) : null}
       </div>
-      {!collapsed && expanded && (
+      {!collapsed && expanded && hasItems && (
         <div className="erp-sidebar-group__items">
           {group.items.map((item) => (
             <div key={item.id}>

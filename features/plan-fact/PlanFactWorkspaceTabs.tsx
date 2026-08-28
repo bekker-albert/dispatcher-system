@@ -8,11 +8,14 @@ import type { ReportCustomerConfig } from "@/lib/domain/reports/types";
 import { PlanFactReportManager } from "./PlanFactReportManager";
 
 export type PlanFactWorkspaceTabsProps = {
+  mode: "pto" | "reports";
+  activePtoTab: string;
   activeSourceTab: PtoDateTableKey | null;
   activeReportId: string | null;
   reportCustomers: ReportCustomerConfig[];
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
+  onSelectPtoTab: (tab: string) => void;
   onSelectSourceTab: (tab: PtoDateTableKey) => void;
   onSelectReport: (id: string) => void;
   onSetReportVisible: (id: string, visible: boolean) => void;
@@ -22,65 +25,63 @@ export type PlanFactWorkspaceTabsProps = {
   onDeleteReport: (id: string) => void;
 };
 
-const sourceTabs: Array<{ id: PtoDateTableKey; label: string }> = [
+const ptoTabs: Array<{ id: string; label: string }> = [
   { id: "plan", label: "План" },
   { id: "oper", label: "Опер учет" },
   { id: "survey", label: "Марк замер" },
+  { id: "cycle", label: "Цикл" },
+  { id: "buckets", label: "Ковши" },
+  { id: "bodies", label: "Кузова" },
+  { id: "performance", label: "Расчет объемов" },
 ];
 
-export function PlanFactWorkspaceTabs({
-  activeSourceTab,
-  activeReportId,
-  reportCustomers,
-  editing,
-  onEditingChange,
-  onSelectSourceTab,
-  onSelectReport,
-  onSetReportVisible,
-  onRenameReport,
-  onCreateReportCopy,
-  onMoveReport,
-  onDeleteReport,
-}: PlanFactWorkspaceTabsProps) {
+const editablePtoTabs = new Set(["plan", "oper", "survey"]);
+
+export function PlanFactWorkspaceTabs(props: PlanFactWorkspaceTabsProps) {
   const [managerOpen, setManagerOpen] = useState(false);
-  const visibleReports = reportCustomers.filter((customer) => customer.visible);
+  const visibleReports = props.reportCustomers.filter((customer) => customer.visible);
+  const showEditButton = props.mode === "reports" || editablePtoTabs.has(props.activePtoTab);
 
   return (
     <div className="no-print" style={shellStyle}>
-      <div style={tabsStyle} role="tablist" aria-label="План-факт">
-        {sourceTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeSourceTab === tab.id}
-            onClick={() => onSelectSourceTab(tab.id)}
-            style={tabButtonStyle(activeSourceTab === tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-        <span style={dividerStyle} aria-hidden />
-        {visibleReports.map((customer) => (
-          <button
-            key={customer.id}
-            type="button"
-            role="tab"
-            aria-selected={activeReportId === customer.id}
-            onClick={() => onSelectReport(customer.id)}
-            style={tabButtonStyle(activeReportId === customer.id)}
-          >
-            {planFactReportTabLabel(customer)}
-          </button>
-        ))}
+      <div style={tabsStyle} role="tablist" aria-label={props.mode === "pto" ? "ПТО" : "Отчеты"}>
+        {props.mode === "pto" ? (
+          ptoTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={props.activePtoTab === tab.id}
+              onClick={() => props.onSelectPtoTab(tab.id)}
+              style={tabButtonStyle(props.activePtoTab === tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))
+        ) : (
+          visibleReports.map((customer) => (
+            <button
+              key={customer.id}
+              type="button"
+              role="tab"
+              aria-selected={props.activeReportId === customer.id}
+              onClick={() => props.onSelectReport(customer.id)}
+              style={tabButtonStyle(props.activeReportId === customer.id)}
+            >
+              {planFactReportTabLabel(customer)}
+            </button>
+          ))
+        )}
       </div>
 
       <div style={actionsStyle}>
-        <button type="button" onClick={() => onEditingChange(!editing)} style={editButtonStyle(editing)}>
-          <Pencil size={15} aria-hidden />
-          {editing ? "Завершить" : "Редактировать"}
-        </button>
-        {editing ? (
+        {showEditButton ? (
+          <button type="button" onClick={() => props.onEditingChange(!props.editing)} style={editButtonStyle(props.editing)}>
+            <Pencil size={15} aria-hidden />
+            {props.editing ? "Завершить" : "Редактировать"}
+          </button>
+        ) : null}
+        {props.mode === "reports" && props.editing ? (
           <div style={{ position: "relative" }}>
             <button
               type="button"
@@ -93,12 +94,12 @@ export function PlanFactWorkspaceTabs({
             </button>
             {managerOpen ? (
               <PlanFactReportManager
-                reportCustomers={reportCustomers}
-                onSetReportVisible={onSetReportVisible}
-                onRenameReport={onRenameReport}
-                onCreateReportCopy={onCreateReportCopy}
-                onMoveReport={onMoveReport}
-                onDeleteReport={onDeleteReport}
+                reportCustomers={props.reportCustomers}
+                onSetReportVisible={props.onSetReportVisible}
+                onRenameReport={props.onRenameReport}
+                onCreateReportCopy={props.onCreateReportCopy}
+                onMoveReport={props.onMoveReport}
+                onDeleteReport={props.onDeleteReport}
                 onClose={() => setManagerOpen(false)}
               />
             ) : null}
@@ -126,7 +127,6 @@ const shellStyle: CSSProperties = {
 
 const tabsStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 4, minWidth: 0, overflowX: "auto" };
 const actionsStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 6, flex: "0 0 auto" };
-const dividerStyle: CSSProperties = { width: 1, alignSelf: "stretch", minHeight: 26, background: "#d8e0ea", margin: "0 4px" };
 
 function tabButtonStyle(active: boolean): CSSProperties {
   return {
