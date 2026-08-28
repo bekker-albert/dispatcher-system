@@ -24,6 +24,7 @@ export type DispatchSummaryRow = {
   downtimeReason: string;
   repairReasonGroup: string;
   repairReason: string;
+  repairReasonDetail: string;
   reason: string;
   comment: string;
 };
@@ -39,6 +40,7 @@ export type DispatchSummaryTextField =
   | "downtimeReason"
   | "repairReasonGroup"
   | "repairReason"
+  | "repairReasonDetail"
   | "reason"
   | "comment";
 
