@@ -52,9 +52,9 @@ export function useAppPtoPersistenceController({
     || (appState.topTab === "admin" && appState.adminSection === "reports");
   const activePtoTabNeedsDatabase = appState.topTab === "pto"
     && ptoTabNeedsDatabase(appState.ptoTab);
-  const ptoDatabaseLoadEnabled = ptoDatabaseLoadStarted
+  const ptoDatabaseLoadEnabled = appState.ptoDatabaseLoadStarted
     || (
-      ptoBootstrapLoaded
+      appState.ptoBootstrapLoaded
       && (!databaseConfigured || reportsNeedPtoDatabase || activePtoTabNeedsDatabase)
     );
   const ptoPersistenceEnabled = adminDataLoaded
