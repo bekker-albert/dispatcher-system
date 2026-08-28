@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, type ChangeEvent, type KeyboardEvent } from "react";
+import { ChevronDown } from "lucide-react";
 
 import type { VehicleRow } from "@/lib/domain/vehicles/types";
 import { normalizeLookupValue } from "@/lib/utils/text";
@@ -86,24 +87,43 @@ export function DispatchVehiclePicker({
 
   return (
     <>
-      <input
-        key={value ?? "empty"}
-        type="text"
-        list={disabled ? undefined : listId}
-        disabled={disabled}
-        defaultValue={selectedGarageNumber}
-        placeholder="Гаражный №"
-        autoComplete="off"
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onBlur={(event) => {
-          if (!selectExactGarageNumber(event.currentTarget.value)) {
-            event.currentTarget.value = selectedGarageNumber;
-          }
-        }}
-        style={{ ...dispatchSummaryInputStyle, textAlign: "center", fontVariantNumeric: "tabular-nums" }}
-        aria-label="Гаражный номер техники"
-      />
+      <div style={{ position: "relative", width: "100%" }}>
+        <input
+          key={value ?? "empty"}
+          type="text"
+          list={disabled ? undefined : listId}
+          disabled={disabled}
+          defaultValue={selectedGarageNumber}
+          placeholder="Гаражный №"
+          autoComplete="off"
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onBlur={(event) => {
+            if (!selectExactGarageNumber(event.currentTarget.value)) {
+              event.currentTarget.value = selectedGarageNumber;
+            }
+          }}
+          style={{
+            ...dispatchSummaryInputStyle,
+            paddingRight: 24,
+            textAlign: "center",
+            fontVariantNumeric: "tabular-nums",
+          }}
+          aria-label="Гаражный номер техники"
+        />
+        <ChevronDown
+          size={14}
+          aria-hidden
+          style={{
+            position: "absolute",
+            right: 6,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: disabled ? "#94a3b8" : "#475569",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
       {!disabled ? (
         <datalist id={listId}>
           {availableVehicles
