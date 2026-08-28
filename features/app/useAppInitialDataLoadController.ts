@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { defaultSubTabs } from "@/features/app/appDefaults";
+import { useAppSectionPreloader } from "@/features/app/useAppSectionPreloader";
 import { useInitialAppDataLoad } from "@/features/app/useInitialAppDataLoad";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 
@@ -108,4 +109,8 @@ export function useAppInitialDataLoadController({
   ]);
 
   useInitialAppDataLoad(initialLoadOptions);
+  useAppSectionPreloader(appState.adminDataLoaded, {
+    activeTab: appState.topTab,
+    includePto: true,
+  });
 }
