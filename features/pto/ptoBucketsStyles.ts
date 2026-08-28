@@ -1,7 +1,10 @@
 import type { CSSProperties } from "react";
 
 export const ptoBucketsLayoutStyle: CSSProperties = {
-  display: "grid",
+  flex: "1 1 auto",
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
   gap: 10,
 };
 
@@ -18,14 +21,15 @@ export const ptoBucketsHintStyle: CSSProperties = {
 };
 
 export const ptoBucketsScrollStyle: CSSProperties = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  height: "100%",
   overflow: "auto",
   borderWidth: 1,
   borderStyle: "solid",
   borderColor: "#e2e8f0",
   borderRadius: 8,
   background: "#ffffff",
-  maxHeight: "calc(100dvh - 310px)",
-  minHeight: 260,
 };
 
 export const ptoBucketsTableStyle: CSSProperties = {
