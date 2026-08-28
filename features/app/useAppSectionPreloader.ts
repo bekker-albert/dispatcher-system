@@ -33,8 +33,16 @@ const primarySectionPreloaders: SectionPreloader[] = [
 ];
 
 const ptoSectionPreloaders: SectionPreloader[] = [
-  // PTO is intentionally not preloaded: the date tables and bucket grids are heavy.
-  // Load them only when the user opens the section.
+  {
+    key: "pto",
+    load: () => Promise.all([
+      import("@/features/app/PtoPrimaryContent"),
+      import("@/features/app/PtoDataPrimaryContent"),
+      import("@/features/app/PtoDateDataPrimaryContent"),
+      import("@/features/app/PtoBucketsDataPrimaryContent"),
+      import("@/features/app/PtoStaticPrimaryContent"),
+    ]),
+  },
 ];
 
 export function useAppSectionPreloader(
