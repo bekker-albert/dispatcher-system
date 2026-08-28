@@ -54,6 +54,7 @@ export function createDispatchSummaryRow(vehicle: VehicleRow | undefined, date: 
     downtimeReason: "",
     repairReasonGroup: "",
     repairReason: "",
+    repairReasonDetail: "",
     reason: "",
     comment: "",
   };
@@ -105,6 +106,7 @@ export function normalizeDispatchSummaryRow(row: unknown, index: number, fallbac
     downtimeReason: stringValue(row.downtimeReason),
     repairReasonGroup: stringValue(row.repairReasonGroup),
     repairReason: stringValue(row.repairReason),
+    repairReasonDetail: stringValue(row.repairReasonDetail),
     reason: stringValue(row.reason),
     comment: stringValue(row.comment),
   };
