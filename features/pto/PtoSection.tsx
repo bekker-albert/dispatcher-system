@@ -89,8 +89,8 @@ export default function PtoSection({
   const showStaticContent = !isPtoDataTableKey(ptoTab);
 
   return (
-    <div style={isPtoDateTab ? ptoWorkspaceStyle : undefined}>
-      <SectionCard title="" fill={isPtoDateTab}>
+    <div style={ptoWorkspaceStyle}>
+      <SectionCard title="" fill>
         {showStaticContent ? <PtoStaticTabContent content={content} ptoTab={ptoTab} /> : null}
         {ptoTab === "buckets" && (
           <div style={ptoBucketsPanelStyle}>
@@ -206,6 +206,9 @@ const ptoDateTableFrameStyle: CSSProperties = {
 };
 
 const ptoBucketsPanelStyle: CSSProperties = {
-  display: "grid",
+  flex: "1 1 auto",
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
   gap: 10,
 };
