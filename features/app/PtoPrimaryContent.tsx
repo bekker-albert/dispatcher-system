@@ -31,23 +31,28 @@ export function PtoPrimaryContent({
   const isPtoDateTab = isPtoDateTableKey(appState.ptoTab);
   const isPtoBucketsSection = isPtoMatrixTableKey(appState.ptoTab);
 
-  const content = !isPtoDateTab && !isPtoBucketsSection ? (
-    <PtoStaticPrimaryContent
-      appState={appState}
-      models={{
-        ...models,
-        ...createEmptyPtoDateModel(appState.ptoPlanYear),
-      } as AppPtoModels}
-      navigation={navigation}
-    />
-  ) : (
-    <PtoDataPrimaryContent
-      appState={appState}
-      models={models}
-      runtime={runtime}
-      navigation={navigation}
-    />
-  );
+  let content;
+  if (!isPtoDateTab && !isPtoBucketsSection) {
+    content = (
+      <PtoStaticPrimaryContent
+        appState={appState}
+        models={{
+          ...models,
+          ...createEmptyPtoDateModel(appState.ptoPlanYear),
+        } as AppPtoModels}
+        navigation={navigation}
+      />
+    );
+  } else {
+    content = (
+      <PtoDataPrimaryContent
+        appState={appState}
+        models={models}
+        runtime={runtime}
+        navigation={navigation}
+      />
+    );
+  }
 
   return (
     <PlanFactWorkspaceShell appState={appState}>
