@@ -74,6 +74,13 @@ function optionMatches(values: string[], current: string) {
   return !normalizedCurrent || values.some((value) => normalizeLookupValue(value) === normalizedCurrent);
 }
 
+const dispatchSummaryDropdownStyle = {
+  ...dispatchSummaryInputStyle,
+  appearance: "auto",
+  paddingRight: 24,
+  textOverflow: "ellipsis",
+} as const;
+
 export function DispatchSummaryTableRow({
   row,
   isReadOnly,
@@ -192,19 +199,19 @@ export function DispatchSummaryTableRow({
       ) : (
         <>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly} value={row.area} onChange={handleAreaChange} style={dispatchSummaryInputStyle}>
+            <select disabled={isReadOnly} value={row.area} onChange={handleAreaChange} style={dispatchSummaryDropdownStyle}>
               <option value="">Участок</option>
               {optionValues(areaOptions, row.area).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </td>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly} value={row.location} onChange={handleLocationChange} style={dispatchSummaryInputStyle}>
+            <select disabled={isReadOnly} value={row.location} onChange={handleLocationChange} style={dispatchSummaryDropdownStyle}>
               <option value="">Местонахождение</option>
               {optionValues(rowLocationOptions, row.location).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </td>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly || rowStructureOptions.length === 0} value={row.workType} onChange={handleTextChange("workType")} style={dispatchSummaryInputStyle}>
+            <select disabled={isReadOnly || rowStructureOptions.length === 0} value={row.workType} onChange={handleTextChange("workType")} style={dispatchSummaryDropdownStyle}>
               <option value="">{rowStructureOptions.length === 0 ? "Нет структур в плане для выбранной связки" : "Структура"}</option>
               {optionValues(rowStructureOptions, row.workType).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
@@ -241,20 +248,20 @@ export function DispatchSummaryTableRow({
       {isReasonTab ? (
         <>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly || reasonGroups.length === 0} value={reasonGroupValue} onChange={handleReasonGroupChange} style={dispatchSummaryInputStyle}>
+            <select disabled={isReadOnly || reasonGroups.length === 0} value={reasonGroupValue} onChange={handleReasonGroupChange} style={dispatchSummaryDropdownStyle}>
               <option value="">{reasonGroups.length === 0 ? "Справочник пуст" : "Выберите группу"}</option>
               {reasonGroups.map((group) => <option key={group.id} value={group.name}>{group.name}</option>)}
             </select>
           </td>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly || !reasonGroupValue || reasonItems.length === 0} value={reasonValue} onChange={handleReasonChange} style={dispatchSummaryInputStyle}>
+            <select disabled={isReadOnly || !reasonGroupValue || reasonItems.length === 0} value={reasonValue} onChange={handleReasonChange} style={dispatchSummaryDropdownStyle}>
               <option value="">{!reasonGroupValue ? "Сначала выберите группу" : reasonItems.length === 0 ? "Нет значений второго уровня" : isRepairTab ? "Выберите вид ремонта" : "Выберите причину"}</option>
               {reasonItems.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
             </select>
           </td>
           {isRepairTab ? (
             <td style={dispatchSummaryTdStyle}>
-              <select disabled={isReadOnly || !reasonValue || repairDetails.length === 0} value={row.repairReasonDetail} onChange={handleRepairDetailChange} style={dispatchSummaryInputStyle}>
+              <select disabled={isReadOnly || !reasonValue || repairDetails.length === 0} value={row.repairReasonDetail} onChange={handleRepairDetailChange} style={dispatchSummaryDropdownStyle}>
                 <option value="">{!reasonValue ? "Сначала выберите 2 уровень" : repairDetails.length === 0 ? "Нет значений третьего уровня" : "Выберите 3 уровень"}</option>
                 {repairDetails.map((detail) => <option key={detail.id} value={detail.name}>{detail.name}</option>)}
               </select>
