@@ -129,11 +129,11 @@ export async function loadInitialAppDatabaseBootstrap({
       timestampToMs(currentAppSettingsLocalUpdatedAt),
       timestampToMs(currentAppLocalUpdatedAt),
     );
-    const shouldUseDatabaseSettings = databaseSettings.length > 0
-      && (
-        !hasLocalAppState
-        || (currentLocalUpdatedTime > 0 && databaseSettingsUpdatedTime > currentLocalUpdatedTime)
-      );
+
+    // app_settings contains shared settings (including tab order) and is the
+    // canonical source across browsers. localStorage is only a startup cache
+    // and fallback when the database/settings endpoint is unavailable.
+    const shouldUseDatabaseSettings = databaseSettings.length > 0;
 
     if (shouldUseDatabaseSettings) {
       databaseSettings.forEach((setting) => {
@@ -146,6 +146,10 @@ export async function loadInitialAppDatabaseBootstrap({
         window.localStorage.setItem(adminStorageKeys.appSettingsLocalUpdatedAt, updatedAt);
         window.localStorage.setItem(adminStorageKeys.appStateLocalUpdatedAt, updatedAt);
         window.localStorage.setItem(adminStorageKeys.appLocalUpdatedAt, updatedAt);
+      } else if (currentLocalUpdatedTime > 0) {
+        // Do not let an old browser-side timestamp make the cache look newer
+        // than authoritative database values that do not have timestamps yet.
+        window.localStorage.removeItem(adminStorageKeys.appSettingsLocalUpdatedAt);
       }
       storageChanged = true;
     }
