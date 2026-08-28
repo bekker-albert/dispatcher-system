@@ -79,6 +79,7 @@ const dispatchSummaryHeaders = [
   ["", dispatchSummaryThStyle],
   ["Группа", dispatchSummaryThStyle],
   ["Причина / вид", dispatchSummaryThStyle],
+  ["Детализация", dispatchSummaryThStyle],
 ] as const;
 
 function hiddenColumnIndexes(categoryTab: DispatchSummaryCategoryTab) {
@@ -94,12 +95,13 @@ function hiddenColumnIndexes(categoryTab: DispatchSummaryCategoryTab) {
   }
 
   if (categoryTab === "Простои") {
-    [5, 6, 7, 9, 10, 11, 12].forEach((index) => hidden.add(index));
+    [5, 6, 7, 9, 10, 11, 12, 15].forEach((index) => hidden.add(index));
   } else if (categoryTab === "Ремонты") {
     [5, 6, 7, 8, 10, 11, 12].forEach((index) => hidden.add(index));
   } else {
     hidden.add(13);
     hidden.add(14);
+    hidden.add(15);
   }
 
   return hidden;
@@ -108,23 +110,16 @@ function hiddenColumnIndexes(categoryTab: DispatchSummaryCategoryTab) {
 function headerLabel(index: number, categoryTab: DispatchSummaryCategoryTab) {
   if (index === 13) return categoryTab === "Ремонты" ? "Группа ремонта" : "Группа простоя";
   if (index === 14) return categoryTab === "Ремонты" ? "Вид ремонта" : "Причина простоя";
+  if (index === 15) return "Детализация ремонта";
   return dispatchSummaryHeaders[index][0];
 }
 
 function columnSizingStyle(index: number) {
   const fixedWidth = dispatchSummaryFixedColumnWidths[index];
   if (fixedWidth) {
-    return {
-      width: fixedWidth,
-      minWidth: fixedWidth,
-      maxWidth: fixedWidth,
-    };
+    return { width: fixedWidth, minWidth: fixedWidth, maxWidth: fixedWidth };
   }
-
-  if (index === 2) {
-    return { minWidth: dispatchSummaryStructureMinWidth };
-  }
-
+  if (index === 2) return { minWidth: dispatchSummaryStructureMinWidth };
   return undefined;
 }
 
@@ -140,20 +135,12 @@ function vehicleDisplayKeys(vehicle: VehicleRow | undefined, row: DispatchSummar
     vehicle?.garageNumber,
     vehicle?.plateNumber,
     [vehicle?.brand, vehicle?.model].filter(Boolean).join(" "),
-  ]
-    .map((value) => normalizeGroupKey(value ?? ""))
-    .filter(Boolean);
+  ].map((value) => normalizeGroupKey(value ?? "")).filter(Boolean);
 }
 
 function isLoadingEquipment(vehicle: VehicleRow | undefined, row: DispatchSummaryRow) {
-  const text = [
-    vehicle?.vehicleType,
-    vehicle?.equipmentType,
-    vehicle?.brand,
-    vehicle?.model,
-    row.vehicleName,
-  ].join(" ").toLowerCase();
-
+  const text = [vehicle?.vehicleType, vehicle?.equipmentType, vehicle?.brand, vehicle?.model, row.vehicleName]
+    .join(" ").toLowerCase();
   return /экскават|погруз|loader|shovel|фронтал/.test(text);
 }
 
@@ -195,7 +182,6 @@ function createDispatchSummaryGroups(
         truckRows: [],
         unassignedRows: [],
       };
-
       group.loadingRows.push(row);
       group.area ||= row.area;
       group.location ||= row.location;
@@ -203,12 +189,10 @@ function createDispatchSummaryGroups(
       keys.forEach((key) => loaderGroups.set(key, group));
       return;
     }
-
     if (row.excavator.trim()) {
       pendingTruckRows.push(row);
       return;
     }
-
     unassignedRows.push(row);
   });
 
@@ -222,7 +206,6 @@ function createDispatchSummaryGroups(
       loaderGroup.structure ||= row.workType;
       return;
     }
-
     const fallbackGroup = fallbackGroups.get(key) ?? {
       id: `excavator:${key || row.id}`,
       label: row.excavator || "Без привязки",
@@ -256,7 +239,6 @@ function createDispatchSummaryGroups(
       unassignedRows,
     });
   }
-
   return groups;
 }
 
@@ -276,39 +258,24 @@ export function DispatchSummaryTable({
   onUpdateDispatchSummaryText,
 }: DispatchSummaryTableProps) {
   const vehicleById = useMemo(() => new Map(vehicles.map((vehicle) => [vehicle.id, vehicle])), [vehicles]);
-  const ptoPlanIndex = useMemo(() => (
-    ptoPlanRows.length > 0 ? createDispatchStructureOptionIndex(ptoPlanRows) : null
-  ), [ptoPlanRows]);
-  const groups = useMemo(() => (
-    createDispatchSummaryGroups(rows, vehicleById, categoryTab)
-  ), [categoryTab, rows, vehicleById]);
+  const ptoPlanIndex = useMemo(() => ptoPlanRows.length > 0 ? createDispatchStructureOptionIndex(ptoPlanRows) : null, [ptoPlanRows]);
+  const groups = useMemo(() => createDispatchSummaryGroups(rows, vehicleById, categoryTab), [categoryTab, rows, vehicleById]);
   const { catalogs } = useDispatchReasonCatalogs();
-  const reasonGroups = categoryTab === "Простои"
-    ? catalogs.downtime
-    : categoryTab === "Ремонты"
-      ? catalogs.repair
-      : [];
+  const reasonGroups = categoryTab === "Простои" ? catalogs.downtime : categoryTab === "Ремонты" ? catalogs.repair : [];
   const hiddenColumns = hiddenColumnIndexes(categoryTab);
-  const visibleColumnIndexes = dispatchSummaryHeaders
-    .map((_, index) => index)
-    .filter((index) => !hiddenColumns.has(index));
+  const visibleColumnIndexes = dispatchSummaryHeaders.map((_, index) => index).filter((index) => !hiddenColumns.has(index));
 
   return (
     <div style={dispatchSummaryTableScrollStyle}>
       <table style={{ ...dispatchSummaryTableStyle, minWidth: 0, tableLayout: "auto" }}>
         <colgroup>
-          {visibleColumnIndexes.map((index) => (
-            <col key={`column-${index}`} style={columnSizingStyle(index)} />
-          ))}
+          {visibleColumnIndexes.map((index) => <col key={`column-${index}`} style={columnSizingStyle(index)} />)}
         </colgroup>
         <thead>
           <tr>
             {visibleColumnIndexes.map((index) => {
               const [, style] = dispatchSummaryHeaders[index];
-              const resolvedStyle = {
-                ...style,
-                ...columnSizingStyle(index),
-              };
+              const resolvedStyle = { ...style, ...columnSizingStyle(index) };
               return <th key={`${index}-${headerLabel(index, categoryTab)}`} style={resolvedStyle}>{headerLabel(index, categoryTab)}</th>;
             })}
           </tr>
@@ -335,13 +302,9 @@ export function DispatchSummaryTable({
             />
           ))}
           {rows.length === 0 ? (
-            <tr>
-              <td colSpan={visibleColumnIndexes.length} style={dispatchSummaryEmptyStyle}>
-                {isDailyDispatchShift
-                  ? "Сутки пока пустые: заполни ночную и дневную смену за выбранную дату."
-                  : `Нет строк в разделе «${categoryTab}».`}
-              </td>
-            </tr>
+            <tr><td colSpan={visibleColumnIndexes.length} style={dispatchSummaryEmptyStyle}>
+              {isDailyDispatchShift ? "Сутки пока пустые: заполни ночную и дневную смену за выбранную дату." : `Нет строк в разделе «${categoryTab}».`}
+            </td></tr>
           ) : null}
         </tbody>
       </table>
@@ -382,9 +345,7 @@ function DispatchSummaryTableGroupRows({
   onUpdateDispatchSummaryNumber: (rowId: string, field: DispatchSummaryNumberField, value: string) => void;
   onUpdateDispatchSummaryText: (rowId: string, field: DispatchSummaryTextField, value: string) => void;
 }) {
-  const linkedTruckTrips = group.truckRows.reduce((sum, row) => (
-    sum + (Number.isFinite(row.trips) ? row.trips : 0)
-  ), 0);
+  const linkedTruckTrips = group.truckRows.reduce((sum, row) => sum + (Number.isFinite(row.trips) ? row.trips : 0), 0);
   const rows = [
     ...group.loadingRows.map((row) => ({ row, role: "loading" as const })),
     ...group.truckRows.map((row) => ({ row, role: "truck" as const })),
@@ -409,9 +370,7 @@ function DispatchSummaryTableGroupRows({
           locationOptions={locationOptions}
           structureOptions={structureOptions}
           ptoPlanIndex={ptoPlanIndex}
-          onAddDumpTruckToCurrentLink={categoryTab === "Производственная" && role === "loading"
-            ? () => onAddDumpTruckToDispatchLink(group.label, row)
-            : undefined}
+          onAddDumpTruckToCurrentLink={categoryTab === "Производственная" && role === "loading" ? () => onAddDumpTruckToDispatchLink(group.label, row) : undefined}
           onUpdateDispatchSummaryText={onUpdateDispatchSummaryText}
           onUpdateDispatchSummaryNumber={onUpdateDispatchSummaryNumber}
           onUpdateDispatchSummaryVehicle={onUpdateDispatchSummaryVehicle}
