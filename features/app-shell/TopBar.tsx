@@ -27,7 +27,7 @@ export function TopBar({
   const dateMovedToTitle = activeItemId === "dispatch-daily-volumes";
 
   return (
-    <header className="erp-topbar no-print">
+    <header className="erp-topbar no-print" style={{ zIndex: 30 }}>
       <div className="erp-topbar__left">
         <SidebarToggle mobile onClick={onOpenMobileMenu} />
         <Breadcrumbs
