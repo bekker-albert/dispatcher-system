@@ -113,6 +113,7 @@ export function PlanFactWorkspaceTabs(props: PlanFactWorkspaceTabsProps) {
 const shellStyle: CSSProperties = {
   position: "relative",
   zIndex: 20,
+  flex: "0 0 auto",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
