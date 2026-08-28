@@ -16,41 +16,49 @@ export function useAppPtoPersistenceController({
   appState,
   resetUndoHistoryForExternalRestore,
 }: UseAppPtoPersistenceControllerOptions) {
+  const {
+    adminDataLoaded,
+    ptoBootstrapLoaded,
+    ptoDatabaseLoadStarted,
+    ptoDatabaseReady,
+    setPtoDatabaseLoadStarted,
+  } = appState;
+
   useEffect(() => {
     if (
       !databaseConfigured
-      || !appState.adminDataLoaded
-      || !appState.ptoBootstrapLoaded
-      || appState.ptoDatabaseLoadStarted
-      || appState.ptoDatabaseReady
+      || !adminDataLoaded
+      || !ptoBootstrapLoaded
+      || ptoDatabaseLoadStarted
+      || ptoDatabaseReady
     ) {
       return undefined;
     }
 
     const timeoutId = window.setTimeout(() => {
-      appState.setPtoDatabaseLoadStarted(true);
+      setPtoDatabaseLoadStarted(true);
     }, 400);
 
     return () => window.clearTimeout(timeoutId);
   }, [
-    appState.adminDataLoaded,
-    appState.ptoBootstrapLoaded,
-    appState.ptoDatabaseLoadStarted,
-    appState.ptoDatabaseReady,
-    appState.setPtoDatabaseLoadStarted,
+    adminDataLoaded,
+    ptoBootstrapLoaded,
+    ptoDatabaseLoadStarted,
+    ptoDatabaseReady,
+    setPtoDatabaseLoadStarted,
   ]);
 
   const reportsNeedPtoDatabase = appState.topTab === "reports"
     || (appState.topTab === "admin" && appState.adminSection === "reports");
   const activePtoTabNeedsDatabase = appState.topTab === "pto"
     && ptoTabNeedsDatabase(appState.ptoTab);
-  const ptoDatabaseLoadEnabled = appState.ptoDatabaseLoadStarted
+  const ptoDatabaseLoadEnabled = ptoDatabaseLoadStarted
     || (
-      appState.ptoBootstrapLoaded
+      ptoBootstrapLoaded
       && (!databaseConfigured || reportsNeedPtoDatabase || activePtoTabNeedsDatabase)
     );
-  const ptoPersistenceEnabled = appState.adminDataLoaded
-    && (!databaseConfigured || appState.ptoDatabaseReady);
+  const ptoPersistenceEnabled = adminDataLoaded
+    && (!databaseConfigured || ptoDatabaseReady);
 
   return useAppPtoPersistence({
     ptoDatabaseLoadEnabled,
