@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ChangeEvent } from "react";
+import { useMemo, type ChangeEvent, type KeyboardEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import {
@@ -190,6 +190,42 @@ export function DispatchSummaryTableRow({
     onUpdateDispatchSummaryText(row.id, "reason", value || row.repairReason);
   };
 
+  const clearOnDelete = (clear: () => void) => (event: KeyboardEvent<HTMLSelectElement>) => {
+    if (event.key !== "Delete") return;
+    event.preventDefault();
+    clear();
+  };
+
+  const clearArea = () => {
+    onUpdateDispatchSummaryText(row.id, "area", "");
+    onUpdateDispatchSummaryText(row.id, "location", "");
+    onUpdateDispatchSummaryText(row.id, "workType", "");
+  };
+  const clearLocation = () => {
+    onUpdateDispatchSummaryText(row.id, "location", "");
+    onUpdateDispatchSummaryText(row.id, "workType", "");
+  };
+  const clearReasonGroup = () => {
+    if (isRepairTab) {
+      onUpdateDispatchSummaryText(row.id, "repairReasonGroup", "");
+      onUpdateDispatchSummaryText(row.id, "repairReason", "");
+      onUpdateDispatchSummaryText(row.id, "repairReasonDetail", "");
+    } else {
+      onUpdateDispatchSummaryText(row.id, "downtimeReasonGroup", "");
+      onUpdateDispatchSummaryText(row.id, "downtimeReason", "");
+    }
+    onUpdateDispatchSummaryText(row.id, "reason", "");
+  };
+  const clearReason = () => {
+    onUpdateDispatchSummaryText(row.id, isRepairTab ? "repairReason" : "downtimeReason", "");
+    if (isRepairTab) onUpdateDispatchSummaryText(row.id, "repairReasonDetail", "");
+    onUpdateDispatchSummaryText(row.id, "reason", "");
+  };
+  const clearRepairDetail = () => {
+    onUpdateDispatchSummaryText(row.id, "repairReasonDetail", "");
+    onUpdateDispatchSummaryText(row.id, "reason", row.repairReason);
+  };
+
   const equipmentName = vehicle ? buildDispatchVehicleLabel(vehicle) : row.vehicleName.trim();
 
   return (
@@ -199,20 +235,20 @@ export function DispatchSummaryTableRow({
       ) : (
         <>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly} value={row.area} onChange={handleAreaChange} style={dispatchSummaryDropdownStyle}>
-              <option value="">Участок</option>
+            <select disabled={isReadOnly} value={row.area} onChange={handleAreaChange} onKeyDown={clearOnDelete(clearArea)} style={dispatchSummaryDropdownStyle}>
+              <option value=""></option>
               {optionValues(areaOptions, row.area).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </td>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly} value={row.location} onChange={handleLocationChange} style={dispatchSummaryDropdownStyle}>
-              <option value="">Местонахождение</option>
+            <select disabled={isReadOnly} value={row.location} onChange={handleLocationChange} onKeyDown={clearOnDelete(clearLocation)} style={dispatchSummaryDropdownStyle}>
+              <option value=""></option>
               {optionValues(rowLocationOptions, row.location).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </td>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly || rowStructureOptions.length === 0} value={row.workType} onChange={handleTextChange("workType")} style={dispatchSummaryDropdownStyle}>
-              <option value="">{rowStructureOptions.length === 0 ? "Нет структур в плане для выбранной связки" : "Структура"}</option>
+            <select disabled={isReadOnly || rowStructureOptions.length === 0} value={row.workType} onChange={handleTextChange("workType")} onKeyDown={clearOnDelete(() => onUpdateDispatchSummaryText(row.id, "workType", ""))} style={dispatchSummaryDropdownStyle}>
+              <option value=""></option>
               {optionValues(rowStructureOptions, row.workType).map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           </td>
@@ -248,21 +284,21 @@ export function DispatchSummaryTableRow({
       {isReasonTab ? (
         <>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly || reasonGroups.length === 0} value={reasonGroupValue} onChange={handleReasonGroupChange} style={dispatchSummaryDropdownStyle}>
-              <option value="">{reasonGroups.length === 0 ? "Справочник пуст" : "Выберите группу"}</option>
+            <select disabled={isReadOnly || reasonGroups.length === 0} value={reasonGroupValue} onChange={handleReasonGroupChange} onKeyDown={clearOnDelete(clearReasonGroup)} style={dispatchSummaryDropdownStyle}>
+              <option value=""></option>
               {reasonGroups.map((group) => <option key={group.id} value={group.name}>{group.name}</option>)}
             </select>
           </td>
           <td style={dispatchSummaryTdStyle}>
-            <select disabled={isReadOnly || !reasonGroupValue || reasonItems.length === 0} value={reasonValue} onChange={handleReasonChange} style={dispatchSummaryDropdownStyle}>
-              <option value="">{!reasonGroupValue ? "Сначала выберите группу" : reasonItems.length === 0 ? "Нет значений второго уровня" : isRepairTab ? "Выберите вид ремонта" : "Выберите причину"}</option>
+            <select disabled={isReadOnly || !reasonGroupValue || reasonItems.length === 0} value={reasonValue} onChange={handleReasonChange} onKeyDown={clearOnDelete(clearReason)} style={dispatchSummaryDropdownStyle}>
+              <option value=""></option>
               {reasonItems.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
             </select>
           </td>
           {isRepairTab ? (
             <td style={dispatchSummaryTdStyle}>
-              <select disabled={isReadOnly || !reasonValue || repairDetails.length === 0} value={row.repairReasonDetail} onChange={handleRepairDetailChange} style={dispatchSummaryDropdownStyle}>
-                <option value="">{!reasonValue ? "Сначала выберите 2 уровень" : repairDetails.length === 0 ? "Нет значений третьего уровня" : "Выберите 3 уровень"}</option>
+              <select disabled={isReadOnly || !reasonValue || repairDetails.length === 0} value={row.repairReasonDetail} onChange={handleRepairDetailChange} onKeyDown={clearOnDelete(clearRepairDetail)} style={dispatchSummaryDropdownStyle}>
+                <option value=""></option>
                 {repairDetails.map((detail) => <option key={detail.id} value={detail.name}>{detail.name}</option>)}
               </select>
             </td>
