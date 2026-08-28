@@ -114,7 +114,20 @@ function headerLabel(index: number, categoryTab: DispatchSummaryCategoryTab) {
   return dispatchSummaryHeaders[index][0];
 }
 
-function columnSizingStyle(index: number) {
+function columnSizingStyle(index: number, categoryTab: DispatchSummaryCategoryTab) {
+  if (index === 13 && (categoryTab === "Ремонты" || categoryTab === "Простои")) {
+    return { width: 190, minWidth: 190, maxWidth: 190 };
+  }
+  if (index === 14 && categoryTab === "Ремонты") {
+    return { width: 230, minWidth: 230, maxWidth: 230 };
+  }
+  if (index === 14 && categoryTab === "Простои") {
+    return { width: 280, minWidth: 280, maxWidth: 280 };
+  }
+  if (index === 15 && categoryTab === "Ремонты") {
+    return { width: 250, minWidth: 250, maxWidth: 250 };
+  }
+
   const fixedWidth = dispatchSummaryFixedColumnWidths[index];
   if (fixedWidth) {
     return { width: fixedWidth, minWidth: fixedWidth, maxWidth: fixedWidth };
@@ -269,13 +282,13 @@ export function DispatchSummaryTable({
     <div style={dispatchSummaryTableScrollStyle}>
       <table style={{ ...dispatchSummaryTableStyle, minWidth: 0, tableLayout: "auto" }}>
         <colgroup>
-          {visibleColumnIndexes.map((index) => <col key={`column-${index}`} style={columnSizingStyle(index)} />)}
+          {visibleColumnIndexes.map((index) => <col key={`column-${index}`} style={columnSizingStyle(index, categoryTab)} />)}
         </colgroup>
         <thead>
           <tr>
             {visibleColumnIndexes.map((index) => {
               const [, style] = dispatchSummaryHeaders[index];
-              const resolvedStyle = { ...style, ...columnSizingStyle(index) };
+              const resolvedStyle = { ...style, ...columnSizingStyle(index, categoryTab) };
               return <th key={`${index}-${headerLabel(index, categoryTab)}`} style={resolvedStyle}>{headerLabel(index, categoryTab)}</th>;
             })}
           </tr>
