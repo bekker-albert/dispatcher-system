@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { useAppPtoPersistence } from "@/features/app/useAppPtoPersistence";
 import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { databaseConfigured } from "@/lib/data/config";
@@ -14,6 +16,30 @@ export function useAppPtoPersistenceController({
   appState,
   resetUndoHistoryForExternalRestore,
 }: UseAppPtoPersistenceControllerOptions) {
+  useEffect(() => {
+    if (
+      !databaseConfigured
+      || !appState.adminDataLoaded
+      || !appState.ptoBootstrapLoaded
+      || appState.ptoDatabaseLoadStarted
+      || appState.ptoDatabaseReady
+    ) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      appState.setPtoDatabaseLoadStarted(true);
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    appState.adminDataLoaded,
+    appState.ptoBootstrapLoaded,
+    appState.ptoDatabaseLoadStarted,
+    appState.ptoDatabaseReady,
+    appState.setPtoDatabaseLoadStarted,
+  ]);
+
   const reportsNeedPtoDatabase = appState.topTab === "reports"
     || (appState.topTab === "admin" && appState.adminSection === "reports");
   const activePtoTabNeedsDatabase = appState.topTab === "pto"
