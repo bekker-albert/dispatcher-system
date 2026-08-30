@@ -10,7 +10,7 @@ export function useSectionSelectionState() {
   const [contractorTab, setContractorTab] = useState("AA Mining");
   const [fuelTab, setFuelTab] = useState("general");
   const [fleetTab, setFleetTab] = useState("directory");
-  const [ptoTab, setPtoTab] = useState("bodies");
+  const [ptoTab, setPtoTab] = useState("plan");
   const [tbTab, setTbTab] = useState("list");
   const [structureSection, setStructureSection] = useState<StructureSection>("scheme");
   const [adminSection, setAdminSection] = useState<AdminSection>("vehicles");
