@@ -61,7 +61,7 @@ export const erpNavigationModel: NavigationGroup[] = [
     id: "pto",
     label: "ПТО",
     icon: "clipboard-list",
-    defaultTarget: { topTab: "pto", ptoTab: "plan" },
+    defaultTarget: { topTab: "pto" },
     items: [],
   },
   {
