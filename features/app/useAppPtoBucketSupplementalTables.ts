@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import { useMemo, type Dispatch, type RefObject, type SetStateAction } from "react";
 
 import { usePtoBucketsEditor } from "@/features/pto/usePtoBucketsEditor";
 import { usePtoBucketsViewModel } from "@/features/pto/usePtoBucketsViewModel";
@@ -9,6 +9,7 @@ import { usePtoMatrixExcelTransfer } from "@/features/pto/usePtoMatrixExcelTrans
 import { usePtoPerformanceViewModel } from "@/features/pto/usePtoPerformanceViewModel";
 import type { PtoDatabaseInlineSavePatch } from "@/features/pto/ptoPersistenceModel";
 import { createPtoCycleColumns } from "@/lib/domain/pto/cycle";
+import { resolvePtoBodyReferenceData } from "@/lib/domain/pto/bodies";
 import type { PtoBucketRow } from "@/lib/domain/pto/buckets";
 import type { PtoPlanRow } from "@/lib/domain/pto/date-table";
 import { ptoMatrixTableMetaFor } from "@/lib/domain/pto/tabs";
@@ -29,6 +30,7 @@ type UseAppPtoBucketSupplementalTablesOptions = {
   deferredVehicleRows: VehicleRow[];
   ptoBucketManualRows: PtoBucketRow[];
   ptoBucketValues: Record<string, number>;
+  ptoHeaderLabels: Record<string, string>;
   setPtoBucketValues: Dispatch<SetStateAction<Record<string, number>>>;
   setPtoBucketManualRows: Dispatch<SetStateAction<PtoBucketRow[]>>;
   databaseConfigured: boolean;
@@ -49,6 +51,7 @@ export function useAppPtoBucketSupplementalTables({
   deferredVehicleRows,
   ptoBucketManualRows,
   ptoBucketValues,
+  ptoHeaderLabels,
   setPtoBucketValues,
   setPtoBucketManualRows,
   databaseConfigured,
@@ -64,6 +67,10 @@ export function useAppPtoBucketSupplementalTables({
   const bodiesActive = active && ptoTab === "bodies";
   const performanceActive = active && ptoTab === "performance";
   const matrixTableMeta = ptoMatrixTableMetaFor(ptoTab);
+  const bodyReferenceData = useMemo(
+    () => resolvePtoBodyReferenceData(ptoHeaderLabels),
+    [ptoHeaderLabels],
+  );
   const {
     ptoBucketRows,
     ptoBucketColumns,
@@ -79,8 +86,11 @@ export function useAppPtoBucketSupplementalTables({
   const {
     ptoBodyRows,
     ptoBodyColumns,
+    ptoBodyAreaTabs,
   } = usePtoBodiesViewModel({
     active: bodiesActive,
+    bodyAreas: bodyReferenceData.areas,
+    bodyMaterialSources: bodyReferenceData.materialSources,
     areaFilter: ptoAreaFilter,
     vehicleRows: deferredVehicleRows,
   });
@@ -155,6 +165,8 @@ export function useAppPtoBucketSupplementalTables({
     ptoCycleColumns,
     ptoBodyRows,
     ptoBodyColumns,
+    ptoBodyAreaTabs,
+    ptoBodyReferenceData: bodyReferenceData,
     ptoPerformanceRows,
     ptoPerformanceColumns,
     commitPtoBucketValue,
