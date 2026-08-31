@@ -35,12 +35,10 @@ const ptoTabs: Array<{ id: string; label: string }> = [
   { id: "performance", label: "Расчет объемов" },
 ];
 
-const editablePtoTabs = new Set(["plan", "oper", "survey"]);
-
 export function PlanFactWorkspaceTabs(props: PlanFactWorkspaceTabsProps) {
   const [managerOpen, setManagerOpen] = useState(false);
   const visibleReports = props.reportCustomers.filter((customer) => customer.visible);
-  const showEditButton = props.mode === "reports" || editablePtoTabs.has(props.activePtoTab);
+  const showEditButton = props.mode === "reports";
 
   return (
     <div className="no-print" style={shellStyle}>
