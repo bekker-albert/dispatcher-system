@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 
 import { createAppPtoBucketSectionProps } from "@/features/app/appPtoBucketSectionProps";
 import { createAppPtoSectionShellProps } from "@/features/app/appPtoSectionShellProps";
@@ -9,6 +9,13 @@ import type { AppStateBundle } from "@/features/app/AppStateBundle";
 import { useAppPtoBucketSupplementalTables } from "@/features/app/useAppPtoBucketSupplementalTables";
 import PtoSection from "@/features/pto/PtoSection";
 import { databaseConfigured } from "@/lib/data/config";
+import {
+  addPtoBodyAreaMetadata,
+  addPtoBodyMaterialMetadata,
+  ptoBodyAreaExists,
+  ptoBodyMaterialExists,
+} from "@/lib/domain/pto/bodies";
+import { cleanAreaName } from "@/lib/utils/text";
 
 type PtoBucketsPrimaryContentProps = {
   appState: AppStateBundle;
@@ -48,6 +55,7 @@ export function PtoBucketsPrimaryContent({
     ptoAreaFilter: appState.ptoAreaFilter,
     ptoBucketManualRows: appState.ptoBucketManualRows,
     ptoBucketValues: appState.ptoBucketValues,
+    ptoHeaderLabels: appState.ptoHeaderLabels,
     setPtoBucketValues: appState.setPtoBucketValues,
     setPtoBucketManualRows: appState.setPtoBucketManualRows,
     databaseConfigured,
@@ -61,9 +69,61 @@ export function PtoBucketsPrimaryContent({
   const shellProps = createAppPtoSectionShellProps({ appState, models, navigation });
   const bucketProps = createAppPtoBucketSectionProps({ appState, ptoSupplementalTables });
 
+  const addBodyArea = useCallback(() => {
+    const entered = window.prompt("Название нового участка");
+    const area = cleanAreaName(entered ?? "").trim();
+    if (!area) return;
+
+    if (ptoBodyAreaExists(ptoSupplementalTables.ptoBodyReferenceData.areas, area)) {
+      appState.setPtoAreaFilter(area);
+      window.alert(`Участок «${area}» уже есть в Кузовах.`);
+      return;
+    }
+
+    appState.setPtoHeaderLabels((current) => addPtoBodyAreaMetadata(current, area));
+    appState.setPtoAreaFilter(area);
+    runtime.requestPtoDatabaseSave();
+    appState.addAdminLog({
+      action: "Добавление",
+      section: "ПТО — Кузова",
+      details: `Добавлен участок «${area}».`,
+    });
+  }, [appState, ptoSupplementalTables.ptoBodyReferenceData.areas, runtime]);
+
+  const addBodyMaterial = useCallback(() => {
+    const selectedArea = appState.ptoAreaFilter === "Все участки"
+      ? ""
+      : cleanAreaName(appState.ptoAreaFilter).trim();
+    const enteredArea = selectedArea || cleanAreaName(window.prompt("Участок для нового материала") ?? "").trim();
+    if (!enteredArea) return;
+
+    const material = (window.prompt(`Новый материал для участка «${enteredArea}»`) ?? "").trim();
+    if (!material) return;
+
+    if (ptoBodyMaterialExists(ptoSupplementalTables.ptoBodyReferenceData.materialSources, enteredArea, material)) {
+      appState.setPtoAreaFilter(enteredArea);
+      window.alert(`Материал «${material}» уже есть на участке «${enteredArea}».`);
+      return;
+    }
+
+    appState.setPtoHeaderLabels((current) => addPtoBodyMaterialMetadata(current, enteredArea, material));
+    appState.setPtoAreaFilter(enteredArea);
+    runtime.requestPtoDatabaseSave();
+    appState.addAdminLog({
+      action: "Добавление",
+      section: "ПТО — Кузова",
+      details: `Добавлен материал «${material}» на участок «${enteredArea}».`,
+    });
+  }, [appState, ptoSupplementalTables.ptoBodyReferenceData.materialSources, runtime]);
+
+  const ptoAreaTabs = appState.ptoTab === "bodies"
+    ? bucketProps.ptoBodyAreaTabs
+    : shellProps.ptoAreaTabs;
+
   return (
     <PtoSection
       {...shellProps}
+      ptoAreaTabs={ptoAreaTabs}
       onSelectArea={shellProps.selectPtoArea}
       ptoBucketRows={bucketProps.ptoBucketRows}
       ptoBucketColumns={bucketProps.ptoBucketColumns}
@@ -81,12 +141,14 @@ export function PtoBucketsPrimaryContent({
         setHeaderDraft: appState.setPtoHeaderDraft,
         startHeaderEdit: runtime.startPtoHeaderEdit,
         commitHeaderEdit: runtime.commitPtoHeaderEdit,
-        cancelHeaderEdit: runtime.cancelPtoHeaderEdit,
+        cancelHeaderEdit: runtime.cancelHeaderEdit,
       }}
       onCommitBucketValue={bucketProps.commitPtoBucketValue}
       onClearBucketCells={bucketProps.clearPtoBucketCells}
       onAddBucketManualRow={bucketProps.addPtoBucketManualRow}
       onDeleteBucketManualRow={bucketProps.deletePtoBucketManualRow}
+      onAddPtoBodyArea={addBodyArea}
+      onAddPtoBodyMaterial={addBodyMaterial}
       onExportPtoMatrixToExcel={bucketProps.exportPtoMatrixToExcel}
       onImportPtoMatrixFromExcel={bucketProps.importPtoMatrixFromExcel}
       renderPlanTable={renderEmptyPtoDateTable}
