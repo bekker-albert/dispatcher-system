@@ -143,6 +143,8 @@ export default function PtoSection({
               headerEditor={bodiesHeaderEditor}
               onCommitValue={onCommitBucketValue}
               onClearCells={onClearBucketCells}
+              onExportToExcel={onExportPtoMatrixToExcel}
+              onImportFromExcel={onImportPtoMatrixFromExcel}
             />
           </div>
         )}
@@ -158,6 +160,8 @@ export default function PtoSection({
               headerEditor={performanceHeaderEditor}
               onCommitValue={onCommitBucketValue}
               onClearCells={onClearBucketCells}
+              onExportToExcel={onExportPtoMatrixToExcel}
+              onImportFromExcel={onImportPtoMatrixFromExcel}
             />
           </div>
         )}
