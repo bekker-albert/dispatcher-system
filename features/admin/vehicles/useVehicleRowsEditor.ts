@@ -114,7 +114,7 @@ export function useVehicleRowsEditor({
       && databaseLoadedRef.current
       && databaseSaveSnapshotRef.current === JSON.stringify(vehicleRowsRef.current)
     ) {
-      showSaveStatus("saving", "Техника убрана из рабочего списка. История и запись в БД сохраняются.");
+      showSaveStatus("saving", "Удаление техники будет сохранено общим списком. Запись и история в БД сохраняются.");
     }
 
     addAdminLog({
