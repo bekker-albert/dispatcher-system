@@ -25,6 +25,8 @@ const bodyRowPrefix = "body";
 const bodyColumnPrefix = "bodies";
 const bodyAreaMetadataPrefix = "__pto_body_area__:";
 const bodyMaterialMetadataPrefix = "__pto_body_material__:";
+const bodyAreaHiddenMetadataPrefix = "__pto_body_area_hidden__:";
+const bodyMaterialHiddenMetadataPrefix = "__pto_body_material_hidden__:";
 
 export const defaultPtoBodyMaterialSources: readonly PtoBodyMaterialSource[] = [
   { area: "Аксу", material: "Руда(Котенко)" },
@@ -152,7 +154,7 @@ export function createPtoBodyRows(vehicles: VehicleRow[]): PtoBucketRow[] {
 
   const additionalRows: PtoBucketRow[] = [];
   vehicles.forEach((vehicle) => {
-    if (vehicle.visible === false || !isDumpTruck(vehicle)) return;
+    if (!isDumpTruck(vehicle)) return;
 
     const label = dumpTruckModelLabel(vehicle);
     if (!label) return;
@@ -188,6 +190,14 @@ export function ptoBodyMaterialMetadataKey(area: string, material: string) {
   return `${bodyMaterialMetadataPrefix}${bodyMaterialKey(area, material)}`;
 }
 
+function ptoBodyAreaHiddenMetadataKey(area: string) {
+  return `${bodyAreaHiddenMetadataPrefix}${bodyAreaKey(area)}`;
+}
+
+function ptoBodyMaterialHiddenMetadataKey(area: string, material: string) {
+  return `${bodyMaterialHiddenMetadataPrefix}${bodyMaterialKey(area, material)}`;
+}
+
 export function addPtoBodyAreaMetadata(
   current: Record<string, string>,
   area: string,
@@ -195,10 +205,10 @@ export function addPtoBodyAreaMetadata(
   const normalizedArea = normalizedBodyArea(area);
   if (!normalizedArea) return current;
 
-  return {
-    ...current,
-    [ptoBodyAreaMetadataKey(normalizedArea)]: normalizedArea,
-  };
+  const next = { ...current };
+  delete next[ptoBodyAreaHiddenMetadataKey(normalizedArea)];
+  next[ptoBodyAreaMetadataKey(normalizedArea)] = normalizedArea;
+  return next;
 }
 
 export function addPtoBodyMaterialMetadata(
@@ -210,10 +220,39 @@ export function addPtoBodyMaterialMetadata(
   const normalizedMaterial = material.trim();
   if (!normalizedArea || !normalizedMaterial) return current;
 
+  const next = { ...current };
+  delete next[ptoBodyAreaHiddenMetadataKey(normalizedArea)];
+  delete next[ptoBodyMaterialHiddenMetadataKey(normalizedArea, normalizedMaterial)];
+  next[ptoBodyAreaMetadataKey(normalizedArea)] = normalizedArea;
+  next[ptoBodyMaterialMetadataKey(normalizedArea, normalizedMaterial)] = JSON.stringify([normalizedArea, normalizedMaterial]);
+  return next;
+}
+
+export function hidePtoBodyAreaMetadata(
+  current: Record<string, string>,
+  area: string,
+): Record<string, string> {
+  const normalizedArea = normalizedBodyArea(area);
+  if (!normalizedArea) return current;
+
   return {
     ...current,
-    [ptoBodyAreaMetadataKey(normalizedArea)]: normalizedArea,
-    [ptoBodyMaterialMetadataKey(normalizedArea, normalizedMaterial)]: JSON.stringify([normalizedArea, normalizedMaterial]),
+    [ptoBodyAreaHiddenMetadataKey(normalizedArea)]: normalizedArea,
+  };
+}
+
+export function hidePtoBodyMaterialMetadata(
+  current: Record<string, string>,
+  area: string,
+  material: string,
+): Record<string, string> {
+  const normalizedArea = normalizedBodyArea(area);
+  const normalizedMaterial = material.trim();
+  if (!normalizedArea || !normalizedMaterial) return current;
+
+  return {
+    ...current,
+    [ptoBodyMaterialHiddenMetadataKey(normalizedArea, normalizedMaterial)]: JSON.stringify([normalizedArea, normalizedMaterial]),
   };
 }
 
@@ -235,11 +274,27 @@ function parsePtoBodyMaterialMetadata(value: string): PtoBodyMaterialSource | nu
 export function resolvePtoBodyReferenceData(headerLabels: Record<string, string>): PtoBodyReferenceData {
   const areasByKey = new Map<string, string>();
   const materialsByKey = new Map<string, PtoBodyMaterialSource>();
+  const hiddenAreaKeys = new Set<string>();
+  const hiddenMaterialKeys = new Set<string>();
+
+  Object.entries(headerLabels).forEach(([key, value]) => {
+    if (key.startsWith(bodyAreaHiddenMetadataPrefix)) {
+      const area = normalizedBodyArea(value);
+      if (area) hiddenAreaKeys.add(bodyAreaKey(area));
+      return;
+    }
+
+    if (!key.startsWith(bodyMaterialHiddenMetadataPrefix)) return;
+    const source = parsePtoBodyMaterialMetadata(value);
+    if (source) hiddenMaterialKeys.add(bodyMaterialKey(source.area, source.material));
+  });
 
   defaultPtoBodyMaterialSources.forEach((source) => {
     const area = normalizedBodyArea(source.area);
     const material = source.material.trim();
     if (!area || !material) return;
+    if (hiddenAreaKeys.has(bodyAreaKey(area))) return;
+    if (hiddenMaterialKeys.has(bodyMaterialKey(area, material))) return;
     areasByKey.set(bodyAreaKey(area), area);
     materialsByKey.set(bodyMaterialKey(area, material), { area, material });
   });
@@ -247,13 +302,15 @@ export function resolvePtoBodyReferenceData(headerLabels: Record<string, string>
   Object.entries(headerLabels).forEach(([key, value]) => {
     if (key.startsWith(bodyAreaMetadataPrefix)) {
       const area = normalizedBodyArea(value);
-      if (area) areasByKey.set(bodyAreaKey(area), area);
+      if (area && !hiddenAreaKeys.has(bodyAreaKey(area))) areasByKey.set(bodyAreaKey(area), area);
       return;
     }
 
     if (!key.startsWith(bodyMaterialMetadataPrefix)) return;
     const source = parsePtoBodyMaterialMetadata(value);
     if (!source) return;
+    if (hiddenAreaKeys.has(bodyAreaKey(source.area))) return;
+    if (hiddenMaterialKeys.has(bodyMaterialKey(source.area, source.material))) return;
     areasByKey.set(bodyAreaKey(source.area), source.area);
     materialsByKey.set(bodyMaterialKey(source.area, source.material), source);
   });
