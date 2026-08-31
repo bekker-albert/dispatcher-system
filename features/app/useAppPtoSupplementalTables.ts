@@ -32,6 +32,7 @@ type UseAppPtoSupplementalTablesOptions = {
 const emptyPtoBucketRows: PtoBucketRow[] = [];
 const emptyPtoBucketColumns: PtoBucketColumn[] = [];
 const emptyPtoBodyColumns: PtoBodyColumn[] = [];
+const emptyPtoBodyAreaTabs: string[] = [];
 const emptyPtoPerformanceRows: PtoPerformanceRow[] = [];
 const emptyPtoPerformanceColumns: PtoPerformanceColumn[] = [];
 const noopCommitPtoBucketValue = () => undefined;
@@ -86,6 +87,7 @@ export function useAppPtoSupplementalTables({
     ptoCycleColumns: emptyPtoBucketColumns,
     ptoBodyRows: emptyPtoBucketRows,
     ptoBodyColumns: emptyPtoBodyColumns,
+    ptoBodyAreaTabs: emptyPtoBodyAreaTabs,
     ptoPerformanceRows: emptyPtoPerformanceRows,
     ptoPerformanceColumns: emptyPtoPerformanceColumns,
     openPtoDateImportFilePicker,
