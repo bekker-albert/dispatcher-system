@@ -12,6 +12,8 @@ import { databaseConfigured } from "@/lib/data/config";
 import {
   addPtoBodyAreaMetadata,
   addPtoBodyMaterialMetadata,
+  hidePtoBodyAreaMetadata,
+  hidePtoBodyMaterialMetadata,
   ptoBodyAreaExists,
   ptoBodyMaterialExists,
 } from "@/lib/domain/pto/bodies";
@@ -116,6 +118,56 @@ export function PtoBucketsPrimaryContent({
     });
   }, [appState, ptoSupplementalTables.ptoBodyReferenceData.materialSources, runtime]);
 
+  const deleteBodyArea = useCallback(() => {
+    const selectedArea = appState.ptoAreaFilter === "Все участки"
+      ? ""
+      : cleanAreaName(appState.ptoAreaFilter).trim();
+    const area = selectedArea || cleanAreaName(window.prompt("Участок для удаления") ?? "").trim();
+    if (!area) return;
+
+    if (!ptoBodyAreaExists(ptoSupplementalTables.ptoBodyReferenceData.areas, area)) {
+      window.alert(`Участок «${area}» не найден в Кузовах.`);
+      return;
+    }
+
+    if (!window.confirm(`Удалить участок «${area}» из Кузовов? Сохраненные объемы не удалятся и восстановятся, если участок добавить снова.`)) return;
+
+    appState.setPtoHeaderLabels((current) => hidePtoBodyAreaMetadata(current, area));
+    if (selectedArea) appState.setPtoAreaFilter("Все участки");
+    runtime.requestPtoDatabaseSave();
+    appState.addAdminLog({
+      action: "Удаление",
+      section: "ПТО — Кузова",
+      details: `Участок «${area}» скрыт из справочника. Исторические значения объемов сохранены.`,
+    });
+  }, [appState, ptoSupplementalTables.ptoBodyReferenceData.areas, runtime]);
+
+  const deleteBodyMaterial = useCallback(() => {
+    const selectedArea = appState.ptoAreaFilter === "Все участки"
+      ? ""
+      : cleanAreaName(appState.ptoAreaFilter).trim();
+    const area = selectedArea || cleanAreaName(window.prompt("Участок материала для удаления") ?? "").trim();
+    if (!area) return;
+
+    const material = (window.prompt(`Материал для удаления с участка «${area}»`) ?? "").trim();
+    if (!material) return;
+
+    if (!ptoBodyMaterialExists(ptoSupplementalTables.ptoBodyReferenceData.materialSources, area, material)) {
+      window.alert(`Материал «${material}» на участке «${area}» не найден.`);
+      return;
+    }
+
+    if (!window.confirm(`Удалить материал «${material}» с участка «${area}»? Сохраненные объемы не удалятся и восстановятся, если материал добавить снова.`)) return;
+
+    appState.setPtoHeaderLabels((current) => hidePtoBodyMaterialMetadata(current, area, material));
+    runtime.requestPtoDatabaseSave();
+    appState.addAdminLog({
+      action: "Удаление",
+      section: "ПТО — Кузова",
+      details: `Материал «${material}» на участке «${area}» скрыт из справочника. Исторические значения объемов сохранены.`,
+    });
+  }, [appState, ptoSupplementalTables.ptoBodyReferenceData.materialSources, runtime]);
+
   const ptoAreaTabs = appState.ptoTab === "bodies"
     ? bucketProps.ptoBodyAreaTabs
     : shellProps.ptoAreaTabs;
@@ -149,6 +201,8 @@ export function PtoBucketsPrimaryContent({
       onDeleteBucketManualRow={bucketProps.deletePtoBucketManualRow}
       onAddPtoBodyArea={addBodyArea}
       onAddPtoBodyMaterial={addBodyMaterial}
+      onDeletePtoBodyArea={deleteBodyArea}
+      onDeletePtoBodyMaterial={deleteBodyMaterial}
       onExportPtoMatrixToExcel={bucketProps.exportPtoMatrixToExcel}
       onImportPtoMatrixFromExcel={bucketProps.importPtoMatrixFromExcel}
       renderPlanTable={renderEmptyPtoDateTable}
