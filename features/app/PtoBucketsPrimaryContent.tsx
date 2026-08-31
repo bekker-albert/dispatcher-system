@@ -141,7 +141,7 @@ export function PtoBucketsPrimaryContent({
         setHeaderDraft: appState.setPtoHeaderDraft,
         startHeaderEdit: runtime.startPtoHeaderEdit,
         commitHeaderEdit: runtime.commitPtoHeaderEdit,
-        cancelHeaderEdit: runtime.cancelHeaderEdit,
+        cancelHeaderEdit: runtime.cancelPtoHeaderEdit,
       }}
       onCommitBucketValue={bucketProps.commitPtoBucketValue}
       onClearBucketCells={bucketProps.clearPtoBucketCells}
