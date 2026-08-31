@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import {
+  createPtoBodyAreaTabs,
   createPtoBodyColumns,
   createPtoBodyRows,
   defaultPtoBodyMaterialSources,
@@ -14,6 +15,7 @@ import type { VehicleRow } from "@/lib/domain/vehicles/types";
 
 type UsePtoBodiesViewModelOptions = {
   active: boolean;
+  bodyAreas?: readonly string[];
   bodyMaterialSources?: readonly PtoBodyMaterialSource[];
   areaFilter: string;
   vehicleRows: VehicleRow[];
@@ -21,9 +23,11 @@ type UsePtoBodiesViewModelOptions = {
 
 const emptyBodyRows: PtoBucketRow[] = [];
 const emptyBodyColumns: PtoBodyColumn[] = [];
+const emptyBodyAreaTabs: string[] = [];
 
 export function usePtoBodiesViewModel({
   active,
+  bodyAreas = [],
   bodyMaterialSources = defaultPtoBodyMaterialSources,
   areaFilter,
   vehicleRows,
@@ -36,8 +40,13 @@ export function usePtoBodiesViewModel({
     active ? createPtoBodyColumns(bodyMaterialSources, areaFilter) : emptyBodyColumns
   ), [active, areaFilter, bodyMaterialSources]);
 
+  const ptoBodyAreaTabs = useMemo(() => (
+    active ? createPtoBodyAreaTabs(bodyAreas) : emptyBodyAreaTabs
+  ), [active, bodyAreas]);
+
   return {
     ptoBodyRows,
     ptoBodyColumns,
+    ptoBodyAreaTabs,
   };
 }
