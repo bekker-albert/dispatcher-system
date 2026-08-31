@@ -93,12 +93,18 @@ export function useAdminVehicleRowsViewModel({
     );
   }, [active, deferredVehicleRows, openVehicleFilter, vehicleFilterSets, vehicleFilters]);
 
+  const availableVehicleRows = useMemo(() => (
+    adminVehiclesEditing
+      ? vehicleRows
+      : vehicleRows.filter((vehicle) => vehicle.visible !== false)
+  ), [adminVehiclesEditing, vehicleRows]);
+
   const filteredVehicleRows = useMemo(() => {
     if (!active) return emptyVehicleRows;
-    if (!hasActiveVehicleFilters) return vehicleRows;
+    if (!hasActiveVehicleFilters) return availableVehicleRows;
 
-    return vehicleRows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, vehicleFilterSets, vehicleFilterColumns));
-  }, [active, hasActiveVehicleFilters, vehicleFilterSets, vehicleRows]);
+    return availableVehicleRows.filter((vehicle) => vehicleMatchesFilterSets(vehicle, vehicleFilterSets, vehicleFilterColumns));
+  }, [active, availableVehicleRows, hasActiveVehicleFilters, vehicleFilterSets]);
 
   useEffect(() => {
     if (!active || showAllVehicleRows) return undefined;
