@@ -17,6 +17,8 @@ type PtoBucketsToolbarProps = {
   onToggleEditingMode: () => void;
   onExportToExcel?: () => void | Promise<void>;
   onImportFromExcel?: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onAddArea?: () => void;
+  onAddMaterial?: () => void;
   ptoAreaFilter: string;
   ptoAreaTabs: string[];
 };
@@ -27,6 +29,8 @@ export function PtoBucketsToolbar({
   onToggleEditingMode,
   onExportToExcel,
   onImportFromExcel,
+  onAddArea,
+  onAddMaterial,
   ptoAreaFilter,
   ptoAreaTabs,
 }: PtoBucketsToolbarProps) {
@@ -47,6 +51,12 @@ export function PtoBucketsToolbar({
           {ptoAreaTabs.map((area) => (
             <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => onSelectArea(area)} label={area} />
           ))}
+          {editingMode && onAddArea ? (
+            <PtoToolbarButton active={false} onClick={onAddArea} label="+ Участок" />
+          ) : null}
+          {editingMode && onAddMaterial ? (
+            <PtoToolbarButton active={false} onClick={onAddMaterial} label="+ Материал" />
+          ) : null}
         </div>
       </div>
 
