@@ -34,6 +34,8 @@ export type PtoSectionProps = {
   onDeleteBucketManualRow: (row: PtoBucketRow) => void;
   onAddPtoBodyArea?: () => void;
   onAddPtoBodyMaterial?: () => void;
+  onDeletePtoBodyArea?: () => void;
+  onDeletePtoBodyMaterial?: () => void;
   onExportPtoMatrixToExcel: () => void | Promise<void>;
   onImportPtoMatrixFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   renderPlanTable: () => ReactNode;
@@ -79,6 +81,8 @@ export default function PtoSection({
   onDeleteBucketManualRow,
   onAddPtoBodyArea,
   onAddPtoBodyMaterial,
+  onDeletePtoBodyArea,
+  onDeletePtoBodyMaterial,
   onExportPtoMatrixToExcel,
   onImportPtoMatrixFromExcel,
   renderPlanTable,
@@ -151,6 +155,8 @@ export default function PtoSection({
               onImportFromExcel={onImportPtoMatrixFromExcel}
               onAddArea={onAddPtoBodyArea ?? (() => undefined)}
               onAddMaterial={onAddPtoBodyMaterial ?? (() => undefined)}
+              onDeleteArea={onDeletePtoBodyArea ?? (() => undefined)}
+              onDeleteMaterial={onDeletePtoBodyMaterial ?? (() => undefined)}
             />
           </div>
         )}
