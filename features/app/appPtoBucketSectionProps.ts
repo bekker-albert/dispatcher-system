@@ -11,6 +11,7 @@ export type AppPtoBucketSectionProps = {
   ptoCycleColumns: PtoBucketColumn[];
   ptoBodyRows: PtoBucketRow[];
   ptoBodyColumns: PtoBodyColumn[];
+  ptoBodyAreaTabs: string[];
   ptoPerformanceRows: PtoPerformanceRow[];
   ptoPerformanceColumns: PtoPerformanceColumn[];
   ptoBucketValues: Record<string, number>;
@@ -30,6 +31,7 @@ type AppPtoBucketSupplementalTables = Pick<
   | "ptoCycleColumns"
   | "ptoBodyRows"
   | "ptoBodyColumns"
+  | "ptoBodyAreaTabs"
   | "ptoPerformanceRows"
   | "ptoPerformanceColumns"
   | "commitPtoBucketValue"
@@ -54,6 +56,7 @@ export function createAppPtoBucketSectionProps({
     ptoCycleColumns: ptoSupplementalTables.ptoCycleColumns,
     ptoBodyRows: ptoSupplementalTables.ptoBodyRows,
     ptoBodyColumns: ptoSupplementalTables.ptoBodyColumns,
+    ptoBodyAreaTabs: ptoSupplementalTables.ptoBodyAreaTabs,
     ptoPerformanceRows: ptoSupplementalTables.ptoPerformanceRows,
     ptoPerformanceColumns: ptoSupplementalTables.ptoPerformanceColumns,
     ptoBucketValues: appState.ptoBucketValues,
