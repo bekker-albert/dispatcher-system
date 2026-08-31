@@ -26,6 +26,8 @@ type PtoBodiesSectionProps = {
   onClearCells: (cellKeys: string[]) => void;
   onExportToExcel: () => void | Promise<void>;
   onImportFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onAddArea: () => void;
+  onAddMaterial: () => void;
 };
 
 export default function PtoBodiesSection({
@@ -40,6 +42,8 @@ export default function PtoBodiesSection({
   onClearCells,
   onExportToExcel,
   onImportFromExcel,
+  onAddArea,
+  onAddMaterial,
 }: PtoBodiesSectionProps) {
   const defaultDraftArea = ptoAreaFilter === allAreasLabel ? "" : ptoAreaFilter;
   const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
@@ -86,6 +90,8 @@ export default function PtoBodiesSection({
         onToggleEditingMode={toggleEditingMode}
         onExportToExcel={onExportToExcel}
         onImportFromExcel={onImportFromExcel}
+        onAddArea={onAddArea}
+        onAddMaterial={onAddMaterial}
         ptoAreaFilter={ptoAreaFilter}
         ptoAreaTabs={ptoAreaTabs}
       />
