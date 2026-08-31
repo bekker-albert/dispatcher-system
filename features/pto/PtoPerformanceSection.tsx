@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, type ChangeEvent } from "react";
 
 import { PtoBucketsToolbar } from "@/features/pto/PtoBucketsToolbar";
 import { allAreasLabel } from "@/features/pto/ptoBucketsConfig";
@@ -23,6 +23,8 @@ type PtoPerformanceSectionProps = {
   headerEditor: PtoMatrixHeaderEditor;
   onCommitValue: (cellKey: string, draft: string) => void;
   onClearCells: (cellKeys: string[]) => void;
+  onExportToExcel: () => void | Promise<void>;
+  onImportFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
 };
 
 export default function PtoPerformanceSection({
@@ -35,6 +37,8 @@ export default function PtoPerformanceSection({
   headerEditor,
   onCommitValue,
   onClearCells,
+  onExportToExcel,
+  onImportFromExcel,
 }: PtoPerformanceSectionProps) {
   const defaultDraftArea = ptoAreaFilter === allAreasLabel ? "" : ptoAreaFilter;
   const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
@@ -79,6 +83,8 @@ export default function PtoPerformanceSection({
         editingMode={editingMode}
         onSelectArea={onSelectArea}
         onToggleEditingMode={toggleEditingMode}
+        onExportToExcel={onExportToExcel}
+        onImportFromExcel={onImportFromExcel}
         ptoAreaFilter={ptoAreaFilter}
         ptoAreaTabs={ptoAreaTabs}
       />
