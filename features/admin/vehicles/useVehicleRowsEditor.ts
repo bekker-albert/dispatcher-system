@@ -94,27 +94,33 @@ export function useVehicleRowsEditor({
     addAdminLog({
       action: "Редактирование",
       section: "Техника",
-      details: `Изменен показ техники${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
+      details: `Изменен показ техники${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}. Историческая запись сохранена.`,
     });
   }, [addAdminLog, pushVehicleUndoSnapshot, setVehicleRows, vehicleRows]);
 
   const deleteVehicle = useCallback((id: number) => {
     const vehicle = vehicleRows.find((item) => item.id === id);
+    if (!vehicle) return;
+
     pushVehicleUndoSnapshot();
-    setVehicleRows((current) => current.filter((vehicle) => vehicle.id !== id));
+    setVehicleRows((current) =>
+      current.map((item) => (
+        item.id === id ? { ...item, visible: false } : item
+      )),
+    );
 
     if (
       databaseConfigured
       && databaseLoadedRef.current
       && databaseSaveSnapshotRef.current === JSON.stringify(vehicleRowsRef.current)
     ) {
-      showSaveStatus("saving", "Удаление техники будет сохранено общим списком.");
+      showSaveStatus("saving", "Техника убрана из рабочего списка. История и запись в БД сохраняются.");
     }
 
     addAdminLog({
       action: "Удаление",
       section: "Техника",
-      details: `Удалена техника${vehicle ? `: ${buildVehicleDisplayName(vehicle)}` : ""}.`,
+      details: `Техника убрана из рабочего списка, запись и история сохранены: ${buildVehicleDisplayName(vehicle)}.`,
     });
   }, [
     addAdminLog,
