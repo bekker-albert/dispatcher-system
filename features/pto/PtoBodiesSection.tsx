@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, type ChangeEvent } from "react";
 
 import { PtoBucketsToolbar } from "@/features/pto/PtoBucketsToolbar";
 import { allAreasLabel } from "@/features/pto/ptoBucketsConfig";
@@ -24,6 +24,8 @@ type PtoBodiesSectionProps = {
   headerEditor: PtoMatrixHeaderEditor;
   onCommitValue: (cellKey: string, draft: string) => void;
   onClearCells: (cellKeys: string[]) => void;
+  onExportToExcel: () => void | Promise<void>;
+  onImportFromExcel: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
 };
 
 const emptyDumpTrucksHint = "\u0412 \u0430\u0434\u043c\u0438\u043d\u043a\u0435 \u0434\u043e\u0431\u0430\u0432\u044c \u0441\u0430\u043c\u043e\u0441\u0432\u0430\u043b\u044b. \u0417\u0434\u0435\u0441\u044c \u0441\u0442\u0440\u043e\u043a\u0438 \u0444\u043e\u0440\u043c\u0438\u0440\u0443\u044e\u0442\u0441\u044f \u0438\u0437 \u0443\u043d\u0438\u043a\u0430\u043b\u044c\u043d\u044b\u0445 \u0441\u043e\u0447\u0435\u0442\u0430\u043d\u0438\u0439 \u041c\u0430\u0440\u043a\u0430 \u041c\u043e\u0434\u0435\u043b\u044c.";
@@ -40,6 +42,8 @@ export default function PtoBodiesSection({
   headerEditor,
   onCommitValue,
   onClearCells,
+  onExportToExcel,
+  onImportFromExcel,
 }: PtoBodiesSectionProps) {
   const defaultDraftArea = ptoAreaFilter === allAreasLabel ? "" : ptoAreaFilter;
   const { scrollRef, viewport, updateViewport, scheduleViewportUpdate } = usePtoGridViewport();
@@ -84,6 +88,8 @@ export default function PtoBodiesSection({
         editingMode={editingMode}
         onSelectArea={onSelectArea}
         onToggleEditingMode={toggleEditingMode}
+        onExportToExcel={onExportToExcel}
+        onImportFromExcel={onImportFromExcel}
         ptoAreaFilter={ptoAreaFilter}
         ptoAreaTabs={ptoAreaTabs}
       />
