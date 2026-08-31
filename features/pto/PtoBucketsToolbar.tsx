@@ -60,18 +60,6 @@ export function PtoBucketsToolbar({
 
       <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
         <div style={ptoToolbarRowStyle}>
-          {editingMode && onAddArea ? (
-            <PtoToolbarButton active={false} onClick={onAddArea} label="+ Участок" />
-          ) : null}
-          {editingMode && onDeleteArea ? (
-            <PtoToolbarButton active={false} onClick={onDeleteArea} label="− Участок" />
-          ) : null}
-          {editingMode && onAddMaterial ? (
-            <PtoToolbarButton active={false} onClick={onAddMaterial} label="+ Материал" />
-          ) : null}
-          {editingMode && onDeleteMaterial ? (
-            <PtoToolbarButton active={false} onClick={onDeleteMaterial} label="− Материал" />
-          ) : null}
           {excelTransferEnabled ? (
             <>
               <PtoToolbarIconButton label="Загрузить таблицу из Excel" onClick={() => document.getElementById(importInputId)?.click()}>
@@ -88,6 +76,18 @@ export function PtoBucketsToolbar({
           >
             {editingMode ? <Check size={14} aria-hidden /> : <Pencil size={14} aria-hidden />}
           </PtoToolbarIconButton>
+          {editingMode && onAddArea ? (
+            <PtoToolbarButton active={false} onClick={onAddArea} label="+ Участок" />
+          ) : null}
+          {editingMode && onAddMaterial ? (
+            <PtoToolbarButton active={false} onClick={onAddMaterial} label="+ Материал" />
+          ) : null}
+          {editingMode && onDeleteArea ? (
+            <PtoToolbarButton active={false} onClick={onDeleteArea} label="− Участок" />
+          ) : null}
+          {editingMode && onDeleteMaterial ? (
+            <PtoToolbarButton active={false} onClick={onDeleteMaterial} label="− Материал" />
+          ) : null}
           {excelTransferEnabled ? (
             <input
               id={importInputId}
