@@ -16,8 +16,15 @@ export type PtoBodyColumnGroup = {
   span: number;
 };
 
+export type PtoBodyReferenceData = {
+  areas: string[];
+  materialSources: PtoBodyMaterialSource[];
+};
+
 const bodyRowPrefix = "body";
 const bodyColumnPrefix = "bodies";
+const bodyAreaMetadataPrefix = "__pto_body_area__:";
+const bodyMaterialMetadataPrefix = "__pto_body_material__:";
 
 export const defaultPtoBodyMaterialSources: readonly PtoBodyMaterialSource[] = [
   { area: "Аксу", material: "Руда(Котенко)" },
@@ -161,6 +168,120 @@ export function createPtoBodyRows(vehicles: VehicleRow[]): PtoBucketRow[] {
   return Array.from(rowsByKey.values());
 }
 
+function normalizedBodyArea(area: string) {
+  return cleanAreaName(area).trim();
+}
+
+function bodyAreaKey(area: string) {
+  return normalizeLookupValue(normalizedBodyArea(area));
+}
+
+function bodyMaterialKey(area: string, material: string) {
+  return `${bodyAreaKey(area)}:${normalizeLookupValue(material)}`;
+}
+
+export function ptoBodyAreaMetadataKey(area: string) {
+  return `${bodyAreaMetadataPrefix}${bodyAreaKey(area)}`;
+}
+
+export function ptoBodyMaterialMetadataKey(area: string, material: string) {
+  return `${bodyMaterialMetadataPrefix}${bodyMaterialKey(area, material)}`;
+}
+
+export function addPtoBodyAreaMetadata(
+  current: Record<string, string>,
+  area: string,
+): Record<string, string> {
+  const normalizedArea = normalizedBodyArea(area);
+  if (!normalizedArea) return current;
+
+  return {
+    ...current,
+    [ptoBodyAreaMetadataKey(normalizedArea)]: normalizedArea,
+  };
+}
+
+export function addPtoBodyMaterialMetadata(
+  current: Record<string, string>,
+  area: string,
+  material: string,
+): Record<string, string> {
+  const normalizedArea = normalizedBodyArea(area);
+  const normalizedMaterial = material.trim();
+  if (!normalizedArea || !normalizedMaterial) return current;
+
+  return {
+    ...current,
+    [ptoBodyAreaMetadataKey(normalizedArea)]: normalizedArea,
+    [ptoBodyMaterialMetadataKey(normalizedArea, normalizedMaterial)]: JSON.stringify([normalizedArea, normalizedMaterial]),
+  };
+}
+
+function parsePtoBodyMaterialMetadata(value: string): PtoBodyMaterialSource | null {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed) || parsed.length !== 2) return null;
+    const [area, material] = parsed;
+    if (typeof area !== "string" || typeof material !== "string") return null;
+    const normalizedArea = normalizedBodyArea(area);
+    const normalizedMaterial = material.trim();
+    if (!normalizedArea || !normalizedMaterial) return null;
+    return { area: normalizedArea, material: normalizedMaterial };
+  } catch {
+    return null;
+  }
+}
+
+export function resolvePtoBodyReferenceData(headerLabels: Record<string, string>): PtoBodyReferenceData {
+  const areasByKey = new Map<string, string>();
+  const materialsByKey = new Map<string, PtoBodyMaterialSource>();
+
+  defaultPtoBodyMaterialSources.forEach((source) => {
+    const area = normalizedBodyArea(source.area);
+    const material = source.material.trim();
+    if (!area || !material) return;
+    areasByKey.set(bodyAreaKey(area), area);
+    materialsByKey.set(bodyMaterialKey(area, material), { area, material });
+  });
+
+  Object.entries(headerLabels).forEach(([key, value]) => {
+    if (key.startsWith(bodyAreaMetadataPrefix)) {
+      const area = normalizedBodyArea(value);
+      if (area) areasByKey.set(bodyAreaKey(area), area);
+      return;
+    }
+
+    if (!key.startsWith(bodyMaterialMetadataPrefix)) return;
+    const source = parsePtoBodyMaterialMetadata(value);
+    if (!source) return;
+    areasByKey.set(bodyAreaKey(source.area), source.area);
+    materialsByKey.set(bodyMaterialKey(source.area, source.material), source);
+  });
+
+  return {
+    areas: Array.from(areasByKey.values()),
+    materialSources: Array.from(materialsByKey.values()),
+  };
+}
+
+export function createPtoBodyAreaTabs(areas: readonly string[]) {
+  return ["Все участки", ...areas];
+}
+
+export function ptoBodyAreaExists(areas: readonly string[], area: string) {
+  const key = bodyAreaKey(area);
+  return Boolean(key && areas.some((item) => bodyAreaKey(item) === key));
+}
+
+export function ptoBodyMaterialExists(
+  sources: readonly PtoBodyMaterialSource[],
+  area: string,
+  material: string,
+) {
+  const key = bodyMaterialKey(area, material);
+  return Boolean(key && sources.some((source) => bodyMaterialKey(source.area, source.material) === key));
+}
+
 export function createPtoBodyColumns(
   materialSources: readonly Partial<PtoBodyMaterialSource>[],
   areaFilter: string,
@@ -168,7 +289,7 @@ export function createPtoBodyColumns(
   const columnsByKey = new Map<string, PtoBodyColumn>();
 
   materialSources.forEach((source) => {
-    const area = typeof source.area === "string" ? cleanAreaName(source.area).trim() : "";
+    const area = typeof source.area === "string" ? normalizedBodyArea(source.area) : "";
     const material = typeof source.material === "string" ? source.material.trim() : "";
     if (!area || !material) return;
     if (!ptoBodyAreaMatches(area, areaFilter)) return;
@@ -199,5 +320,5 @@ export function createPtoBodyColumnGroups(columns: readonly PtoBodyColumn[]): Pt
 function ptoBodyAreaMatches(area: string, filter: string) {
   if (filter === "Все участки") return true;
 
-  return cleanAreaName(area) === cleanAreaName(filter);
+  return bodyAreaKey(area) === bodyAreaKey(filter);
 }
