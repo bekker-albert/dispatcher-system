@@ -19,6 +19,8 @@ type PtoBucketsToolbarProps = {
   onImportFromExcel?: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   onAddArea?: () => void;
   onAddMaterial?: () => void;
+  onDeleteArea?: () => void;
+  onDeleteMaterial?: () => void;
   ptoAreaFilter: string;
   ptoAreaTabs: string[];
 };
@@ -31,6 +33,8 @@ export function PtoBucketsToolbar({
   onImportFromExcel,
   onAddArea,
   onAddMaterial,
+  onDeleteArea,
+  onDeleteMaterial,
   ptoAreaFilter,
   ptoAreaTabs,
 }: PtoBucketsToolbarProps) {
@@ -51,17 +55,23 @@ export function PtoBucketsToolbar({
           {ptoAreaTabs.map((area) => (
             <PtoToolbarButton key={area} active={ptoAreaFilter === area} onClick={() => onSelectArea(area)} label={area} />
           ))}
-          {editingMode && onAddArea ? (
-            <PtoToolbarButton active={false} onClick={onAddArea} label="+ Участок" />
-          ) : null}
-          {editingMode && onAddMaterial ? (
-            <PtoToolbarButton active={false} onClick={onAddMaterial} label="+ Материал" />
-          ) : null}
         </div>
       </div>
 
       <div style={{ ...ptoToolbarBlockStyle, justifySelf: "end", alignItems: "end" }}>
         <div style={ptoToolbarRowStyle}>
+          {editingMode && onAddArea ? (
+            <PtoToolbarButton active={false} onClick={onAddArea} label="+ Участок" />
+          ) : null}
+          {editingMode && onDeleteArea ? (
+            <PtoToolbarButton active={false} onClick={onDeleteArea} label="− Участок" />
+          ) : null}
+          {editingMode && onAddMaterial ? (
+            <PtoToolbarButton active={false} onClick={onAddMaterial} label="+ Материал" />
+          ) : null}
+          {editingMode && onDeleteMaterial ? (
+            <PtoToolbarButton active={false} onClick={onDeleteMaterial} label="− Материал" />
+          ) : null}
           {excelTransferEnabled ? (
             <>
               <PtoToolbarIconButton label="Загрузить таблицу из Excel" onClick={() => document.getElementById(importInputId)?.click()}>
