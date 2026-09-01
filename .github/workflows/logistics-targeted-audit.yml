@@ -1,0 +1,129 @@
+name: Logistics targeted production audit
+
+on:
+  push:
+    branches:
+      - feature/gazel-logistics-release
+    paths:
+      - ".github/workflows/logistics-targeted-audit.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/logistics-targeted-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Capture production audit
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        shell: bash
+        run: |
+          set +e
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' > logistics-targeted-audit.log 2>&1 <<'EOF'
+          set +e
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          export PM2_HOME="/var/www/dispatcher/data/.pm2"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
+          socket="/var/www/dispatcher/data/nodejs/0.sock"
+
+          echo "=== FILES ==="
+          for path in "$site" "$site/.next/BUILD_ID" "$site/logistics-server.js" "$site/.env.local" "$main_site/.env.local"; do
+            if [ -e "$path" ]; then echo "PASS $path"; else echo "FAIL $path"; fi
+          done
+
+          echo "=== PM2 ==="
+          node - <<'NODE'
+          const {execFileSync}=require('node:child_process');
+          try {
+            const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));
+            for (const name of ['aam-dispatch','gazel-logistics-web']) {
+              const r=rows.find(x=>x.name===name);
+              console.log(`${name}: ${r?.pm2_env?.status || 'missing'} restarts=${r?.pm2_env?.restart_time ?? '-'} uptime=${r?.pm2_env?.pm_uptime ?? '-'}`);
+            }
+          } catch (e) { console.log('PM2_ERROR '+e.message); }
+          NODE
+
+          echo "=== HTTP ==="
+          for path in /health/ / /logistics/release /logistics/documents /api/logistics; do
+            code=$(curl -sS -o /tmp/audit-body -w '%{http_code}' --max-time 20 --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' "http://localhost$path")
+            echo "$path status=$code body=$(head -c 160 /tmp/audit-body | tr '\n' ' ')"
+          done
+
+          echo "=== ENV ==="
+          cd "$site" || exit 0
+          node - <<'NODE'
+          const {loadEnvConfig}=require('@next/env');
+          loadEnvConfig(process.cwd());
+          for (const key of ['DB_HOST','DB_PORT','DB_NAME','DB_USER','DB_PASSWORD','AUTH_REQUIRED','AUTH_SESSION_SECRET','AUTH_INITIAL_LOGIN','AUTH_INITIAL_PASSWORD']) {
+            console.log(`${key}=${process.env[key] ? 'SET' : 'MISSING'}`);
+          }
+          NODE
+
+          echo "=== AUTHENTICATED API ==="
+          node - <<'NODE'
+          const {loadEnvConfig}=require('@next/env'); const fs=require('node:fs');
+          loadEnvConfig(process.cwd());
+          if(process.env.AUTH_INITIAL_LOGIN && process.env.AUTH_INITIAL_PASSWORD){
+            fs.writeFileSync('/tmp/logistics-audit-login.json',JSON.stringify({login:process.env.AUTH_INITIAL_LOGIN,password:process.env.AUTH_INITIAL_PASSWORD}),{mode:0o600});
+            console.log('LOGIN_PAYLOAD_READY');
+          } else console.log('LOGIN_PAYLOAD_UNAVAILABLE');
+          NODE
+          if [ -f /tmp/logistics-audit-login.json ]; then
+            login_code=$(curl -sS -o /tmp/login-body -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -H 'Content-Type: application/json' -c /tmp/logistics-audit-cookie --data-binary @/tmp/logistics-audit-login.json http://localhost/api/auth/login)
+            echo "login status=$login_code body=$(head -c 200 /tmp/login-body | tr '\n' ' ')"
+            api_code=$(curl -sS -o /tmp/auth-api-body -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -b /tmp/logistics-audit-cookie http://localhost/api/logistics)
+            echo "authenticated api status=$api_code body=$(head -c 300 /tmp/auth-api-body | tr '\n' ' ')"
+          fi
+
+          echo "=== DATABASE ==="
+          node - <<'NODE'
+          const {loadEnvConfig}=require('@next/env'); const mysql=require('mysql2/promise');
+          loadEnvConfig(process.cwd());
+          (async()=>{
+            const keys=['DB_HOST','DB_NAME','DB_USER','DB_PASSWORD'];
+            if(keys.some(k=>!process.env[k])) return console.log('DB_CHECK_SKIPPED missing env');
+            try {
+              const c=await mysql.createConnection({host:process.env.DB_HOST,port:Number(process.env.DB_PORT||3306),database:process.env.DB_NAME,user:process.env.DB_USER,password:process.env.DB_PASSWORD});
+              console.log('DB_CONNECTION_PASS');
+              const tables=['logistics_requests','logistics_request_stops','logistics_approvals','logistics_approval_steps','logistics_trips','logistics_trip_requests','logistics_trip_release_checklists','logistics_document_templates','logistics_document_package_rules','logistics_document_instances','logistics_audit_events','logistics_config_versions'];
+              const [rows]=await c.query('SELECT table_name FROM information_schema.tables WHERE table_schema=?',[process.env.DB_NAME]);
+              const existing=new Set(rows.map(r=>r.TABLE_NAME||r.table_name));
+              for(const table of tables) console.log(`${existing.has(table)?'PASS':'FAIL'} table ${table}`);
+              if(existing.has('logistics_audit_events')){const[a]=await c.query('SELECT COUNT(*) total FROM logistics_audit_events');console.log('audit_count='+a[0].total)}
+              await c.end();
+            } catch(e){console.log('DB_ERROR '+e.message)}
+          })();
+          NODE
+          EOF
+          code=$?
+          echo "ssh_exit=$code" >> logistics-targeted-audit.log
+          cat logistics-targeted-audit.log
+          exit 0
+
+      - name: Upload audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: logistics-targeted-audit
+          path: logistics-targeted-audit.log

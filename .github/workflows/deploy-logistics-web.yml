@@ -1,0 +1,221 @@
+name: Deploy logistics web
+
+on:
+  push:
+    branches:
+      - feature/gazel-logistics-release
+    paths:
+      - "app/api/logistics/**"
+      - "app/api/auth/password/**"
+      - "app/logistics/**"
+      - "features/logistics/**"
+      - "lib/domain/logistics/**"
+      - "lib/server/logistics/**"
+      - "lib/server/mysql/logistics-*.ts"
+      - "lib/server/mysql/schema.ts"
+      - "scripts/ensure-logistics-schema.mjs"
+      - "scripts/run-logistics-schema.mjs"
+      - "logistics-server.js"
+      - ".github/workflows/deploy-logistics-web.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/api/logistics/**"
+      - "app/api/auth/password/**"
+      - "app/logistics/**"
+      - "features/logistics/**"
+      - "lib/domain/logistics/**"
+      - "lib/server/logistics/**"
+      - "lib/server/mysql/logistics-*.ts"
+      - "lib/server/mysql/schema.ts"
+      - "scripts/ensure-logistics-schema.mjs"
+      - "scripts/run-logistics-schema.mjs"
+      - "logistics-server.js"
+      - ".github/workflows/deploy-logistics-web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: logistics-web-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build web application
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Pack release
+        run: |
+          set -euo pipefail
+          items=(.next public package.json package-lock.json logistics-server.js scripts/ensure-logistics-schema.mjs scripts/run-logistics-schema.mjs)
+          if [ -f next.config.ts ]; then items+=(next.config.ts); fi
+          if [ -f next.config.mjs ]; then items+=(next.config.mjs); fi
+          tar -czf logistics-web-${GITHUB_SHA}.tar.gz "${items[@]}"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" "logistics-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/logistics.aam-dispatch.kz/"
+
+      - name: Prepare and switch atomic release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          set +e
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" > logistics-deploy-switch.log 2>&1 <<'EOF'
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          export PM2_HOME="/var/www/dispatcher/data/.pm2"
+          export NEXT_TELEMETRY_DISABLED="1"
+
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
+          releases="$site/data/releases"
+          release="$releases/$DEPLOY_SHA"
+          archive="$site/logistics-web-${DEPLOY_SHA}.tar.gz"
+          socket="/var/www/dispatcher/data/nodejs/0.sock"
+
+          test -f "$archive"
+          mkdir -p "$releases" "$site/logs"
+          rm -rf "$release"
+          mkdir -p "$release"
+          tar -xzf "$archive" -C "$release"
+          test -f "$release/.next/BUILD_ID"
+          test -f "$release/logistics-server.js"
+          test -f "$release/scripts/ensure-logistics-schema.mjs"
+          test -f "$release/scripts/run-logistics-schema.mjs"
+
+          if [ -f "$site/.env.local" ]; then
+            cp "$site/.env.local" "$release/.env.local"
+          elif [ -f "$main_site/.env.local" ]; then
+            cp "$main_site/.env.local" "$release/.env.local"
+          else
+            echo "No protected environment file found"
+            exit 1
+          fi
+          chmod 600 "$release/.env.local"
+
+          cd "$release"
+          npm ci --omit=dev --no-audit --no-fund
+          node scripts/run-logistics-schema.mjs
+
+          main_before=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(x=>x.name==='aam-dispatch');if(!row||row.pm2_env?.status!=='online')process.exit(1);process.stdout.write(String(row.pm2_env.restart_time)+':'+String(row.pm2_env.pm_uptime))")
+          previous_cwd=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(x=>x.name==='gazel-logistics-web');process.stdout.write(row?.pm2_env?.pm_cwd||'')")
+
+          rollback() {
+            echo "New logistics release failed; restoring previous process"
+            /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics-web >/dev/null 2>&1 || true
+            rm -f "$socket"
+            if [ -n "$previous_cwd" ] && [ -f "$previous_cwd/logistics-server.js" ]; then
+              cd "$previous_cwd"
+              SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js --name gazel-logistics-web --cwd "$previous_cwd" --time --update-env || true
+              /usr/lib/ispnodejs/bin/pm2 save || true
+            fi
+          }
+          trap rollback ERR
+
+          /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics-web >/dev/null 2>&1 || true
+          rm -f "$socket"
+          cd "$release"
+          SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start logistics-server.js --name gazel-logistics-web --cwd "$release" --time --update-env
+          /usr/lib/ispnodejs/bin/pm2 save
+
+          healthy=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS --unix-socket "$socket" http://localhost/health/ >/tmp/logistics-health.json 2>/dev/null; then healthy=1; break; fi
+            sleep 2
+          done
+          test "$healthy" = "1"
+          grep -q 'gazel-logistics-web' /tmp/logistics-health.json
+
+          for path in / /logistics/release /logistics/documents /logistics/admin /logistics/admin/constructor; do
+            safe_name=$(printf '%s' "$path" | tr '/' '_')
+            curl -fsS --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -o "/tmp/logistics-${safe_name}.html" "http://localhost$path"
+            grep -q 'Войти' "/tmp/logistics-${safe_name}.html"
+          done
+          grep -q 'Логистика Газели' /tmp/logistics-_.html
+
+          api_status=$(curl -sS -o /tmp/logistics-api-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' http://localhost/api/logistics)
+          case "$api_status" in 401|403) ;; *) cat /tmp/logistics-api-anon.json; exit 1;; esac
+
+          password_status=$(curl -sS -o /tmp/logistics-password-anon.json -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' -H 'Content-Type: application/json' -H 'X-Dispatcher-Request: same-origin' --data '{"currentPassword":"x","newPassword":"ExamplePassword1","confirmPassword":"ExamplePassword1"}' http://localhost/api/auth/password)
+          test "$password_status" = "401"
+
+          main_after=$(node -e "const{execFileSync}=require('node:child_process');const rows=JSON.parse(execFileSync('/usr/lib/ispnodejs/bin/pm2',['jlist'],{encoding:'utf8',env:{...process.env,PM2_HOME:'/var/www/dispatcher/data/.pm2'}}));const row=rows.find(x=>x.name==='aam-dispatch');if(!row||row.pm2_env?.status!=='online')process.exit(1);process.stdout.write(String(row.pm2_env.restart_time)+':'+String(row.pm2_env.pm_uptime))")
+          test "$main_before" = "$main_after"
+
+          trap - ERR
+          cp "$release/.env.local" "$site/.env.local"
+          chmod 600 "$site/.env.local"
+          rm -f "$archive"
+          find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -nr | tail -n +4 | cut -d' ' -f2- | xargs -r rm -rf
+          EOF
+          code=$?
+          cat logistics-deploy-switch.log
+          exit "$code"
+
+      - name: Upload deployment switch log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logistics-deploy-switch-${{ github.run_id }}
+          path: logistics-deploy-switch.log
+          if-no-files-found: ignore
+
+      - name: Public smoke test
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o /tmp/logistics-public-health.json https://logistics.aam-dispatch.kz/health/
+          grep -q 'gazel-logistics-web' /tmp/logistics-public-health.json
+
+          for path in / /logistics/release /logistics/documents /logistics/admin /logistics/admin/constructor; do
+            safe_name=$(printf '%s' "$path" | tr '/' '_')
+            curl -fsS --retry 20 --retry-delay 3 --max-time 20 -o "/tmp/logistics-public-${safe_name}.html" "https://logistics.aam-dispatch.kz$path"
+            grep -q 'Войти' "/tmp/logistics-public-${safe_name}.html"
+          done
+          grep -q 'Логистика Газели' /tmp/logistics-public-_.html
+
+          password_status=$(curl -sS --retry 5 --retry-delay 2 --max-time 20 -o /tmp/logistics-public-password-anon.json -w '%{http_code}' -H 'Content-Type: application/json' -H 'X-Dispatcher-Request: same-origin' --data '{"currentPassword":"x","newPassword":"ExamplePassword1","confirmPassword":"ExamplePassword1"}' https://logistics.aam-dispatch.kz/api/auth/password)
+          test "$password_status" = "401"
+
+          curl -fsS --retry 20 --retry-delay 3 --max-time 20 https://aam-dispatch.kz/ >/tmp/aam-main.html
+          test -s /tmp/aam-main.html

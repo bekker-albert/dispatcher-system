@@ -1,0 +1,127 @@
+name: Diagnose logistics authentication gate
+
+on:
+  push:
+    branches:
+      - feature/gazel-logistics-release
+    paths:
+      - ".github/workflows/logistics-auth-gate-debug.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/logistics-auth-gate-debug.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Build isolated release
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          set -euo pipefail
+          npm ci --silent
+          npm run typecheck
+          npm run build
+          tar -czf logistics-auth-debug-${GITHUB_SHA}.tar.gz .next public package.json package-lock.json logistics-server.js
+
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload isolated release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "${DEPLOY_PORT}" "logistics-auth-debug-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dispatcher/data/www/logistics.aam-dispatch.kz/data/"
+
+      - name: Run isolated authentication checks
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEBUG_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "DEBUG_SHA='${DEBUG_SHA}' bash -s" > logistics-auth-gate-debug.log 2>&1 <<'EOF'
+          set -u
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          main_site="/var/www/dispatcher/data/www/aam-dispatch.kz"
+          archive="$site/data/logistics-auth-debug-${DEBUG_SHA}.tar.gz"
+          debug_dir="$site/data/auth-debug-${DEBUG_SHA}"
+          socket="/var/www/dispatcher/data/nodejs/auth-debug-${DEBUG_SHA}.sock"
+          server_log="$debug_dir/server.log"
+          pid=""
+
+          cleanup() {
+            if [ -n "$pid" ]; then kill "$pid" >/dev/null 2>&1 || true; wait "$pid" >/dev/null 2>&1 || true; fi
+            rm -f "$socket" "$archive"
+          }
+          trap cleanup EXIT
+
+          rm -rf "$debug_dir"
+          mkdir -p "$debug_dir"
+          tar -xzf "$archive" -C "$debug_dir"
+          if [ -f "$site/.env.local" ]; then cp "$site/.env.local" "$debug_dir/.env.local"; else cp "$main_site/.env.local" "$debug_dir/.env.local"; fi
+          chmod 600 "$debug_dir/.env.local"
+          cd "$debug_dir"
+          npm ci --omit=dev --no-audit --no-fund --silent
+
+          SOCKET_PATH="$socket" NODE_ENV=production node logistics-server.js >"$server_log" 2>&1 &
+          pid=$!
+          healthy=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS --unix-socket "$socket" http://localhost/health/ >/tmp/auth-debug-health.json 2>/dev/null; then healthy=1; break; fi
+            sleep 1
+          done
+          echo "healthy=$healthy"
+          cat /tmp/auth-debug-health.json 2>/dev/null || true
+          echo
+
+          for request_path in / /logistics /logistics/release /logistics/documents; do
+            safe_name=$(printf '%s' "$request_path" | tr '/?' '__')
+            body="/tmp/auth-debug-${safe_name}.html"
+            code=$(curl -sS -o "$body" -w '%{http_code}' --unix-socket "$socket" -H 'Host: logistics.aam-dispatch.kz' "http://localhost$request_path")
+            echo "=== $request_path status=$code bytes=$(wc -c < "$body") ==="
+            for marker in 'Логистика Газели' 'Войти' 'Логин' 'current-password' 'Требуется авторизация' 'Выпуск' 'Документ'; do
+              if grep -q "$marker" "$body"; then echo "PASS marker=$marker"; else echo "MISS marker=$marker"; fi
+            done
+            grep -o -E '.{0,80}(Логистика Газели|Войти|Логин|current-password|Требуется авторизация|Выпуск|Документ).{0,80}' "$body" | head -n 20 || true
+          done
+
+          echo "=== SERVER LOG ==="
+          cat "$server_log" || true
+          EOF
+          cat logistics-auth-gate-debug.log
+
+      - name: Upload diagnostic log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logistics-auth-gate-debug
+          path: logistics-auth-gate-debug.log

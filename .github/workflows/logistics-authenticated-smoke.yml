@@ -1,0 +1,118 @@
+name: Logistics authenticated production smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/logistics-authenticated-smoke.yml"
+      - "app/api/auth/password/**"
+      - "app/logistics/**"
+      - "features/logistics/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Verify authenticated production flow
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+          set -euo pipefail
+          export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+          site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+          cd "$site"
+
+          node - <<'NODE'
+          const envModule = require('@next/env');
+          const loadEnvConfig = envModule.loadEnvConfig || envModule.default?.loadEnvConfig;
+          if (typeof loadEnvConfig !== 'function') throw new Error('Environment loader is unavailable');
+          loadEnvConfig(process.cwd());
+          const fs = require('node:fs');
+          if (!process.env.AUTH_INITIAL_LOGIN || !process.env.AUTH_INITIAL_PASSWORD) {
+            throw new Error('Authenticated smoke credentials are unavailable');
+          }
+          fs.writeFileSync(
+            '/tmp/logistics-smoke-login.json',
+            JSON.stringify({
+              login: process.env.AUTH_INITIAL_LOGIN,
+              password: process.env.AUTH_INITIAL_PASSWORD,
+            }),
+            { mode: 0o600 },
+          );
+          NODE
+
+          cleanup() {
+            rm -f /tmp/logistics-smoke-login.json /tmp/logistics-smoke-cookies.txt
+            rm -f /tmp/logistics-smoke-login-body.json /tmp/logistics-smoke-api.json
+            rm -f /tmp/logistics-smoke-*.html /tmp/logistics-smoke-password.json
+          }
+          trap cleanup EXIT
+
+          login_code=$(curl -sS --max-time 30 \
+            -o /tmp/logistics-smoke-login-body.json \
+            -w '%{http_code}' \
+            -c /tmp/logistics-smoke-cookies.txt \
+            -H 'Content-Type: application/json' \
+            -H 'X-Dispatcher-Request: same-origin' \
+            --data-binary @/tmp/logistics-smoke-login.json \
+            https://logistics.aam-dispatch.kz/api/auth/login)
+          test "$login_code" = "200"
+
+          api_code=$(curl -sS --max-time 30 \
+            -o /tmp/logistics-smoke-api.json \
+            -w '%{http_code}' \
+            -b /tmp/logistics-smoke-cookies.txt \
+            https://logistics.aam-dispatch.kz/api/logistics)
+          test "$api_code" = "200"
+
+          for spec in \
+            '/|Заявки и рейсы' \
+            '/logistics/release|Выпуск рейсов' \
+            '/logistics/documents|Документы' \
+            '/logistics/admin|Управление системой' \
+            '/logistics/admin/constructor|Конструктор системы'; do
+            path=${spec%%|*}
+            marker=${spec#*|}
+            safe_name=$(printf '%s' "$path" | tr '/' '_')
+            curl -fsS --max-time 30 \
+              -b /tmp/logistics-smoke-cookies.txt \
+              -o "/tmp/logistics-smoke-${safe_name}.html" \
+              "https://logistics.aam-dispatch.kz$path"
+            grep -q "$marker" "/tmp/logistics-smoke-${safe_name}.html"
+          done
+
+          grep -q 'Сменить пароль' /tmp/logistics-smoke-_logistics_admin.html
+
+          password_code=$(curl -sS --max-time 30 \
+            -o /tmp/logistics-smoke-password.json \
+            -w '%{http_code}' \
+            -b /tmp/logistics-smoke-cookies.txt \
+            -H 'Content-Type: application/json' \
+            -H 'X-Dispatcher-Request: same-origin' \
+            --data '{"currentPassword":"intentionally-wrong","newPassword":"ExamplePassword1","confirmPassword":"ExamplePassword1"}' \
+            https://logistics.aam-dispatch.kz/api/auth/password)
+          test "$password_code" = "400"
+          grep -q 'Текущий пароль указан неверно' /tmp/logistics-smoke-password.json
+
+          echo 'authenticated_logistics_smoke=pass'
+          EOF
