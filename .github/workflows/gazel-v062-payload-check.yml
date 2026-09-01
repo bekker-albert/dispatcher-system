@@ -1,0 +1,103 @@
+name: Verify Gazel v0.6.2 payload
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/gazel-v062-payload-check.yml"
+      - "deploy/gazel-v0.6.2-payload/**"
+      - "deploy/gazel-v0.6.2/**"
+      - "deploy/logistics-payload/**"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analyze payloads
+        shell: bash
+        run: |
+          set +e
+          python - <<'PY' > payload-check.txt 2>&1
+          from pathlib import Path
+          import base64, hashlib, lzma, tarfile, io
+
+          def load(pattern):
+              files = sorted(Path('.').glob(pattern))
+              text = ''.join(p.read_text().replace('\r','').replace('\n','') for p in files)
+              print(f"{pattern}: files={len(files)} chars={len(text)} mod4={len(text)%4}")
+              for p in files:
+                  data=p.read_bytes()
+                  print(f"  {p.name}: {len(data)} sha256={hashlib.sha256(data).hexdigest()}")
+              return text
+
+          gazel = load('deploy/gazel-v0.6.2-payload/*.b64')
+          logistics = load('deploy/logistics-payload/*.b64')
+          cp=0
+          for a,b in zip(gazel,logistics):
+              if a!=b: break
+              cp+=1
+          print(f"common_prefix={cp}")
+
+          # Map fixed windows between both strings using fast native find().
+          print('gazel windows in logistics:')
+          for pos in range(0,len(gazel),7000):
+              token=gazel[pos:pos+256]
+              print(pos, logistics.find(token))
+          print('logistics windows in gazel:')
+          for pos in range(0,len(logistics),7000):
+              token=logistics[pos:pos+256]
+              print(pos, gazel.find(token))
+
+          candidates={'gazel':gazel,'logistics':logistics}
+          # Build merges at every discovered 256-byte matching window.
+          for gpos in range(0,len(gazel),7000):
+              token=gazel[gpos:gpos+256]
+              lpos=logistics.find(token)
+              if lpos>=0:
+                  candidates[f'g_to_l_{gpos}_{lpos}']=gazel[:gpos]+logistics[lpos:]
+                  candidates[f'l_to_g_{lpos}_{gpos}']=logistics[:lpos]+gazel[gpos:]
+          for lpos in range(0,len(logistics),7000):
+              token=logistics[lpos:lpos+256]
+              gpos=gazel.find(token)
+              if gpos>=0:
+                  candidates[f'g_to_l_{gpos}_{lpos}']=gazel[:gpos]+logistics[lpos:]
+                  candidates[f'l_to_g_{lpos}_{gpos}']=logistics[:lpos]+gazel[gpos:]
+
+          seen=set()
+          for name,text in candidates.items():
+              digest=hashlib.sha256(text.encode()).hexdigest()
+              if digest in seen: continue
+              seen.add(digest)
+              padded=text+'='*((-len(text))%4)
+              try:
+                  raw=base64.b64decode(padded,validate=True)
+              except Exception as exc:
+                  print(f"candidate {name}: base64_error={exc}")
+                  continue
+              print(f"candidate {name}: chars={len(text)} raw={len(raw)} sha256={hashlib.sha256(raw).hexdigest()}")
+              try:
+                  unpacked=lzma.decompress(raw)
+                  print(f"  xz=ok unpacked={len(unpacked)}")
+                  tf=tarfile.open(fileobj=io.BytesIO(unpacked),mode='r:')
+                  names=tf.getnames()
+                  print(f"  tar=ok files={len(names)} server.js={'./server.js' in names or 'server.js' in names} index={'./public/index.html' in names or 'public/index.html' in names}")
+                  Path('recovered.tar.xz').write_bytes(raw)
+                  Path('recovered-name.txt').write_text(name)
+                  break
+              except Exception as exc:
+                  print(f"  archive_error={exc}")
+          PY
+          cat payload-check.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gazel-v062-payload-check
+          path: |
+            payload-check.txt
+            recovered.tar.xz
+            recovered-name.txt
+          if-no-files-found: warn

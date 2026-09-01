@@ -1,0 +1,13 @@
+name: Logistics public check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS https://logistics.aam-dispatch.kz/ >/dev/null

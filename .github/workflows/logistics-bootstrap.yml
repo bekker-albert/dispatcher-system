@@ -1,0 +1,87 @@
+name: Logistics bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Start isolated logistics process
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+            set -euo pipefail
+            export PATH="/usr/lib/ispnodejs/bin:/usr/local/bin:/usr/bin:/bin"
+            export PM2_HOME="/var/www/dispatcher/data/.pm2"
+            site="/var/www/dispatcher/data/www/logistics.aam-dispatch.kz"
+            socket="/var/www/dispatcher/data/nodejs/0.sock"
+            mkdir -p "$site" "$(dirname "$socket")" "$site/backups"
+
+            if [ -f "$site/index.html" ]; then
+              cp -p "$site/index.html" "$site/backups/index-before-node-$(date +%Y%m%d-%H%M%S).html"
+            fi
+
+            cat > "$site/package.json" <<'JSON'
+            {
+              "name": "gazel-logistics-bootstrap",
+              "version": "0.1.0",
+              "private": true,
+              "main": "server.js",
+              "scripts": { "start": "node server.js" },
+              "engines": { "node": ">=24 <25" }
+            }
+            JSON
+
+            cat > "$site/server.js" <<'JS'
+            'use strict';
+            const http = require('http');
+            const fs = require('fs');
+            const path = require('path');
+            const socketPath = process.env.SOCKET_PATH || '/var/www/dispatcher/data/nodejs/0.sock';
+            fs.mkdirSync(path.dirname(socketPath), { recursive: true });
+            try { if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath); } catch (error) { console.error(error); process.exit(1); }
+            const page = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Логистика Газели</title></head><body><h1>Логистика Газели</h1><p>Сервер подключён.</p></body></html>`;
+            const server = http.createServer((req, res) => {
+              if (req.url === '/health' || req.url === '/health/') {
+                res.writeHead(200, {'content-type':'application/json; charset=utf-8','cache-control':'no-store'});
+                return res.end(JSON.stringify({status:'ok',service:'gazel-logistics-bootstrap'}));
+              }
+              res.writeHead(200, {'content-type':'text/html; charset=utf-8','cache-control':'no-store'});
+              res.end(page);
+            });
+            server.on('error', error => { console.error(error); process.exit(1); });
+            server.listen(socketPath, () => { fs.chmodSync(socketPath, 0o666); console.log(`Listening on ${socketPath}`); });
+            JS
+
+            cd "$site"
+            /usr/lib/ispnodejs/bin/pm2 delete gazel-logistics >/dev/null 2>&1 || true
+            rm -f "$socket"
+            SOCKET_PATH="$socket" NODE_ENV=production /usr/lib/ispnodejs/bin/pm2 start server.js --name gazel-logistics --cwd "$site" --time --update-env
+            /usr/lib/ispnodejs/bin/pm2 save
+            sleep 5
+            /usr/lib/ispnodejs/bin/pm2 describe gazel-logistics
+            test -S "$socket"
+            curl --silent --show-error --fail --unix-socket "$socket" http://localhost/health
+          EOF
+
+      - name: Verify public site
+        run: curl -fsS --retry 10 --retry-delay 2 https://logistics.aam-dispatch.kz/ | grep -q "Логистика Газели"

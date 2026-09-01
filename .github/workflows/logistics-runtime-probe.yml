@@ -1,0 +1,13 @@
+name: Logistics runtime probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS https://logistics.aam-dispatch.kz/health >/dev/null

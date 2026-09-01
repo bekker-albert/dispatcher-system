@@ -1,0 +1,13 @@
+name: Logistics diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Diagnostics are manual after bootstrap completion."

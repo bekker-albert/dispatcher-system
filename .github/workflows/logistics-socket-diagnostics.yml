@@ -1,0 +1,56 @@
+name: Logistics socket diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/logistics-socket-diagnostics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Inspect socket and nginx references
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" 'bash -s' <<'EOF'
+            set -u
+            echo '== nodejs directory =='
+            find /var/www/dispatcher/data/nodejs -maxdepth 2 -printf '%y %M %u:%g %p -> %l\n' 2>/dev/null | sort || true
+
+            echo '== unix sockets =='
+            find /var/www/dispatcher/data -type s -printf '%M %u:%g %p\n' 2>/dev/null | sort || true
+
+            echo '== logistics references in user config =='
+            grep -RIn --exclude='*.log' 'logistics.aam-dispatch.kz' /var/www/dispatcher/data/etc 2>/dev/null | head -200 || true
+
+            echo '== proxy/socket references around logistics files =='
+            for file in $(grep -RIl --exclude='*.log' 'logistics.aam-dispatch.kz' /var/www/dispatcher/data/etc 2>/dev/null | head -30); do
+              echo "--- $file"
+              sed -n '1,240p' "$file" 2>/dev/null || true
+            done
+
+            echo '== listening ports =='
+            ss -ltn 2>/dev/null | sed -n '1,120p' || true
+          EOF
